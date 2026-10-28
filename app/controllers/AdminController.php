@@ -520,6 +520,31 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 
+    /** POST /Admin/SaveSocialLinks — ফুটারের সোশ্যাল মিডিয়া আইকন + লিংক */
+    public function SaveSocialLinks_POST(): void
+    {
+        $this->requireAdminJson();
+        $list = json_decode((string)input_str('links', '[]'), true);
+        if (!is_array($list)) json_response(['success' => false, 'message' => 'ভুল ডাটা।']);
+        if (count($list) > 15) json_response(['success' => false, 'message' => 'সর্বোচ্চ ১৫টা সোশ্যাল মিডিয়া দেওয়া যাবে।']);
+        $pl = social_platforms();
+        $out = [];
+        foreach ($list as $i => $it) {
+            $p = is_array($it) ? (string)($it['p'] ?? '') : '';
+            if (!isset($pl[$p])) json_response(['success' => false, 'message' => 'অজানা সোশ্যাল মিডিয়া।']);
+            $raw = trim((string)($it['url'] ?? ''));
+            if ($raw === '') json_response(['success' => false, 'message' => $pl[$p][0] . ' — লিংক দিন, অথবা এটা মুছে দিন।', 'index' => $i]);
+            $url = social_normalize_url($p, $raw);
+            if ($url === null) json_response(['success' => false, 'message' => $pl[$p][0] . ' — লিংকটা সঠিক নয়। উদাহরণ: ' . $pl[$p][2], 'index' => $i]);
+            $out[] = ['p' => $p, 'url' => $url];
+        }
+        $err = null;
+        if ($this->db->SaveSiteContent(['social_links' => json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)], $err)) {
+            json_response(['success' => true, 'message' => 'সোশ্যাল মিডিয়া লিংক সেভ হয়েছে!', 'links' => $out]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
     public function UploadHeroImage_POST(): void
     {
         $this->uploadImage('heroImage', 'hero', 'hero_', self::IMAGE_EXTS, 5 * 1024 * 1024,

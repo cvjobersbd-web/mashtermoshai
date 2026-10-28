@@ -489,6 +489,80 @@ function highlight_brackets(?string $text, string $class): string
 }
 
 // ============================================================
+// ===== ফুটারের Social Media লিংক (অ্যাডমিন সেটিং থেকে) =====
+// ============================================================
+/** যেসব সোশ্যাল মিডিয়া অ্যাড করা যাবে: key => [নাম, আইকন class, placeholder, রং, টাইপ] */
+function social_platforms(): array
+{
+    return [
+        'facebook'  => ['Facebook',  'fa-brands fa-facebook-f',       'https://facebook.com/yourpage',      '#1877F2', 'url'],
+        'messenger' => ['Messenger', 'fa-brands fa-facebook-messenger','https://m.me/yourpage',             '#0084FF', 'url'],
+        'youtube'   => ['YouTube',   'fa-brands fa-youtube',          'https://youtube.com/@yourchannel',   '#FF0000', 'url'],
+        'instagram' => ['Instagram', 'fa-brands fa-instagram',        'https://instagram.com/yourname',     '#E1306C', 'url'],
+        'whatsapp'  => ['WhatsApp',  'fa-brands fa-whatsapp',         '01XXXXXXXXX অথবা https://wa.me/8801…', '#25D366', 'whatsapp'],
+        'telegram'  => ['Telegram',  'fa-brands fa-telegram',         'https://t.me/yourchannel',           '#26A5E4', 'url'],
+        'linkedin'  => ['LinkedIn',  'fa-brands fa-linkedin-in',      'https://linkedin.com/company/…',     '#0A66C2', 'url'],
+        'x'         => ['X (Twitter)','fa-brands fa-x-twitter',       'https://x.com/yourname',             '#000000', 'url'],
+        'tiktok'    => ['TikTok',    'fa-brands fa-tiktok',           'https://tiktok.com/@yourname',       '#010101', 'url'],
+        'threads'   => ['Threads',   'fa-brands fa-threads',          'https://threads.net/@yourname',      '#000000', 'url'],
+        'pinterest' => ['Pinterest', 'fa-brands fa-pinterest-p',      'https://pinterest.com/yourname',     '#E60023', 'url'],
+        'github'    => ['GitHub',    'fa-brands fa-github',           'https://github.com/yourname',        '#181717', 'url'],
+        'website'   => ['Website',   'fa-solid fa-globe',             'https://example.com',                '#02B8F5', 'url'],
+        'email'     => ['Email',     'fa-solid fa-envelope',          'info@mashtermoshai.com',             '#EA4335', 'email'],
+        'phone'     => ['Phone',     'fa-solid fa-phone',             '01XXXXXXXXX',                        '#16A34A', 'phone'],
+    ];
+}
+
+/**
+ * অ্যাডমিনের দেওয়া লেখা থেকে নিরাপদ লিংক বানায়। ভুল হলে null.
+ * (javascript: ইত্যাদি কখনো পাস হবে না — শুধু http/https/mailto/tel)
+ */
+function social_normalize_url(string $platform, string $raw): ?string
+{
+    $raw = trim($raw);
+    if ($raw === '' || mb_strlen($raw) > 300) return null;
+    $type = social_platforms()[$platform][4] ?? 'url';
+    if ($type === 'email') {
+        $m = preg_replace('/^mailto:/i', '', $raw);
+        return filter_var($m, FILTER_VALIDATE_EMAIL) ? 'mailto:' . $m : null;
+    }
+    if ($type === 'phone') {
+        $d = preg_replace('/[^\d+]/', '', preg_replace('/^tel:/i', '', $raw));
+        return preg_match('/^\+?\d{6,15}$/', $d) ? 'tel:' . $d : null;
+    }
+    if ($type === 'whatsapp' && !preg_match('#^https?://#i', $raw)) {
+        $d = preg_replace('/\D/', '', $raw);
+        if (strlen($d) === 11 && $d[0] === '0') $d = '88' . $d;   // 01XXXXXXXXX → 8801XXXXXXXXX
+        return preg_match('/^\d{8,15}$/', $d) ? 'https://wa.me/' . $d : null;
+    }
+    if (!preg_match('#^[a-z][a-z0-9+.-]*:#i', $raw)) $raw = 'https://' . ltrim($raw, '/');
+    if (!preg_match('#^https?://#i', $raw)) return null;
+    $u = filter_var($raw, FILTER_VALIDATE_URL);
+    if (!$u) return null;
+    $host = parse_url($u, PHP_URL_HOST);
+    return ($host && str_contains($host, '.')) ? $u : null;
+}
+
+/** @return array<int,array{p:string,url:string}> ফুটারে দেখানোর লিংক (ক্রম অনুযায়ী) */
+function social_links(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $raw = db()->GetSiteContent(['social_links' => ''])['social_links'];
+    $c = [];
+    $list = json_decode((string)$raw, true);
+    if (is_array($list)) {
+        $pl = social_platforms();
+        foreach ($list as $it) {
+            if (is_array($it) && isset($pl[$it['p'] ?? '']) && is_string($it['url'] ?? null) && $it['url'] !== '') {
+                $c[] = ['p' => $it['p'], 'url' => $it['url']];
+            }
+        }
+    }
+    return $c;
+}
+
+// ============================================================
 // ===== USER SUSPENSION helpers =====
 // ============================================================
 /** লগইন পেজে দেখানোর জন্য Suspension এর তথ্য */

@@ -28,7 +28,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
@@ -901,7 +901,16 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 .container, .container-fluid { padding-left: 14px; padding-right: 14px; }
                 input, select, textarea { font-size: 16px !important; } /* iOS zoom বন্ধ */
             }
-    </style>
+    
+        /* ===== Footer social icons ===== */
+        .footer-social { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .footer-social-icons { display: flex; flex-wrap: wrap; gap: 8px; }
+        .footer-social-link { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.08); color: var(--footer-muted); font-size: 15px; text-decoration: none;
+            transition: background .2s, color .2s, transform .2s; }
+        .footer-social-link:hover { background: #fff; color: var(--brand); transform: translateY(-2px); }
+        @media (max-width: 640px) { .footer-social { justify-content: center; width: 100%; } }
+</style>
 </head>
 <body>
     <?php if (session_get('UserName') === null): ?><?= csrf_field() ?><?php endif; ?>
@@ -1185,30 +1194,20 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <?php $__social = social_links(); $__pl = social_platforms(); ?>
+                    <?php if ($__social): ?>
+                    <div class="footer-social">
                         <span class="text-sm" style="color:var(--footer-muted);">Follow us</span>
-                        <a href="#" aria-label="Twitter" class="transition hover:opacity-70" style="color:var(--footer-muted);">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04 4.28 4.28 0 0 0-7.29 3.9 12.14 12.14 0 0 1-8.82-4.47 4.28 4.28 0 0 0 1.32 5.71A4.24 4.24 0 0 1 2.8 9.7v.05a4.28 4.28 0 0 0 3.43 4.2 4.3 4.3 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.97A8.6 8.6 0 0 1 2 18.57a12.1 12.1 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2 0-.19 0-.37-.01-.56A8.72 8.72 0 0 0 22.46 6Z" />
-                            </svg>
-                        </a>
-                        <a href="#" aria-label="YouTube" class="transition hover:opacity-70" style="color:var(--footer-muted);">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.51 3.5 12 3.5 12 3.5s-7.51 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14c1.87.55 9.38.55 9.38.55s7.51 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.81ZM9.6 15.6V8.4l6.27 3.6L9.6 15.6Z" />
-                            </svg>
-                        </a>
-                        <a href="#" aria-label="Facebook" class="transition hover:opacity-70" style="color:var(--footer-muted);">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                <path d="M13.5 22v-8.5h2.85l.43-3.31H13.5V8.06c0-.96.27-1.61 1.64-1.61h1.75V3.5c-.3-.04-1.35-.13-2.56-.13-2.53 0-4.27 1.55-4.27 4.38v2.44H7.2v3.31h2.86V22h3.44Z" />
-                            </svg>
-                        </a>
-                        <a href="#" aria-label="Instagram" class="transition hover:opacity-70" style="color:var(--footer-muted);">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5">
-                                <rect x="3" y="3" width="18" height="18" rx="5" />
-                                <circle cx="12" cy="12" r="4" />
-                                <circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none" />
-                            </svg>
-                        </a>
+                        <div class="footer-social-icons">
+                            <?php foreach ($__social as $__s): $__d = $__pl[$__s['p']]; $__ext = str_starts_with($__s['url'], 'http'); ?>
+                                <a href="<?= e($__s['url']) ?>" aria-label="<?= e($__d[0]) ?>" title="<?= e($__d[0]) ?>" class="footer-social-link"
+                                   style="--brand:<?= e($__d[3]) ?>;"<?= $__ext ? ' target="_blank" rel="noopener noreferrer"' : '' ?>>
+                                    <i class="<?= e($__d[1]) ?>"></i>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     </div>
                 </div>
 

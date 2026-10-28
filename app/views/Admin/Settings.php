@@ -871,6 +871,143 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+    <!-- ===== ✅ Footer Social Media ===== -->
+    <?php $smLinks = social_links(); $smPl = social_platforms(); ?>
+    <style>
+        .sm-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .sm-chip { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid #DCECF5; background: #fff; border-radius: 999px;
+            padding: 7px 13px; font-size: 13px; font-weight: 600; color: #08224A; cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+        .sm-chip i { color: var(--c); font-size: 15px; }
+        .sm-chip:hover { border-color: var(--c); background: #F5FBFF; }
+        .sm-chip:active { transform: scale(.96); }
+        .sm-chip .sm-added { display: none; color: #16A34A; font-size: 12px; }
+        .sm-chip.is-added { background: #F0FDF4; border-color: #A8E2C0; }
+        .sm-chip.is-added .sm-added { display: inline; }
+        .sm-list { display: flex; flex-direction: column; gap: 10px; }
+        .sm-row { display: flex; align-items: center; gap: 10px; border: 1.5px solid #DCECF5; border-radius: 14px; padding: 10px 12px; background: #F8FCFF; }
+        .sm-row.has-err { border-color: #e74c3c; background: #FFF5F4; }
+        .sm-ico { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; }
+        .sm-mid { flex: 1; min-width: 0; }
+        .sm-name { font-weight: 700; font-size: 13.5px; color: #08224A; margin-bottom: 4px; }
+        .sm-mid input { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 8px 11px; font-size: 14px; outline: none; background: #fff; }
+        .sm-mid input:focus { border-color: #02B8F5; }
+        .sm-acts { display: flex; gap: 4px; flex-shrink: 0; }
+        .sm-acts button { width: 32px; height: 32px; border: none; border-radius: 8px; background: #EAF5FB; color: #08224A; cursor: pointer; }
+        .sm-acts button:hover { background: #DCECF5; }
+        .sm-acts button.del { background: #FDECEA; color: #c0392b; }
+        .sm-acts button:disabled { opacity: .35; cursor: default; }
+        .sm-empty { text-align: center; color: #7A8CA0; font-size: 13.5px; border: 1.5px dashed #DCECF5; border-radius: 14px; padding: 18px; }
+        .sm-prev { margin-top: 16px; background: #08224A; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .sm-prev > span { color: rgba(255,255,255,.75); font-size: 13px; }
+        .sm-prev a { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.1); color: rgba(255,255,255,.85); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+        .sm-prev a:hover { background: #fff; color: var(--c); }
+        @media (max-width: 576px) {
+            .sm-row { flex-wrap: wrap; }
+            .sm-mid { flex: 1 1 calc(100% - 52px); }
+            .sm-acts { width: 100%; justify-content: flex-end; }
+        }
+    </style>
+    <div class="settings-card" id="smSettings">
+        <h5><i class="fas fa-share-alt"></i> Footer — Social Media Links</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            নিচ থেকে যে সোশ্যাল মিডিয়াগুলো ফুটারে দেখাতে চান সেগুলোতে ক্লিক করুন, তারপর প্রতিটার পাশে আপনার পেজের লিংক দিন।
+            ▲▼ দিয়ে ক্রম বদলাতে পারবেন। কোনোটা না রাখলে ফুটারে "Follow us" অংশটা লুকানো থাকবে।
+        </p>
+
+        <div class="sm-chips" id="smChips">
+            <?php foreach ($smPl as $k => $d): ?>
+                <button type="button" class="sm-chip" data-p="<?= e($k) ?>" style="--c:<?= e($d[3]) ?>;" onclick="smAdd('<?= e($k) ?>')">
+                    <i class="<?= e($d[1]) ?>"></i> <?= e($d[0]) ?> <span class="sm-added"><i class="fas fa-check"></i></span>
+                </button>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="sm-list" id="smList"></div>
+
+        <div class="sm-prev" id="smPrev"></div>
+
+        <div class="text-end mt-3">
+            <button type="button" class="btn-save" id="smSaveBtn" onclick="smSave()">
+                <i class="fas fa-save"></i> Save Social Links
+            </button>
+        </div>
+    </div>
+    <script>
+        var SM_PL = <?= json_encode(array_map(fn($d) => ['name' => $d[0], 'icon' => $d[1], 'ph' => $d[2], 'color' => $d[3]], $smPl), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+        var smItems = <?= json_encode(array_map(fn($l) => ['p' => $l['p'], 'url' => preg_replace('/^(mailto|tel):/i', '', $l['url'])], $smLinks), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+        var smErrIdx = -1;
+
+        function smEsc(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+
+        function smRender() {
+            var list = document.getElementById('smList');
+            if (!smItems.length) {
+                list.innerHTML = '<div class="sm-empty"><i class="fas fa-hand-pointer"></i> উপরের যেকোনো আইকনে ক্লিক করে সোশ্যাল মিডিয়া অ্যাড করুন</div>';
+            } else {
+                list.innerHTML = smItems.map(function (it, i) {
+                    var d = SM_PL[it.p];
+                    return '<div class="sm-row' + (i === smErrIdx ? ' has-err' : '') + '">' +
+                        '<div class="sm-ico" style="background:' + d.color + '"><i class="' + d.icon + '"></i></div>' +
+                        '<div class="sm-mid"><div class="sm-name">' + smEsc(d.name) + '</div>' +
+                        '<input type="text" data-i="' + i + '" value="' + smEsc(it.url) + '" placeholder="' + smEsc(d.ph) + '" oninput="smItems[' + i + '].url=this.value; smPreview();" /></div>' +
+                        '<div class="sm-acts">' +
+                        '<button type="button" title="উপরে" onclick="smMove(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '><i class="fas fa-arrow-up"></i></button>' +
+                        '<button type="button" title="নিচে" onclick="smMove(' + i + ',1)"' + (i === smItems.length - 1 ? ' disabled' : '') + '><i class="fas fa-arrow-down"></i></button>' +
+                        '<button type="button" class="del" title="মুছুন" onclick="smDel(' + i + ')"><i class="fas fa-trash"></i></button>' +
+                        '</div></div>';
+                }).join('');
+            }
+            document.querySelectorAll('#smChips .sm-chip').forEach(function (c) {
+                c.classList.toggle('is-added', smItems.some(function (it) { return it.p === c.dataset.p; }));
+            });
+            smPreview();
+        }
+
+        function smPreview() {
+            var pv = document.getElementById('smPrev');
+            var shown = smItems.filter(function (it) { return (it.url || '').trim() !== ''; });
+            pv.innerHTML = shown.length
+                ? '<span>Footer Preview — Follow us</span>' + shown.map(function (it) { var d = SM_PL[it.p];
+                    return '<a href="javascript:void(0)" title="' + smEsc(d.name) + '" style="--c:' + d.color + '"><i class="' + d.icon + '"></i></a>'; }).join('')
+                : '<span><i class="fas fa-eye-slash"></i> ফুটারে কোনো সোশ্যাল আইকন দেখাবে না</span>';
+        }
+
+        function smAdd(p) {
+            if (smItems.length >= 15) { alert('সর্বোচ্চ ১৫টা দেওয়া যাবে।'); return; }
+            var idx = smItems.findIndex(function (it) { return it.p === p; });
+            if (idx === -1) { smItems.push({ p: p, url: '' }); idx = smItems.length - 1; smRender(); }
+            var inp = document.querySelector('#smList input[data-i="' + idx + '"]');
+            if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+        }
+        function smMove(i, d) { var j = i + d; if (j < 0 || j >= smItems.length) return; var t = smItems[i]; smItems[i] = smItems[j]; smItems[j] = t; smErrIdx = -1; smRender(); }
+        function smDel(i) { smItems.splice(i, 1); smErrIdx = -1; smRender(); }
+
+        function smSave() {
+            var fd = new FormData();
+            fd.append('links', JSON.stringify(smItems.map(function (it) { return { p: it.p, url: (it.url || '').trim() }; })));
+            var tok = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (tok) fd.append('__RequestVerificationToken', tok.value);
+            var btn = document.getElementById('smSaveBtn'), html = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            fetch('/Admin/SaveSocialLinks', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    btn.disabled = false; btn.innerHTML = html;
+                    if (d.success) {
+                        smErrIdx = -1;
+                        smItems = (d.links || []).map(function (l) { return { p: l.p, url: l.url.replace(/^(mailto|tel):/i, '') }; });
+                        smRender();
+                    } else if (typeof d.index === 'number') {
+                        smErrIdx = d.index; smRender();
+                        var inp = document.querySelector('#smList input[data-i="' + d.index + '"]'); if (inp) inp.focus();
+                    }
+                    alert(d.message || (d.success ? 'Saved' : 'Failed'));
+                })
+                .catch(function (e) { btn.disabled = false; btn.innerHTML = html; alert('Error: ' + e.message); });
+        }
+        smRender();
+    </script>
+
     <!-- ===== Theme Colors ===== -->
     <div class="settings-card">
         <h5><i class="fas fa-palette"></i> Theme Colors</h5>
