@@ -1,0 +1,10 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/mashterm/public_html/
+    - /bin/cp -R app $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/uploads
+    - /bin/cp -Rn uploads/. $DEPLOYPATH/uploads/
+    - /bin/cp index.php .htaccess .user.ini $DEPLOYPATH
+    # config.php শুধু প্রথমবার কপি হবে — পরে সার্ভারের পাসওয়ার্ড মুছে যাবে না
+    - /bin/cp -n config.php $DEPLOYPATH

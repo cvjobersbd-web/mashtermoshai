@@ -1,0 +1,10 @@
+# আপলোড ফোল্ডারে কোনো স্ক্রিপ্ট চলবে না (নিরাপত্তা)
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php|phtml|php\d|phar|pl|py|cgi|sh|asp|aspx|jsp|htaccess)$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar

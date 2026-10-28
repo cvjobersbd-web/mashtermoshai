@@ -1,0 +1,632 @@
+<?php
+class AdminController extends Controller
+{
+    private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    /** পেজ অ্যাকশনের জন্য: Admin না হলে Login এ পাঠায় */
+    private function requireAdminPage(): void
+    {
+        if (!is_admin()) $this->redirectToAction('Login', 'Account');
+    }
+
+    /** JSON অ্যাকশনের জন্য */
+    private function requireAdminJson(): void
+    {
+        if (!is_admin()) json_response(['success' => false, 'message' => 'Unauthorized']);
+    }
+
+    // ============================================================
+    // ===== DASHBOARD =====
+    // ============================================================
+    public function Dashboard(): void
+    {
+        $this->requireAdminPage();
+        $users = $this->db->GetAllUsers();
+        $this->view(null, $users, [
+            'UserCount' => count($users),
+            'PendingCount' => $this->db->GetPendingTeacherRequestCount(),
+        ]);
+    }
+
+    /** GET /Admin/TeacherOverview/{id?} */
+    public function TeacherOverview(): void
+    {
+        $this->requireAdminPage();
+        $all = $this->db->GetAllTeachers();
+        $bag = ['AllTeachers' => $all];
+        $id = input_int('id', null);
+        if ($id !== null) {
+            foreach ($all as $t) {
+                if ($t->Id === $id) {
+                    $bag['SelectedTeacher'] = $t;
+                    $bag['TeacherStats'] = $this->db->GetTeacherDashboardStats($t->Id);
+                    $bag['PostStats'] = $this->db->GetTeacherPostStats($t->Id);
+                    $bag['DirectRequests'] = $this->db->GetTeacherDirectRequests($t->FullName);
+                    $bag['TuitionApps'] = $this->db->GetUserTuitionApplications($t->Id);
+                    break;
+                }
+            }
+        }
+        $this->view(null, null, $bag);
+    }
+
+    /** GET /Admin/UserOverview/{id?} */
+    public function UserOverview(): void
+    {
+        $this->requireAdminPage();
+        $all = $this->db->GetAllNonAdminUsers();
+        $bag = ['AllUsers' => $all];
+        $id = input_int('id', null);
+        if ($id !== null) {
+            foreach ($all as $u) {
+                if ($u->Id === $id) {
+                    $bag['SelectedUser'] = $u;
+                    $bag['UserStats'] = $this->db->GetUserOverviewStats($u->Id);
+                    $bag['UserPostStats'] = $this->db->GetUserPostStats($u->Id);
+                    $bag['TeachersEngaged'] = $this->db->GetTeachersEngagedWithUser($u->Id);
+                    $bag['UserTuitionApps'] = $this->db->GetUserTuitionApplications($u->Id);
+                    break;
+                }
+            }
+        }
+        $this->view(null, null, $bag);
+    }
+
+    // ============================================================
+    // ===== USER MANAGEMENT =====
+    // ============================================================
+    /** GET /Admin/UserDetails?id= */
+    public function UserDetails(): void
+    {
+        $this->requireAdminJson();
+        $u = $this->db->GetUserById(input_int('id', 0));
+        if (!$u) json_response(['success' => false, 'message' => 'User not found']);
+        $keys = ['Id', 'UserName', 'FullName', 'Email', 'Role', 'IsActive', 'MobileNumber', 'Gender', 'AgeRange', 'PrimaryDeviceType',
+            'YearsOfExperience', 'AreaType', 'Country', 'StreetAddress', 'PermanentAddress', 'EducationLevel', 'CurrentStudyStatus',
+            'ExamDegreeTitle', 'InstitutionName', 'PassingYear', 'IsCSEStudent', 'CvLink', 'GithubProfile', 'PortfolioLink',
+            'LinkedInProfile', 'ProfileImageLink'];
+        $out = [];
+        foreach ($keys as $k) $out[$k] = $u->$k;
+        $out['CreatedAt'] = fmt_date($u->CreatedAt, 'Y-m-d H:i');
+        $out['LastLoginAt'] = $u->LastLoginAt ? fmt_date($u->LastLoginAt, 'Y-m-d H:i') : 'Never';
+        // পেজের JS এগুলো সরাসরি innerHTML এ বসায় — তাই HTML-escape (XSS প্রতিরোধ)
+        $out = array_map(fn($v) => is_string($v) ? e($v) : $v, $out);
+        json_camel(['success' => true, 'user' => $out]);
+    }
+
+    /** POST /Admin/DeleteUser */
+    public function DeleteUser_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0);
+        if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot delete your own account']);
+        try {
+            if ($this->db->DeleteUser($id)) json_response(['success' => true, 'message' => 'User deleted successfully']);
+        } catch (Throwable $e) {}
+        json_response(['success' => false, 'message' => 'Failed to delete user']);
+    }
+
+    /** POST /Admin/ToggleUserStatus */
+    public function ToggleUserStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0);
+        $isActive = input_bool('isActive');
+        if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot disable your own account']);
+        if ($this->db->ToggleUserStatus($id, $isActive)) {
+            if ($isActive) {
+                $this->db->CreateNotification($id, '✅ Account Activated', 'Your account has been activated. You can now log in.', 'success', null, 'fa-check-circle');
+            } else {
+                $this->db->CreateNotification($id, '⚠️ Account Deactivated', 'Your account has been deactivated by an administrator.', 'warning', null, 'fa-exclamation-triangle');
+            }
+            json_response(['success' => true, 'message' => 'User status updated successfully']);
+        }
+        json_response(['success' => false, 'message' => 'Failed to update user status']);
+    }
+
+    /** POST /Admin/UpdatePassword */
+    public function UpdatePassword_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0);
+        $pw = (string)input_str('newPassword', '');
+        if (trim($pw) === '' || strlen($pw) < 6) json_response(['success' => false, 'message' => 'Password must be at least 6 characters']);
+        if ($this->db->UpdatePassword($id, $pw)) {
+            $this->db->CreateNotification($id, '🔑 Password Changed', 'Your account password was changed by an administrator.', 'warning', null, 'fa-key');
+            json_response(['success' => true, 'message' => 'Password updated successfully']);
+        }
+        json_response(['success' => false, 'message' => 'Failed to update password']);
+    }
+
+    // ============================================================
+    // ===== TEACHER REQUESTS =====
+    // ============================================================
+    public function TeacherRequests(): void
+    {
+        $this->requireAdminPage();
+        $requests = $this->db->GetAllTeacherRequests();
+        $this->view(null, $requests, [
+            'UserCount' => count($this->db->GetAllUsers()),
+            'PendingCount' => count(array_filter($requests, fn($r) => $r->Status === 'Pending')),
+        ]);
+    }
+
+    /** POST /Admin/ProcessTeacherRequest (id, action=Approve|Reject, adminNote) */
+    public function ProcessTeacherRequest_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0);
+        $action = input_str('action');
+        $note = input_str('adminNote');
+        if ($action !== 'Approve' && $action !== 'Reject') json_response(['success' => false, 'message' => 'Invalid action']);
+
+        $status = $action === 'Approve' ? 'Approved' : 'Rejected';
+        $req = $this->db->GetTeacherRequestById($id);
+        if ($this->db->UpdateTeacherRequest($id, $status, $note)) {
+            if ($action === 'Approve' && $req) {
+                $this->db->MakeUserTeacher($req->UserId);
+                $this->db->CreateNotification($req->UserId, "🎓 You're now a Teacher!",
+                    'Congratulations! Your teacher request has been approved. Access your Teacher Dashboard now.',
+                    'success', '/Teacher/TeacherDashboard', 'fa-chalkboard-teacher');
+            } elseif ($action === 'Reject' && $req) {
+                $msg = is_blank($note) ? 'Your teacher request was not approved. You can try again later.'
+                    : "Your teacher request was not approved. Reason: $note";
+                $this->db->CreateNotification($req->UserId, '❌ Teacher Request Rejected', $msg, 'danger', '/Teacher/RequestForm', 'fa-times-circle');
+            }
+            json_response(['success' => true, 'message' => 'Teacher request ' . strtolower($action) . 'd successfully']);
+        }
+        json_response(['success' => false, 'message' => 'Failed to process request']);
+    }
+
+    /** POST /Admin/DeleteTeacherAccount (id = userId, requestId) */
+    public function DeleteTeacherAccount_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0);
+        $requestId = input_int('requestId', 0);
+        if ($id > 0 && current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot delete your own account']);
+        $userDeleted = $requestDeleted = false;
+        try { if ($id > 0) $userDeleted = $this->db->DeleteUser($id); } catch (Throwable $e) {}
+        try { $requestDeleted = $this->db->DeleteTeacherRequestById($requestId); } catch (Throwable $e) {}
+        if ($userDeleted || $requestDeleted) json_response(['success' => true, 'message' => 'Teacher deleted successfully']);
+        json_response(['success' => false, 'message' => 'Failed to delete: no matching user or request was found']);
+    }
+
+    /** GET /Admin/GetTeacherRequestDetails?id= */
+    public function GetTeacherRequestDetails(): void
+    {
+        $this->requireAdminJson();
+        $r = $this->db->GetTeacherRequestById(input_int('id', 0));
+        if (!$r) json_response(['success' => false, 'message' => 'Request not found']);
+        $keys = ['Id', 'UserId', 'FullName', 'Email', 'MobileNumber', 'Education', 'Institution', 'SubjectExpertise', 'Experience',
+            'TeachingStyle', 'AvailableDays', 'PreferredTime', 'HourlyRate', 'CvLink', 'WhyTeach', 'Status'];
+        $out = [];
+        foreach ($keys as $k) $out[$k] = $r->$k;
+        $out['RequestDate'] = fmt_date($r->RequestDate, 'd M Y, H:i');
+        $out['AdminNote'] = $r->AdminNote;
+        // পেজের JS এগুলো সরাসরি innerHTML এ বসায় — তাই HTML-escape (XSS প্রতিরোধ)
+        $out = array_map(fn($v) => is_string($v) ? e($v) : $v, $out);
+        json_camel(['success' => true, 'request' => $out]);
+    }
+
+    // ============================================================
+    // ===== TUTOR REQUESTS (Student → Teacher) =====
+    // ============================================================
+    /**
+     * GET /Admin/TutorRequests?status=
+     * (মূল প্রজেক্টে এই রুটটি কমেন্ট করা ছিল, কিন্তু অ্যাডমিন নোটিফিকেশন এই লিংকে যায় —
+     *  তাই View টি সহ পেজটি চালু রাখা হয়েছে)
+     */
+    public function TutorRequests(): void
+    {
+        $this->requireAdminPage();
+        $status = input_str('status', 'all') ?: 'all';
+        $stats = $this->db->GetTutorRequestStats();
+        $this->view(null, $this->db->GetAllTutorRequests($status), [
+            'TotalCount' => $stats->Total,
+            'PendingCount' => $stats->Pending,
+            'ContactedCount' => $stats->Contacted,
+            'CompletedCount' => $stats->Completed,
+            'CurrentStatus' => $status,
+        ]);
+    }
+
+    /** POST /Admin/UpdateTutorRequestStatus */
+    public function UpdateTutorRequestStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        $status = input_str('status');
+        if (is_blank($status)) json_response(['success' => false, 'message' => 'Status is required.']);
+        if (!in_array($status, ['Pending', 'Contacted', 'Completed', 'Cancelled'], true)) json_response(['success' => false, 'message' => 'Invalid status value.']);
+        if ($this->db->UpdateTutorRequestStatus(input_int('id', 0), $status, input_str('adminNote'))) {
+            json_response(['success' => true, 'message' => 'Status updated successfully.']);
+        }
+        json_response(['success' => false, 'message' => 'Failed to update status.']);
+    }
+
+    /** POST /Admin/DeleteTutorRequest */
+    public function DeleteTutorRequest_POST(): void
+    {
+        $this->requireAdminJson();
+        if ($this->db->DeleteTutorRequest(input_int('id', 0))) json_response(['success' => true, 'message' => 'Request deleted successfully.']);
+        json_response(['success' => false, 'message' => 'Failed to delete request.']);
+    }
+
+    // ============================================================
+    // ===== NOTICE MANAGEMENT =====
+    // ============================================================
+    public function ManageNotices(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetAllNotices());
+    }
+
+    public function AddNotice(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, obj([
+            'Id' => 0, 'Title' => '', 'Content' => '', 'Category' => 'News', 'ImageUrl' => '',
+            'PublishedDate' => now(), 'IsAnnouncement' => false, 'IsActive' => true,
+        ]));
+    }
+
+    private function noticeFromForm(): Obj
+    {
+        return obj([
+            'Id' => input_int('Id', 0),
+            'Title' => input_str('Title', ''),
+            'Content' => input_str('Content', ''),
+            'Category' => input_str('Category', 'News') ?: 'News',
+            'ImageUrl' => input_str('ImageUrl', '') ?? '',
+            'PublishedDate' => input_str('PublishedDate'),
+            'IsAnnouncement' => input_bool('IsAnnouncement'),
+            'IsActive' => input_bool('IsActive'),
+        ]);
+    }
+
+    /** "PublishedDate" ফর্ম থেকে এলে তারিখ ঠিক করা */
+    private function normalizeNoticeModel(Obj $m): void
+    {
+        if (strcasecmp((string)$m->Category, 'News') === 0) $m->IsAnnouncement = false;
+        $d = to_dt($m->PublishedDate);
+        if (!$d || (int)$d->format('Y') < 2000 || (int)$d->format('Y') > 2100) $m->PublishedDate = now();
+        if ($m->IsAnnouncement) { $m->ImageUrl = ''; $m->IsActive = true; }
+    }
+
+    public function AddNotice_POST(): void
+    {
+        $this->requireAdminPage();
+        $m = $this->noticeFromForm();
+        if (is_blank($m->Title)) $this->view('AddNotice', $m, ['Error' => 'Title is required.']);
+        if (is_blank($m->Content)) $this->view('AddNotice', $m, ['Error' => 'Content is required.']);
+        $this->normalizeNoticeModel($m);
+        $err = null;
+        if ($this->db->CreateNotice($m, $err)) {
+            tempdata_set('Success', $m->IsAnnouncement ? 'Announcement added successfully!' : 'News added successfully!');
+            $this->redirectToAction('ManageNotices');
+        }
+        $this->view('AddNotice', $m, ['Error' => "Failed to add notice: $err"]);
+    }
+
+    public function EditNotice(): void
+    {
+        $this->requireAdminPage();
+        $n = $this->db->GetNoticeById(input_int('id', 0));
+        if (!$n) {
+            tempdata_set('Error', 'Notice not found.');
+            $this->redirectToAction('ManageNotices');
+        }
+        $this->view(null, $n);
+    }
+
+    public function EditNotice_POST(): void
+    {
+        $this->requireAdminPage();
+        $m = $this->noticeFromForm();
+        if (is_blank($m->Title)) $this->view('EditNotice', $m, ['Error' => 'Title is required.']);
+        if (is_blank($m->Content)) $this->view('EditNotice', $m, ['Error' => 'Content is required.']);
+        $this->normalizeNoticeModel($m);
+        $err = null;
+        if ($this->db->UpdateNotice($m, $err)) {
+            tempdata_set('Success', $m->IsAnnouncement ? 'Announcement updated successfully!' : 'News updated successfully!');
+            $this->redirectToAction('ManageNotices');
+        }
+        $this->view('EditNotice', $m, ['Error' => "Failed to update notice: $err"]);
+    }
+
+    public function DeleteNotice_POST(): void
+    {
+        $this->requireAdminJson();
+        if ($this->db->DeleteNotice(input_int('id', 0))) json_response(['success' => true, 'message' => 'Notice deleted successfully.']);
+        json_response(['success' => false, 'message' => 'Failed to delete notice.']);
+    }
+
+    /** ছবি আপলোডের কমন লজিক */
+    private function uploadImage(string $field, string $dir, string $prefix, array $exts, int $maxBytes, string $sizeMsg, string $typeMsg, string $okMsg): void
+    {
+        $this->requireAdminJson();
+        $file = upload_file($field);
+        if (!$file) json_response(['success' => false, 'message' => 'Please select an image.']);
+        $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, $exts, true)) json_response(['success' => false, 'message' => $typeMsg]);
+        if ($file['size'] > $maxBytes) json_response(['success' => false, 'message' => $sizeMsg]);
+        try {
+            $url = save_upload($file, $dir, $prefix . ticks(), $ext);
+            json_response(['success' => true, 'message' => $okMsg, 'imageUrl' => $url]);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    public function UploadNoticeImage_POST(): void
+    {
+        $this->uploadImage('noticeImage', 'notices', 'notice_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'Image size must be less than 5MB.', 'Only JPG, PNG, GIF, or WEBP images are allowed.', 'Image uploaded successfully!');
+    }
+
+    // ============================================================
+    // ===== SITE SETTINGS =====
+    // ============================================================
+    public function Settings(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetSiteSettings());
+    }
+
+    public function SaveSettings_POST(): void
+    {
+        $this->requireAdminJson();
+        $s = $this->db->GetSiteSettings();
+        $str = fn($k, $def) => has_input($k) ? (string)input_str($k, '') : $def;
+        $s->HeroImageUrls = $str('HeroImageUrls', $s->HeroImageUrls);
+        $s->TutorSectionImageUrl = $str('TutorSectionImageUrl', $s->TutorSectionImageUrl);
+        $s->SiteName = $str('SiteName', $s->SiteName);
+        $s->NavbarLogoUrl = $str('NavbarLogoUrl', $s->NavbarLogoUrl);
+        $s->FooterLogoUrl = $str('FooterLogoUrl', $s->FooterLogoUrl);
+        $s->SliderEnabled = has_input('SliderEnabled') ? input_bool('SliderEnabled') : false;
+        $s->SliderIntervalSeconds = input_int('SliderIntervalSeconds', 0) ?? 0;
+        $s->LogoSizePx = input_int('LogoSizePx', 0) ?? 0;
+        $s->LogoShape = $str('LogoShape', 'circle');
+        foreach (['PrimaryColor', 'SecondaryColor', 'AccentColor', 'TextColor', 'NavbarBgColor', 'FooterBgColor'] as $c) {
+            $s->$c = $str($c, $s->$c);
+        }
+        if ($s->SliderIntervalSeconds < 1) $s->SliderIntervalSeconds = 5;
+        if ($s->SliderIntervalSeconds > 60) $s->SliderIntervalSeconds = 60;
+        $s->LogoSizePx = max(24, min(100, $s->LogoSizePx));
+        $shape = strtolower(trim($s->LogoShape ?: 'circle'));
+        $s->LogoShape = in_array($shape, ['circle', 'square', 'rounded'], true) ? $shape : 'circle';
+
+        $err = null;
+        if ($this->db->SaveSiteSettings($s, $err)) json_response(['success' => true, 'message' => 'Settings saved successfully!']);
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
+    public function UploadHeroImage_POST(): void
+    {
+        $this->uploadImage('heroImage', 'hero', 'hero_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'Image size must be less than 5MB.', 'Only JPG, PNG, GIF, or WEBP images are allowed.', 'Image uploaded!');
+    }
+
+    public function UploadTutorSectionImage_POST(): void
+    {
+        $this->uploadImage('tutorSectionImage', 'tutor-section', 'tutor_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'Image size must be less than 5MB.', 'Only JPG, PNG, GIF, or WEBP images are allowed.', 'Image uploaded!');
+    }
+
+    public function UploadLogo_POST(): void
+    {
+        $prefix = input_str('target', 'navbar') === 'footer' ? 'footer' : 'navbar';
+        $this->uploadImage('logoImage', 'logos', $prefix . '_logo_', array_merge(self::IMAGE_EXTS, ['.svg']), 3 * 1024 * 1024,
+            'Logo size must be less than 3MB.', 'Only JPG, PNG, GIF, WEBP, or SVG are allowed.', 'Logo uploaded!');
+    }
+
+    // ============================================================
+    // ===== TUITION CIRCULAR MANAGEMENT =====
+    // ============================================================
+    public function TuitionPosts(): void
+    {
+        $this->requireAdminPage();
+        try {
+            $posts = $this->db->GetAllTuitionPostsWithApplications();
+            $this->view(null, $posts, [
+                'TotalPosts' => count($posts),
+                'OpenPosts' => count(array_filter($posts, fn($p) => $p->Status === 'Open')),
+                'TotalApplications' => $this->db->CountTuitionApplications(),
+                'PendingApplications' => $this->db->CountTuitionApplications('Pending'),
+            ]);
+        } catch (Throwable $e) {
+            tempdata_set('Error', 'Unable to load tuition posts. Details: ' . $e->getMessage());
+            $this->view(null, [], ['TotalPosts' => 0, 'OpenPosts' => 0, 'TotalApplications' => 0, 'PendingApplications' => 0]);
+        }
+    }
+
+    private function emptyTuitionPost(): Obj
+    {
+        return obj(['Id' => 0, 'Title' => '', 'StudentGender' => null, 'StudentClass' => null, 'Subjects' => null,
+            'DaysPerWeek' => null, 'PreferredTime' => null, 'Salary' => null, 'Area' => null, 'MediaFee' => null,
+            'TuitionCode' => null, 'SpecialNote' => null, 'TutorGenderPreference' => null, 'Status' => 'Open',
+            'ShowOnHome' => false, 'PostedDate' => now(), 'UpdatedAt' => null, 'Applications' => []]);
+    }
+
+    private function tuitionPostFromForm(): Obj
+    {
+        $m = $this->emptyTuitionPost();
+        $m->Id = input_int('Id', 0);
+        foreach (['Title', 'StudentGender', 'StudentClass', 'Subjects', 'DaysPerWeek', 'PreferredTime', 'Salary', 'Area',
+                     'MediaFee', 'TuitionCode', 'SpecialNote', 'TutorGenderPreference', 'Status'] as $f) {
+            $v = input_str($f);
+            $m->$f = ($v === null || trim($v) === '') ? null : trim($v);
+        }
+        $m->Title = $m->Title ?? '';
+        if (has_input('ShowOnHome')) $m->ShowOnHome = input_bool('ShowOnHome');
+        return $m;
+    }
+
+    /** ফর্ম ভ্যালিডেশন (TuitionPost এর DataAnnotations) */
+    private function validateTuitionPost(Obj $m): array
+    {
+        $errors = [];
+        if (trim($m->Title) === '') $errors['Title'] = 'Title is required';
+        $limits = ['Title' => 300, 'StudentGender' => 100, 'StudentClass' => 200, 'Subjects' => 300, 'DaysPerWeek' => 50,
+            'PreferredTime' => 200, 'Salary' => 100, 'Area' => 300, 'MediaFee' => 200, 'TuitionCode' => 50,
+            'TutorGenderPreference' => 50, 'Status' => 20];
+        foreach ($limits as $f => $max) {
+            if ($m->$f !== null && mb_strlen($m->$f) > $max) $errors[$f] = "The field $f must be a string with a maximum length of $max.";
+        }
+        return $errors;
+    }
+
+    public function AddTuitionPost(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->emptyTuitionPost());
+    }
+
+    public function AddTuitionPost_POST(): void
+    {
+        $this->requireAdminPage();
+        $m = $this->tuitionPostFromForm();
+        if ($errors = $this->validateTuitionPost($m)) {
+            $GLOBALS['__ModelErrors'] = $errors;
+            $this->view('AddTuitionPost', $m);
+        }
+        try {
+            $m->PostedDate = now();
+            $m->Status = is_blank($m->Status) ? 'Open' : $m->Status;
+            if (is_blank($m->TuitionCode)) {
+                $areaPart = is_blank($m->Area) ? 'TUITION' : strtoupper(substr(preg_replace('/[^\p{L}]/u', '', $m->Area), 0, 8));
+                if (is_blank($areaPart)) $areaPart = 'TUITION';
+                $m->TuitionCode = $areaPart . random_int(1000, 9998);
+            }
+            $this->db->CreateTuitionPost($m);
+            tempdata_set('Success', 'Tuition post added successfully!');
+            $this->redirectToAction('TuitionPosts');
+        } catch (Throwable $e) {
+            $this->view('AddTuitionPost', $m, ['Error' => 'Failed to add tuition post: ' . $e->getMessage()]);
+        }
+    }
+
+    public function EditTuitionPost(): void
+    {
+        $this->requireAdminPage();
+        $p = $this->db->GetTuitionPostById(input_int('id', 0), true);
+        if (!$p) {
+            tempdata_set('Error', 'Tuition post not found.');
+            $this->redirectToAction('TuitionPosts');
+        }
+        $this->view(null, $p);
+    }
+
+    public function EditTuitionPost_POST(): void
+    {
+        $this->requireAdminPage();
+        $m = $this->tuitionPostFromForm();
+        if ($errors = $this->validateTuitionPost($m)) {
+            $GLOBALS['__ModelErrors'] = $errors;
+            $this->view('EditTuitionPost', $m);
+        }
+        try {
+            $existing = $this->db->GetTuitionPostById($m->Id);
+            if (!$existing) {
+                tempdata_set('Error', 'Tuition post not found.');
+                $this->redirectToAction('TuitionPosts');
+            }
+            if (is_blank($m->Status)) $m->Status = $existing->Status;
+            $this->db->UpdateTuitionPost($m);
+            tempdata_set('Success', 'Tuition post updated successfully!');
+            $this->redirectToAction('TuitionPosts');
+        } catch (Throwable $e) {
+            $this->view('EditTuitionPost', $m, ['Error' => 'Failed to update tuition post: ' . $e->getMessage()]);
+        }
+    }
+
+    public function ToggleTuitionStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        try {
+            $p = $this->db->GetTuitionPostById(input_int('id', 0));
+            if (!$p) json_response(['success' => false, 'message' => 'Post not found']);
+            $new = $p->Status === 'Open' ? 'Closed' : 'Open';
+            $this->db->SetTuitionPostStatus($p->Id, $new);
+            json_response(['success' => true, 'message' => "Tuition marked as $new", 'newStatus' => $new]);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    public function ToggleShowOnHome_POST(): void
+    {
+        $this->requireAdminJson();
+        try {
+            $p = $this->db->GetTuitionPostById(input_int('id', 0));
+            if (!$p) json_response(['success' => false, 'message' => 'Post not found']);
+            $show = !$p->ShowOnHome;
+            $this->db->ToggleShowOnHome($p->Id, $show);
+            json_response(['success' => true, 'message' => $show ? 'Added to Home Page' : 'Removed from Home Page', 'isShowing' => $show]);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    public function DeleteTuitionPost_POST(): void
+    {
+        $this->requireAdminJson();
+        try {
+            if (!$this->db->GetTuitionPostById(input_int('id', 0))) json_response(['success' => false, 'message' => 'Post not found']);
+            $this->db->DeleteTuitionPost(input_int('id', 0));
+            json_response(['success' => true, 'message' => 'Tuition post deleted successfully.']);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    // ============================================================
+    // ===== TUITION APPLICATIONS MANAGEMENT =====
+    // ============================================================
+    public function TuitionApplications(): void
+    {
+        $this->requireAdminPage();
+        $status = input_str('status', 'all') ?: 'all';
+        try {
+            $apps = $this->db->GetTuitionApplications($status);
+            $postId = input_int('postId', null);
+            if ($postId !== null) $apps = array_values(array_filter($apps, fn($a) => $a->TuitionPostId === $postId));
+            $this->view(null, $apps, [
+                'CurrentStatus' => $status,
+                'TotalCount' => $this->db->CountTuitionApplications(),
+                'PendingCount' => $this->db->CountTuitionApplications('Pending'),
+                'ShortlistedCount' => $this->db->CountTuitionApplications('Shortlisted'),
+                'SelectedCount' => $this->db->CountTuitionApplications('Selected'),
+            ]);
+        } catch (Throwable $e) {
+            tempdata_set('Error', 'Unable to load applications. Details: ' . $e->getMessage());
+            $this->view(null, [], ['CurrentStatus' => $status, 'TotalCount' => 0, 'PendingCount' => 0, 'ShortlistedCount' => 0, 'SelectedCount' => 0]);
+        }
+    }
+
+    public function UpdateApplicationStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        try {
+            $status = input_str('status');
+            if (!in_array($status, ['Pending', 'Shortlisted', 'Selected', 'Rejected'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+            $id = input_int('id', 0);
+            if (!$this->db->GetTuitionApplicationById($id)) json_response(['success' => false, 'message' => 'Application not found.']);
+            $this->db->UpdateApplicationStatus($id, $status, input_str('adminNote'));
+            json_response(['success' => true, 'message' => 'Application status updated successfully.']);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    public function DeleteTuitionApplication_POST(): void
+    {
+        $this->requireAdminJson();
+        try {
+            if (!$this->db->DeleteTuitionApplication(input_int('id', 0))) json_response(['success' => false, 'message' => 'Application not found.']);
+            json_response(['success' => true, 'message' => 'Application deleted.']);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+}

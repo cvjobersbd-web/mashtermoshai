@@ -1,0 +1,36 @@
+# =============================================================
+#  Smart Tutor Hub — Apache rewrite rules (cPanel / Hostnil)
+# =============================================================
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # (ঐচ্ছিক) HTTPS এ রিডাইরেক্ট — SSL চালু থাকলে নিচের ২ লাইনের # মুছে দিন
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # app/ ফোল্ডার, কনফিগ ও SQL ফাইল সরাসরি খোলা যাবে না
+    RewriteRule ^(app|tests)(/|$) - [F,L]
+    RewriteRule ^(config(\.local)?\.php|database\.sql|README.*)$ - [F,L]
+
+    # বাস্তব ফাইল/ফোল্ডার থাকলে সেটাই দেখাবে (uploads, images ইত্যাদি)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # বাকি সব রিকোয়েস্ট index.php তে
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# বড় ভিডিও আপলোডের জন্য (Helpdesk 50MB) — হোস্ট অনুমতি দিলে কাজ করবে
+<IfModule mod_php.c>
+    php_value upload_max_filesize 64M
+    php_value post_max_size 70M
+</IfModule>
+
+<FilesMatch "\.(sql|md|log|ini)$">
+    Require all denied
+</FilesMatch>
