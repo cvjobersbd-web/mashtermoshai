@@ -106,7 +106,7 @@ $ViewData['Title'] = 'Application Submitted - Smart Tutor Hub';
                HEADING
                ====================== */
     .as-heading {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 28px;
         font-weight: 700;
         color: #08224A;

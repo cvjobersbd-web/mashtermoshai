@@ -15,7 +15,7 @@ $selectedCategory = (string)($ViewBag->SelectedCategory ?? 'all');
 
     /* ===== Header ===== */
     .notice-header h1 {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 42px;
         font-weight: 700;
         color: #08224A;
@@ -105,7 +105,7 @@ $selectedCategory = (string)($ViewBag->SelectedCategory ?? 'all');
     }
 
         .notice-left-header h2 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 26px;
             font-weight: 700;
             color: #08224A;
@@ -239,7 +239,7 @@ $selectedCategory = (string)($ViewBag->SelectedCategory ?? 'all');
             }
 
         .news-card .card-title {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 16px;
             font-weight: 700;
             color: #08224A;
@@ -305,7 +305,7 @@ $selectedCategory = (string)($ViewBag->SelectedCategory ?? 'all');
     }
 
     .ann-header-left h3 {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 22px;
         font-weight: 700;
         margin: 0 0 4px;

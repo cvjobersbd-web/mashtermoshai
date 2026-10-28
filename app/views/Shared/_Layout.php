@@ -23,6 +23,10 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><?= e($ViewData['Title']) ?> - <?= e($safeSiteName) ?></title>
 
+    <!-- ✅ ফন্ট: শিরোনামে Sora, বাকি লেখায় Poppins (বাংলা অক্ষরের জন্য Hind Siliguri) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,7 +40,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                             cream: '<?= e($layoutSettings->SecondaryColor) ?>'
                         },
                         fontFamily: {
-                            serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif']
+                            sans: ['Poppins', '"Hind Siliguri"', 'system-ui', 'sans-serif'],
+                            serif: ['Sora', '"Hind Siliguri"', 'system-ui', 'sans-serif']
                         }
                     }
                 }
@@ -78,7 +83,18 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 --icon-color: #028EA5;
                 --nav-text: #EAF7FC;
                 --footer-muted: rgba(255,255,255,0.75);
+
+                /* ✅ ফন্ট */
+                --font-body: 'Poppins', 'Hind Siliguri', system-ui, -apple-system, 'Segoe UI', sans-serif;
+                --font-heading: 'Sora', 'Hind Siliguri', 'Poppins', system-ui, sans-serif;
+                --bs-body-font-family: var(--font-body);
+                --bs-font-sans-serif: var(--font-body);
             }
+
+            html, body { font-family: var(--font-body); }
+            body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+            input, select, textarea, button, .btn, .form-control, .form-select, .dropdown-menu, .modal, .tooltip, .popover { font-family: inherit; }
+            h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6, .font-serif { font-family: var(--font-heading); letter-spacing: -0.01em; }
 
 
             body {
@@ -796,7 +812,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .m-brand { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: #fff; }
             .m-brand-logo { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: #fff; flex-shrink: 0; display: flex; }
             .m-brand-logo img { width: 100%; height: 100%; object-fit: contain; }
-            .m-brand-name { font-family: Georgia, serif; font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .m-brand-name { font-family: var(--font-heading); font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .m-close {
                 width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0;
                 background: rgba(255,255,255,0.1); color: #fff; font-size: 16px; cursor: pointer;

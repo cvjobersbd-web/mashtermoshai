@@ -19,7 +19,7 @@ $ViewData['Title'] = 'All Notifications';
     }
 
     .notif-page-header h2 {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 28px;
         color: #08224A;
         margin: 0;

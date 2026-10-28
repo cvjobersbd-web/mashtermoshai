@@ -23,6 +23,7 @@ class AdminController extends Controller
         $this->requireAdminPage();
         $users = $this->db->GetAllUsers();
         $this->view(null, $users, [
+            'Suspensions' => $this->db->GetActiveSuspensionsMap(),
             'UserCount' => count($users),
             'PendingCount' => $this->db->GetPendingTeacherRequestCount(),
         ]);
@@ -95,6 +96,56 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/DeleteUser */
+    /**
+     * POST /Admin/SuspendUser
+     * duration: 1h | 1d | 2d | 3d | 7d | 30d | custom | permanent
+     */
+    public function SuspendUser_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0) ?? 0;
+        $user = $this->db->GetUserById($id);
+        if (!$user) json_response(['success' => false, 'message' => 'User not found.']);
+        if ($user->Role === 'Admin') json_response(['success' => false, 'message' => 'অ্যাডমিনকে Suspend করা যাবে না।']);
+
+        $duration = (string)input_str('duration', '');
+        $reason = trim((string)input_str('reason', ''));
+        if (mb_strlen($reason) > 500) json_response(['success' => false, 'message' => 'কারণ সর্বোচ্চ ৫০০ অক্ষর।']);
+
+        $presets = ['1h' => '+1 hour', '1d' => '+1 day', '2d' => '+2 days', '3d' => '+3 days', '7d' => '+7 days', '30d' => '+30 days'];
+        $permanent = false; $until = null;
+        if ($duration === 'permanent') {
+            $permanent = true;
+        } elseif (isset($presets[$duration])) {
+            $until = date('Y-m-d H:i:s', strtotime($presets[$duration]));
+        } elseif ($duration === 'custom') {
+            $raw = trim((string)input_str('until', ''));
+            $ts = $raw !== '' ? strtotime($raw) : false;
+            if (!$ts) json_response(['success' => false, 'message' => 'সঠিক তারিখ ও সময় দিন।']);
+            if ($ts <= time() + 60) json_response(['success' => false, 'message' => 'Suspend শেষের সময় এখনকার পরে হতে হবে।']);
+            $until = date('Y-m-d H:i:s', $ts);
+        } else {
+            json_response(['success' => false, 'message' => 'সময় বেছে নিন।']);
+        }
+
+        if (!$this->db->SuspendUser($id, $until, $permanent, $reason === '' ? null : $reason, current_user_id())) {
+            json_response(['success' => false, 'message' => 'Suspend করা যায়নি।']);
+        }
+        $when = $permanent ? 'স্থায়ীভাবে' : date('d M Y, h:i A', strtotime($until)) . ' পর্যন্ত';
+        $this->db->CreateNotification($id, 'Account Suspended', "আপনার অ্যাকাউন্ট $when Suspend করা হয়েছে।" . ($reason !== '' ? " কারণ: $reason" : ''), 'danger', null, 'fa-user-slash');
+        json_response(['success' => true, 'message' => ($user->FullName ?: $user->UserName) . " — $when Suspend করা হয়েছে।"]);
+    }
+
+    /** POST /Admin/UnsuspendUser */
+    public function UnsuspendUser_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0) ?? 0;
+        if (!$this->db->LiftSuspension($id, current_user_id())) json_response(['success' => false, 'message' => 'এই ইউজার এখন Suspend অবস্থায় নেই।']);
+        $this->db->CreateNotification($id, 'Suspension Lifted', 'আপনার অ্যাকাউন্টের Suspend তুলে নেওয়া হয়েছে। আবার স্বাগতম!', 'success', null, 'fa-user-check');
+        json_response(['success' => true, 'message' => 'Suspend তুলে নেওয়া হয়েছে।']);
+    }
+
     public function DeleteUser_POST(): void
     {
         $this->requireAdminJson();
@@ -398,6 +449,74 @@ class AdminController extends Controller
 
         $err = null;
         if ($this->db->SaveSiteSettings($s, $err)) json_response(['success' => true, 'message' => 'Settings saved successfully!']);
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
+    // ============================================================
+    // ===== REVIEWS =====
+    // ============================================================
+    /** GET /Admin/Reviews?status= */
+    public function Reviews(): void
+    {
+        $this->requireAdminPage();
+        $status = input_str('status', 'all') ?: 'all';
+        if (!in_array($status, ['all', 'Pending', 'Approved', 'Rejected'], true)) $status = 'all';
+        $this->view(null, $this->db->GetReviews($status), [
+            'CurrentStatus' => $status,
+            'TotalCount' => $this->db->CountReviews(),
+            'ReviewPending' => $this->db->CountReviews('Pending'),
+            'ApprovedCount' => $this->db->CountReviews('Approved'),
+            'RejectedCount' => $this->db->CountReviews('Rejected'),
+        ]);
+    }
+
+    /** POST /Admin/UpdateReviewStatus */
+    public function UpdateReviewStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        $status = (string)input_str('status', '');
+        if (!in_array($status, ['Approved', 'Rejected', 'Pending'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+        $note = trim((string)input_str('note', ''));
+        $r = $this->db->UpdateReviewStatus(input_int('id', 0) ?? 0, $status, $note === '' ? null : mb_substr($note, 0, 300));
+        if (!$r) json_response(['success' => false, 'message' => 'Review not found.']);
+
+        $link = $r->Role === 'Teacher' ? '/Teacher/TeacherDashboard?section=review' : '/User/Dashboard?section=review';
+        if ($status === 'Approved') {
+            $this->db->CreateNotification($r->UserId, 'Review Approved 🎉', 'আপনার রিভিউ এখন হোম পেজে দেখানো হচ্ছে। ধন্যবাদ!', 'success', $link, 'fa-star');
+        } elseif ($status === 'Rejected') {
+            $this->db->CreateNotification($r->UserId, 'Review Not Approved', $note !== '' ? "অ্যাডমিন: $note" : 'আপনার রিভিউটি এবার প্রকাশ করা হয়নি। চাইলে এডিট করে আবার পাঠাতে পারেন।', 'warning', $link, 'fa-star-half-alt');
+        }
+        json_response(['success' => true, 'status' => $status]);
+    }
+
+    /** POST /Admin/DeleteReview */
+    public function DeleteReview_POST(): void
+    {
+        $this->requireAdminJson();
+        if ($this->db->DeleteReview(input_int('id', 0) ?? 0)) json_response(['success' => true]);
+        json_response(['success' => false, 'message' => 'Review not found.']);
+    }
+
+    /** POST /Admin/SaveBecomeTutorSection — হোম পেজের Become a Tutor সেকশনের লেখা */
+    public function SaveBecomeTutorSection_POST(): void
+    {
+        $this->requireAdminJson();
+        $def = become_tutor_defaults();
+        $limits = ['bt_badge' => 40, 'bt_kicker' => 60, 'bt_title' => 30, 'bt_line1' => 70, 'bt_line2' => 70];
+        $vals = ['bt_enabled' => input_bool('bt_enabled') ? '1' : '0'];
+        foreach ($limits as $k => $max) {
+            $v = trim((string)input_str($k, ''));
+            if ($v === '') $v = $def[$k];
+            if (mb_strlen($v) > $max) json_response(['success' => false, 'message' => "লেখাটা খুব বড় (সর্বোচ্চ $max অক্ষর)।"]);
+            $vals[$k] = $v;
+        }
+        $perks = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)input_str('bt_perks', ''))), fn($x) => $x !== ''));
+        if (count($perks) > 6) json_response(['success' => false, 'message' => 'সুবিধা সর্বোচ্চ ৬টা লাইন দেওয়া যাবে।']);
+        foreach ($perks as $pk) if (mb_strlen($pk) > 60) json_response(['success' => false, 'message' => 'প্রতিটি সুবিধা সর্বোচ্চ ৬০ অক্ষর।']);
+        $vals['bt_perks'] = implode("\n", $perks);
+
+        $err = null;
+        if ($this->db->SaveSiteContent($vals, $err)) json_response(['success' => true, 'message' => 'Become a Tutor সেকশন সেভ হয়েছে!']);
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 

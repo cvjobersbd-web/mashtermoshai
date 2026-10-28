@@ -67,7 +67,7 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
     }
 
         .tc-header h1 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 38px;
             font-weight: 700;
             color: #08224A;
@@ -714,7 +714,7 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
     }
 
         .sidebar-card h3 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 20px;
             font-weight: 700;
             color: #08224A;
@@ -1116,7 +1116,7 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
 
             <!-- ADMIN POSTS (OLD SYSTEM) -->
             <div class="list-header">
-                <h3 style="font-family:'Georgia', serif; font-weight:700; color:#08224A; margin-bottom:20px;"><i class="fas fa-clipboard-list"></i> Admin Circulars</h3>
+                <h3 style="font-family: var(--font-heading); font-weight:700; color:#08224A; margin-bottom:20px;"><i class="fas fa-clipboard-list"></i> Admin Circulars</h3>
             </div>
 
             <div class="admin-circular-grid">
@@ -1130,7 +1130,7 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
                                     <span class="badge" style="background:#08224A; color:#FFB300; padding:5px 10px; border-radius:10px; font-family:monospace;"><?= e($post->TuitionCode) ?></span>
                                 <?php endif; ?>
                             </div>
-                            <h3 style="font-size:18px; color:#08224A; font-weight:700; font-family:'Georgia', serif;"><?= e($post->Title) ?></h3>
+                            <h3 style="font-size:18px; color:#08224A; font-weight:700; font-family: var(--font-heading);"><?= e($post->Title) ?></h3>
                             <p style="font-size:13.5px; color:#64748B; margin-bottom:15px; line-height:1.6;">
                                 <?php if (!is_blank($post->StudentClass)): ?>
                                     <span><strong>Class:</strong> <?= e($post->StudentClass) ?></span> <br />

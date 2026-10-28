@@ -102,7 +102,7 @@ $moreNews = is_array($ViewBag->MoreNews) ? $ViewBag->MoreNews : [];
 
     /* ===== Main Article ===== */
     .article-title {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 40px;
         font-weight: 700;
         color: #08224A;
@@ -173,7 +173,7 @@ $moreNews = is_array($ViewBag->MoreNews) ? $ViewBag->MoreNews : [];
     }
 
         .more-news-header h4 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 20px;
             font-weight: 700;
             color: #08224A;
@@ -265,7 +265,7 @@ $moreNews = is_array($ViewBag->MoreNews) ? $ViewBag->MoreNews : [];
     }
 
         .mn-content .mn-title {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 14px;
             font-weight: 700;
             color: #08224A;

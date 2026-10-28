@@ -56,7 +56,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
     }
 
     .td-name {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 20px;
         font-weight: 700;
         color: #08224A;
@@ -511,6 +511,11 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                     <span class="td-badge"><?= e($Model->TotalApplications + count($Model->CircularApplications ?? [])) ?></span>
                 </a>
             </li>
+            <li>
+                <a href="?section=review" class="<?= $activeSection === 'review' ? 'active' : '' ?>">
+                    <i class="fas fa-star"></i> My Review
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -520,7 +525,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
     <div class="td-main">
         <?php
             $tdLabels = ['overview' => 'Overview', 'direct-requests' => 'Direct Requests', 'posts' => 'My Posts',
-                         'comments' => 'Comments', 'responses' => 'Responses', 'applications' => 'Applications'];
+                         'comments' => 'Comments', 'responses' => 'Responses', 'applications' => 'Applications', 'review' => 'My Review'];
             partial('Shared/_DashDrawer', [
                 'ddTarget' => 'tdSidebar',
                 'ddKicker' => 'Teacher Dashboard',
@@ -844,6 +849,17 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 7. MY REVIEW SECTION -->
+        <!-- ============================================================ -->
+        <div class="td-section <?= $activeSection === 'review' ? 'active' : '' ?>" id="sec-review">
+            <h3 style="color:#08224A; font-weight:800; margin-bottom:8px;">My Review</h3>
+            <p style="color:#64748B; font-size:14px; margin-bottom:18px;">
+                টিউটর হিসেবে মাষ্টারমশাই নিয়ে আপনার অভিজ্ঞতা লিখুন। অ্যাডমিন Approve করলে আপনার ছবি ও নামসহ হোম পেজে দেখাবে।
+            </p>
+            <?php partial('Shared/_ReviewForm', ['rvReview' => $Model->MyReview ?? null, 'rvSubtitleHint' => 'যেমন: Dhaka College / Math Tutor']); ?>
         </div>
 
     </div>

@@ -97,7 +97,7 @@ $isLoggedIn = session_get('UserName') != null;
     }
 
     .td-title {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 26px;
         font-weight: 700;
         color: #08224A;

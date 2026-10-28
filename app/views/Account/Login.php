@@ -55,6 +55,21 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
     .form-control-transparent.is-invalid ~ .invalid-feedback {
         display: block;
     }
+
+    /* ===== Suspension notice ===== */
+    .susp-box { border: 1px solid #F5B7B1; background: #FFF5F4; border-radius: 14px; padding: 14px; margin-bottom: 16px; color: #5B1A14; }
+    .susp-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .susp-ic { width: 40px; height: 40px; border-radius: 50%; background: #e74c3c; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .susp-head strong { display: block; font-size: 14.5px; color: #8B1E15; }
+    .susp-head small { font-size: 12px; color: #A0443B; }
+    .susp-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 7px 0; border-top: 1px dashed #F5C6C0; }
+    .susp-row span { color: #A0443B; white-space: nowrap; }
+    .susp-row b { text-align: right; color: #5B1A14; }
+    .susp-left { font-variant-numeric: tabular-nums; }
+    .susp-reason { margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #F5C6C0; }
+    .susp-reason span { font-size: 12px; font-weight: 700; color: #A0443B; }
+    .susp-reason p { margin: 4px 0 0; font-size: 13.5px; white-space: pre-wrap; color: #333; }
+    .susp-help { margin: 10px 0 0; font-size: 12px; color: #A0443B; }
 </style>
 
 <div class="container-fluid py-5" style="background-image: url('https://i.ibb.co.com/93m2hpJS/Chat-GPT-Image-Sep-26-2026-06-11-52-PM.png'); background-size: cover; background-position: center; min-height: 80vh; display: flex; align-items: center;">
@@ -65,6 +80,46 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
                     <h4>Login</h4>
                 </div>
                 <div class="card-body">
+                    <?php $susp = is_array($ViewBag->Suspension) ? $ViewBag->Suspension : null; ?>
+                    <?php if ($susp): ?>
+                        <!-- ✅ অ্যাকাউন্ট Suspend — কারণ ও সময় -->
+                        <div class="susp-box" role="alert">
+                            <div class="susp-head">
+                                <span class="susp-ic"><i class="fas fa-user-slash"></i></span>
+                                <div>
+                                    <strong>আপনার অ্যাকাউন্ট Suspend করা হয়েছে</strong>
+                                    <small><?= $susp['permanent'] ? 'স্থায়ীভাবে' : 'সাময়িকভাবে' ?> — এই সময়ে লগইন করা যাবে না</small>
+                                </div>
+                            </div>
+
+                            <div class="susp-row">
+                                <span><i class="far fa-clock"></i> সময়সীমা</span>
+                                <?php if ($susp['permanent']): ?>
+                                    <b>পারমানেন্ট (স্থায়ী)</b>
+                                <?php else: ?>
+                                    <b><?= e($susp['untilText']) ?> পর্যন্ত</b>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!$susp['permanent'] && $susp['untilIso']): ?>
+                                <div class="susp-row">
+                                    <span><i class="fas fa-hourglass-half"></i> বাকি আছে</span>
+                                    <b class="susp-left" id="suspLeft" data-until="<?= e($susp['untilIso']) ?>">—</b>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!empty($susp['since'])): ?>
+                                <div class="susp-row">
+                                    <span><i class="far fa-calendar"></i> Suspend হয়েছে</span>
+                                    <b><?= e($susp['since']) ?></b>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="susp-reason">
+                                <span><i class="fas fa-comment-dots"></i> কারণ</span>
+                                <p><?= $susp['reason'] !== '' ? e($susp['reason']) : 'অ্যাডমিন কোনো কারণ উল্লেখ করেননি।' ?></p>
+                            </div>
+                            <p class="susp-help">ভুল মনে হলে সাইটের অ্যাডমিনের সাথে যোগাযোগ করুন।</p>
+                        </div>
+                    <?php endif; ?>
                     <?php if ($ViewBag->Error !== null): ?>
                         <div class="alert alert-danger"><?= e($ViewBag->Error) ?></div>
                     <?php endif; ?>
@@ -134,5 +189,22 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
                 e.stopPropagation();
             }
         });
+    })();
+</script>
+
+<script>
+    // ✅ Suspend এর বাকি সময় লাইভ দেখানো
+    (function () {
+        var el = document.getElementById('suspLeft');
+        if (!el) return;
+        var until = new Date(el.getAttribute('data-until')).getTime();
+        function tick() {
+            var ms = until - Date.now();
+            if (ms <= 0) { el.textContent = 'শেষ — এখন লগইন করতে পারবেন'; el.style.color = '#155724'; return; }
+            var s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+            el.textContent = (d ? d + ' দিন ' : '') + (d || h ? h + ' ঘণ্টা ' : '') + m + ' মিনিট ' + sec + ' সেকেন্ড';
+            setTimeout(tick, 1000);
+        }
+        tick();
     })();
 </script>

@@ -15,6 +15,9 @@ try {
         $pendingTeacherRequests = db()->GetPendingTeacherRequestCount();
 } catch (Throwable $e) { }
 
+$pendingReviews = 0;
+try { $pendingReviews = db()->CountReviews('Pending'); } catch (Throwable $e) { }
+
 try {
     if ($ViewBag->PendingTuitionApps !== null)
         $pendingTuitionApps = (int)$ViewBag->PendingTuitionApps;
@@ -275,9 +278,10 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
+        'Reviews' => 'Reviews',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
-    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps;
+    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews;
 ?>
 <div class="admin-mbar">
     <button class="admin-mbar-btn" id="adminSidebarToggle" type="button" aria-label="Open admin menu" aria-controls="adminSidebar" aria-expanded="false">
@@ -355,6 +359,14 @@ try {
         <li>
             <a href="/Admin/ManageNotices" class="<?= $currentAction === 'ManageNotices' || $currentAction === 'AddNotice' || $currentAction === 'EditNotice' ? 'active' : '' ?>">
                 <i class="fas fa-newspaper"></i> News &amp; Announcements
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/Reviews" class="<?= $currentAction === 'Reviews' ? 'active' : '' ?>">
+                <i class="fas fa-star"></i> Reviews
+                <?php if ($pendingReviews > 0): ?>
+                    <span class="badge-sidebar warning"><?= e($pendingReviews) ?></span>
+                <?php endif; ?>
             </a>
         </li>
         <li>

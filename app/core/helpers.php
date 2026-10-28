@@ -457,3 +457,52 @@ function field_error(string $field): string
     return $msg ? e($msg) : '';
 }
 function has_field_error(string $field): bool { return !empty($GLOBALS['__ModelErrors'][$field]); }
+
+// ============================================================
+// ===== হোম পেজের "Become a Tutor" সেকশনের লেখা =====
+// ============================================================
+function become_tutor_defaults(): array
+{
+    return [
+        'bt_enabled' => '1',
+        'bt_badge'   => 'For Teachers',
+        'bt_kicker'  => 'Want to Become a',
+        'bt_title'   => 'TUT[O]R?',
+        'bt_line1'   => 'Be a [master],',
+        'bt_line2'   => 'to grow faster.',
+        'bt_perks'   => "টিউশন পোস্টে Apply\nসরাসরি স্টুডেন্ট রিকোয়েস্ট\nসম্পূর্ণ ফ্রি",
+    ];
+}
+
+function become_tutor_content(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(become_tutor_defaults());
+    return $c;
+}
+
+/** লেখা escape করে [শব্দ] অংশটুকু হাইলাইট span এ মুড়ে দেয় */
+function highlight_brackets(?string $text, string $class): string
+{
+    $safe = e((string)$text);
+    return preg_replace('/\[([^\[\]]{1,60})\]/u', '<span class="' . e($class) . '">$1</span>', $safe);
+}
+
+// ============================================================
+// ===== USER SUSPENSION helpers =====
+// ============================================================
+/** লগইন পেজে দেখানোর জন্য Suspension এর তথ্য */
+function suspension_info(Obj $s): array
+{
+    $until = $s->IsPermanent ? null : (string)$s->SuspendedUntil;
+    $ts = $until ? strtotime($until) : null;
+    return [
+        'reason'    => (string)($s->Reason ?? ''),
+        'permanent' => (bool)$s->IsPermanent,
+        'until'     => $until,
+        'untilText' => $ts ? date('d M Y, h:i A', $ts) : null,
+        'untilIso'  => $ts ? gmdate('Y-m-d\TH:i:s\Z', $ts) : null,
+        'since'     => $s->CreatedAt ? date('d M Y, h:i A', strtotime((string)$s->CreatedAt)) : null,
+    ];
+}
+

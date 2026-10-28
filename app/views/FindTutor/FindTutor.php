@@ -61,7 +61,7 @@ $CommentIso = function ($dt): string {
     }
 
         .ft-header h1 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 36px;
             font-weight: 700;
             color: #08224A;
@@ -1031,7 +1031,7 @@ $CommentIso = function ($dt): string {
         }
 
         .area-tuition-card h3 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 22px;
             font-weight: 700;
             color: white;
@@ -1098,7 +1098,7 @@ $CommentIso = function ($dt): string {
         }
 
     .helper-card h4 {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 18px;
         color: #08224A;
         margin: 0 0 8px;

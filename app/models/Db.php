@@ -980,6 +980,272 @@ class Db
     // ============================================================
     // ===== SITE SETTINGS =====
     // ============================================================
+    // ============================================================
+    // ===== USER SUSPENSION (অ্যাডমিন নির্দিষ্ট সময় বা স্থায়ীভাবে Suspend করে) =====
+    // ============================================================
+    private bool $suspensionsReady = false;
+
+    public function EnsureSuspensionsTable(): void
+    {
+        if ($this->suspensionsReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "UserSuspensions" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "Reason" TEXT NULL,
+                "SuspendedUntil" TEXT NULL, "IsPermanent" INTEGER NOT NULL DEFAULT 0, "CreatedBy" INTEGER NULL,
+                "CreatedAt" TEXT NOT NULL, "LiftedAt" TEXT NULL, "LiftedBy" INTEGER NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `UserSuspensions` (
+                `Id` INT NOT NULL AUTO_INCREMENT,
+                `UserId` INT NOT NULL,
+                `Reason` TEXT NULL,
+                `SuspendedUntil` DATETIME NULL,
+                `IsPermanent` TINYINT(1) NOT NULL DEFAULT 0,
+                `CreatedBy` INT NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `LiftedAt` DATETIME NULL,
+                `LiftedBy` INT NULL,
+                PRIMARY KEY (`Id`),
+                KEY `IX_UserSuspensions_User` (`UserId`, `LiftedAt`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->suspensionsReady = true;
+    }
+
+    private const ACTIVE_SUSPENSION_WHERE = '`LiftedAt` IS NULL AND (`IsPermanent` = 1 OR `SuspendedUntil` > :now)';
+
+    private function mapSuspension(Obj $r): Obj
+    {
+        $r->Id = (int)$r->Id; $r->UserId = (int)$r->UserId; $r->IsPermanent = (bool)(int)$r->IsPermanent;
+        return $r;
+    }
+
+    /** এই মুহূর্তে চালু থাকা Suspension (না থাকলে null) */
+    public function GetActiveSuspension(int $userId): ?Obj
+    {
+        try {
+            $this->EnsureSuspensionsTable();
+            $r = $this->one('SELECT * FROM `UserSuspensions` WHERE `UserId` = :u AND ' . self::ACTIVE_SUSPENSION_WHERE . ' ORDER BY `Id` DESC LIMIT 1',
+                ['u' => $userId, 'now' => now()]);
+            return $r ? $this->mapSuspension($r) : null;
+        } catch (Throwable $e) { error_log('[GetActiveSuspension] ' . $e->getMessage()); return null; }
+    }
+
+    /** @return array<int,Obj> userId => চালু Suspension (অ্যাডমিন তালিকার জন্য) */
+    public function GetActiveSuspensionsMap(): array
+    {
+        try {
+            $this->EnsureSuspensionsTable();
+            $map = [];
+            foreach ($this->all('SELECT * FROM `UserSuspensions` WHERE ' . self::ACTIVE_SUSPENSION_WHERE . ' ORDER BY `Id`', ['now' => now()]) as $r) {
+                $r = $this->mapSuspension($r);
+                $map[$r->UserId] = $r;
+            }
+            return $map;
+        } catch (Throwable $e) { return []; }
+    }
+
+    public function SuspendUser(int $userId, ?string $until, bool $permanent, ?string $reason, ?int $adminId): bool
+    {
+        try {
+            $this->EnsureSuspensionsTable();
+            $this->exec('UPDATE `UserSuspensions` SET `LiftedAt` = :t, `LiftedBy` = :a WHERE `UserId` = :u AND `LiftedAt` IS NULL',
+                ['t' => now(), 'a' => $adminId, 'u' => $userId]);
+            $this->insert('INSERT INTO `UserSuspensions` (`UserId`, `Reason`, `SuspendedUntil`, `IsPermanent`, `CreatedBy`, `CreatedAt`)
+                VALUES (:u, :r, :until, :p, :a, :t)',
+                ['u' => $userId, 'r' => $reason, 'until' => $permanent ? null : $until, 'p' => $permanent ? 1 : 0, 'a' => $adminId, 't' => now()]);
+            return true;
+        } catch (Throwable $e) { error_log('[SuspendUser] ' . $e->getMessage()); return false; }
+    }
+
+    public function LiftSuspension(int $userId, ?int $adminId): bool
+    {
+        try {
+            $this->EnsureSuspensionsTable();
+            return $this->exec('UPDATE `UserSuspensions` SET `LiftedAt` = :t, `LiftedBy` = :a WHERE `UserId` = :u AND `LiftedAt` IS NULL',
+                ['t' => now(), 'a' => $adminId, 'u' => $userId]) > 0;
+        } catch (Throwable $e) { return false; }
+    }
+
+    // ============================================================
+    // ===== REVIEWS (স্টুডেন্ট/টিচারের রিভিউ → অ্যাডমিন Approve → হোম পেজ) =====
+    // ============================================================
+    private bool $reviewsReady = false;
+
+    public function EnsureReviewsTable(): void
+    {
+        if ($this->reviewsReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "Reviews" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL UNIQUE, "Rating" INTEGER NOT NULL DEFAULT 5,
+                "Subtitle" TEXT NULL, "Content" TEXT NOT NULL, "Status" TEXT NOT NULL DEFAULT \'Pending\', "AdminNote" TEXT NULL,
+                "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `Reviews` (
+                `Id` INT NOT NULL AUTO_INCREMENT,
+                `UserId` INT NOT NULL,
+                `Rating` TINYINT NOT NULL DEFAULT 5,
+                `Subtitle` VARCHAR(120) NULL,
+                `Content` TEXT NOT NULL,
+                `Status` VARCHAR(20) NOT NULL DEFAULT 'Pending',
+                `AdminNote` TEXT NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `UpdatedAt` DATETIME NULL,
+                PRIMARY KEY (`Id`),
+                UNIQUE KEY `UX_Reviews_User` (`UserId`),
+                KEY `IX_Reviews_Status` (`Status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->reviewsReady = true;
+    }
+
+    private const REVIEW_SELECT = 'SELECT r.`Id`, r.`UserId`, r.`Rating`, r.`Subtitle`, r.`Content`, r.`Status`, r.`AdminNote`, r.`CreatedAt`, r.`UpdatedAt`,
+            u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, u.`ProfileImageLink`, u.`InstitutionName`
+        FROM `Reviews` r LEFT JOIN `Users` u ON r.`UserId` = u.`Id`';
+
+    private function mapReview(Obj $r): Obj
+    {
+        $r->Id = (int)$r->Id; $r->UserId = (int)$r->UserId; $r->Rating = max(1, min(5, (int)$r->Rating));
+        $r->FullName = $r->FullName ?: ($r->UserName ?: 'User');
+        $r->RoleLabel = $r->Role === 'Teacher' ? 'Tutor' : ($r->Role === 'Admin' ? 'Admin' : 'Student / Parent');
+        $r->Initials = initials($r->FullName, 'U');
+        $r->TimeAgo = time_ago($r->UpdatedAt ?: $r->CreatedAt);
+        return $r;
+    }
+
+    public function GetReviewByUser(int $userId): ?Obj
+    {
+        try {
+            $this->EnsureReviewsTable();
+            $r = $this->one(self::REVIEW_SELECT . ' WHERE r.`UserId` = :u', ['u' => $userId]);
+            return $r ? $this->mapReview($r) : null;
+        } catch (Throwable $e) { error_log('[GetReviewByUser] ' . $e->getMessage()); return null; }
+    }
+
+    /** নতুন রিভিউ বা আগেরটা আপডেট — আপডেট করলে আবার Pending হয়ে অ্যাডমিনের কাছে যায় */
+    public function SaveUserReview(int $userId, int $rating, ?string $subtitle, string $content, ?bool &$isNew = null): bool
+    {
+        try {
+            $this->EnsureReviewsTable();
+            $existing = $this->scalar('SELECT `Id` FROM `Reviews` WHERE `UserId` = :u', ['u' => $userId]);
+            $p = ['u' => $userId, 'r' => max(1, min(5, $rating)), 's' => $subtitle, 'c' => $content, 't' => now()];
+            if ($existing) {
+                $isNew = false;
+                $this->exec("UPDATE `Reviews` SET `Rating` = :r, `Subtitle` = :s, `Content` = :c, `Status` = 'Pending', `AdminNote` = NULL, `UpdatedAt` = :t WHERE `UserId` = :u", $p);
+            } else {
+                $isNew = true;
+                $this->insert("INSERT INTO `Reviews` (`UserId`, `Rating`, `Subtitle`, `Content`, `Status`, `CreatedAt`) VALUES (:u, :r, :s, :c, 'Pending', :t)", $p);
+            }
+            return true;
+        } catch (Throwable $e) { error_log('[SaveUserReview] ' . $e->getMessage()); return false; }
+    }
+
+    /** @return Obj[] */
+    public function GetReviews(?string $status = null): array
+    {
+        try {
+            $this->EnsureReviewsTable();
+            $sql = self::REVIEW_SELECT;
+            $p = [];
+            if ($status !== null && $status !== 'all') { $sql .= ' WHERE r.`Status` = :s'; $p['s'] = $status; }
+            $sql .= " ORDER BY CASE r.`Status` WHEN 'Pending' THEN 0 WHEN 'Approved' THEN 1 ELSE 2 END, COALESCE(r.`UpdatedAt`, r.`CreatedAt`) DESC";
+            return array_map(fn($r) => $this->mapReview($r), $this->all($sql, $p));
+        } catch (Throwable $e) { error_log('[GetReviews] ' . $e->getMessage()); return []; }
+    }
+
+    /** @return Obj[] হোম পেজের জন্য */
+    public function GetApprovedReviews(int $limit = 12): array
+    {
+        try {
+            $this->EnsureReviewsTable();
+            $limit = max(1, min(50, $limit));
+            $rows = $this->all(self::REVIEW_SELECT . " WHERE r.`Status` = 'Approved' AND u.`Id` IS NOT NULL AND u.`IsActive` = 1
+                ORDER BY COALESCE(r.`UpdatedAt`, r.`CreatedAt`) DESC LIMIT $limit");
+            return array_map(fn($r) => $this->mapReview($r), $rows);
+        } catch (Throwable $e) { error_log('[GetApprovedReviews] ' . $e->getMessage()); return []; }
+    }
+
+    public function CountReviews(?string $status = null): int
+    {
+        try {
+            $this->EnsureReviewsTable();
+            return $status === null ? (int)$this->scalar('SELECT COUNT(*) FROM `Reviews`')
+                : (int)$this->scalar('SELECT COUNT(*) FROM `Reviews` WHERE `Status` = :s', ['s' => $status]);
+        } catch (Throwable $e) { return 0; }
+    }
+
+    public function UpdateReviewStatus(int $id, string $status, ?string $note = null): ?Obj
+    {
+        try {
+            $this->EnsureReviewsTable();
+            $n = $this->exec('UPDATE `Reviews` SET `Status` = :s, `AdminNote` = :n, `UpdatedAt` = :t WHERE `Id` = :id',
+                ['s' => $status, 'n' => $note, 't' => now(), 'id' => $id]);
+            if ($n < 1) return null;
+            $r = $this->one(self::REVIEW_SELECT . ' WHERE r.`Id` = :id', ['id' => $id]);
+            return $r ? $this->mapReview($r) : null;
+        } catch (Throwable $e) { error_log('[UpdateReviewStatus] ' . $e->getMessage()); return null; }
+    }
+
+    public function DeleteReview(int $id): bool
+    {
+        try { $this->EnsureReviewsTable(); return $this->exec('DELETE FROM `Reviews` WHERE `Id` = :id', ['id' => $id]) > 0; }
+        catch (Throwable $e) { return false; }
+    }
+
+    // ============================================================
+    // ===== SITE CONTENT (অ্যাডমিন থেকে এডিট করা যায় এমন লেখা) =====
+    // ============================================================
+    private bool $siteContentReady = false;
+
+    public function EnsureSiteContentTable(): void
+    {
+        if ($this->siteContentReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "SiteContents" ("ContentKey" TEXT PRIMARY KEY, "ContentValue" TEXT NULL, "UpdatedAt" TEXT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `SiteContents` (
+                `ContentKey` VARCHAR(100) NOT NULL,
+                `ContentValue` TEXT NULL,
+                `UpdatedAt` DATETIME NULL,
+                PRIMARY KEY (`ContentKey`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->siteContentReady = true;
+    }
+
+    /** @param array<string,string> $defaults  @return array<string,string> (ডাটাবেসে না থাকলে ডিফল্ট) */
+    public function GetSiteContent(array $defaults): array
+    {
+        try {
+            $this->EnsureSiteContentTable();
+            if (!$defaults) return [];
+            $keys = array_keys($defaults);
+            $in = implode(',', array_fill(0, count($keys), '?'));
+            $st = $this->pdo->prepare("SELECT `ContentKey`, `ContentValue` FROM `SiteContents` WHERE `ContentKey` IN ($in)");
+            $st->execute($keys);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                if ($r['ContentValue'] !== null) $defaults[$r['ContentKey']] = (string)$r['ContentValue'];
+            }
+        } catch (Throwable $e) { error_log('[GetSiteContent] ' . $e->getMessage()); }
+        return $defaults;
+    }
+
+    /** @param array<string,string> $values */
+    public function SaveSiteContent(array $values, ?string &$errorMessage = null): bool
+    {
+        $errorMessage = null;
+        try {
+            $this->EnsureSiteContentTable();
+            foreach ($values as $k => $v) {
+                $exists = (int)$this->scalar('SELECT COUNT(*) FROM `SiteContents` WHERE `ContentKey` = :k', ['k' => $k]) > 0;
+                $this->exec($exists
+                    ? 'UPDATE `SiteContents` SET `ContentValue` = :v, `UpdatedAt` = :t WHERE `ContentKey` = :k'
+                    : 'INSERT INTO `SiteContents` (`ContentKey`, `ContentValue`, `UpdatedAt`) VALUES (:k, :v, :t)',
+                    ['k' => $k, 'v' => $v, 't' => now()]);
+            }
+            return true;
+        } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
+    }
+
     public function GetSiteSettings(): SiteSettings
     {
         try {

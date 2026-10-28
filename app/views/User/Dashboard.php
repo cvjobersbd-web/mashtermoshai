@@ -6,7 +6,7 @@ $stats = $ViewBag->Stats ?? obj(['TotalPosts' => 0, 'TotalLikes' => 0, 'TotalCom
 $recentPosts = is_array($ViewBag->RecentPosts) ? $ViewBag->RecentPosts : [];
 $applications = is_array($ViewBag->Applications) ? $ViewBag->Applications : [];
 $pendingApps = count(array_filter($applications, fn($a) => $a->Status === 'Pending'));
-$activeSection = input_str('section') === 'applications' ? 'applications' : 'overview';
+$activeSection = in_array(input_str('section'), ['applications', 'review'], true) ? input_str('section') : 'overview';
 $waLink = function (?string $phone): string {
     $d = preg_replace('/\D/', '', (string)$phone);
     if (str_starts_with($d, '01')) $d = '88' . $d;
@@ -65,7 +65,7 @@ $waLink = function (?string $phone): string {
     }
 
     .ud-name {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 20px;
         font-weight: 700;
         color: #08224A;
@@ -195,7 +195,7 @@ $waLink = function (?string $phone): string {
         font-weight: 800;
         color: #08224A;
         line-height: 1.1;
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
     }
 
     .stat-lbl {
@@ -217,7 +217,7 @@ $waLink = function (?string $phone): string {
     }
 
         .section-header h3 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 20px;
             font-weight: 700;
             color: #08224A;
@@ -468,6 +468,11 @@ $waLink = function (?string $phone): string {
                 </a>
             </li>
             <li>
+                <a href="/User/Dashboard?section=review" class="<?= $activeSection === 'review' ? 'active' : '' ?>">
+                    <i class="fas fa-star"></i> My Review
+                </a>
+            </li>
+            <li>
                 <a href="/Profile">
                     <i class="fas fa-id-card"></i> My Profile
                 </a>
@@ -495,7 +500,7 @@ $waLink = function (?string $phone): string {
         <?php partial('Shared/_DashDrawer', [
             'ddTarget' => 'udSidebar',
             'ddKicker' => 'Student Dashboard',
-            'ddTitle'  => $activeSection === 'applications' ? 'Teacher Applications' : 'Overview',
+            'ddTitle'  => ['applications' => 'Teacher Applications', 'review' => 'My Review'][$activeSection] ?? 'Overview',
             'ddBadge'  => $pendingApps,
         ]); ?>
         <?= csrf_field() ?>
@@ -669,6 +674,17 @@ $waLink = function (?string $phone): string {
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
+        </div>
+
+        <!-- ===================== MY REVIEW ===================== -->
+        <div class="ud-section <?= $activeSection === 'review' ? 'active' : '' ?>" id="sec-review">
+            <div class="section-header">
+                <h3>My Review</h3>
+            </div>
+            <p style="color:#64748B; font-size:14px; margin:-6px 0 16px;">
+                মাষ্টারমশাই নিয়ে আপনার অভিজ্ঞতা লিখুন। অ্যাডমিন Approve করলে আপনার ছবি ও নামসহ হোম পেজে দেখাবে।
+            </p>
+            <?php partial('Shared/_ReviewForm', ['rvReview' => $ViewBag->MyReview, 'rvSubtitleHint' => 'যেমন: Class 9 Student / অভিভাবক']); ?>
         </div>
     </div>
 

@@ -27,7 +27,7 @@ $post = $ViewBag->Post;
     }
 
         .ap-page-header h1 {
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-size: 32px;
             font-weight: 700;
             color: #08224A;
@@ -60,7 +60,7 @@ $post = $ViewBag->Post;
     }
 
     .ap-post-card h2 {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 21px;
         font-weight: 700;
         color: #08224A;
@@ -132,7 +132,7 @@ $post = $ViewBag->Post;
             font-weight: 700;
             color: #08224A;
             margin: 0;
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
         }
 
     /* ======================

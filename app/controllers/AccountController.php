@@ -5,7 +5,10 @@ class AccountController extends Controller
     public function Login(): void
     {
         if (session_get('UserName') !== null) $this->redirectToAction('Index', 'Home');
-        $this->view(null, null, ['ReturnUrl' => input_str('returnUrl')]);
+        // লগইন থাকা অবস্থায় Suspend হলে এখানে পাঠানো হয় — তথ্যটা একবার দেখানো হয়
+        $susp = $_SESSION['__suspension'] ?? null;
+        unset($_SESSION['__suspension']);
+        $this->view(null, null, ['ReturnUrl' => input_str('returnUrl'), 'Suspension' => $susp]);
     }
 
     /** POST /Account/Login */
@@ -16,6 +19,10 @@ class AccountController extends Controller
         $returnUrl = input_str('returnUrl');
 
         $user = ($username !== '' && $password !== '') ? $this->db->AuthenticateUser($username, $password) : null;
+        if ($user && $user->Role !== 'Admin' && ($susp = $this->db->GetActiveSuspension((int)$user->Id))) {
+            // ✅ পাসওয়ার্ড ঠিক, কিন্তু অ্যাকাউন্ট Suspend করা — লগইন হবে না, কারণ ও সময় দেখাবে
+            $this->view('Login', null, ['Suspension' => suspension_info($susp), 'ReturnUrl' => $returnUrl]);
+        }
         if ($user) {
             $this->db->UpdateLastLogin($user->UserName);
             session_regenerate_id(true);

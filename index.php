@@ -53,6 +53,24 @@ $_SESSION['_last'] = time();
 // TempData লোড (আগের রিকোয়েস্ট থেকে)
 $GLOBALS['__TempData'] = new Bag($_SESSION['_tempdata'] ?? []);
 
+// ✅ লগইন থাকা ইউজার Suspend হলে সাথে সাথে লগআউট (প্রতি ২০ সেকেন্ডে একবার যাচাই)
+if (!empty($_SESSION['UserId']) && ($_SESSION['UserRole'] ?? '') !== 'Admin'
+    && (time() - (int)($_SESSION['_susp_chk'] ?? 0)) >= 20) {
+    $_SESSION['_susp_chk'] = time();
+    $__susp = null;
+    try { $__susp = db()->GetActiveSuspension((int)$_SESSION['UserId']); } catch (Throwable $e) { $__susp = null; }
+    if ($__susp) {
+        $_SESSION = [];
+        session_regenerate_id(true);
+        $_SESSION['__suspension'] = suspension_info($__susp);
+        $_SESSION['_last'] = time();
+        if (is_ajax() || !empty($_SERVER['HTTP_REQUESTVERIFICATIONTOKEN'])) {
+            json_response(['success' => false, 'message' => 'আপনার অ্যাকাউন্ট Suspend করা হয়েছে।', 'suspended' => true], 403);
+        }
+        redirect('/Account/Login');
+    }
+}
+
 // ---------- Routing ----------
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';

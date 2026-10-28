@@ -18,6 +18,7 @@ class UserController extends Controller
             'Stats' => $this->db->GetUserDashboardStats($userId),
             'RecentPosts' => $this->db->GetUserCircularPosts($userId, 10),
             'Applications' => $this->db->GetCircularApplicationsForOwner($userId),
+            'MyReview' => $this->db->GetReviewByUser($userId),
         ]);
     }
 

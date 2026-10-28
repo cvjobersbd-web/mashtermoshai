@@ -133,7 +133,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
             font-weight: 800;
             color: #08224A;
             line-height: 1.1;
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
         }
 
         .stat-card .lbl {

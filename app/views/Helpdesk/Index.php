@@ -41,7 +41,7 @@ $userProfileImg = session_get('ProfileImageLink');
     }
 
     .hd-page-header h1 {
-        font-family: 'Georgia', serif;
+        font-family: var(--font-heading);
         font-size: 30px;
         color: #08224A;
         margin: 0 0 4px;

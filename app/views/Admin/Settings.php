@@ -502,6 +502,34 @@ $heroImages = $Model->GetHeroImageList();
             align-items: flex-start;
         }
     }
+
+    /* ===== Become a Tutor preview ===== */
+    .bt-prev-wrap { margin-top: 18px; border: 1px dashed #B9D6E6; border-radius: 16px; padding: 14px; background: #F5FBFF; }
+    .bt-prev-label { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #028EA5; margin-bottom: 10px; }
+    .bt-prev { display: grid; grid-template-columns: 1.1fr 1px 1.2fr 1px .9fr; gap: 18px; align-items: center;
+        background: #fff; border: 1px solid #DCECF5; border-radius: 16px; padding: 18px 20px; }
+    .bt-prev-div { width: 1px; align-self: stretch; background: #DCECF5; }
+    .bt-prev-badge { display: inline-block; background: #CFF2FC; color: #028EA5; font-size: 10px; font-weight: 800; letter-spacing: 1px;
+        text-transform: uppercase; padding: 3px 10px; border-radius: 20px; margin-bottom: 6px; }
+    .bt-prev-badge:empty { display: none; }
+    .bt-prev-kicker { font-size: 14px; color: #334155; }
+    .bt-prev-big { font-family: var(--font-heading); font-weight: 800; font-size: 38px; line-height: 1; color: #08224A; }
+    .bt-prev-big .hl { color: #02B8F5; }
+    .bt-prev-tag { font-size: 16px; font-weight: 600; color: #08224A; line-height: 1.5; }
+    .bt-prev-tag .l2 { display: block; padding-left: 40px; color: #028EA5; }
+    .bt-prev-tag .hl { background: linear-gradient(transparent 60%, rgba(255,179,0,.4) 60%); }
+    .bt-prev-perks { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: #64748B; }
+    .bt-prev-perks li::before { content: '✔'; color: #2ecc71; margin-right: 4px; }
+    .bt-prev-btn { display: inline-flex; align-items: center; gap: 6px; background: #02B8F5; color: #fff; padding: 9px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+    .bt-prev-off { display: none; text-align: center; color: #7A8CA0; font-size: 13px; padding: 10px; }
+    .bt-prev-wrap.off .bt-prev { opacity: .35; filter: grayscale(1); }
+    .bt-prev-wrap.off .bt-prev-off { display: block; }
+    @media (max-width: 768px) {
+        .bt-prev { grid-template-columns: 1fr; text-align: center; }
+        .bt-prev-div { width: 50%; height: 1px; justify-self: center; }
+        .bt-prev-tag .l2 { padding-left: 0; }
+        .bt-prev-perks { justify-content: center; }
+    }
 </style>
 
 <!-- ===== Admin Sidebar (Partial) ===== -->
@@ -772,6 +800,74 @@ $heroImages = $Model->GetHeroImageList();
                     কত সেকেন্ড পর পর ইমেজ পরিবর্তন হবে (1-60 সেকেন্ড)
                 </span>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== ✅ Become a Tutor Section (Home Page) ===== -->
+    <?php $btc = become_tutor_content(); ?>
+    <div class="settings-card" id="btSettings">
+        <h5><i class="fas fa-chalkboard-teacher"></i> Home — "Become a Tutor" Section</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের "Become a Tutor" সেকশনের লেখা এখান থেকে বদলান।
+            কোনো অক্ষর বা শব্দ রঙিন করতে <code>[ ]</code> দিয়ে ঘিরে দিন — যেমন <code>TUT[O]R?</code> বা <code>Be a [master],</code>
+        </p>
+
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="bt_enabled" <?= $btc['bt_enabled'] !== '0' ? 'checked' : '' ?> oninput="btPreview()" />
+            <label class="form-check-label fw-semibold" for="bt_enabled">হোম পেজে সেকশনটা দেখাও</label>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold" for="bt_badge">ছোট ব্যাজ</label>
+                <input type="text" class="form-control" id="bt_badge" maxlength="40" value="<?= e($btc['bt_badge']) ?>" oninput="btPreview()" placeholder="For Teachers" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold" for="bt_kicker">উপরের লাইন</label>
+                <input type="text" class="form-control" id="bt_kicker" maxlength="60" value="<?= e($btc['bt_kicker']) ?>" oninput="btPreview()" placeholder="Want to Become a" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold" for="bt_title">বড় শিরোনাম</label>
+                <input type="text" class="form-control" id="bt_title" maxlength="30" value="<?= e($btc['bt_title']) ?>" oninput="btPreview()" placeholder="TUT[O]R?" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="bt_line1">স্লোগান — প্রথম লাইন</label>
+                <input type="text" class="form-control" id="bt_line1" maxlength="70" value="<?= e($btc['bt_line1']) ?>" oninput="btPreview()" placeholder="Be a [master]," />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="bt_line2">স্লোগান — দ্বিতীয় লাইন</label>
+                <input type="text" class="form-control" id="bt_line2" maxlength="70" value="<?= e($btc['bt_line2']) ?>" oninput="btPreview()" placeholder="to grow faster." />
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold" for="bt_perks">সুবিধাগুলো <span style="color:#7A8CA0; font-weight:400;">(প্রতি লাইনে একটা, সর্বোচ্চ ৬টা)</span></label>
+                <textarea class="form-control" id="bt_perks" rows="3" oninput="btPreview()"><?= e($btc['bt_perks']) ?></textarea>
+            </div>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="bt-prev-wrap">
+            <div class="bt-prev-label"><i class="fas fa-eye"></i> Live Preview</div>
+            <div class="bt-prev" id="btPrev">
+                <div>
+                    <span class="bt-prev-badge" id="btpBadge"></span>
+                    <div class="bt-prev-kicker" id="btpKicker"></div>
+                    <div class="bt-prev-big" id="btpTitle"></div>
+                </div>
+                <div class="bt-prev-div"></div>
+                <div>
+                    <div class="bt-prev-tag"><span id="btpL1"></span><span class="l2" id="btpL2"></span></div>
+                    <ul class="bt-prev-perks" id="btpPerks"></ul>
+                </div>
+                <div class="bt-prev-div"></div>
+                <div style="text-align:center;"><span class="bt-prev-btn"><i class="fas fa-paper-plane"></i> Apply Now</span></div>
+            </div>
+            <div class="bt-prev-off" id="btPrevOff"><i class="fas fa-eye-slash"></i> সেকশনটা এখন হোম পেজে লুকানো থাকবে</div>
+        </div>
+
+        <div class="text-end mt-3">
+            <button type="button" class="btn-save" id="btSaveBtn" onclick="saveBecomeTutor()">
+                <i class="fas fa-save"></i> Save Section Text
+            </button>
         </div>
     </div>
 
@@ -1280,6 +1376,46 @@ $heroImages = $Model->GetHeroImageList();
                     btn.disabled = false;
                     alert('Error: ' + err.message);
                 });
+        }
+
+        // ============================================================
+        // ===== BECOME A TUTOR SECTION (Home) =====
+        // ============================================================
+        function btHighlight(text) {
+            return escapeHtml(text || '').replace(/\[([^\[\]]{1,60})\]/g, '<span class="hl">$1</span>');
+        }
+        function btPreview() {
+            var v = function (id) { return document.getElementById(id).value; };
+            document.getElementById('btpBadge').textContent = v('bt_badge').trim();
+            document.getElementById('btpKicker').textContent = v('bt_kicker');
+            document.getElementById('btpTitle').innerHTML = btHighlight(v('bt_title'));
+            document.getElementById('btpL1').innerHTML = btHighlight(v('bt_line1'));
+            document.getElementById('btpL2').innerHTML = btHighlight(v('bt_line2'));
+            document.getElementById('btpPerks').innerHTML = v('bt_perks').split(/\r?\n/).map(function (x) { return x.trim(); })
+                .filter(Boolean).slice(0, 6).map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('');
+            document.querySelector('.bt-prev-wrap').classList.toggle('off', !document.getElementById('bt_enabled').checked);
+        }
+        document.addEventListener('DOMContentLoaded', btPreview);
+
+        function saveBecomeTutor() {
+            var fd = new FormData();
+            ['bt_badge', 'bt_kicker', 'bt_title', 'bt_line1', 'bt_line2', 'bt_perks'].forEach(function (id) {
+                fd.append(id, document.getElementById(id).value);
+            });
+            fd.append('bt_enabled', document.getElementById('bt_enabled').checked ? 'true' : 'false');
+            fd.append('__RequestVerificationToken', getToken());
+
+            var btn = document.getElementById('btSaveBtn');
+            var html = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+            fetch('/Admin/SaveBecomeTutorSection', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    btn.innerHTML = html; btn.disabled = false;
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                })
+                .catch(function (e) { btn.innerHTML = html; btn.disabled = false; alert('Error: ' + e.message); });
         }
 
         // ===== Enter key on hero URL input =====

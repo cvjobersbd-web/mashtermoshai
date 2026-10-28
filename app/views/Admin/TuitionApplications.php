@@ -53,7 +53,7 @@ $ViewData['Title'] = 'Tuition Applications - Admin Panel';
             font-weight: 800;
             color: #08224A;
             line-height: 1.1;
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
         }
 
         .stat-box .lbl {
@@ -591,7 +591,7 @@ $ViewData['Title'] = 'Tuition Applications - Admin Panel';
          ====================== -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h2 style="color:#08224A; margin:0; font-family:'Georgia',serif; font-weight:700;">
+            <h2 style="color:#08224A; margin:0; font-family: var(--font-heading); font-weight:700;">
                 <i class="fas fa-user-check me-2"></i>Tuition Applications
             </h2>
             <p style="color:#64748B; margin:6px 0 0 0; font-size:14px;">

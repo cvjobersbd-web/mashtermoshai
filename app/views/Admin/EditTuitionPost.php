@@ -27,7 +27,7 @@ $ViewData['Title'] = 'Edit Tuition Post - Admin Panel';
         .page-header h2 {
             color: #08224A;
             margin: 0;
-            font-family: 'Georgia', serif;
+            font-family: var(--font-heading);
             font-weight: 700;
             font-size: 26px;
             display: flex;

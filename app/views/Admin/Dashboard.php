@@ -221,6 +221,18 @@ $ViewBag->PendingCount = $pendingTeacherCount;
             height: 60px;
         }
     }
+
+    /* ===== Suspend ===== */
+    .susp-badge { background: #08224A; color: #fff; margin-left: 4px; }
+    .susp-until { display: block; font-size: 11px; color: #e74c3c; margin-top: 3px; white-space: nowrap; }
+    .susp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .susp-chips label { cursor: pointer; margin: 0; }
+    .susp-chips input { position: absolute; opacity: 0; pointer-events: none; }
+    .susp-chips span { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; border: 1.5px solid #DCECF5; background: #fff; font-size: 13.5px; font-weight: 600; color: #334155; transition: all .15s; }
+    .susp-chips input:checked + span { background: #02B8F5; border-color: #02B8F5; color: #fff; }
+    .susp-chips .perm input:checked + span { background: #e74c3c; border-color: #e74c3c; }
+    .susp-chips input:focus-visible + span { outline: 2px solid #08224A; outline-offset: 2px; }
+    .susp-summary { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #FFF5F4; border: 1px solid #F5C6C0; color: #8B1E15; font-size: 13px; }
 </style>
 
 <!-- ===== Admin Sidebar (Partial) ===== -->
@@ -377,6 +389,13 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                         $statusText = $user->IsActive ? 'Active' : 'Inactive';
                                     ?>
                                     <span class="badge <?= e($statusClass) ?>"><?= e($statusText) ?></span>
+                                    <?php $sp = $ViewBag->Suspensions[$user->Id] ?? null; ?>
+                                    <?php if ($sp): ?>
+                                        <span class="badge susp-badge" title="<?= e($sp->IsPermanent ? 'Permanent' : 'Until ' . fmt_date($sp->SuspendedUntil, 'd M Y, h:i A')) ?><?= !is_blank($sp->Reason) ? ' — ' . e($sp->Reason) : '' ?>">
+                                            <i class="fas fa-user-slash"></i> Suspended
+                                        </span>
+                                        <small class="susp-until"><?= $sp->IsPermanent ? 'Permanent' : 'till ' . e(fmt_date($sp->SuspendedUntil, 'd M, h:i A')) ?></small>
+                                    <?php endif; ?>
                                 </td>
                                 <td data-label="Created"><?= e(fmt_date($user->CreatedAt, 'd/m/Y')) ?></td>
                                 <td data-label="Last Login"><?= e(fmt_date($user->LastLoginAt, 'd/m/Y H:i', 'Never')) ?></td>
@@ -397,6 +416,17 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                             title="<?= e($toggleTitle) ?>">
                                         <i class="fas <?= e($toggleIcon) ?>"></i>
                                     </button>
+                                    <?php if ($user->Role !== 'Admin'): ?>
+                                        <?php if ($sp): ?>
+                                            <button class="btn btn-sm btn-outline-success" onclick="unsuspendUser(<?= (int)$user->Id ?>, <?= e(js($user->FullName ?: $user->UserName)) ?>)" title="Unsuspend">
+                                                <i class="fas fa-user-check"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn btn-sm btn-dark" onclick="openSuspend(<?= (int)$user->Id ?>, <?= e(js($user->FullName ?: $user->UserName)) ?>)" title="Suspend">
+                                                <i class="fas fa-user-slash"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                     <?php if ($user->UserName !== 'admin'): ?>
                                         <button class="btn btn-sm btn-danger" onclick="deleteUser(<?= (int)$user->Id ?>)" title="Delete">
                                             <i class="fas fa-trash"></i>
@@ -407,6 +437,50 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ✅ Suspend Modal ===== -->
+<div class="modal fade" id="suspendModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#08224A; color:#fff;">
+                <h5 class="modal-title" style="color:#fff;"><i class="fas fa-user-slash me-2"></i>Suspend User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="suspUserId" />
+                <p style="margin:0 0 12px; color:#334155;">ইউজার: <strong id="suspUserName"></strong></p>
+
+                <label class="form-label fw-semibold">কতদিনের জন্য Suspend?</label>
+                <div class="susp-chips">
+                    <label><input type="radio" name="suspDur" value="1h" /> <span>১ ঘণ্টা</span></label>
+                    <label><input type="radio" name="suspDur" value="1d" checked /> <span>১ দিন</span></label>
+                    <label><input type="radio" name="suspDur" value="2d" /> <span>২ দিন</span></label>
+                    <label><input type="radio" name="suspDur" value="3d" /> <span>৩ দিন</span></label>
+                    <label><input type="radio" name="suspDur" value="7d" /> <span>৭ দিন</span></label>
+                    <label><input type="radio" name="suspDur" value="30d" /> <span>৩০ দিন</span></label>
+                    <label><input type="radio" name="suspDur" value="custom" /> <span><i class="far fa-calendar-alt"></i> নিজে সেট করুন</span></label>
+                    <label class="perm"><input type="radio" name="suspDur" value="permanent" /> <span><i class="fas fa-ban"></i> পারমানেন্ট</span></label>
+                </div>
+
+                <div id="suspCustomBox" style="display:none;" class="mt-3">
+                    <label class="form-label fw-semibold" for="suspUntil">কখন পর্যন্ত?</label>
+                    <input type="datetime-local" class="form-control" id="suspUntil" />
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label fw-semibold" for="suspReason">কারণ <span style="font-weight:400; color:#7A8CA0;">(ঐচ্ছিক — ইউজার লগইন পেজে দেখতে পাবে)</span></label>
+                    <textarea class="form-control" id="suspReason" rows="3" maxlength="500" placeholder="যেমন: ভুয়া টিউশন পোস্ট / অশোভন কমেন্ট"></textarea>
+                </div>
+
+                <div class="susp-summary" id="suspSummary"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="suspSubmit" onclick="submitSuspend()"><i class="fas fa-user-slash me-1"></i> Suspend</button>
             </div>
         </div>
     </div>
@@ -652,6 +726,73 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                     if (data.success) { location.reload(); }
                 })
                 .catch(function () { alert('Error toggling user status'); });
+        }
+
+        // ============================================================
+        // ===== ✅ SUSPEND / UNSUSPEND =====
+        // ============================================================
+        function suspToken() { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; }
+        function suspDur() { var r = document.querySelector('input[name="suspDur"]:checked'); return r ? r.value : ''; }
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+        function toLocalInput(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+        function suspUpdateSummary() {
+            var d = suspDur(), box = document.getElementById('suspSummary');
+            document.getElementById('suspCustomBox').style.display = d === 'custom' ? 'block' : 'none';
+            var add = { '1h': 3600e3, '1d': 864e5, '2d': 2 * 864e5, '3d': 3 * 864e5, '7d': 7 * 864e5, '30d': 30 * 864e5 }[d];
+            var until = null;
+            if (add) until = new Date(Date.now() + add);
+            if (d === 'custom') { var v = document.getElementById('suspUntil').value; until = v ? new Date(v) : null; }
+            if (d === 'permanent') box.innerHTML = '<i class="fas fa-ban"></i> ইউজার <b>স্থায়ীভাবে</b> লগইন করতে পারবে না (আপনি Unsuspend না করা পর্যন্ত)।';
+            else if (until) box.innerHTML = '<i class="far fa-clock"></i> Suspend থাকবে <b>' + until.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) + '</b> পর্যন্ত।';
+            else box.innerHTML = '<i class="far fa-clock"></i> তারিখ ও সময় দিন।';
+        }
+
+        function openSuspend(id, name) {
+            document.getElementById('suspUserId').value = id;
+            document.getElementById('suspUserName').textContent = name;
+            document.getElementById('suspReason').value = '';
+            document.querySelector('input[name="suspDur"][value="1d"]').checked = true;
+            var min = new Date(Date.now() + 5 * 60e3);
+            var u = document.getElementById('suspUntil');
+            u.min = toLocalInput(min); u.value = toLocalInput(new Date(Date.now() + 864e5));
+            suspUpdateSummary();
+            new bootstrap.Modal(document.getElementById('suspendModal')).show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('input[name="suspDur"]').forEach(function (r) { r.addEventListener('change', suspUpdateSummary); });
+            var u = document.getElementById('suspUntil'); if (u) u.addEventListener('input', suspUpdateSummary);
+        });
+
+        function submitSuspend() {
+            var d = suspDur();
+            var fd = new FormData();
+            fd.append('id', document.getElementById('suspUserId').value);
+            fd.append('duration', d);
+            fd.append('reason', document.getElementById('suspReason').value.trim());
+            if (d === 'custom') {
+                var v = document.getElementById('suspUntil').value;
+                if (!v) { alert('তারিখ ও সময় দিন।'); return; }
+                // ব্রাউজারের লোকাল সময় → সার্ভার (Asia/Dhaka) এর জন্য "Y-m-d H:i"
+                fd.append('until', v.replace('T', ' '));
+            }
+            fd.append('__RequestVerificationToken', suspToken());
+            var btn = document.getElementById('suspSubmit'); btn.disabled = true;
+            fetch('/Admin/SuspendUser', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { alert(data.message); if (data.success) location.reload(); else btn.disabled = false; })
+                .catch(function () { alert('Error suspending user'); btn.disabled = false; });
+        }
+
+        function unsuspendUser(id, name) {
+            if (!confirm(name + ' — Suspend তুলে নেবেন? ইউজার আবার লগইন করতে পারবে।')) return;
+            var fd = new FormData();
+            fd.append('id', id); fd.append('__RequestVerificationToken', suspToken());
+            fetch('/Admin/UnsuspendUser', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { alert(data.message); if (data.success) location.reload(); })
+                .catch(function () { alert('Error'); });
         }
 
         // ===== Delete User =====

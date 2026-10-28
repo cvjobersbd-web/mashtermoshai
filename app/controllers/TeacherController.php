@@ -7,9 +7,10 @@ class TeacherController extends Controller
     /** GET /Teacher/RequestForm */
     public function RequestForm(): void
     {
-        if (session_get('UserName') === null) $this->redirectToAction('Login', 'Account');
+        if (session_get('UserName') === null || (current_user_id() ?? 0) === 0) {
+            redirect('/Account/Login?returnUrl=' . rawurlencode('/Teacher/RequestForm'));
+        }
         $userId = current_user_id() ?? 0;
-        if ($userId === 0) $this->redirectToAction('Login', 'Account');
 
         $status = $this->db->GetUserTeacherRequestStatus($userId);
         if ($status === 'Pending') {
@@ -98,6 +99,7 @@ class TeacherController extends Controller
             'PostStats' => $this->db->GetTeacherPostStats($userId),
             'TutorRequests' => $this->db->GetTeacherDirectRequests($user->FullName),
             'CircularApplications' => $this->db->GetCircularApplicationsByTeacher($userId),
+            'MyReview' => $this->db->GetReviewByUser($userId),
         ]);
         $this->view(null, $model);
     }
