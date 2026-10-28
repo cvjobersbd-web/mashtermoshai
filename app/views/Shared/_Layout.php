@@ -21,7 +21,49 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title><?= e($ViewData['Title']) ?> - <?= e($safeSiteName) ?></title>
+<?php
+    // ===== ✅ SEO: টাইটেল, বর্ণনা, favicon, Google এর জন্য সাইটের নাম =====
+    $__route = $GLOBALS['__route'] ?? [];
+    $__isHome = strcasecmp((string)($__route['controller'] ?? ''), 'Home') === 0 && strcasecmp((string)($__route['action'] ?? ''), 'Index') === 0;
+    $__scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
+    $__host = preg_replace('/[^A-Za-z0-9.\-:]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'mashtermoshai.com'));
+    $__origin = $__scheme . '://' . $__host;
+    $__abs = fn(string $u) => preg_match('#^https?://#i', $u) ? $u : $__origin . '/' . ltrim($u, '/');
+    $__pageTitle = $__isHome
+        ? $safeSiteName . ' – Find Home Tutors & Tuitions in Bangladesh'
+        : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName;
+    $__desc = (string)($ViewData['Description'] ?? ($safeSiteName . ' — বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া। অভিজ্ঞ হোম টিউটর খুঁজুন অথবা টিউটর হিসেবে টিউশনে Apply করুন — সহজ, নিরাপদ ও দ্রুত।'));
+    $__favicon = $__abs($layoutSettings->GetFaviconUrl());
+    $__altNames = array_values(array_filter(['মাষ্টারমশাই', 'Mashter Moshai', 'MashterMoshai', $__host], fn($n) => strcasecmp($n, $safeSiteName) !== 0));
+    ?>
+    <title><?= e($__pageTitle) ?></title>
+    <meta name="description" content="<?= e($__desc) ?>" />
+    <link rel="canonical" href="<?= e($__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>" />
+
+    <!-- ✅ ট্যাব আইকন + Google সার্চ রেজাল্টের আইকন (অ্যাডমিন সেটিংয়ের Navbar Logo) -->
+    <link rel="icon" href="<?= e($__favicon) ?>" />
+    <link rel="shortcut icon" href="<?= e($__favicon) ?>" />
+    <link rel="apple-touch-icon" href="<?= e($__favicon) ?>" />
+
+    <!-- ✅ Facebook / WhatsApp এ লিংক শেয়ার করলে যা দেখাবে -->
+    <meta property="og:site_name" content="<?= e($safeSiteName) ?>" />
+    <meta property="og:title" content="<?= e($__pageTitle) ?>" />
+    <meta property="og:description" content="<?= e($__desc) ?>" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="<?= e($__origin . ($_SERVER['REQUEST_URI'] ?? '/')) ?>" />
+    <meta property="og:image" content="<?= e($__favicon) ?>" />
+    <meta name="application-name" content="<?= e($safeSiteName) ?>" />
+    <meta name="apple-mobile-web-app-title" content="<?= e($safeSiteName) ?>" />
+    <?php if ($__isHome): ?>
+    <!-- ✅ Google যেন সার্চ রেজাল্টে সঠিক সাইটের নাম ও লোগো দেখায় -->
+    <script type="application/ld+json"><?= json_encode([
+        '@context' => 'https://schema.org',
+        '@graph' => [
+            ['@type' => 'WebSite', 'name' => $safeSiteName, 'alternateName' => $__altNames, 'url' => $__origin . '/'],
+            ['@type' => 'Organization', 'name' => $safeSiteName, 'url' => $__origin . '/', 'logo' => $__favicon],
+        ],
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+    <?php endif; ?>
 
     <!-- ✅ ফন্ট: শিরোনামে Sora, বাকি লেখায় Poppins (বাংলা অক্ষরের জন্য Hind Siliguri) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

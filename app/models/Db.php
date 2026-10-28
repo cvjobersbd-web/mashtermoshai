@@ -1269,7 +1269,7 @@ class Db
                 'accent' => $s->AccentColor ?: '#FFB300', 'text' => $s->TextColor ?: '#334155',
                 'navbg' => $s->NavbarBgColor ?: '#134856', 'footbg' => $s->FooterBgColor ?: '#08224A',
                 'tutor' => is_blank($s->TutorSectionImageUrl) ? SiteSettings::DEFAULT_TUTOR_IMG : $s->TutorSectionImageUrl,
-                'site' => is_blank($s->SiteName) ? 'SMART TUTOR HUB' : trim($s->SiteName),
+                'site' => is_blank($s->SiteName) ? 'Mashter Moshai' : trim($s->SiteName),
                 'navlogo' => is_blank($s->NavbarLogoUrl) ? SiteSettings::DEFAULT_LOGO : trim($s->NavbarLogoUrl),
                 'footlogo' => is_blank($s->FooterLogoUrl) ? SiteSettings::DEFAULT_LOGO : trim($s->FooterLogoUrl),
                 'logosize' => max(24, min(100, $s->LogoSizePx)), 'shape' => $shape, 'ts' => now(),

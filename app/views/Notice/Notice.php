@@ -528,7 +528,7 @@ $selectedCategory = (string)($ViewBag->SelectedCategory ?? 'all');
     <!-- Header -->
     <div class="notice-header">
         <h1>News &amp; Announcements</h1>
-        <p>Stay updated with the latest workshops, new courses, events, competition results, and important announcements from SMART TUTOR HUB.</p>
+        <p>Stay updated with the latest workshops, new courses, events, competition results, and important announcements from <?= e(site_settings()->GetSafeSiteName()) ?>.</p>
     </div>
 
     <!-- Search Bar -->
@@ -603,7 +603,7 @@ $selectedCategory = (string)($ViewBag->SelectedCategory ?? 'all');
             <div class="ann-header">
                 <div class="ann-header-left">
                     <h3><i class="fas fa-bullhorn"></i> Announcements</h3>
-                    <p>Important updates from SMART TUTOR HUB</p>
+                    <p>Important updates from <?= e(site_settings()->GetSafeSiteName()) ?></p>
                 </div>
                 <span class="ann-header-count"><?= count($announcements) ?> Active</span>
             </div>

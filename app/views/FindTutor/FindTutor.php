@@ -1,5 +1,5 @@
 <?php
-$ViewData['Title'] = 'Find Tutor - Smart Tutor Hub';
+$ViewData['Title'] = 'Find Tutor';
 
 $isLoggedIn = session_get('UserName') !== null;
 $userRole = session_get('UserRole');

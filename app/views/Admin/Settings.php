@@ -572,7 +572,7 @@ $heroImages = $Model->GetHeroImageList();
                 <label class="form-label">Site Name</label>
                 <input type="text" id="siteNameInput" class="form-control"
                        value="<?= e($Model->SiteName) ?>" maxlength="100"
-                       placeholder="e.g. SMART TUTOR HUB" />
+                       placeholder="e.g. Mashter Moshai" />
                 <span class="info-note">
                     <i class="fas fa-info-circle"></i> নেভবারের পাশে ও ফুটারে দেখাবে
                 </span>
@@ -1137,7 +1137,7 @@ $heroImages = $Model->GetHeroImageList();
         function updateLogoPreview() {
             const size = getCurrentLogoSize();
             const radius = getShapeRadius();
-            const name = (document.getElementById('siteNameInput').value || '').trim() || 'SMART TUTOR HUB';
+            const name = (document.getElementById('siteNameInput').value || '').trim() || 'Mashter Moshai';
 
             const navImg = document.getElementById('navbarLogoPreview');
             const footImg = document.getElementById('footerLogoPreview');
@@ -1471,7 +1471,7 @@ $heroImages = $Model->GetHeroImageList();
             formData.append('TutorSectionImageUrl', document.getElementById('tutorSectionImageUrl').value || '');
 
             // ✅ Branding
-            formData.append('SiteName', document.getElementById('siteNameInput').value.trim() || 'SMART TUTOR HUB');
+            formData.append('SiteName', document.getElementById('siteNameInput').value.trim() || 'Mashter Moshai');
             formData.append('NavbarLogoUrl', document.getElementById('navbarLogoUrlInput').value.trim() || '');
             formData.append('FooterLogoUrl', document.getElementById('footerLogoUrlInput').value.trim() || '');
             formData.append('LogoSizePx', getCurrentLogoSize());

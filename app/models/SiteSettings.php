@@ -10,7 +10,7 @@ class SiteSettings
     public int $Id = 0;
     public string $HeroImageUrls = '';
     public string $TutorSectionImageUrl = self::DEFAULT_TUTOR_IMG;
-    public string $SiteName = 'SMART TUTOR HUB';
+    public string $SiteName = 'Mashter Moshai';
     public string $NavbarLogoUrl = self::DEFAULT_LOGO;
     public string $FooterLogoUrl = self::DEFAULT_LOGO;
     public int $LogoSizePx = 56;
@@ -92,6 +92,12 @@ class SiteSettings
         return is_blank($this->NavbarLogoUrl) ? self::DEFAULT_LOGO : $this->NavbarLogoUrl;
     }
 
+    /** ট্যাব আইকন / Google রেজাল্টের আইকন — নেভবার লোগোই ব্যবহার হয় */
+    public function GetFaviconUrl(): string
+    {
+        return $this->GetNavbarLogo();
+    }
+
     public function GetFooterLogo(): string
     {
         return is_blank($this->FooterLogoUrl) ? self::DEFAULT_LOGO : $this->FooterLogoUrl;
@@ -99,6 +105,6 @@ class SiteSettings
 
     public function GetSafeSiteName(): string
     {
-        return is_blank($this->SiteName) ? 'SMART TUTOR HUB' : trim($this->SiteName);
+        return is_blank($this->SiteName) ? 'Mashter Moshai' : trim($this->SiteName);
     }
 }

@@ -1,5 +1,5 @@
 <?php
-$ViewData['Title'] = 'Apply for Tuition - Smart Tutor Hub';
+$ViewData['Title'] = 'Apply for Tuition';
 $post = $ViewBag->Post;
 ?>
 

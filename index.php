@@ -79,6 +79,13 @@ if ($base !== '' && str_starts_with($path, $base)) $path = substr($path, strlen(
 $path = trim(rawurldecode($path), '/');
 if (strcasecmp($path, 'index.php') === 0) $path = '';
 
+// ✅ ব্রাউজার ও Google /favicon.ico খোঁজে — সাইটের লোগোতে পাঠিয়ে দাও
+if (in_array(strtolower($path), ['favicon.ico', 'apple-touch-icon.png', 'apple-touch-icon-precomposed.png'], true)) {
+    header('Cache-Control: public, max-age=86400');
+    header('Location: ' . site_settings()->GetFaviconUrl(), true, 301);
+    exit;
+}
+
 $segments = $path === '' ? [] : explode('/', $path);
 $controllerName = $segments[0] ?? 'Home';
 $actionName = $segments[1] ?? 'Index';

@@ -1,5 +1,5 @@
 <?php
-$ViewData['Title'] = 'Tuition Circular - Smart Tutor Hub';
+$ViewData['Title'] = 'Tuition Circular';
 $isLoggedIn = session_get('UserName') != null;
 $userRole = session_get('UserRole');
 $isTeacher = $userRole == 'Teacher';

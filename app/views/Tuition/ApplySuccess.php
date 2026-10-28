@@ -1,5 +1,5 @@
 <?php
-$ViewData['Title'] = 'Application Submitted - Smart Tutor Hub';
+$ViewData['Title'] = 'Application Submitted';
 ?>
 
 <style>

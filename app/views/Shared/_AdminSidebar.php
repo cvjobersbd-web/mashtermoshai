@@ -299,7 +299,7 @@ try {
     <div class="admin-sidebar-brand">
         <div>
             <h4><i class="fas fa-shield-alt me-2"></i>Admin Panel</h4>
-            <small>Smart Tutor Hub</small>
+            <small><?= e(site_settings()->GetSafeSiteName()) ?></small>
         </div>
         <button type="button" class="admin-sidebar-close" id="adminSidebarClose" aria-label="Close admin menu"><i class="fas fa-times"></i></button>
     </div>
