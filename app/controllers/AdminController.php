@@ -459,14 +459,12 @@ class AdminController extends Controller
     public function Reviews(): void
     {
         $this->requireAdminPage();
-        $status = input_str('status', 'all') ?: 'all';
-        if (!in_array($status, ['all', 'Pending', 'Approved', 'Rejected'], true)) $status = 'all';
-        $this->view(null, $this->db->GetReviews($status), [
-            'CurrentStatus' => $status,
-            'TotalCount' => $this->db->CountReviews(),
-            'ReviewPending' => $this->db->CountReviews('Pending'),
-            'ApprovedCount' => $this->db->CountReviews('Approved'),
-            'RejectedCount' => $this->db->CountReviews('Rejected'),
+        $all = $this->db->GetReviews('all');
+        $avg = $all ? round(array_sum(array_map(fn($r) => (int)$r->Rating, $all)) / count($all), 1) : 0;
+        $this->view(null, $all, [
+            'TotalCount' => count($all),
+            'LiveCount' => count(array_filter($all, fn($r) => $r->Status === 'Approved')),
+            'AvgRating' => $avg,
         ]);
     }
 

@@ -1,18 +1,11 @@
 <?php
 $ViewData['Title'] = 'Reviews';
 $reviews = is_array($Model) ? $Model : [];
-$cur = (string)($ViewBag->CurrentStatus ?? 'all');
-$tabs = [
-    'all' => ['All', 'fa-list', (int)$ViewBag->TotalCount],
-    'Pending' => ['Pending', 'fa-hourglass-half', (int)$ViewBag->ReviewPending],
-    'Approved' => ['Approved', 'fa-check-circle', (int)$ViewBag->ApprovedCount],
-    'Rejected' => ['Rejected', 'fa-times-circle', (int)$ViewBag->RejectedCount],
-];
 ?>
 <style>
     .admin-main-content { margin-left: 250px; padding: 20px; min-height: calc(100vh - 80px); }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
     .stat-box { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-left: 4px solid #02B8F5; }
     .stat-box.pending { border-left-color: #f39c12; }
     .stat-box.approved { border-left-color: #2ecc71; }
@@ -55,18 +48,21 @@ $tabs = [
     .rv-act.reject { background: #fff; color: #e74c3c; border: 1px solid #e74c3c; }
     .rv-act.pend { background: #fff; color: #64748B; border: 1px solid #DCECF5; }
     .rv-act.del { background: #fff; color: #e74c3c; border: 1px solid #f5c6cb; margin-left: auto; }
+    .rv-act.del:hover { background: #e74c3c; color: #fff; opacity: 1; }
 
     .rv-empty { text-align: center; padding: 60px 20px; background: #fff; border-radius: 16px; border: 2px dashed #DCECF5; color: #7A8CA0; }
     .rv-empty i { font-size: 46px; color: #B9D6E6; margin-bottom: 12px; display: block; }
 
     @media (max-width: 992px) {
         .admin-main-content { margin-left: 0; padding: 20px 15px; }
-        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .stat-box { padding: 14px 12px; }
+        .stat-box .num { font-size: 22px; }
     }
     @media (max-width: 576px) {
         .rv-pill { margin-left: 0; }
         .rv-act { flex: 1 1 auto; justify-content: center; }
-        .rv-act.del { margin-left: 0; flex: 0 0 auto; }
+        .rv-act.del { margin-left: 0; flex: 1 1 auto; }
     }
 </style>
 
@@ -77,29 +73,17 @@ $tabs = [
         <div>
             <h2 style="color:#08224A; margin:0;"><i class="fas fa-star me-2" style="color:#FFB300;"></i>Reviews</h2>
             <p style="color:#64748B; margin:4px 0 0 0; font-size:14px;">
-                স্টুডেন্ট ও টিচারদের রিভিউ দেখুন — Approve করলে হোম পেজের "Stakeholders' Statements" সেকশনে দেখাবে
+                স্টুডেন্ট ও টিচারদের রিভিউ সরাসরি হোম পেজের "Stakeholders' Statements" সেকশনে দেখায় — অনুপযুক্ত মনে হলে এখান থেকে Delete করুন
             </p>
         </div>
-        <?php if ((int)$ViewBag->ReviewPending > 0): ?>
-            <span class="badge bg-warning text-dark" style="font-size:13px; padding:8px 14px;"><?= e($ViewBag->ReviewPending) ?> Pending</span>
-        <?php endif; ?>
     </div>
 
     <?= csrf_field() ?>
 
     <div class="stats-grid">
-        <div class="stat-box"><div class="num"><?= e($ViewBag->TotalCount) ?></div><div class="lbl"><i class="fas fa-list"></i> Total</div></div>
-        <div class="stat-box pending"><div class="num"><?= e($ViewBag->ReviewPending) ?></div><div class="lbl"><i class="fas fa-hourglass-half"></i> Pending</div></div>
-        <div class="stat-box approved"><div class="num"><?= e($ViewBag->ApprovedCount) ?></div><div class="lbl"><i class="fas fa-check-circle"></i> On Home Page</div></div>
-        <div class="stat-box rejected"><div class="num"><?= e($ViewBag->RejectedCount) ?></div><div class="lbl"><i class="fas fa-times-circle"></i> Rejected</div></div>
-    </div>
-
-    <div class="filter-tabs">
-        <?php foreach ($tabs as $key => [$label, $icon, $n]): ?>
-            <a href="/Admin/Reviews<?= $key === 'all' ? '' : '?status=' . e($key) ?>" class="filter-tab <?= $cur === $key ? 'active' : '' ?>">
-                <i class="fas <?= e($icon) ?>"></i> <?= e($label) ?> <span class="cnt"><?= e($n) ?></span>
-            </a>
-        <?php endforeach; ?>
+        <div class="stat-box"><div class="num" id="rvTotal"><?= e($ViewBag->TotalCount) ?></div><div class="lbl"><i class="fas fa-list"></i> মোট রিভিউ</div></div>
+        <div class="stat-box approved"><div class="num" id="rvLive"><?= e($ViewBag->LiveCount) ?></div><div class="lbl"><i class="fas fa-home"></i> হোম পেজে দেখাচ্ছে</div></div>
+        <div class="stat-box pending"><div class="num"><?= e($ViewBag->AvgRating) ?> <i class="fas fa-star" style="color:#FFB300; font-size:20px;"></i></div><div class="lbl"><i class="fas fa-chart-line"></i> গড় রেটিং</div></div>
     </div>
 
     <?php if (empty($reviews)): ?>
@@ -124,7 +108,7 @@ $tabs = [
                             <span><i class="far fa-clock"></i> <?= e($r->TimeAgo) ?></span>
                         </div>
                     </div>
-                    <span class="rv-pill <?= e($r->Status) ?>" id="rv-pill-<?= e($r->Id) ?>"><?= e($r->Status) ?></span>
+                    <?php if ($r->Status === 'Rejected'): ?><span class="rv-pill Rejected">Hidden</span><?php else: ?><span class="rv-pill Approved"><i class="fas fa-home"></i> Live</span><?php endif; ?>
                 </div>
 
                 <div class="rv-text"><?= e($r->Content) ?></div>
@@ -133,16 +117,7 @@ $tabs = [
                 <?php endif; ?>
 
                 <div class="rv-actions">
-                    <?php if ($r->Status !== 'Approved'): ?>
-                        <button class="rv-act approve" onclick="rvSet(<?= (int)$r->Id ?>, 'Approved', this)"><i class="fas fa-check"></i> Approve</button>
-                    <?php endif; ?>
-                    <?php if ($r->Status !== 'Rejected'): ?>
-                        <button class="rv-act reject" onclick="rvSet(<?= (int)$r->Id ?>, 'Rejected', this)"><i class="fas fa-times"></i> <?= $r->Status === 'Approved' ? 'Hide from Home' : 'Reject' ?></button>
-                    <?php endif; ?>
-                    <?php if ($r->Status !== 'Pending'): ?>
-                        <button class="rv-act pend" onclick="rvSet(<?= (int)$r->Id ?>, 'Pending', this)"><i class="fas fa-undo"></i> Back to Pending</button>
-                    <?php endif; ?>
-                    <button class="rv-act del" onclick="rvDel(<?= (int)$r->Id ?>, this)" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button class="rv-act del" onclick="rvDel(<?= (int)$r->Id ?>, this)" title="Delete"><i class="fas fa-trash"></i> Delete</button>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -153,31 +128,17 @@ $tabs = [
 <script>
     function rvToken() { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; }
 
-    function rvSet(id, status, btn) {
-        var note = '';
-        if (status === 'Rejected') {
-            note = prompt('Reject করার কারণ লিখুন (ঐচ্ছিক — ইউজার নোটিফিকেশনে দেখবে):', '');
-            if (note === null) return;
-        }
-        var fd = new FormData();
-        fd.append('id', id); fd.append('status', status); fd.append('note', note);
-        fd.append('__RequestVerificationToken', rvToken());
-        btn.disabled = true;
-        fetch('/Admin/UpdateReviewStatus', { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
-            .then(function (d) { if (d.success) location.reload(); else { alert(d.message || 'Failed'); btn.disabled = false; } })
-            .catch(function (e) { alert('Error: ' + e.message); btn.disabled = false; });
-    }
-
     function rvDel(id, btn) {
-        if (!confirm('এই রিভিউটি স্থায়ীভাবে মুছে ফেলবেন?')) return;
+        if (!confirm('এই রিভিউটি মুছে ফেলবেন? এটা হোম পেজ থেকেও সরে যাবে।')) return;
         var fd = new FormData();
         fd.append('id', id); fd.append('__RequestVerificationToken', rvToken());
         btn.disabled = true;
         fetch('/Admin/DeleteReview', { method: 'POST', body: fd })
             .then(function (r) { return r.json(); })
             .then(function (d) {
-                if (d.success) { var el = document.getElementById('rv-' + id); el.style.transition = 'opacity .3s'; el.style.opacity = 0; setTimeout(function () { el.remove(); }, 300); }
+                if (d.success) { var el = document.getElementById('rv-' + id); el.style.transition = 'opacity .3s'; el.style.opacity = 0; setTimeout(function () { el.remove(); if (!document.querySelector('.rv-item')) location.reload(); }, 300);
+                    var t = document.getElementById('rvTotal'); if (t) t.textContent = Math.max(0, (+t.textContent) - 1);
+                    var lv = document.getElementById('rvLive'); if (lv && el.classList.contains('status-Approved')) lv.textContent = Math.max(0, (+lv.textContent) - 1); }
                 else { alert(d.message || 'Failed'); btn.disabled = false; }
             })
             .catch(function (e) { alert('Error: ' + e.message); btn.disabled = false; });

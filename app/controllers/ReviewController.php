@@ -1,7 +1,7 @@
 <?php
 /**
  * স্টুডেন্ট / টিচার নিজের ড্যাশবোর্ড থেকে রিভিউ জমা দেয়।
- * রিভিউ প্রথমে Pending থাকে — অ্যাডমিন Approve করলে হোম পেজে দেখায়।
+ * রিভিউ সাথে সাথে হোম পেজে দেখায় — অ্যাডমিন চাইলে মুছে দিতে পারে।
  */
 class ReviewController extends Controller
 {
@@ -31,8 +31,8 @@ class ReviewController extends Controller
         $name = session_get('UserFullName') ?? session_get('UserName') ?? 'A user';
         foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, $isNew ? 'New Review ⭐' : 'Review Updated',
-                "$name একটি রিভিউ " . ($isNew ? 'দিয়েছেন' : 'আপডেট করেছেন') . " — Approve করুন।", 'info', '/Admin/Reviews?status=Pending', 'fa-star');
+                "$name একটি রিভিউ " . ($isNew ? 'দিয়েছেন' : 'আপডেট করেছেন') . " — হোম পেজে দেখানো হচ্ছে।", 'info', '/Admin/Reviews', 'fa-star');
         }
-        json_response(['success' => true, 'message' => 'ধন্যবাদ! আপনার রিভিউ অ্যাডমিনের কাছে পাঠানো হয়েছে। Approve হলে হোম পেজে দেখাবে।']);
+        json_response(['success' => true, 'message' => $isNew ? 'ধন্যবাদ! আপনার রিভিউ হোম পেজে প্রকাশ হয়েছে।' : 'আপনার রিভিউ আপডেট হয়েছে।']);
     }
 }

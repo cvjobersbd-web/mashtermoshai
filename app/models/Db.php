@@ -1095,6 +1095,8 @@ class Db
                 KEY `IX_Reviews_Status` (`Status`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
+        // রিভিউ এখন সরাসরি হোম পেজে যায় — আগের Pending গুলোও প্রকাশ করে দাও
+        try { $this->pdo->exec("UPDATE `Reviews` SET `Status` = 'Approved' WHERE `Status` = 'Pending'"); } catch (Throwable $e) { }
         $this->reviewsReady = true;
     }
 
@@ -1130,10 +1132,10 @@ class Db
             $p = ['u' => $userId, 'r' => max(1, min(5, $rating)), 's' => $subtitle, 'c' => $content, 't' => now()];
             if ($existing) {
                 $isNew = false;
-                $this->exec("UPDATE `Reviews` SET `Rating` = :r, `Subtitle` = :s, `Content` = :c, `Status` = 'Pending', `AdminNote` = NULL, `UpdatedAt` = :t WHERE `UserId` = :u", $p);
+                $this->exec("UPDATE `Reviews` SET `Rating` = :r, `Subtitle` = :s, `Content` = :c, `Status` = 'Approved', `AdminNote` = NULL, `UpdatedAt` = :t WHERE `UserId` = :u", $p);
             } else {
                 $isNew = true;
-                $this->insert("INSERT INTO `Reviews` (`UserId`, `Rating`, `Subtitle`, `Content`, `Status`, `CreatedAt`) VALUES (:u, :r, :s, :c, 'Pending', :t)", $p);
+                $this->insert("INSERT INTO `Reviews` (`UserId`, `Rating`, `Subtitle`, `Content`, `Status`, `CreatedAt`) VALUES (:u, :r, :s, :c, 'Approved', :t)", $p);
             }
             return true;
         } catch (Throwable $e) { error_log('[SaveUserReview] ' . $e->getMessage()); return false; }

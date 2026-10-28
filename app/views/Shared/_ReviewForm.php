@@ -7,9 +7,9 @@ $rv = $rvReview ?? null;
 $rvHint = (string)($rvSubtitleHint ?? 'যেমন: Dhaka College / অভিভাবক');
 $rvRating = $rv ? (int)$rv->Rating : 5;
 $statusInfo = [
-    'Pending'  => ['fa-hourglass-half', 'অ্যাডমিন রিভিউ করছেন', 'Approve হলে আপনার রিভিউ হোম পেজে দেখাবে।'],
-    'Approved' => ['fa-check-circle', 'Approved — হোম পেজে দেখানো হচ্ছে', 'আপনার রিভিউ এখন সবাই দেখতে পাচ্ছে। ধন্যবাদ!'],
-    'Rejected' => ['fa-times-circle', 'এবার Approve হয়নি', 'চাইলে নিচে এডিট করে আবার পাঠাতে পারেন।'],
+    'Pending'  => ['fa-check-circle', 'হোম পেজে দেখানো হচ্ছে', 'আপনার রিভিউ এখন সবাই দেখতে পাচ্ছে। ধন্যবাদ!'],
+    'Approved' => ['fa-check-circle', 'হোম পেজে দেখানো হচ্ছে', 'আপনার রিভিউ এখন সবাই দেখতে পাচ্ছে। ধন্যবাদ!'],
+    'Rejected' => ['fa-eye-slash', 'রিভিউটি হোম পেজে দেখানো হচ্ছে না', 'চাইলে নিচে এডিট করে আবার পাঠাতে পারেন।'],
 ];
 ?>
 <style>
@@ -44,7 +44,7 @@ $statusInfo = [
 
 <div class="rv-card">
     <?php if ($rv && isset($statusInfo[$rv->Status])): [$ic, $tt, $ds] = $statusInfo[$rv->Status]; ?>
-        <div class="rv-status <?= e($rv->Status) ?>">
+        <div class="rv-status <?= e($rv->Status === 'Pending' ? 'Approved' : $rv->Status) ?>">
             <i class="fas <?= e($ic) ?>"></i>
             <div>
                 <strong><?= e($tt) ?></strong>
@@ -78,7 +78,7 @@ $statusInfo = [
         <button type="submit" class="rv-btn" id="rvBtn">
             <i class="fas fa-paper-plane"></i> <?= $rv ? 'Update Review' : 'Submit Review' ?>
         </button>
-        <p class="rv-tip"><i class="fas fa-info-circle"></i> রিভিউ আপডেট করলে সেটা আবার অ্যাডমিনের কাছে Approve এর জন্য যাবে।</p>
+        <p class="rv-tip"><i class="fas fa-info-circle"></i> Submit করলেই রিভিউ সাথে সাথে হোম পেজে দেখাবে। পরে চাইলে এখান থেকে এডিট করতে পারবেন।</p>
     </form>
 </div>
 
