@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 29, 2026 at 05:36 AM
+-- Generation Time: Oct 29, 2026 at 06:57 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,23 @@ SET time_zone = "+00:00";
 --
 -- Database: `mashterm_smarttutordb`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `friendships`
+--
+
+CREATE TABLE `friendships` (
+  `Id` int(11) NOT NULL,
+  `RequesterId` int(11) NOT NULL,
+  `AddresseeId` int(11) NOT NULL,
+  `UserLow` int(11) NOT NULL,
+  `UserHigh` int(11) NOT NULL,
+  `Status` varchar(20) NOT NULL DEFAULT 'Pending',
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `RespondedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -544,6 +561,15 @@ INSERT INTO `usersuspensions` (`Id`, `UserId`, `Reason`, `SuspendedUntil`, `IsPe
 --
 
 --
+-- Indexes for table `friendships`
+--
+ALTER TABLE `friendships`
+  ADD PRIMARY KEY (`Id`),
+  ADD UNIQUE KEY `UX_Friendships_Pair` (`UserLow`,`UserHigh`),
+  ADD KEY `IX_Friendships_Addressee` (`AddresseeId`,`Status`),
+  ADD KEY `IX_Friendships_Requester` (`RequesterId`,`Status`);
+
+--
 -- Indexes for table `helpdeskcomments`
 --
 ALTER TABLE `helpdeskcomments`
@@ -714,6 +740,12 @@ ALTER TABLE `usersuspensions`
 --
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `friendships`
+--
+ALTER TABLE `friendships`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `helpdeskcomments`

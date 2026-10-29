@@ -516,6 +516,11 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                     <i class="fas fa-star"></i> My Review
                 </a>
             </li>
+            <li>
+                <a href="/Friends">
+                    <i class="fas fa-user-group"></i> Friends
+                </a>
+            </li>
         </ul>
     </div>
 

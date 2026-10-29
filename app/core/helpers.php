@@ -167,6 +167,31 @@ function str_preview(?string $s, int $len, string $empty = '(No text)'): string
 
 function is_blank($v): bool { return $v === null || trim((string)$v) === ''; }
 
+/**
+ * ফ্রেন্ড বাটন (সম্পর্ক অনুযায়ী)। JS এর frRenderActions() একই HTML বানায় —
+ * একটা বদলালে অন্যটাও বদলাতে হবে।
+ * $rel: none | sent | received | friends | self
+ */
+function friend_actions_html(int $uid, string $rel): string
+{
+    $b = fn(string $act, string $cls, string $icon, string $label) =>
+        '<button type="button" class="fr-btn ' . $cls . '" data-act="' . $act . '" data-uid="' . $uid . '"><i class="fas ' . $icon . '"></i><span>' . $label . '</span></button>';
+    switch ($rel) {
+        case 'friends':
+            return '<span class="fr-btn fr-is-friend"><i class="fas fa-user-check"></i><span>Friends</span></span>'
+                . $b('unfriend', 'fr-ghost fr-icon-only', 'fa-user-xmark', 'Unfriend');
+        case 'sent':
+            return '<span class="fr-btn fr-is-sent"><i class="fas fa-clock"></i><span>Requested</span></span>'
+                . $b('cancel', 'fr-ghost', 'fa-xmark', 'Cancel');
+        case 'received':
+            return $b('accept', 'fr-primary', 'fa-check', 'Confirm') . $b('decline', 'fr-ghost', 'fa-xmark', 'Delete');
+        case 'self':
+            return '<a class="fr-btn fr-ghost" href="/Profile"><i class="fas fa-pen"></i><span>Edit Profile</span></a>';
+        default:
+            return $b('send', 'fr-primary', 'fa-user-plus', 'Add Friend');
+    }
+}
+
 // ------------------------------------------------------------
 // Request helpers (ASP.NET model binding এর মতো — case-insensitive)
 // ------------------------------------------------------------

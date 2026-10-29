@@ -218,6 +218,9 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
         gap: 6px;
     }
 
+    .fb-author-link { color: inherit; text-decoration: none; }
+    .fb-author-link:hover { color: #028EA5; text-decoration: underline; }
+
     .fb-post-user-info .time {
         font-size: 12.5px;
         color: #7A8CA0;
@@ -959,7 +962,7 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
                                         <?php endif; ?>
                                     </div>
                                     <div class="fb-post-user-info">
-                                        <h6><?= e($post->UserFullName) ?></h6>
+                                        <h6><a href="/Friends/Person/<?= (int)$post->UserId ?>" class="fb-author-link"><?= e($post->UserFullName) ?></a></h6>
                                         <div class="time"><i class="far fa-clock"></i> <?= e(fmt_date($post->CreatedAt, 'd M Y, h:i A')) ?></div>
                                     </div>
                                 </div>

@@ -359,6 +359,15 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 pointer-events: auto;
             }
 
+            /* ===== Friends icon (নেভবার) ===== */
+            .fr-nav-wrapper { margin-right: 4px; }
+            .fr-nav-wrapper .notification-bell { text-decoration: none; font-size: 19px; }
+            .fr-nav-wrapper .notif-badge { background: #FFB300 !important; color: #08224A !important; }
+            .m-nav a .m-fr-badge {
+                margin-left: auto; font-style: normal; background: #FFB300; color: #08224A; font-size: 11px; font-weight: 800;
+                min-width: 22px; height: 20px; padding: 0 7px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center;
+            }
+
             /* ===== Notification Bell ===== */
             .notification-wrapper {
                 position: relative;
@@ -1012,6 +1021,19 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         $userFullName = session_get('UserFullName') ?? session_get('UserName');
                     ?>
 
+                        <?php if (!$isAdmin):
+                            $frReq = 0;
+                            try { $frReq = db()->CountIncomingFriendRequests((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
+                        ?>
+                            <!-- Friends -->
+                            <div class="notification-wrapper fr-nav-wrapper">
+                                <a href="/Friends" class="notification-bell" title="Friends" aria-label="Friends">
+                                    <i class="fas fa-user-group"></i>
+                                    <span class="notif-badge show" id="frNavBadge" style="<?= $frReq > 0 ? '' : 'display:none' ?>"><?= $frReq > 9 ? '9+' : $frReq ?></span>
+                                </a>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Notification Bell -->
                         <div class="notification-wrapper" id="notifWrapper">
                             <button class="notification-bell" id="notifBell" type="button" title="Notifications">
@@ -1059,6 +1081,14 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         <i class="fas fa-id-card"></i> My Profile
                                     </a>
                                 </li>
+                                <?php if (!$isAdmin): ?>
+                                    <li>
+                                        <a class="dropdown-item" href="/Friends">
+                                            <i class="fas fa-user-group"></i> Friends
+                                            <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> new</span><?php endif; ?>
+                                        </a>
+                                    </li>
+                                <?php endif; ?>
 
                                 <?php if ($userRole === 'User' || $userRole === 'Admin'): ?>
                                     <li>
@@ -1174,6 +1204,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <div class="m-label">My Account</div>
                 <nav class="m-nav">
                     <a href="/Profile" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
+                    <?php if ($mRole !== 'Admin'): ?>
+                        <a href="/Friends" class="<?= $mActive('/Friends') ?>"><i class="fas fa-user-group"></i><span>Friends</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                    <?php endif; ?>
                     <?php if ($mRole === 'User' || $mRole === 'Admin'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
                     <?php endif; ?>

@@ -344,6 +344,7 @@ class Db
             $this->exec('DELETE FROM `TeacherRequests` WHERE `UserId` = :id', ['id' => $userId]);
             $n = $this->exec('DELETE FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
             $this->pdo->commit();
+            if ($n > 0) $this->DeleteFriendshipsOfUser($userId);
             return $n > 0;
         } catch (Throwable $e) {
             $this->pdo->rollBack();
@@ -1919,5 +1920,294 @@ class Db
             $this->exec('DELETE FROM `HelpdeskComments` WHERE `ParentCommentId` = :id', ['id' => $commentId]);
             return $this->exec('DELETE FROM `HelpdeskComments` WHERE `Id` = :id', ['id' => $commentId]) > 0;
         } catch (Throwable $e) { return false; }
+    }
+
+    // ============================================================
+    // ===== FRIENDS (স্টুডেন্ট ↔ স্টুডেন্ট, টিচার ↔ টিচার, টিচার ↔ স্টুডেন্ট) =====
+    // প্রতি জোড়া ইউজারের জন্য একটাই সারি (UserLow, UserHigh ইউনিক)।
+    // Pending = রিকোয়েস্ট পাঠানো হয়েছে, Accepted = ফ্রেন্ড।
+    // Decline / Cancel / Unfriend করলে সারিটা মুছে যায় — পরে আবার রিকোয়েস্ট দেওয়া যায়।
+    // ============================================================
+    private bool $friendsReady = false;
+
+    public function EnsureFriendshipsTable(): void
+    {
+        if ($this->friendsReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "Friendships" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT, "RequesterId" INTEGER NOT NULL, "AddresseeId" INTEGER NOT NULL,
+                "UserLow" INTEGER NOT NULL, "UserHigh" INTEGER NOT NULL, "Status" TEXT NOT NULL DEFAULT \'Pending\',
+                "CreatedAt" TEXT NOT NULL, "RespondedAt" TEXT NULL, UNIQUE ("UserLow", "UserHigh"))');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `Friendships` (
+                `Id` INT NOT NULL AUTO_INCREMENT,
+                `RequesterId` INT NOT NULL,
+                `AddresseeId` INT NOT NULL,
+                `UserLow` INT NOT NULL,
+                `UserHigh` INT NOT NULL,
+                `Status` VARCHAR(20) NOT NULL DEFAULT 'Pending',
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `RespondedAt` DATETIME NULL,
+                PRIMARY KEY (`Id`),
+                UNIQUE KEY `UX_Friendships_Pair` (`UserLow`, `UserHigh`),
+                KEY `IX_Friendships_Addressee` (`AddresseeId`, `Status`),
+                KEY `IX_Friendships_Requester` (`RequesterId`, `Status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->friendsReady = true;
+    }
+
+    private const FRIEND_USER_COLS = 'u.`Id` AS PersonId, u.`UserName` AS PersonUserName, u.`FullName` AS PersonName, u.`Role` AS PersonRole,
+        u.`ProfileImageLink` AS PersonImage, u.`InstitutionName` AS PersonInstitution, u.`EducationLevel` AS PersonEducation,
+        u.`Country` AS PersonCountry';
+
+    /** ফ্রেন্ড কার্ডে দেখানোর জন্য একজন মানুষের তথ্য গুছিয়ে দেয় */
+    private function mapFriendPerson(Obj $r): Obj
+    {
+        $name = (string)($r->PersonName ?? '');
+        if ($name === '') $name = (string)($r->PersonUserName ?? 'User');
+        $role = (string)($r->PersonRole ?? 'User');
+        return obj([
+            'Id' => (int)$r->PersonId,
+            'FriendshipId' => isset($r->FriendshipId) ? (int)$r->FriendshipId : null,
+            'UserName' => (string)($r->PersonUserName ?? ''),
+            'FullName' => $name,
+            'Role' => $role,
+            'RoleLabel' => $role === 'Teacher' ? 'Teacher' : 'Student',
+            'Image' => is_blank($r->PersonImage ?? null) ? null : (string)$r->PersonImage,
+            'Initials' => initials($name, 'U'),
+            'Institution' => (string)($r->PersonInstitution ?? ''),
+            'Education' => (string)($r->PersonEducation ?? ''),
+            'Since' => $r->Since ?? null,
+            'TimeAgo' => isset($r->Since) ? time_ago($r->Since) : '',
+            'Relation' => $r->Relation ?? 'none',
+        ]);
+    }
+
+    /** দুজনের মধ্যে সারি (না থাকলে null) */
+    public function GetFriendship(int $a, int $b): ?Obj
+    {
+        $this->EnsureFriendshipsTable();
+        $r = $this->one('SELECT * FROM `Friendships` WHERE `UserLow` = :l AND `UserHigh` = :h', ['l' => min($a, $b), 'h' => max($a, $b)]);
+        if ($r) { foreach (['Id', 'RequesterId', 'AddresseeId'] as $k) $r->$k = (int)$r->$k; }
+        return $r;
+    }
+
+    /** আমার দিক থেকে অন্যজনের সাথে সম্পর্ক: self | none | friends | sent | received */
+    public function GetFriendRelation(int $me, int $other): string
+    {
+        if ($me === $other) return 'self';
+        try {
+            $f = $this->GetFriendship($me, $other);
+        } catch (Throwable $e) { return 'none'; }
+        if (!$f) return 'none';
+        if ($f->Status === 'Accepted') return 'friends';
+        return $f->RequesterId === $me ? 'sent' : 'received';
+    }
+
+    /** ফ্রেন্ড হওয়ার যোগ্য কিনা (অ্যাডমিন বা নিষ্ক্রিয়/সাসপেন্ড অ্যাকাউন্ট নয়) */
+    public function IsFriendEligibleUser(int $userId): bool
+    {
+        $u = $this->one('SELECT `Id`, `Role`, `IsActive` FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
+        if (!$u || ($u->Role ?? 'User') === 'Admin') return false;
+        if ($u->IsActive !== null && !(bool)(int)$u->IsActive) return false;
+        return $this->GetActiveSuspension($userId) === null;
+    }
+
+    /** শেষ X মিনিটে কয়টা রিকোয়েস্ট পাঠিয়েছে (স্প্যাম ঠেকাতে) */
+    public function CountRecentFriendRequests(int $me, int $minutes): int
+    {
+        $this->EnsureFriendshipsTable();
+        return (int)$this->scalar('SELECT COUNT(*) FROM `Friendships` WHERE `RequesterId` = :u AND `CreatedAt` >= :t',
+            ['u' => $me, 't' => date('Y-m-d H:i:s', time() - $minutes * 60)]);
+    }
+
+    /**
+     * ফ্রেন্ড রিকোয়েস্ট পাঠায়। অন্যজন আগেই আমাকে পাঠিয়ে থাকলে সরাসরি Accept হয়ে যায়।
+     * @return string 'sent' | 'accepted' | 'already_sent' | 'already_friends' | 'error'
+     */
+    public function SendFriendRequest(int $me, int $other): string
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $f = $this->GetFriendship($me, $other);
+            if ($f) {
+                if ($f->Status === 'Accepted') return 'already_friends';
+                if ($f->RequesterId === $me) return 'already_sent';
+                $this->exec('UPDATE `Friendships` SET `Status` = \'Accepted\', `RespondedAt` = :t WHERE `Id` = :id', ['t' => now(), 'id' => $f->Id]);
+                return 'accepted';
+            }
+            $this->insert('INSERT INTO `Friendships` (`RequesterId`, `AddresseeId`, `UserLow`, `UserHigh`, `Status`, `CreatedAt`)
+                VALUES (:r, :a, :l, :h, \'Pending\', :t)',
+                ['r' => $me, 'a' => $other, 'l' => min($me, $other), 'h' => max($me, $other), 't' => now()]);
+            return 'sent';
+        } catch (Throwable $e) {
+            error_log('[SendFriendRequest] ' . $e->getMessage());
+            // দুইজন একই সময়ে চাপলে ইউনিক কী-তে আটকায় — তখন বর্তমান অবস্থা ফেরত দিই
+            $rel = $this->GetFriendRelation($me, $other);
+            return $rel === 'friends' ? 'already_friends' : ($rel === 'sent' ? 'already_sent' : 'error');
+        }
+    }
+
+    /** আমার কাছে আসা রিকোয়েস্ট Accept / Decline। সফল হলে রিকোয়েস্ট পাঠানো ইউজারের Id দেয়। */
+    public function RespondFriendRequest(int $me, int $other, bool $accept): ?int
+    {
+        try {
+            $f = $this->GetFriendship($me, $other);
+            if (!$f || $f->Status !== 'Pending' || $f->AddresseeId !== $me) return null;
+            if ($accept) {
+                $this->exec('UPDATE `Friendships` SET `Status` = \'Accepted\', `RespondedAt` = :t WHERE `Id` = :id', ['t' => now(), 'id' => $f->Id]);
+            } else {
+                $this->exec('DELETE FROM `Friendships` WHERE `Id` = :id', ['id' => $f->Id]);
+            }
+            return $f->RequesterId;
+        } catch (Throwable $e) { error_log('[RespondFriendRequest] ' . $e->getMessage()); return null; }
+    }
+
+    /** নিজের পাঠানো রিকোয়েস্ট ফিরিয়ে নেওয়া */
+    public function CancelFriendRequest(int $me, int $other): bool
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            return $this->exec('DELETE FROM `Friendships` WHERE `UserLow` = :l AND `UserHigh` = :h AND `Status` = \'Pending\' AND `RequesterId` = :me',
+                ['l' => min($me, $other), 'h' => max($me, $other), 'me' => $me]) > 0;
+        } catch (Throwable $e) { return false; }
+    }
+
+    public function Unfriend(int $me, int $other): bool
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            return $this->exec('DELETE FROM `Friendships` WHERE `UserLow` = :l AND `UserHigh` = :h AND `Status` = \'Accepted\'',
+                ['l' => min($me, $other), 'h' => max($me, $other)]) > 0;
+        } catch (Throwable $e) { return false; }
+    }
+
+    /** @return Obj[] আমার ফ্রেন্ড লিস্ট */
+    public function GetFriends(int $me): array
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $rows = $this->all('SELECT f.`Id` AS FriendshipId, COALESCE(f.`RespondedAt`, f.`CreatedAt`) AS Since, \'friends\' AS Relation, ' . self::FRIEND_USER_COLS . '
+                FROM `Friendships` f
+                INNER JOIN `Users` u ON u.`Id` = CASE WHEN f.`UserLow` = :me1 THEN f.`UserHigh` ELSE f.`UserLow` END
+                WHERE (f.`UserLow` = :me2 OR f.`UserHigh` = :me3) AND f.`Status` = \'Accepted\'
+                ORDER BY u.`FullName`', ['me1' => $me, 'me2' => $me, 'me3' => $me]);
+            return array_map(fn($r) => $this->mapFriendPerson($r), $rows);
+        } catch (Throwable $e) { error_log('[GetFriends] ' . $e->getMessage()); return []; }
+    }
+
+    /** @return int[] আমার ফ্রেন্ডদের Id */
+    public function GetFriendIds(int $me): array
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $ids = [];
+            foreach ($this->all('SELECT `UserLow`, `UserHigh` FROM `Friendships` WHERE (`UserLow` = :a OR `UserHigh` = :b) AND `Status` = \'Accepted\'',
+                ['a' => $me, 'b' => $me]) as $r) {
+                $ids[] = (int)$r->UserLow === $me ? (int)$r->UserHigh : (int)$r->UserLow;
+            }
+            return $ids;
+        } catch (Throwable $e) { return []; }
+    }
+
+    /** @return Obj[] আমার কাছে আসা রিকোয়েস্ট */
+    public function GetIncomingFriendRequests(int $me): array
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $rows = $this->all('SELECT f.`Id` AS FriendshipId, f.`CreatedAt` AS Since, \'received\' AS Relation, ' . self::FRIEND_USER_COLS . '
+                FROM `Friendships` f INNER JOIN `Users` u ON u.`Id` = f.`RequesterId`
+                WHERE f.`AddresseeId` = :me AND f.`Status` = \'Pending\' ORDER BY f.`CreatedAt` DESC, f.`Id` DESC', ['me' => $me]);
+            return array_map(fn($r) => $this->mapFriendPerson($r), $rows);
+        } catch (Throwable $e) { error_log('[GetIncomingFriendRequests] ' . $e->getMessage()); return []; }
+    }
+
+    /** @return Obj[] আমার পাঠানো (এখনো Accept হয়নি) রিকোয়েস্ট */
+    public function GetSentFriendRequests(int $me): array
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $rows = $this->all('SELECT f.`Id` AS FriendshipId, f.`CreatedAt` AS Since, \'sent\' AS Relation, ' . self::FRIEND_USER_COLS . '
+                FROM `Friendships` f INNER JOIN `Users` u ON u.`Id` = f.`AddresseeId`
+                WHERE f.`RequesterId` = :me AND f.`Status` = \'Pending\' ORDER BY f.`CreatedAt` DESC, f.`Id` DESC', ['me' => $me]);
+            return array_map(fn($r) => $this->mapFriendPerson($r), $rows);
+        } catch (Throwable $e) { error_log('[GetSentFriendRequests] ' . $e->getMessage()); return []; }
+    }
+
+    public function CountIncomingFriendRequests(int $me): int
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            return (int)$this->scalar('SELECT COUNT(*) FROM `Friendships` WHERE `AddresseeId` = :me AND `Status` = \'Pending\'', ['me' => $me]);
+        } catch (Throwable $e) { return 0; }
+    }
+
+    /**
+     * মানুষ খোঁজা (নাম / username / প্রতিষ্ঠান দিয়ে)। অ্যাডমিন, নিষ্ক্রিয় ও সাসপেন্ড অ্যাকাউন্ট বাদ।
+     * কিছু না লিখলে নতুন যোগ দেওয়া মানুষ দেখায় (People you may know)।
+     * @return Obj[] প্রত্যেকের সাথে Relation সহ
+     */
+    public function SearchPeople(int $me, string $q, string $role = 'all', int $limit = 30): array
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $this->EnsureSuspensionsTable();
+            $where = ["u.`Role` <> 'Admin'", 'u.`Id` <> :me', '(u.`IsActive` IS NULL OR u.`IsActive` = 1)',
+                'NOT EXISTS (SELECT 1 FROM `UserSuspensions` s WHERE s.`UserId` = u.`Id` AND s.`LiftedAt` IS NULL AND (s.`IsPermanent` = 1 OR s.`SuspendedUntil` > :now))'];
+            $p = ['me' => $me, 'now' => now()];
+            if ($role === 'Teacher') $where[] = "u.`Role` = 'Teacher'";
+            elseif ($role === 'User') $where[] = "u.`Role` = 'User'";
+            $q = trim($q);
+            if ($q !== '') {
+                $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+                $where[] = '(u.`FullName` LIKE :q1 OR u.`UserName` LIKE :q2 OR u.`InstitutionName` LIKE :q3)';
+                $p += ['q1' => $like, 'q2' => $like, 'q3' => $like];
+            }
+            $limit = max(1, min(60, $limit));
+            $rows = $this->all('SELECT u.`CreatedAt` AS Since, ' . self::FRIEND_USER_COLS . ' FROM `Users` u WHERE ' . implode(' AND ', $where)
+                . ' ORDER BY ' . ($q !== '' ? 'u.`FullName`' : 'u.`Id` DESC') . " LIMIT $limit", $p);
+
+            // প্রত্যেকের সাথে আমার সম্পর্ক এক কুয়েরিতে বের করি
+            $rel = [];
+            foreach ($this->all('SELECT `RequesterId`, `UserLow`, `UserHigh`, `Status` FROM `Friendships` WHERE `UserLow` = :a OR `UserHigh` = :b',
+                ['a' => $me, 'b' => $me]) as $f) {
+                $other = (int)$f->UserLow === $me ? (int)$f->UserHigh : (int)$f->UserLow;
+                $rel[$other] = $f->Status === 'Accepted' ? 'friends' : ((int)$f->RequesterId === $me ? 'sent' : 'received');
+            }
+            $myFriends = array_flip($this->GetFriendIds($me));
+            $out = [];
+            foreach ($rows as $r) {
+                $r->Relation = $rel[(int)$r->PersonId] ?? 'none';
+                $person = $this->mapFriendPerson($r);
+                $person->TimeAgo = '';
+                $person->MutualCount = $myFriends ? $this->countMutual((int)$r->PersonId, $myFriends) : 0;
+                $out[] = $person;
+            }
+            return $out;
+        } catch (Throwable $e) { error_log('[SearchPeople] ' . $e->getMessage()); return []; }
+    }
+
+    private function countMutual(int $other, array $myFriendSet): int
+    {
+        $n = 0;
+        foreach ($this->GetFriendIds($other) as $id) if (isset($myFriendSet[$id])) $n++;
+        return $n;
+    }
+
+    /** দুজনের কমন ফ্রেন্ড সংখ্যা */
+    public function CountMutualFriends(int $me, int $other): int
+    {
+        $mine = array_flip($this->GetFriendIds($me));
+        return $mine ? $this->countMutual($other, $mine) : 0;
+    }
+
+    /** কোনো ইউজার মুছে গেলে তার সব ফ্রেন্ড সারি মুছে ফেলা */
+    public function DeleteFriendshipsOfUser(int $userId): void
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $this->exec('DELETE FROM `Friendships` WHERE `UserLow` = :a OR `UserHigh` = :b', ['a' => $userId, 'b' => $userId]);
+        } catch (Throwable $e) { /* ignore */ }
     }
 }

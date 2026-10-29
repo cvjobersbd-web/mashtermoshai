@@ -478,6 +478,11 @@ $waLink = function (?string $phone): string {
                 </a>
             </li>
             <li>
+                <a href="/Friends">
+                    <i class="fas fa-user-group"></i> Friends
+                </a>
+            </li>
+            <li>
                 <a href="/Tuition/Circular">
                     <i class="fas fa-clipboard-list"></i> Circular Feed
                 </a>
