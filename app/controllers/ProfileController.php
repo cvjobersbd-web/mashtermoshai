@@ -27,6 +27,80 @@ class ProfileController extends Controller
         $this->view('Index', $profile, ['IsProfileComplete' => self::isProfileComplete($profile)]);
     }
 
+    /**
+     * GET /Profile/Show/{id}?tab=posts|about|friends — ফেসবুকের মতো পাবলিক প্রোফাইল (টাইমলাইন)।
+     * id না দিলে নিজের প্রোফাইল। ফোন / ইমেইল / ঠিকানা শুধু ফ্রেন্ড (আর নিজে) দেখতে পারে।
+     */
+    public function Show(): void
+    {
+        $me = current_user_id();
+        if ($me === null) redirect('/Account/Login?returnUrl=' . rawurlencode(strtok($_SERVER['REQUEST_URI'] ?? '/Profile/Show', '#')));
+        $id = input_int('id', 0) ?: $me;
+        $user = $this->db->GetUserById($id);
+        if (!$user || $user->Role === 'Admin') not_found('এই প্রোফাইলটি পাওয়া যায়নি।');
+
+        $isAdminViewer = current_role() === 'Admin';
+        $isOwner = $id === $me;
+        $relation = $this->db->GetFriendRelation($me, $id);
+        $suspended = $this->db->GetActiveSuspension($id) !== null || !$user->IsActive;
+        if ($suspended && !$isAdminViewer && !$isOwner) not_found('এই প্রোফাইলটি এখন দেখা যাচ্ছে না।');
+
+        $teacherInfo = null;
+        $teacherStatus = $user->Role === 'Teacher' ? 'Approved' : 'None';
+        try {
+            $teacherInfo = $this->db->one('SELECT `Education`, `Institution`, `SubjectExpertise`, `Experience`, `TeachingStyle`, `AvailableDays`,
+                    `PreferredTime`, `HourlyRate`, `Status` FROM `TeacherRequests` WHERE `UserId` = :u ORDER BY `Id` DESC LIMIT 1', ['u' => $id]);
+            if ($user->Role !== 'Teacher' && $teacherInfo) $teacherStatus = (string)($teacherInfo->Status ?? 'Pending');
+        } catch (Throwable $e) { $teacherInfo = null; }
+
+        $tab = (string)input_str('tab', 'posts');
+        if (!in_array($tab, ['posts', 'about', 'friends'], true)) $tab = 'posts';
+
+        $posts = $this->db->GetProfilePosts($id, $me, $isAdminViewer, null, 10);
+        $friends = $this->db->GetFriendsOfUserForViewer($id, $me);
+
+        $this->view('Profile/Show', obj([
+            'User' => $user, 'IsOwner' => $isOwner, 'Relation' => $relation, 'IsAdminViewer' => $isAdminViewer,
+            'CanSeePrivate' => $isOwner || $isAdminViewer || $relation === 'friends',
+            'FriendCount' => count($friends), 'Friends' => $friends,
+            'MutualCount' => $isOwner ? 0 : $this->db->CountMutualFriends($me, $id),
+            'TeacherInfo' => $user->Role === 'Teacher' || $isOwner ? $teacherInfo : null, 'TeacherStatus' => $teacherStatus,
+            'Posts' => $posts, 'HasMore' => count($posts) === 10,
+            'PostCount' => $this->db->CountProfilePosts($id, $me, $isAdminViewer),
+            'Tab' => $tab, 'IsSuspended' => $suspended,
+        ]));
+    }
+
+    /** POST /Profile/ChangePassword — নিজের পাসওয়ার্ড বদলানো (পুরোনো পাসওয়ার্ড লাগবে) */
+    public function ChangePassword_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        $current = (string)input_str('currentPassword', '');
+        $new = (string)input_str('newPassword', '');
+        $confirm = (string)input_str('confirmPassword', '');
+        if ($current === '' || $new === '') json_response(['success' => false, 'message' => 'সব ঘর পূরণ করুন।']);
+        if (mb_strlen($new) < 6) json_response(['success' => false, 'message' => 'নতুন পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।']);
+        if ($new !== $confirm) json_response(['success' => false, 'message' => 'নতুন পাসওয়ার্ড দুইবার একই হয়নি।']);
+
+        // ভুল পাসওয়ার্ড বারবার চেষ্টা ঠেকাতে (১৫ মিনিটে ৫ বার)
+        $tries = array_filter($_SESSION['_pw_tries'] ?? [], fn($t) => $t > time() - 900);
+        if (count($tries) >= 5) json_response(['success' => false, 'message' => 'অনেকবার ভুল হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।']);
+
+        $user = $this->db->GetUserById($me);
+        $auth = $user ? $this->db->AuthenticateUser($user->UserName, $current) : null;
+        if (!$auth || (int)$auth->Id !== $me) {
+            $tries[] = time();
+            $_SESSION['_pw_tries'] = array_values($tries);
+            json_response(['success' => false, 'message' => 'বর্তমান পাসওয়ার্ড ভুল।']);
+        }
+        if ($current === $new) json_response(['success' => false, 'message' => 'নতুন পাসওয়ার্ড আগেরটার মতো হতে পারবে না।']);
+        unset($_SESSION['_pw_tries']);
+        if (!$this->db->UpdatePassword($me, $new)) json_response(['success' => false, 'message' => 'পাসওয়ার্ড বদলানো যায়নি। আবার চেষ্টা করুন।']);
+        $this->db->CreateNotification($me, '🔑 Password Changed', 'আপনার অ্যাকাউন্টের পাসওয়ার্ড বদলানো হয়েছে। আপনি না করে থাকলে সাথে সাথে অ্যাডমিনকে জানান।', 'warning', null, 'fa-key');
+        json_response(['success' => true, 'message' => 'পাসওয়ার্ড সফলভাবে বদলানো হয়েছে।']);
+    }
+
     /** GET /Profile/Edit */
     public function Edit(): void
     {

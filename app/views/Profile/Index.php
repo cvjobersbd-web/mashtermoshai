@@ -114,6 +114,9 @@ $activeSection = (string)(input_str('section') ?? '');
                 <span class="badge bg-success"><?= e($Model->Role) ?></span>
                 <span class="badge bg-info text-white"><?= e($Model->UserName) ?></span>
             </p>
+            <a href="/Profile/Show" style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:8px 16px;border-radius:20px;background:#02B8F5;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">
+                <i class="fas fa-eye"></i> View my profile
+            </a>
         </div>
 
         <ul class="sidebar-menu-list">
@@ -127,7 +130,7 @@ $activeSection = (string)(input_str('section') ?? '');
             
             <li><a href="#" class="<?= $activeSection === 'become-tutor' ? 'active' : '' ?>" onclick="showSection('become-tutor')"><i class="fas fa-chalkboard-teacher"></i> Become a Tutor <span class="badge-status" id="tutorStatusBadge">Check</span></a></li>
             <li style="border-top: 2px solid #F5FBFF; margin-top: 10px; padding-top: 10px;">
-                <a href="#" onclick="changePassword()" style="color: #b8860b;"><i class="fas fa-key"></i> Change Password</a>
+                <a href="/Profile/Show?tab=about#ab-password" style="color: #b8860b;"><i class="fas fa-key"></i> Change Password</a>
             </li>
         </ul>
     </div>
@@ -309,36 +312,6 @@ $activeSection = (string)(input_str('section') ?? '');
         })
         .catch(error => { alert('Error uploading image'); });
     });
-
-    // Change Password
-    function changePassword() {
-        var newPassword = prompt('Enter new password (min 6 characters):');
-        if (newPassword === null) return;
-        if (newPassword.length < 6) { alert('Password must be at least 6 characters'); return; }
-        var confirmPassword = prompt('Confirm new password:');
-        if (newPassword !== confirmPassword) { alert('Passwords do not match'); return; }
-
-        var formData = new FormData();
-        formData.append('newPassword', newPassword);
-        var userId = <?= js((string)$Model->Id) ?>;
-        formData.append('id', userId);
-
-        var token = document.querySelector('input[name="__RequestVerificationToken"]');
-        var headers = {};
-        if (token) { headers['RequestVerificationToken'] = token.value; }
-
-        fetch('/Admin/UpdatePassword', {
-            method: 'POST',
-            body: formData,
-            headers: headers
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            if (data.success) location.reload();
-        })
-        .catch(error => { alert('Error updating password'); });
-    }
 
     // ===== Tutor Status Check =====
     function checkTutorStatus() {

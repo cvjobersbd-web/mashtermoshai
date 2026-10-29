@@ -1,0 +1,292 @@
+<?php
+/**
+ * প্রোফাইল টাইমলাইনের পোস্ট (ফেসবুকের মতো)।
+ *
+ *  GET  /Post/Details/{id}            → একটা পোস্ট আলাদা পেজে (নোটিফিকেশন থেকে আসে)
+ *  GET  /Post/Feed?userId=&before= → "আরো পোস্ট" (HTML)
+ *  GET  /Post/Reactors?type=post|comment&id=  → কে কী রিয়েক্ট দিয়েছে (JSON)
+ *  POST /Post/Create | Update | Delete
+ *  POST /Post/React          (postId, reaction — খালি হলে রিয়েক্ট তুলে নেয়)
+ *  POST /Post/Comment        (postId, content, parentId?)
+ *  POST /Post/EditComment | DeleteComment | ReactComment
+ *
+ * প্রাইভেসি: Public = সবাই, Friends = শুধু ফ্রেন্ড, OnlyMe = শুধু নিজে। অ্যাডমিন সব দেখতে ও মুছতে পারে।
+ */
+class PostController extends Controller
+{
+    private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    private const MAX_POST_LEN = 5000;
+    private const MAX_COMMENT_LEN = 1500;
+
+    private function isAdmin(): bool { return current_role() === 'Admin'; }
+
+    private function me(): int
+    {
+        $id = current_user_id();
+        if ($id === null) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        return $id;
+    }
+
+    private function fail(string $msg): void { json_response(['success' => false, 'message' => $msg]); }
+
+    /** পোস্ট খুঁজে বের করে দেখার অনুমতি যাচাই করে */
+    private function viewablePost(int $postId, ?int $me): Obj
+    {
+        $post = $postId > 0 ? $this->db->GetProfilePostById($postId) : null;
+        if (!$post || !$this->db->CanViewProfilePost($post, $me, $this->isAdmin())) $this->fail('পোস্টটি পাওয়া যায়নি বা দেখার অনুমতি নেই।');
+        return $post;
+    }
+
+    private function cleanText(?string $s): string
+    {
+        $s = str_replace(["\r\n", "\r"], "\n", (string)$s);
+        $s = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $s) ?? '';
+        $s = preg_replace("/\n{4,}/", "\n\n\n", $s) ?? $s;
+        return trim($s);
+    }
+
+    private function privacyInput(): string
+    {
+        $p = (string)input_str('privacy', 'Public');
+        return in_array($p, Db::POST_PRIVACY, true) ? $p : 'Public';
+    }
+
+    /** ছবি যাচাই করে সেভ করে। ছবি না থাকলে null। */
+    private function saveImage(int $userId): ?string
+    {
+        $file = upload_file('image');
+        if (!$file) return null;
+        $ext = strtolower('.' . pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, self::IMAGE_EXTS, true)) $this->fail('শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।');
+        if ($file['size'] > 5 * 1024 * 1024) $this->fail('ছবি ৫ MB এর কম হতে হবে।');
+        if (@getimagesize($file['tmp_name']) === false) $this->fail('ফাইলটি সঠিক ছবি নয়।');
+        return save_upload($file, 'profile-posts', $userId . '_' . ticks() . '_' . bin2hex(random_bytes(3)), $ext);
+    }
+
+    private function renderPost(Obj $post, int $me): string
+    {
+        $post = $this->db->hydrateProfilePosts([$post], $me)[0];
+        ob_start();
+        partial('Post/_Post', ['post' => $post, 'viewerId' => $me, 'viewerIsAdmin' => $this->isAdmin()]);
+        return ob_get_clean();
+    }
+
+    private function renderComment(Obj $c, Obj $post, int $me): string
+    {
+        ob_start();
+        partial('Post/_Comment', ['c' => $c, 'post' => $post, 'viewerId' => $me, 'viewerIsAdmin' => $this->isAdmin(), 'isReply' => $c->ParentId !== null]);
+        return ob_get_clean();
+    }
+
+    private function name(): string { return session_get('UserFullName') ?? session_get('UserName') ?? 'একজন ইউজার'; }
+
+    private function postLink(int $postId): string { return '/Post/Details/' . $postId; }
+
+    // ============================================================
+    // PAGES / READ
+    // ============================================================
+
+    /** GET /Post/Details/{id} */
+    public function Details(): void
+    {
+        $me = current_user_id();
+        if ($me === null) redirect('/Account/Login?returnUrl=' . rawurlencode('/Post/Details/' . (int)input_int('id', 0)));
+        $post = $this->db->GetProfilePostById(input_int('id', 0) ?? 0);
+        if (!$post || !$this->db->CanViewProfilePost($post, $me, $this->isAdmin())) not_found('পোস্টটি পাওয়া যায়নি, মুছে ফেলা হয়েছে, অথবা আপনার দেখার অনুমতি নেই।');
+        $post = $this->db->hydrateProfilePosts([$post], $me)[0];
+        $this->view('Post/Details', $post, ['ViewerIsAdmin' => $this->isAdmin()]);
+    }
+
+    /** GET /Post/Feed?userId=&before=  → পোস্টের HTML + পরের পেজ আছে কিনা (হেডারে) */
+    public function Feed(): void
+    {
+        $me = current_user_id();
+        if ($me === null) { http_response_code(401); exit; }
+        $owner = input_int('userId', 0) ?? 0;
+        $before = input_int('before', 0) ?: null;
+        $posts = $this->db->GetProfilePosts($owner, $me, $this->isAdmin(), $before, 10);
+        header('Content-Type: text/html; charset=utf-8');
+        header('X-Has-More: ' . (count($posts) === 10 ? '1' : '0'));
+        foreach ($posts as $p) partial('Post/_Post', ['post' => $p, 'viewerId' => $me, 'viewerIsAdmin' => $this->isAdmin()]);
+        exit;
+    }
+
+    /** GET /Post/Reactors?type=post|comment&id= */
+    public function Reactors(): void
+    {
+        $me = $this->me();
+        $type = input_str('type', 'post') === 'comment' ? 'comment' : 'post';
+        $id = input_int('id', 0) ?? 0;
+        if ($type === 'comment') {
+            $c = $this->db->GetPostCommentById($id);
+            if (!$c) $this->fail('কমেন্টটি পাওয়া যায়নি।');
+            $this->viewablePost($c->PostId, $me);
+        } else {
+            $this->viewablePost($id, $me);
+        }
+        $meta = reaction_meta();
+        json_response(['success' => true, 'people' => array_map(fn($p) => [
+            'id' => $p->Id, 'name' => $p->Name, 'image' => $p->Image, 'initials' => $p->Initials,
+            'role' => $p->Role === 'Teacher' ? 'Teacher' : 'Student', 'reaction' => $p->Reaction, 'emoji' => $meta[$p->Reaction][0] ?? '👍',
+        ], $this->db->GetReactors($type, $id))]);
+    }
+
+    // ============================================================
+    // POSTS
+    // ============================================================
+
+    /** POST /Post/Create */
+    public function Create_POST(): void
+    {
+        $me = $this->me();
+        if ($this->isAdmin()) $this->fail('অ্যাডমিন অ্যাকাউন্ট থেকে প্রোফাইল পোস্ট করা যায় না।');
+        $content = $this->cleanText(input_str('content'));
+        if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
+        if ($this->db->CountRecentProfileActivity('post', $me, 60) >= 20) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+        $image = $this->saveImage($me);
+        if ($content === '' && $image === null) $this->fail('কিছু লিখুন অথবা একটি ছবি দিন।');
+
+        $id = $this->db->CreateProfilePost($me, $content, $image, $this->privacyInput());
+        $post = $this->db->GetProfilePostById($id);
+        json_response(['success' => true, 'message' => 'পোস্ট হয়েছে।', 'id' => $id, 'html' => $this->renderPost($post, $me)]);
+    }
+
+    /** POST /Post/Update  (postId, content, privacy, removeImage, image?) */
+    public function Update_POST(): void
+    {
+        $me = $this->me();
+        $post = $this->db->GetProfilePostById(input_int('postId', 0) ?? 0);
+        if (!$post || $post->UserId !== $me) $this->fail('শুধু নিজের পোস্ট এডিট করা যায়।');
+
+        $content = $this->cleanText(input_str('content'));
+        if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
+        $newImage = $this->saveImage($me);
+        $image = $post->ImageUrl;
+        if ($newImage !== null || input_bool('removeImage')) $image = $newImage;
+        if ($content === '' && $image === null) {
+            if ($newImage) delete_upload($newImage);
+            $this->fail('পোস্ট খালি রাখা যাবে না — কিছু লিখুন অথবা ছবি রাখুন।');
+        }
+
+        $changed = $content !== $post->Content || $image !== $post->ImageUrl;
+        $this->db->UpdateProfilePost($post->Id, $content, $image, $this->privacyInput(), $changed);
+        if ($post->ImageUrl && $image !== $post->ImageUrl) delete_upload($post->ImageUrl);
+
+        $fresh = $this->db->GetProfilePostById($post->Id);
+        json_response(['success' => true, 'message' => 'পোস্ট আপডেট হয়েছে।', 'html' => $this->renderPost($fresh, $me)]);
+    }
+
+    /** POST /Post/Delete */
+    public function Delete_POST(): void
+    {
+        $me = $this->me();
+        $post = $this->db->GetProfilePostById(input_int('postId', 0) ?? 0);
+        if (!$post) $this->fail('পোস্টটি আগেই মুছে গেছে।');
+        if ($post->UserId !== $me && !$this->isAdmin()) $this->fail('এই পোস্ট মোছার অনুমতি নেই।');
+        if (!$this->db->DeleteProfilePost($post->Id)) $this->fail('মোছা যায়নি। আবার চেষ্টা করুন।');
+        delete_upload($post->ImageUrl);
+        if ($post->UserId !== $me) {
+            $this->db->CreateNotification($post->UserId, 'Post Removed', 'আপনার একটি প্রোফাইল পোস্ট অ্যাডমিন সরিয়ে দিয়েছেন।', 'warning', '/Profile/Show/' . $post->UserId, 'fa-trash');
+        }
+        json_response(['success' => true, 'message' => 'পোস্ট মুছে ফেলা হয়েছে।']);
+    }
+
+    /** POST /Post/React (postId, reaction) */
+    public function React_POST(): void
+    {
+        $me = $this->me();
+        $post = $this->viewablePost(input_int('postId', 0) ?? 0, $me);
+        $reaction = (string)input_str('reaction', '');
+        $reaction = in_array($reaction, Db::REACTIONS, true) ? $reaction : null;
+        $res = $this->db->SetPostReaction($post->Id, $me, $reaction);
+        if ($res['prev'] === null && $reaction !== null && $post->UserId !== $me) {
+            $emoji = reaction_meta()[$reaction][0];
+            $this->db->CreateNotification($post->UserId, "New Reaction $emoji", $this->name() . " আপনার পোস্টে $emoji রিয়েক্ট দিয়েছেন।", 'info', $this->postLink($post->Id), 'fa-heart');
+        }
+        json_response(['success' => true, 'mine' => $reaction, 'counts' => $res['counts'], 'total' => $res['total']]);
+    }
+
+    // ============================================================
+    // COMMENTS
+    // ============================================================
+
+    /** POST /Post/Comment (postId, content, parentId?) */
+    public function Comment_POST(): void
+    {
+        $me = $this->me();
+        $post = $this->viewablePost(input_int('postId', 0) ?? 0, $me);
+        $content = $this->cleanText(input_str('content'));
+        if ($content === '') $this->fail('কমেন্ট লিখুন।');
+        if (mb_strlen($content) > self::MAX_COMMENT_LEN) $this->fail('কমেন্ট সর্বোচ্চ ' . self::MAX_COMMENT_LEN . ' অক্ষর।');
+        if ($this->db->CountRecentProfileActivity('comment', $me, 10) >= 60) $this->fail('খুব দ্রুত অনেক কমেন্ট করছেন। একটু পর চেষ্টা করুন।');
+
+        $parentId = input_int('parentId', 0) ?: null;
+        $parent = null;
+        if ($parentId) {
+            $parent = $this->db->GetPostCommentById($parentId);
+            if (!$parent || $parent->PostId !== $post->Id) $this->fail('যে কমেন্টে রিপ্লাই দিচ্ছেন সেটি আর নেই।');
+            if ($parent->ParentId) $parentId = $parent->ParentId; // রিপ্লাইয়ের রিপ্লাই → একই থ্রেডে
+        }
+
+        $id = $this->db->AddPostComment($post->Id, $me, $parentId, $content);
+        $c = $this->db->GetPostCommentById($id, $me);
+
+        $name = $this->name();
+        $notified = [$me => true];
+        if ($parent && !isset($notified[$parent->UserId])) {
+            $this->db->CreateNotification($parent->UserId, 'New Reply 💬', "$name আপনার কমেন্টে রিপ্লাই দিয়েছেন: " . str_preview($content, 60), 'info', $this->postLink($post->Id), 'fa-reply');
+            $notified[$parent->UserId] = true;
+        }
+        if (!isset($notified[$post->UserId])) {
+            $this->db->CreateNotification($post->UserId, 'New Comment 💬', "$name আপনার পোস্টে কমেন্ট করেছেন: " . str_preview($content, 60), 'info', $this->postLink($post->Id), 'fa-comment');
+        }
+
+        json_response(['success' => true, 'id' => $id, 'parentId' => $parentId, 'count' => $this->db->CountPostComments($post->Id),
+            'html' => $this->renderComment($c, $post, $me)]);
+    }
+
+    /** POST /Post/EditComment (commentId, content) */
+    public function EditComment_POST(): void
+    {
+        $me = $this->me();
+        $c = $this->db->GetPostCommentById(input_int('commentId', 0) ?? 0, $me);
+        if (!$c || $c->UserId !== $me) $this->fail('শুধু নিজের কমেন্ট এডিট করা যায়।');
+        $post = $this->viewablePost($c->PostId, $me);
+        $content = $this->cleanText(input_str('content'));
+        if ($content === '') $this->fail('কমেন্ট খালি রাখা যাবে না।');
+        if (mb_strlen($content) > self::MAX_COMMENT_LEN) $this->fail('কমেন্ট সর্বোচ্চ ' . self::MAX_COMMENT_LEN . ' অক্ষর।');
+        if ($content !== $c->Content) $this->db->UpdatePostComment($c->Id, $content);
+        $c = $this->db->GetPostCommentById($c->Id, $me);
+        json_response(['success' => true, 'contentHtml' => linkify_text($c->Content), 'content' => $c->Content, 'isEdited' => $c->IsEdited]);
+    }
+
+    /** POST /Post/DeleteComment (commentId) — কমেন্টকারী, পোস্টের মালিক বা অ্যাডমিন */
+    public function DeleteComment_POST(): void
+    {
+        $me = $this->me();
+        $c = $this->db->GetPostCommentById(input_int('commentId', 0) ?? 0);
+        if (!$c) $this->fail('কমেন্টটি আগেই মুছে গেছে।');
+        $post = $this->db->GetProfilePostById($c->PostId);
+        if (!$post) $this->fail('পোস্টটি আর নেই।');
+        if ($c->UserId !== $me && $post->UserId !== $me && !$this->isAdmin()) $this->fail('এই কমেন্ট মোছার অনুমতি নেই।');
+        $n = $this->db->DeletePostComment($c->Id);
+        json_response(['success' => true, 'removed' => $n, 'count' => $this->db->CountPostComments($post->Id)]);
+    }
+
+    /** POST /Post/ReactComment (commentId, reaction) */
+    public function ReactComment_POST(): void
+    {
+        $me = $this->me();
+        $c = $this->db->GetPostCommentById(input_int('commentId', 0) ?? 0);
+        if (!$c) $this->fail('কমেন্টটি পাওয়া যায়নি।');
+        $this->viewablePost($c->PostId, $me);
+        $reaction = (string)input_str('reaction', '');
+        $reaction = in_array($reaction, Db::REACTIONS, true) ? $reaction : null;
+        $res = $this->db->SetCommentReaction($c->Id, $me, $reaction);
+        if ($res['prev'] === null && $reaction !== null && $c->UserId !== $me) {
+            $emoji = reaction_meta()[$reaction][0];
+            $this->db->CreateNotification($c->UserId, "New Reaction $emoji", $this->name() . " আপনার কমেন্টে $emoji রিয়েক্ট দিয়েছেন।", 'info', $this->postLink($c->PostId), 'fa-heart');
+        }
+        json_response(['success' => true, 'mine' => $reaction, 'counts' => $res['counts'], 'total' => $res['total']]);
+    }
+}

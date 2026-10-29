@@ -344,7 +344,7 @@ class Db
             $this->exec('DELETE FROM `TeacherRequests` WHERE `UserId` = :id', ['id' => $userId]);
             $n = $this->exec('DELETE FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
             $this->pdo->commit();
-            if ($n > 0) $this->DeleteFriendshipsOfUser($userId);
+            if ($n > 0) { $this->DeleteFriendshipsOfUser($userId); $this->DeleteProfileContentOfUser($userId); }
             return $n > 0;
         } catch (Throwable $e) {
             $this->pdo->rollBack();
@@ -2195,6 +2195,33 @@ class Db
         return $n;
     }
 
+    /** @return array<int,string> অন্য ইউজার Id => আমার সাথে সম্পর্ক (friends|sent|received) */
+    public function GetRelationMap(int $me): array
+    {
+        try {
+            $this->EnsureFriendshipsTable();
+            $rel = [];
+            foreach ($this->all('SELECT `RequesterId`, `UserLow`, `UserHigh`, `Status` FROM `Friendships` WHERE `UserLow` = :a OR `UserHigh` = :b',
+                ['a' => $me, 'b' => $me]) as $f) {
+                $other = (int)$f->UserLow === $me ? (int)$f->UserHigh : (int)$f->UserLow;
+                $rel[$other] = $f->Status === 'Accepted' ? 'friends' : ((int)$f->RequesterId === $me ? 'sent' : 'received');
+            }
+            return $rel;
+        } catch (Throwable $e) { return []; }
+    }
+
+    /** কারো ফ্রেন্ড লিস্ট, প্রত্যেকের পাশে দর্শকের সাথে সম্পর্ক (বাটনের জন্য) @return Obj[] */
+    public function GetFriendsOfUserForViewer(int $ownerId, int $viewerId): array
+    {
+        $list = $this->GetFriends($ownerId);
+        $rel = $this->GetRelationMap($viewerId);
+        foreach ($list as $p) {
+            $p->Relation = $p->Id === $viewerId ? 'self' : ($rel[$p->Id] ?? 'none');
+            $p->TimeAgo = '';
+        }
+        return $list;
+    }
+
     /** দুজনের কমন ফ্রেন্ড সংখ্যা */
     public function CountMutualFriends(int $me, int $other): int
     {
@@ -2209,5 +2236,357 @@ class Db
             $this->EnsureFriendshipsTable();
             $this->exec('DELETE FROM `Friendships` WHERE `UserLow` = :a OR `UserHigh` = :b', ['a' => $userId, 'b' => $userId]);
         } catch (Throwable $e) { /* ignore */ }
+    }
+
+    // ============================================================
+    // ===== PROFILE POSTS (ফেসবুকের মতো টাইমলাইন পোস্ট) =====
+    // Privacy: Public (সবাই) | Friends (শুধু ফ্রেন্ড) | OnlyMe (শুধু নিজে)
+    // Reaction: like | love | care | haha | wow | sad | angry
+    // কমেন্টে এক লেভেলের রিপ্লাই (রিপ্লাইয়ের রিপ্লাই হলে @নাম দিয়ে একই থ্রেডে যায়)
+    // ============================================================
+    public const POST_PRIVACY = ['Public', 'Friends', 'OnlyMe'];
+    public const REACTIONS = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
+    private bool $profilePostsReady = false;
+
+    public function EnsureProfilePostTables(): void
+    {
+        if ($this->profilePostsReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ProfilePosts" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL,
+                "Content" TEXT NULL, "ImageUrl" TEXT NULL, "Privacy" TEXT NOT NULL DEFAULT \'Public\', "IsEdited" INTEGER NOT NULL DEFAULT 0,
+                "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NULL)');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ProfilePostReactions" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "PostId" INTEGER NOT NULL,
+                "UserId" INTEGER NOT NULL, "Reaction" TEXT NOT NULL, "CreatedAt" TEXT NOT NULL, UNIQUE ("PostId", "UserId"))');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ProfilePostComments" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "PostId" INTEGER NOT NULL,
+                "UserId" INTEGER NOT NULL, "ParentId" INTEGER NULL, "Content" TEXT NOT NULL, "IsEdited" INTEGER NOT NULL DEFAULT 0,
+                "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NULL)');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ProfileCommentReactions" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "CommentId" INTEGER NOT NULL,
+                "UserId" INTEGER NOT NULL, "Reaction" TEXT NOT NULL, "CreatedAt" TEXT NOT NULL, UNIQUE ("CommentId", "UserId"))');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ProfilePosts` (
+                `Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `Content` TEXT NULL, `ImageUrl` VARCHAR(500) NULL,
+                `Privacy` VARCHAR(10) NOT NULL DEFAULT 'Public', `IsEdited` TINYINT(1) NOT NULL DEFAULT 0,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, `UpdatedAt` DATETIME NULL,
+                PRIMARY KEY (`Id`), KEY `IX_ProfilePosts_User` (`UserId`, `Id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ProfilePostReactions` (
+                `Id` INT NOT NULL AUTO_INCREMENT, `PostId` INT NOT NULL, `UserId` INT NOT NULL, `Reaction` VARCHAR(10) NOT NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`Id`), UNIQUE KEY `UX_PPR_PostUser` (`PostId`, `UserId`),
+                CONSTRAINT `FK_PPR_Post` FOREIGN KEY (`PostId`) REFERENCES `ProfilePosts` (`Id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ProfilePostComments` (
+                `Id` INT NOT NULL AUTO_INCREMENT, `PostId` INT NOT NULL, `UserId` INT NOT NULL, `ParentId` INT NULL, `Content` TEXT NOT NULL,
+                `IsEdited` TINYINT(1) NOT NULL DEFAULT 0, `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, `UpdatedAt` DATETIME NULL,
+                PRIMARY KEY (`Id`), KEY `IX_PPC_Post` (`PostId`, `Id`),
+                CONSTRAINT `FK_PPC_Post` FOREIGN KEY (`PostId`) REFERENCES `ProfilePosts` (`Id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ProfileCommentReactions` (
+                `Id` INT NOT NULL AUTO_INCREMENT, `CommentId` INT NOT NULL, `UserId` INT NOT NULL, `Reaction` VARCHAR(10) NOT NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`Id`), UNIQUE KEY `UX_PCR_CommentUser` (`CommentId`, `UserId`),
+                CONSTRAINT `FK_PCR_Comment` FOREIGN KEY (`CommentId`) REFERENCES `ProfilePostComments` (`Id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->profilePostsReady = true;
+    }
+
+    private const PROFILE_POST_SELECT = 'SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`Privacy`, p.`IsEdited`, p.`CreatedAt`, p.`UpdatedAt`,
+            u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
+        FROM `ProfilePosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`';
+
+    private function mapProfilePost(Obj $r): Obj
+    {
+        $name = !is_blank($r->FullName) ? (string)$r->FullName : (string)($r->UserName ?? 'User');
+        return obj([
+            'Id' => (int)$r->Id, 'UserId' => (int)$r->UserId, 'Content' => (string)($r->Content ?? ''),
+            'ImageUrl' => is_blank($r->ImageUrl) ? null : (string)$r->ImageUrl,
+            'Privacy' => in_array($r->Privacy, self::POST_PRIVACY, true) ? $r->Privacy : 'Public',
+            'IsEdited' => (bool)(int)$r->IsEdited, 'CreatedAt' => $r->CreatedAt, 'UpdatedAt' => $r->UpdatedAt,
+            'AuthorName' => $name, 'AuthorUserName' => (string)($r->UserName ?? ''), 'AuthorRole' => (string)($r->Role ?? 'User'),
+            'AuthorImage' => is_blank($r->ProfileImageLink) ? null : (string)$r->ProfileImageLink,
+            'AuthorInitials' => initials($name, 'U'), 'TimeAgo' => time_ago($r->CreatedAt),
+            'Reactions' => [], 'ReactionTotal' => 0, 'MyReaction' => null, 'Comments' => [], 'CommentCount' => 0,
+        ]);
+    }
+
+    public function GetProfilePostById(int $id): ?Obj
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $r = $this->one(self::PROFILE_POST_SELECT . ' WHERE p.`Id` = :id', ['id' => $id]);
+            return $r ? $this->mapProfilePost($r) : null;
+        } catch (Throwable $e) { error_log('[GetProfilePostById] ' . $e->getMessage()); return null; }
+    }
+
+    /** কোনো দর্শক এই পোস্টটি দেখতে পারবে কিনা */
+    public function CanViewProfilePost(Obj $post, ?int $viewerId, bool $viewerIsAdmin): bool
+    {
+        if ($viewerIsAdmin) return true;
+        if ($viewerId !== null && $post->UserId === $viewerId) return true;
+        if ($post->Privacy === 'Public') return true;
+        if ($post->Privacy === 'Friends' && $viewerId !== null) return $this->GetFriendRelation($viewerId, $post->UserId) === 'friends';
+        return false;
+    }
+
+    /**
+     * কারো টাইমলাইনের পোস্ট (দর্শকের অনুমতি অনুযায়ী ফিল্টার করা), নতুন আগে।
+     * $beforeId দিলে তার আগের (পুরোনো) পোস্ট — "আরো দেখুন" এর জন্য।
+     */
+    public function GetProfilePosts(int $ownerId, ?int $viewerId, bool $viewerIsAdmin, ?int $beforeId = null, int $limit = 10): array
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $where = ['p.`UserId` = :o'];
+            $p = ['o' => $ownerId];
+            if (!$viewerIsAdmin && $viewerId !== $ownerId) {
+                $isFriend = $viewerId !== null && $this->GetFriendRelation($viewerId, $ownerId) === 'friends';
+                $where[] = $isFriend ? "p.`Privacy` IN ('Public','Friends')" : "p.`Privacy` = 'Public'";
+            }
+            if ($beforeId) { $where[] = 'p.`Id` < :b'; $p['b'] = $beforeId; }
+            $limit = max(1, min(30, $limit));
+            $rows = $this->all(self::PROFILE_POST_SELECT . ' WHERE ' . implode(' AND ', $where) . " ORDER BY p.`Id` DESC LIMIT $limit", $p);
+            return $this->hydrateProfilePosts(array_map(fn($r) => $this->mapProfilePost($r), $rows), $viewerId);
+        } catch (Throwable $e) { error_log('[GetProfilePosts] ' . $e->getMessage()); return []; }
+    }
+
+    public function CountProfilePosts(int $ownerId, ?int $viewerId, bool $viewerIsAdmin): int
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $sql = 'SELECT COUNT(*) FROM `ProfilePosts` WHERE `UserId` = :o';
+            if (!$viewerIsAdmin && $viewerId !== $ownerId) {
+                $isFriend = $viewerId !== null && $this->GetFriendRelation($viewerId, $ownerId) === 'friends';
+                $sql .= $isFriend ? " AND `Privacy` IN ('Public','Friends')" : " AND `Privacy` = 'Public'";
+            }
+            return (int)$this->scalar($sql, ['o' => $ownerId]);
+        } catch (Throwable $e) { return 0; }
+    }
+
+    /** রিয়েকশন, কমেন্ট আর আমার রিয়েকশন যোগ করে */
+    public function hydrateProfilePosts(array $posts, ?int $viewerId): array
+    {
+        if (!$posts) return [];
+        $ids = array_map(fn($p) => (int)$p->Id, $posts);
+        $in = implode(',', $ids);
+        $byId = [];
+        foreach ($posts as $p) $byId[$p->Id] = $p;
+
+        foreach ($this->all("SELECT `PostId`, `Reaction`, COUNT(*) AS N FROM `ProfilePostReactions` WHERE `PostId` IN ($in) GROUP BY `PostId`, `Reaction`") as $r) {
+            $p = $byId[(int)$r->PostId];
+            $p->Reactions[$r->Reaction] = (int)$r->N;
+            $p->ReactionTotal += (int)$r->N;
+        }
+        if ($viewerId) {
+            foreach ($this->all("SELECT `PostId`, `Reaction` FROM `ProfilePostReactions` WHERE `PostId` IN ($in) AND `UserId` = :u", ['u' => $viewerId]) as $r) {
+                $byId[(int)$r->PostId]->MyReaction = $r->Reaction;
+            }
+        }
+        foreach ($posts as $p) arsort($p->Reactions);
+
+        $comments = $this->all("SELECT c.`Id`, c.`PostId`, c.`UserId`, c.`ParentId`, c.`Content`, c.`IsEdited`, c.`CreatedAt`,
+                u.`FullName`, u.`UserName`, u.`ProfileImageLink`
+            FROM `ProfilePostComments` c LEFT JOIN `Users` u ON u.`Id` = c.`UserId`
+            WHERE c.`PostId` IN ($in) ORDER BY c.`Id`");
+        $cById = [];
+        foreach ($comments as $c) $cById[(int)$c->Id] = $this->mapPostComment($c);
+        if ($cById) {
+            $cin = implode(',', array_keys($cById));
+            foreach ($this->all("SELECT `CommentId`, `Reaction`, COUNT(*) AS N FROM `ProfileCommentReactions` WHERE `CommentId` IN ($cin) GROUP BY `CommentId`, `Reaction`") as $r) {
+                $c = $cById[(int)$r->CommentId];
+                $c->Reactions[$r->Reaction] = (int)$r->N;
+                $c->ReactionTotal += (int)$r->N;
+            }
+            if ($viewerId) {
+                foreach ($this->all("SELECT `CommentId`, `Reaction` FROM `ProfileCommentReactions` WHERE `CommentId` IN ($cin) AND `UserId` = :u", ['u' => $viewerId]) as $r) {
+                    $cById[(int)$r->CommentId]->MyReaction = $r->Reaction;
+                }
+            }
+        }
+        foreach ($cById as $c) {
+            arsort($c->Reactions);
+            $post = $byId[$c->PostId] ?? null;
+            if (!$post) continue;
+            $post->CommentCount++;
+            if ($c->ParentId && isset($cById[$c->ParentId])) $cById[$c->ParentId]->Replies[] = $c;
+            elseif (!$c->ParentId) $post->Comments[] = $c;
+        }
+        return $posts;
+    }
+
+    private function mapPostComment(Obj $c): Obj
+    {
+        $name = !is_blank($c->FullName) ? (string)$c->FullName : (string)($c->UserName ?? 'User');
+        return obj([
+            'Id' => (int)$c->Id, 'PostId' => (int)$c->PostId, 'UserId' => (int)$c->UserId,
+            'ParentId' => $c->ParentId !== null ? (int)$c->ParentId : null, 'Content' => (string)$c->Content,
+            'IsEdited' => (bool)(int)$c->IsEdited, 'CreatedAt' => $c->CreatedAt, 'TimeAgo' => time_ago($c->CreatedAt, 'd M'),
+            'AuthorName' => $name, 'AuthorImage' => is_blank($c->ProfileImageLink) ? null : (string)$c->ProfileImageLink,
+            'AuthorInitials' => initials($name, 'U'), 'Reactions' => [], 'ReactionTotal' => 0, 'MyReaction' => null, 'Replies' => [],
+        ]);
+    }
+
+    /** একটা কমেন্ট (রিয়েকশনসহ) — নতুন কমেন্ট রেন্ডার করার জন্য */
+    public function GetPostCommentById(int $id, ?int $viewerId = null): ?Obj
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $c = $this->one('SELECT c.`Id`, c.`PostId`, c.`UserId`, c.`ParentId`, c.`Content`, c.`IsEdited`, c.`CreatedAt`,
+                    u.`FullName`, u.`UserName`, u.`ProfileImageLink`
+                FROM `ProfilePostComments` c LEFT JOIN `Users` u ON u.`Id` = c.`UserId` WHERE c.`Id` = :id', ['id' => $id]);
+            if (!$c) return null;
+            $c = $this->mapPostComment($c);
+            foreach ($this->all('SELECT `Reaction`, COUNT(*) AS N FROM `ProfileCommentReactions` WHERE `CommentId` = :c GROUP BY `Reaction`', ['c' => $id]) as $r) {
+                $c->Reactions[$r->Reaction] = (int)$r->N; $c->ReactionTotal += (int)$r->N;
+            }
+            arsort($c->Reactions);
+            if ($viewerId) $c->MyReaction = $this->scalar('SELECT `Reaction` FROM `ProfileCommentReactions` WHERE `CommentId` = :c AND `UserId` = :u', ['c' => $id, 'u' => $viewerId]) ?: null;
+            return $c;
+        } catch (Throwable $e) { error_log('[GetPostCommentById] ' . $e->getMessage()); return null; }
+    }
+
+    public function CreateProfilePost(int $userId, string $content, ?string $imageUrl, string $privacy): int
+    {
+        $this->EnsureProfilePostTables();
+        return $this->insert('INSERT INTO `ProfilePosts` (`UserId`, `Content`, `ImageUrl`, `Privacy`, `IsEdited`, `CreatedAt`) VALUES (:u, :c, :i, :p, 0, :t)',
+            ['u' => $userId, 'c' => $content, 'i' => $imageUrl, 'p' => $privacy, 't' => now()]);
+    }
+
+    public function UpdateProfilePost(int $postId, string $content, ?string $imageUrl, string $privacy, bool $contentChanged): bool
+    {
+        $this->EnsureProfilePostTables();
+        return $this->exec('UPDATE `ProfilePosts` SET `Content` = :c, `ImageUrl` = :i, `Privacy` = :p, `UpdatedAt` = :t'
+            . ($contentChanged ? ', `IsEdited` = 1' : '') . ' WHERE `Id` = :id',
+            ['c' => $content, 'i' => $imageUrl, 'p' => $privacy, 't' => now(), 'id' => $postId]) >= 0;
+    }
+
+    /** পোস্ট আর তার সব কমেন্ট / রিয়েকশন মুছে ফেলে */
+    public function DeleteProfilePost(int $postId): bool
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $this->exec('DELETE FROM `ProfileCommentReactions` WHERE `CommentId` IN (SELECT `Id` FROM `ProfilePostComments` WHERE `PostId` = :p)', ['p' => $postId]);
+            $this->exec('DELETE FROM `ProfilePostComments` WHERE `PostId` = :p', ['p' => $postId]);
+            $this->exec('DELETE FROM `ProfilePostReactions` WHERE `PostId` = :p', ['p' => $postId]);
+            return $this->exec('DELETE FROM `ProfilePosts` WHERE `Id` = :p', ['p' => $postId]) > 0;
+        } catch (Throwable $e) { error_log('[DeleteProfilePost] ' . $e->getMessage()); return false; }
+    }
+
+    /** শেষ X মিনিটে কয়টা পোস্ট / কমেন্ট (স্প্যাম ঠেকাতে) */
+    public function CountRecentProfileActivity(string $what, int $userId, int $minutes): int
+    {
+        $this->EnsureProfilePostTables();
+        $table = $what === 'comment' ? 'ProfilePostComments' : 'ProfilePosts';
+        return (int)$this->scalar("SELECT COUNT(*) FROM `$table` WHERE `UserId` = :u AND `CreatedAt` >= :t",
+            ['u' => $userId, 't' => date('Y-m-d H:i:s', time() - $minutes * 60)]);
+    }
+
+    /**
+     * রিয়েকশন দেওয়া / বদলানো / তুলে নেওয়া ($reaction = null হলে তুলে নেয়)।
+     * @return array{prev:?string, now:?string}
+     */
+    private function setReaction(string $table, string $col, int $targetId, int $userId, ?string $reaction): array
+    {
+        $this->EnsureProfilePostTables();
+        $prev = $this->scalar("SELECT `Reaction` FROM `$table` WHERE `$col` = :t AND `UserId` = :u", ['t' => $targetId, 'u' => $userId]) ?: null;
+        if ($reaction === null) {
+            $this->exec("DELETE FROM `$table` WHERE `$col` = :t AND `UserId` = :u", ['t' => $targetId, 'u' => $userId]);
+        } elseif ($prev === null) {
+            try {
+                $this->insert("INSERT INTO `$table` (`$col`, `UserId`, `Reaction`, `CreatedAt`) VALUES (:t, :u, :r, :c)",
+                    ['t' => $targetId, 'u' => $userId, 'r' => $reaction, 'c' => now()]);
+            } catch (Throwable $e) { // একসাথে দুইবার চাপলে
+                $this->exec("UPDATE `$table` SET `Reaction` = :r WHERE `$col` = :t AND `UserId` = :u", ['r' => $reaction, 't' => $targetId, 'u' => $userId]);
+            }
+        } elseif ($prev !== $reaction) {
+            $this->exec("UPDATE `$table` SET `Reaction` = :r WHERE `$col` = :t AND `UserId` = :u", ['r' => $reaction, 't' => $targetId, 'u' => $userId]);
+        }
+        return ['prev' => $prev, 'now' => $reaction];
+    }
+
+    private function reactionSummary(string $table, string $col, int $targetId): array
+    {
+        $out = [];
+        $total = 0;
+        foreach ($this->all("SELECT `Reaction`, COUNT(*) AS N FROM `$table` WHERE `$col` = :t GROUP BY `Reaction`", ['t' => $targetId]) as $r) {
+            $out[$r->Reaction] = (int)$r->N; $total += (int)$r->N;
+        }
+        arsort($out);
+        return ['counts' => $out, 'total' => $total];
+    }
+
+    public function SetPostReaction(int $postId, int $userId, ?string $reaction): array
+    {
+        $res = $this->setReaction('ProfilePostReactions', 'PostId', $postId, $userId, $reaction);
+        return $res + $this->reactionSummary('ProfilePostReactions', 'PostId', $postId);
+    }
+
+    public function SetCommentReaction(int $commentId, int $userId, ?string $reaction): array
+    {
+        $res = $this->setReaction('ProfileCommentReactions', 'CommentId', $commentId, $userId, $reaction);
+        return $res + $this->reactionSummary('ProfileCommentReactions', 'CommentId', $commentId);
+    }
+
+    /** @return Obj[] কে কোন রিয়েক্ট দিয়েছে */
+    public function GetReactors(string $type, int $targetId, int $limit = 200): array
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            [$table, $col] = $type === 'comment' ? ['ProfileCommentReactions', 'CommentId'] : ['ProfilePostReactions', 'PostId'];
+            $rows = $this->all("SELECT r.`UserId`, r.`Reaction`, u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
+                FROM `$table` r INNER JOIN `Users` u ON u.`Id` = r.`UserId` WHERE r.`$col` = :t ORDER BY r.`Id` DESC LIMIT " . (int)$limit, ['t' => $targetId]);
+            return array_map(function ($r) {
+                $name = !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName;
+                return obj(['Id' => (int)$r->UserId, 'Name' => $name, 'Reaction' => $r->Reaction, 'Role' => $r->Role,
+                    'Image' => is_blank($r->ProfileImageLink) ? null : $r->ProfileImageLink, 'Initials' => initials($name, 'U')]);
+            }, $rows);
+        } catch (Throwable $e) { return []; }
+    }
+
+    public function AddPostComment(int $postId, int $userId, ?int $parentId, string $content): int
+    {
+        $this->EnsureProfilePostTables();
+        return $this->insert('INSERT INTO `ProfilePostComments` (`PostId`, `UserId`, `ParentId`, `Content`, `IsEdited`, `CreatedAt`) VALUES (:p, :u, :pa, :c, 0, :t)',
+            ['p' => $postId, 'u' => $userId, 'pa' => $parentId, 'c' => $content, 't' => now()]);
+    }
+
+    public function UpdatePostComment(int $commentId, string $content): bool
+    {
+        $this->EnsureProfilePostTables();
+        return $this->exec('UPDATE `ProfilePostComments` SET `Content` = :c, `IsEdited` = 1, `UpdatedAt` = :t WHERE `Id` = :id',
+            ['c' => $content, 't' => now(), 'id' => $commentId]) >= 0;
+    }
+
+    /** কমেন্ট (আর তার রিপ্লাই) মুছে ফেলে। মোট কয়টা মুছলো তা ফেরত দেয়। */
+    public function DeletePostComment(int $commentId): int
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $ids = [$commentId];
+            foreach ($this->all('SELECT `Id` FROM `ProfilePostComments` WHERE `ParentId` = :p', ['p' => $commentId]) as $r) $ids[] = (int)$r->Id;
+            $in = implode(',', $ids);
+            $this->exec("DELETE FROM `ProfileCommentReactions` WHERE `CommentId` IN ($in)");
+            return $this->exec("DELETE FROM `ProfilePostComments` WHERE `Id` IN ($in)");
+        } catch (Throwable $e) { error_log('[DeletePostComment] ' . $e->getMessage()); return 0; }
+    }
+
+    /** ইউজার মুছে গেলে তার পোস্ট, কমেন্ট, রিয়েকশন মুছে ফেলা */
+    public function DeleteProfileContentOfUser(int $userId): void
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            foreach ($this->all('SELECT `Id`, `ImageUrl` FROM `ProfilePosts` WHERE `UserId` = :u', ['u' => $userId]) as $p) {
+                $this->DeleteProfilePost((int)$p->Id);
+                delete_upload($p->ImageUrl);
+            }
+            foreach ($this->all('SELECT `Id` FROM `ProfilePostComments` WHERE `UserId` = :u', ['u' => $userId]) as $c) $this->DeletePostComment((int)$c->Id);
+            $this->exec('DELETE FROM `ProfilePostReactions` WHERE `UserId` = :u', ['u' => $userId]);
+            $this->exec('DELETE FROM `ProfileCommentReactions` WHERE `UserId` = :u', ['u' => $userId]);
+        } catch (Throwable $e) { error_log('[DeleteProfileContentOfUser] ' . $e->getMessage()); }
+    }
+
+    public function CountPostComments(int $postId): int
+    {
+        return (int)$this->scalar('SELECT COUNT(*) FROM `ProfilePostComments` WHERE `PostId` = :p', ['p' => $postId]);
     }
 }

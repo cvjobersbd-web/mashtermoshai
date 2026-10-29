@@ -1,0 +1,99 @@
+<?php
+/**
+ * একটা টাইমলাইন পোস্ট। দরকার: $post (Db::hydrateProfilePosts), $viewerId, $viewerIsAdmin
+ */
+$rx = reaction_meta();
+$pv = post_privacy_meta()[$post->Privacy] ?? post_privacy_meta()['Public'];
+$isOwner = (int)$viewerId === $post->UserId;
+$canDelete = $isOwner || $viewerIsAdmin;
+$text = $post->Content;
+$lineCount = substr_count($text, "\n") + 1;
+$isLong = mb_strlen($text) > 420 || $lineCount > 8;
+$isBig = !$post->ImageUrl && $text !== '' && mb_strlen($text) <= 85 && $lineCount <= 2;
+$roots = $post->Comments;
+$hiddenRoots = max(0, count($roots) - 2);
+$mine = $post->MyReaction;
+?>
+<article class="pc" id="post-<?= $post->Id ?>" data-id="<?= $post->Id ?>" data-privacy="<?= e($post->Privacy) ?>"
+         data-owner="<?= $isOwner ? '1' : '0' ?>" data-content="<?= e($text) ?>" data-image="<?= e((string)$post->ImageUrl) ?>">
+    <header class="pc-head">
+        <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-avatar" aria-label="<?= e($post->AuthorName) ?>">
+            <?= e($post->AuthorInitials) ?>
+            <?php if ($post->AuthorImage): ?><img src="<?= e($post->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+        </a>
+        <div class="pc-who">
+            <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-name"><?= e($post->AuthorName) ?></a>
+            <?php if ($post->AuthorRole === 'Teacher'): ?><i class="fas fa-circle-check pc-verified" title="Teacher"></i><?php endif; ?>
+            <div class="pc-sub">
+                <a href="/Post/Details/<?= $post->Id ?>" title="<?= e(fmt_date($post->CreatedAt, 'l, d F Y \a\t h:i A')) ?>"><?= e($post->TimeAgo) ?></a>
+                <span>·</span>
+                <i class="fas <?= $pv[0] ?>" title="<?= e($pv[1] . ' — ' . $pv[2]) ?>"></i>
+                <?php if ($post->IsEdited): ?><span>·</span><span class="pc-edited" title="<?= e(fmt_date($post->UpdatedAt, 'd M Y, h:i A')) ?>">Edited</span><?php endif; ?>
+            </div>
+        </div>
+        <div class="pc-menu-wrap">
+            <button type="button" class="pc-menu-btn" data-pc="menu" aria-label="Post options"><i class="fas fa-ellipsis"></i></button>
+            <div class="pc-menu" role="menu">
+                <?php if ($isOwner): ?>
+                    <button type="button" data-pc="edit"><i class="fas fa-pen"></i> Edit post</button>
+                    <button type="button" data-pc="audience"><i class="fas <?= $pv[0] ?>"></i> Edit audience</button>
+                <?php endif; ?>
+                <button type="button" data-pc="copy"><i class="fas fa-link"></i> Copy link</button>
+                <?php if ($canDelete): ?>
+                    <button type="button" data-pc="delete" class="danger"><i class="fas fa-trash-can"></i> Delete post</button>
+                <?php endif; ?>
+            </div>
+        </div>
+    </header>
+
+    <?php if ($text !== ''): ?>
+        <div class="pc-body">
+            <div class="pc-text<?= $isBig ? ' big' : '' ?><?= $isLong ? ' clamp' : '' ?>"><?= linkify_text($text) ?></div>
+            <?php if ($isLong): ?><button type="button" class="pc-more" data-pc="more">See more</button><?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($post->ImageUrl): ?>
+        <div class="pc-media"><img src="<?= e($post->ImageUrl) ?>" alt="Post photo" loading="lazy" data-pc="zoom" /></div>
+    <?php endif; ?>
+
+    <div class="pc-stats">
+        <button type="button" class="pc-rx-sum" data-pc="reactors" <?= $post->ReactionTotal ? '' : 'hidden' ?>>
+            <span class="pc-rx-icons"><?php foreach (array_slice(array_keys($post->Reactions), 0, 3) as $k): ?><span><?= $rx[$k][0] ?></span><?php endforeach; ?></span>
+            <span class="pc-rx-n"><?= (int)$post->ReactionTotal ?></span>
+        </button>
+        <button type="button" class="pc-cm-n" data-pc="toggle-comments" <?= $post->CommentCount ? '' : 'hidden' ?>>
+            <span><?= (int)$post->CommentCount ?></span> comment<?= $post->CommentCount === 1 ? '' : 's' ?>
+        </button>
+    </div>
+
+    <div class="pc-actions">
+        <button type="button" class="pc-act pc-like<?= $mine ? ' on rx-' . e($mine) : '' ?>" data-rx-target="post" data-id="<?= $post->Id ?>" data-mine="<?= e((string)$mine) ?>">
+            <span class="pc-like-ico"><?= $mine ? $rx[$mine][0] : '<i class="far fa-thumbs-up"></i>' ?></span>
+            <span class="pc-like-lbl"><?= $mine ? $rx[$mine][1] : 'Like' ?></span>
+        </button>
+        <button type="button" class="pc-act" data-pc="comment"><i class="far fa-comment"></i> Comment</button>
+        <?php if ($post->Privacy === 'Public'): ?>
+            <button type="button" class="pc-act" data-pc="copy"><i class="far fa-share-from-square"></i> Share</button>
+        <?php endif; ?>
+    </div>
+
+    <div class="pc-comments">
+        <?php if ($hiddenRoots > 0): ?>
+            <button type="button" class="cm-prev" data-pc="prev-comments">View <?= $hiddenRoots ?> previous comment<?= $hiddenRoots > 1 ? 's' : '' ?></button>
+        <?php endif; ?>
+        <div class="cm-list">
+            <?php foreach ($roots as $i => $c): ?>
+                <?php partial('Post/_Comment', ['c' => $c, 'post' => $post, 'viewerId' => $viewerId, 'viewerIsAdmin' => $viewerIsAdmin,
+                    'isReply' => false, 'hidden' => $i < $hiddenRoots]); ?>
+            <?php endforeach; ?>
+        </div>
+        <form class="cm-form" data-pc="comment-form" autocomplete="off">
+            <span class="cm-avatar sm me-avatar"></span>
+            <div class="cm-pill">
+                <textarea rows="1" maxlength="1500" placeholder="Write a comment..." aria-label="Write a comment"></textarea>
+                <button type="submit" class="cm-send" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </form>
+    </div>
+</article>

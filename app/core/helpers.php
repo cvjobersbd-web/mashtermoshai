@@ -167,6 +167,41 @@ function str_preview(?string $s, int $len, string $empty = '(No text)'): string
 
 function is_blank($v): bool { return $v === null || trim((string)$v) === ''; }
 
+/** পোস্ট/কমেন্টের রিয়েকশন: key => [ইমোজি, লেবেল, রঙ] */
+function reaction_meta(): array
+{
+    return [
+        'like'  => ['👍', 'Like', '#1877F2'],
+        'love'  => ['❤️', 'Love', '#E41E3F'],
+        'care'  => ['🥰', 'Care', '#F7B125'],
+        'haha'  => ['😆', 'Haha', '#F7B125'],
+        'wow'   => ['😮', 'Wow', '#F7B125'],
+        'sad'   => ['😢', 'Sad', '#F7B125'],
+        'angry' => ['😡', 'Angry', '#E9710F'],
+    ];
+}
+
+/** পোস্টের প্রাইভেসি: key => [আইকন, লেবেল, বাংলা ব্যাখ্যা] */
+function post_privacy_meta(): array
+{
+    return [
+        'Public'  => ['fa-earth-asia', 'Public', 'সবাই দেখতে পারবে'],
+        'Friends' => ['fa-user-group', 'Friends', 'শুধু আপনার ফ্রেন্ডরা'],
+        'OnlyMe'  => ['fa-lock', 'Only me', 'শুধু আপনি'],
+    ];
+}
+
+/** টেক্সট escape করে লিংকগুলো ক্লিকযোগ্য করে (http/https ছাড়া অন্য কিছু না) */
+function linkify_text(?string $text): string
+{
+    $html = e((string)$text);
+    return preg_replace_callback('~\bhttps?://[^\s<>"\']+~i', function ($m) {
+        $url = rtrim($m[0], '.,!?;:)');
+        $tail = substr($m[0], strlen($url));
+        return '<a href="' . $url . '" target="_blank" rel="noopener nofollow ugc">' . $url . '</a>' . $tail;
+    }, $html);
+}
+
 /**
  * ফ্রেন্ড বাটন (সম্পর্ক অনুযায়ী)। JS এর frRenderActions() একই HTML বানায় —
  * একটা বদলালে অন্যটাও বদলাতে হবে।

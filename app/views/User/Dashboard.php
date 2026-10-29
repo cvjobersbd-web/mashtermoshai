@@ -473,7 +473,7 @@ $waLink = function (?string $phone): string {
                 </a>
             </li>
             <li>
-                <a href="/Profile">
+                <a href="/Profile/Show">
                     <i class="fas fa-id-card"></i> My Profile
                 </a>
             </li>

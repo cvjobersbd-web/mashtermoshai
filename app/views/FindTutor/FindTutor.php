@@ -3550,7 +3550,7 @@ $CommentIso = function ($dt): string {
 
                     // ✅ পুরো প্রোফাইল + Add Friend
                     html += `
-                                        <a href="/Friends/Person/${encodeURIComponent(u.id)}" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; padding:12px; border-radius:12px; background:#02B8F5; color:#fff; font-weight:700; text-decoration:none;">
+                                        <a href="/Profile/Show/${encodeURIComponent(u.id)}" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; padding:12px; border-radius:12px; background:#02B8F5; color:#fff; font-weight:700; text-decoration:none;">
                                             <i class="fas fa-user-plus"></i> Full Profile &amp; Add Friend
                                         </a>`;
 

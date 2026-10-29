@@ -4,7 +4,7 @@ $isTeacher = $p->Role === 'Teacher';
 $sub = !is_blank($p->Institution) ? $p->Institution : (!is_blank($p->Education) ? $p->Education : '@' . $p->UserName);
 ?>
 <div class="fr-card" data-uid="<?= (int)$p->Id ?>" data-name="<?= e(mb_strtolower($p->FullName . ' ' . $p->UserName . ' ' . $p->Institution)) ?>" data-role="<?= e($p->Role) ?>">
-    <a href="/Friends/Person/<?= (int)$p->Id ?>" class="fr-card-link" aria-label="<?= e($p->FullName) ?> এর প্রোফাইল">
+    <a href="/Profile/Show/<?= (int)$p->Id ?>" class="fr-card-link" aria-label="<?= e($p->FullName) ?> এর প্রোফাইল">
         <span class="fr-avatar <?= $isTeacher ? 'is-teacher' : '' ?>">
             <?php if ($p->Image): ?>
                 <img src="<?= e($p->Image) ?>" alt="" loading="lazy" onerror="this.remove()" />

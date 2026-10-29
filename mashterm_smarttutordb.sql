@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 29, 2026 at 06:57 AM
+-- Generation Time: Oct 29, 2026 at 08:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -156,6 +156,68 @@ INSERT INTO `passwordresets` (`Id`, `UserId`, `TokenHash`, `ExpiresAt`, `UsedAt`
 (2, 3, 'e6b71d0a309ceed5bc7eae9a26c3af8ad40116ee8132e7c1ee702f5a0e6186ba', '2026-10-29 10:47:36', '2026-10-29 10:20:40', '::1', '2026-10-29 10:17:36'),
 (3, 3, '6972be9d227d44dd0df1fbae7702e57610a35b81933a89144c482ce8659980e0', '2026-10-29 10:50:40', NULL, '::1', '2026-10-29 10:20:40'),
 (4, 5, 'da4fd5d077a4a90108d3e64c97a4198791d19d3ced906ad237dc7ec8f292d976', '2026-10-29 10:59:41', NULL, '::1', '2026-10-29 10:29:41');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `profilecommentreactions`
+--
+
+CREATE TABLE `profilecommentreactions` (
+  `Id` int(11) NOT NULL,
+  `CommentId` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `Reaction` varchar(10) NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `profilepostcomments`
+--
+
+CREATE TABLE `profilepostcomments` (
+  `Id` int(11) NOT NULL,
+  `PostId` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `ParentId` int(11) DEFAULT NULL,
+  `Content` text NOT NULL,
+  `IsEdited` tinyint(1) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `UpdatedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `profilepostreactions`
+--
+
+CREATE TABLE `profilepostreactions` (
+  `Id` int(11) NOT NULL,
+  `PostId` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `Reaction` varchar(10) NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `profileposts`
+--
+
+CREATE TABLE `profileposts` (
+  `Id` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `Content` text DEFAULT NULL,
+  `ImageUrl` varchar(500) DEFAULT NULL,
+  `Privacy` varchar(10) NOT NULL DEFAULT 'Public',
+  `IsEdited` tinyint(1) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `UpdatedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -607,6 +669,34 @@ ALTER TABLE `passwordresets`
   ADD KEY `IX_PasswordResets_Ip` (`RequestIp`,`CreatedAt`);
 
 --
+-- Indexes for table `profilecommentreactions`
+--
+ALTER TABLE `profilecommentreactions`
+  ADD PRIMARY KEY (`Id`),
+  ADD UNIQUE KEY `UX_PCR_CommentUser` (`CommentId`,`UserId`);
+
+--
+-- Indexes for table `profilepostcomments`
+--
+ALTER TABLE `profilepostcomments`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_PPC_Post` (`PostId`,`Id`);
+
+--
+-- Indexes for table `profilepostreactions`
+--
+ALTER TABLE `profilepostreactions`
+  ADD PRIMARY KEY (`Id`),
+  ADD UNIQUE KEY `UX_PPR_PostUser` (`PostId`,`UserId`);
+
+--
+-- Indexes for table `profileposts`
+--
+ALTER TABLE `profileposts`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_ProfilePosts_User` (`UserId`,`Id`);
+
+--
 -- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
@@ -778,6 +868,30 @@ ALTER TABLE `passwordresets`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `profilecommentreactions`
+--
+ALTER TABLE `profilecommentreactions`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `profilepostcomments`
+--
+ALTER TABLE `profilepostcomments`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `profilepostreactions`
+--
+ALTER TABLE `profilepostreactions`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `profileposts`
+--
+ALTER TABLE `profileposts`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
@@ -888,6 +1002,24 @@ ALTER TABLE `usersuspensions`
 --
 ALTER TABLE `helpdeskcomments`
   ADD CONSTRAINT `FK_HC_Post` FOREIGN KEY (`PostId`) REFERENCES `helpdeskposts` (`Id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `profilecommentreactions`
+--
+ALTER TABLE `profilecommentreactions`
+  ADD CONSTRAINT `FK_PCR_Comment` FOREIGN KEY (`CommentId`) REFERENCES `profilepostcomments` (`Id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `profilepostcomments`
+--
+ALTER TABLE `profilepostcomments`
+  ADD CONSTRAINT `FK_PPC_Post` FOREIGN KEY (`PostId`) REFERENCES `profileposts` (`Id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `profilepostreactions`
+--
+ALTER TABLE `profilepostreactions`
+  ADD CONSTRAINT `FK_PPR_Post` FOREIGN KEY (`PostId`) REFERENCES `profileposts` (`Id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `teachwantedcommentlikes`

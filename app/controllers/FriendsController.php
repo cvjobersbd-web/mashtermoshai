@@ -3,7 +3,6 @@
  * ফ্রেন্ড সিস্টেম — স্টুডেন্ট ↔ স্টুডেন্ট, টিচার ↔ টিচার, টিচার ↔ স্টুডেন্ট।
  *
  *  GET  /Friends                 → My Friends / Requests / Sent / Find People (ট্যাব)
- *  GET  /Friends/Person/{id}     → কারো প্রোফাইল + Add Friend বাটন
  *  GET  /Friends/Search?q=&role= → Find People এর লাইভ সার্চ (HTML কার্ড)
  *  POST /Friends/Send | Accept | Decline | Cancel | Unfriend   (userId)
  *
@@ -111,36 +110,10 @@ class FriendsController extends Controller
         exit;
     }
 
-    /** GET /Friends/Person/{id} */
+    /** GET /Friends/Person/{id} — পুরোনো লিংক, এখন প্রোফাইল পেজে যায় */
     public function Person(): void
     {
-        $me = $this->me();
-        $id = input_int('id', 0) ?? 0;
-        $user = $id > 0 ? $this->db->GetUserById($id) : null;
-        if (!$user || $user->Role === 'Admin') not_found('এই প্রোফাইলটি পাওয়া যায়নি।');
-
-        $isAdminViewer = current_role() === 'Admin';
-        $relation = $this->db->GetFriendRelation($me, $id);
-        $suspended = $this->db->GetActiveSuspension($id) !== null || !$user->IsActive;
-        if ($suspended && !$isAdminViewer && $relation !== 'self') not_found('এই প্রোফাইলটি এখন দেখা যাচ্ছে না।');
-
-        $teacherInfo = null;
-        if ($user->Role === 'Teacher') {
-            try {
-                $teacherInfo = $this->db->one('SELECT `Education`, `Institution`, `SubjectExpertise`, `Experience`, `TeachingStyle`, `AvailableDays`, `PreferredTime`
-                    FROM `TeacherRequests` WHERE `UserId` = :u ORDER BY `Id` DESC LIMIT 1', ['u' => $id]);
-            } catch (Throwable $e) { $teacherInfo = null; }
-        }
-
-        $this->view('Friends/Person', obj([
-            'User'          => $user,
-            'Relation'      => $relation,
-            'IsAdminViewer' => $isAdminViewer,
-            'CanSeeContact' => $relation === 'friends' || $relation === 'self' || $isAdminViewer,
-            'FriendCount'   => count($this->db->GetFriendIds($id)),
-            'MutualCount'   => $relation === 'self' ? 0 : $this->db->CountMutualFriends($me, $id),
-            'TeacherInfo'   => $teacherInfo,
-        ]));
+        redirect('/Profile/Show/' . (int)(input_int('id', 0) ?? 0));
     }
 
     // ============================================================
@@ -167,7 +140,7 @@ class FriendsController extends Controller
                 $this->done($me, $other, 'ফ্রেন্ড রিকোয়েস্ট পাঠানো হয়েছে।');
             case 'accepted':
                 $this->db->CreateNotification($other, 'Friend Request Accepted 🎉', "$name আপনার ফ্রেন্ড রিকোয়েস্ট Accept করেছেন।",
-                    'success', '/Friends/Person/' . $me, 'fa-user-check');
+                    'success', '/Profile/Show/' . $me, 'fa-user-check');
                 $this->done($me, $other, 'আপনারা এখন ফ্রেন্ড! 🎉');
             case 'already_sent':
                 $this->done($me, $other, 'রিকোয়েস্ট আগেই পাঠানো আছে।');
@@ -186,7 +159,7 @@ class FriendsController extends Controller
             json_response(['success' => false, 'message' => 'রিকোয়েস্টটি আর নেই।', 'relation' => $this->db->GetFriendRelation($me, $other)]);
         }
         $this->db->CreateNotification($other, 'Friend Request Accepted 🎉', $this->myName() . ' আপনার ফ্রেন্ড রিকোয়েস্ট Accept করেছেন।',
-            'success', '/Friends/Person/' . $me, 'fa-user-check');
+            'success', '/Profile/Show/' . $me, 'fa-user-check');
         $this->done($me, $other, 'আপনারা এখন ফ্রেন্ড! 🎉');
     }
 

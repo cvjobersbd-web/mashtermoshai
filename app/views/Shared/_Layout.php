@@ -1077,7 +1077,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 </li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li>
-                                    <a class="dropdown-item" href="/Profile">
+                                    <a class="dropdown-item" href="<?= $isAdmin ? '/Profile' : '/Profile/Show' ?>">
                                         <i class="fas fa-id-card"></i> My Profile
                                     </a>
                                 </li>
@@ -1180,7 +1180,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
         <div class="m-drawer-body">
             <?php if ($mLoggedIn): ?>
-                <a href="/Profile" class="m-user">
+                <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="m-user">
                     <span class="m-avatar">
                         <?php if (!is_blank($mImg)): ?><img src="<?= e($mImg) ?>" alt="" /><?php else: ?><?= e(initials($mName, 'U')) ?><?php endif; ?>
                     </span>
@@ -1203,7 +1203,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <?php if ($mLoggedIn): ?>
                 <div class="m-label">My Account</div>
                 <nav class="m-nav">
-                    <a href="/Profile" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
+                    <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
                     <?php if ($mRole !== 'Admin'): ?>
                         <a href="/Friends" class="<?= $mActive('/Friends') ?>"><i class="fas fa-user-group"></i><span>Friends</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <?php endif; ?>
