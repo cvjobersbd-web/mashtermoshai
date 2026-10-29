@@ -2288,10 +2288,25 @@ class Db
                 CONSTRAINT `FK_PCR_Comment` FOREIGN KEY (`CommentId`) REFERENCES `ProfilePostComments` (`Id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
+        // পরে যোগ হওয়া কলাম (লাইভ টেবিলে না থাকলে নিজে থেকে যোগ হয়)
+        if (!$this->columnExists('ProfilePosts', 'SharedPostId')) {
+            try { $this->pdo->exec('ALTER TABLE `ProfilePosts` ADD COLUMN `SharedPostId` INT NULL'); } catch (Throwable $e) { error_log('[SharedPostId] ' . $e->getMessage()); }
+        }
         $this->profilePostsReady = true;
     }
 
-    private const PROFILE_POST_SELECT = 'SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`Privacy`, p.`IsEdited`, p.`CreatedAt`, p.`UpdatedAt`,
+    private function columnExists(string $table, string $column): bool
+    {
+        try {
+            if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+                foreach ($this->pdo->query('PRAGMA table_info("' . $table . '")')->fetchAll(PDO::FETCH_ASSOC) as $c) if (strcasecmp($c['name'], $column) === 0) return true;
+                return false;
+            }
+            return (bool)$this->pdo->query("SHOW COLUMNS FROM `$table` LIKE " . $this->pdo->quote($column))->fetch();
+        } catch (Throwable $e) { return true; } // যাচাই না করা গেলে ALTER চেষ্টা করি না
+    }
+
+    private const PROFILE_POST_SELECT = 'SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`Privacy`, p.`IsEdited`, p.`CreatedAt`, p.`UpdatedAt`, p.`SharedPostId`,
             u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
         FROM `ProfilePosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`';
 
@@ -2307,6 +2322,7 @@ class Db
             'AuthorImage' => is_blank($r->ProfileImageLink) ? null : (string)$r->ProfileImageLink,
             'AuthorInitials' => initials($name, 'U'), 'TimeAgo' => time_ago($r->CreatedAt),
             'Reactions' => [], 'ReactionTotal' => 0, 'MyReaction' => null, 'Comments' => [], 'CommentCount' => 0,
+            'SharedPostId' => isset($r->SharedPostId) && $r->SharedPostId !== null ? (int)$r->SharedPostId : null, 'Shared' => null, 'ShareCount' => 0,
         ]);
     }
 
@@ -2346,7 +2362,7 @@ class Db
             if ($beforeId) { $where[] = 'p.`Id` < :b'; $p['b'] = $beforeId; }
             $limit = max(1, min(30, $limit));
             $rows = $this->all(self::PROFILE_POST_SELECT . ' WHERE ' . implode(' AND ', $where) . " ORDER BY p.`Id` DESC LIMIT $limit", $p);
-            return $this->hydrateProfilePosts(array_map(fn($r) => $this->mapProfilePost($r), $rows), $viewerId);
+            return $this->hydrateProfilePosts(array_map(fn($r) => $this->mapProfilePost($r), $rows), $viewerId, $viewerIsAdmin);
         } catch (Throwable $e) { error_log('[GetProfilePosts] ' . $e->getMessage()); return []; }
     }
 
@@ -2364,7 +2380,7 @@ class Db
     }
 
     /** রিয়েকশন, কমেন্ট আর আমার রিয়েকশন যোগ করে */
-    public function hydrateProfilePosts(array $posts, ?int $viewerId): array
+    public function hydrateProfilePosts(array $posts, ?int $viewerId, bool $viewerIsAdmin = false): array
     {
         if (!$posts) return [];
         $ids = array_map(fn($p) => (int)$p->Id, $posts);
@@ -2411,6 +2427,24 @@ class Db
             if ($c->ParentId && isset($cById[$c->ParentId])) $cById[$c->ParentId]->Replies[] = $c;
             elseif (!$c->ParentId) $post->Comments[] = $c;
         }
+
+        // শেয়ার করা মূল পোস্ট (দর্শক দেখতে না পারলে Shared = false → "Content unavailable")
+        $origIds = array_values(array_unique(array_filter(array_map(fn($p) => $p->SharedPostId, $posts))));
+        if ($origIds) {
+            $orig = [];
+            foreach ($this->all(self::PROFILE_POST_SELECT . ' WHERE p.`Id` IN (' . implode(',', array_map('intval', $origIds)) . ')') as $r) {
+                $o = $this->mapProfilePost($r);
+                $orig[$o->Id] = $o;
+            }
+            foreach ($posts as $p) {
+                if (!$p->SharedPostId) continue;
+                $o = $orig[$p->SharedPostId] ?? null;
+                $p->Shared = ($o && $this->CanViewProfilePost($o, $viewerId, $viewerIsAdmin)) ? $o : false;
+            }
+        }
+        foreach ($this->all("SELECT `SharedPostId`, COUNT(*) AS N FROM `ProfilePosts` WHERE `SharedPostId` IN ($in) GROUP BY `SharedPostId`") as $r) {
+            if (isset($byId[(int)$r->SharedPostId])) $byId[(int)$r->SharedPostId]->ShareCount = (int)$r->N;
+        }
         return $posts;
     }
 
@@ -2445,11 +2479,141 @@ class Db
         } catch (Throwable $e) { error_log('[GetPostCommentById] ' . $e->getMessage()); return null; }
     }
 
-    public function CreateProfilePost(int $userId, string $content, ?string $imageUrl, string $privacy): int
+    public function CreateProfilePost(int $userId, string $content, ?string $imageUrl, string $privacy, ?int $sharedPostId = null): int
     {
         $this->EnsureProfilePostTables();
-        return $this->insert('INSERT INTO `ProfilePosts` (`UserId`, `Content`, `ImageUrl`, `Privacy`, `IsEdited`, `CreatedAt`) VALUES (:u, :c, :i, :p, 0, :t)',
-            ['u' => $userId, 'c' => $content, 'i' => $imageUrl, 'p' => $privacy, 't' => now()]);
+        return $this->insert('INSERT INTO `ProfilePosts` (`UserId`, `Content`, `ImageUrl`, `Privacy`, `IsEdited`, `CreatedAt`, `SharedPostId`) VALUES (:u, :c, :i, :p, 0, :t, :s)',
+            ['u' => $userId, 'c' => $content, 'i' => $imageUrl, 'p' => $privacy, 't' => now(), 's' => $sharedPostId]);
+    }
+
+    public function CountRecentShares(int $userId, int $postId, int $minutes): int
+    {
+        $this->EnsureProfilePostTables();
+        return (int)$this->scalar('SELECT COUNT(*) FROM `ProfilePosts` WHERE `UserId` = :u AND `SharedPostId` = :p AND `CreatedAt` >= :t',
+            ['u' => $userId, 'p' => $postId, 't' => date('Y-m-d H:i:s', time() - $minutes * 60)]);
+    }
+
+    /** @return Obj[] কে কে এই পোস্ট শেয়ার করেছে */
+    public function GetSharers(int $postId, int $limit = 200): array
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $rows = $this->all('SELECT p.`Id` AS ShareId, p.`UserId`, p.`Privacy`, u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
+                FROM `ProfilePosts` p INNER JOIN `Users` u ON u.`Id` = p.`UserId` WHERE p.`SharedPostId` = :p ORDER BY p.`Id` DESC LIMIT ' . (int)$limit, ['p' => $postId]);
+            return array_map(function ($r) {
+                $name = !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName;
+                return obj(['Id' => (int)$r->UserId, 'ShareId' => (int)$r->ShareId, 'Privacy' => $r->Privacy, 'Name' => $name, 'Role' => $r->Role,
+                    'Image' => is_blank($r->ProfileImageLink) ? null : $r->ProfileImageLink, 'Initials' => initials($name, 'U')]);
+            }, $rows);
+        } catch (Throwable $e) { return []; }
+    }
+
+    // ============================================================
+    // ===== কভার ফটো (UserProfileExtras) =====
+    // ============================================================
+    private bool $extrasReady = false;
+
+    public function EnsureProfileExtrasTable(): void
+    {
+        if ($this->extrasReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "UserProfileExtras" ("UserId" INTEGER PRIMARY KEY, "CoverImageUrl" TEXT NULL,
+                "CoverPosY" INTEGER NOT NULL DEFAULT 50, "UpdatedAt" TEXT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `UserProfileExtras` (
+                `UserId` INT NOT NULL, `CoverImageUrl` VARCHAR(500) NULL, `CoverPosY` TINYINT NOT NULL DEFAULT 50, `UpdatedAt` DATETIME NULL,
+                PRIMARY KEY (`UserId`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->extrasReady = true;
+    }
+
+    /** @return Obj {CoverImageUrl, CoverPosY} */
+    public function GetProfileExtras(int $userId): Obj
+    {
+        try {
+            $this->EnsureProfileExtrasTable();
+            $r = $this->one('SELECT `CoverImageUrl`, `CoverPosY` FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]);
+        } catch (Throwable $e) { $r = null; }
+        return obj(['CoverImageUrl' => $r && !is_blank($r->CoverImageUrl) ? (string)$r->CoverImageUrl : null,
+            'CoverPosY' => $r ? max(0, min(100, (int)$r->CoverPosY)) : 50]);
+    }
+
+    /** কভার সেভ ($url = '' দিলে মুছে দেয়, null দিলে ছবি না বদলে শুধু পজিশন) */
+    public function SaveCover(int $userId, ?string $url, int $posY): bool
+    {
+        $this->EnsureProfileExtrasTable();
+        $posY = max(0, min(100, $posY));
+        $exists = (int)$this->scalar('SELECT COUNT(*) FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]) > 0;
+        if (!$exists) {
+            $this->insert('INSERT INTO `UserProfileExtras` (`UserId`, `CoverImageUrl`, `CoverPosY`, `UpdatedAt`) VALUES (:u, :c, :y, :t)',
+                ['u' => $userId, 'c' => $url === '' ? null : $url, 'y' => $posY, 't' => now()]);
+            return true;
+        }
+        if ($url === null) {
+            return $this->exec('UPDATE `UserProfileExtras` SET `CoverPosY` = :y, `UpdatedAt` = :t WHERE `UserId` = :u', ['y' => $posY, 't' => now(), 'u' => $userId]) >= 0;
+        }
+        return $this->exec('UPDATE `UserProfileExtras` SET `CoverImageUrl` = :c, `CoverPosY` = :y, `UpdatedAt` = :t WHERE `UserId` = :u',
+            ['c' => $url === '' ? null : $url, 'y' => $posY, 't' => now(), 'u' => $userId]) >= 0;
+    }
+
+    // ============================================================
+    // ===== @Mention (কমেন্টে কাউকে ট্যাগ করা) =====
+    // কমেন্টে সেভ হয়: @[নাম|ইউজারId]
+    // ============================================================
+
+    /** মেনশন সাজেশন: পোস্টের মালিক, কমেন্টকারীরা আর আমার ফ্রেন্ডরা — নামের সাথে মিলিয়ে */
+    public function MentionSuggestions(int $me, ?int $postId, string $q, int $limit = 8): array
+    {
+        try {
+            $ids = [];
+            if ($postId) {
+                $this->EnsureProfilePostTables();
+                $owner = $this->scalar('SELECT `UserId` FROM `ProfilePosts` WHERE `Id` = :p', ['p' => $postId]);
+                if ($owner) $ids[(int)$owner] = 3;
+                foreach ($this->all('SELECT DISTINCT `UserId` FROM `ProfilePostComments` WHERE `PostId` = :p', ['p' => $postId]) as $r) $ids[(int)$r->UserId] = max($ids[(int)$r->UserId] ?? 0, 2);
+            }
+            foreach ($this->GetFriendIds($me) as $f) $ids[$f] = max($ids[$f] ?? 0, 1);
+            unset($ids[$me]);
+            if (!$ids) return [];
+            $q = trim($q);
+            $sql = 'SELECT `Id`, `FullName`, `UserName`, `Role`, `ProfileImageLink` FROM `Users` WHERE `Id` IN (' . implode(',', array_keys($ids)) . ") AND `Role` <> 'Admin'";
+            $p = [];
+            if ($q !== '') {
+                $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+                $sql .= ' AND (`FullName` LIKE :a OR `UserName` LIKE :b)';
+                $p = ['a' => $like, 'b' => $like];
+            }
+            $rows = $this->all($sql . ' LIMIT 50', $p);
+            usort($rows, function ($x, $y) use ($ids, $q) {
+                $sx = ($ids[(int)$x->Id] ?? 0) + ($q !== '' && stripos((string)$x->FullName, $q) === 0 ? 5 : 0);
+                $sy = ($ids[(int)$y->Id] ?? 0) + ($q !== '' && stripos((string)$y->FullName, $q) === 0 ? 5 : 0);
+                return $sy <=> $sx ?: strcasecmp((string)$x->FullName, (string)$y->FullName);
+            });
+            return array_map(function ($r) {
+                $name = !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName;
+                return ['id' => (int)$r->Id, 'name' => $name, 'username' => (string)$r->UserName, 'role' => $r->Role === 'Teacher' ? 'Teacher' : 'Student',
+                    'image' => is_blank($r->ProfileImageLink) ? null : $r->ProfileImageLink, 'initials' => initials($name, 'U')];
+            }, array_slice($rows, 0, $limit));
+        } catch (Throwable $e) { error_log('[MentionSuggestions] ' . $e->getMessage()); return []; }
+    }
+
+    /**
+     * কমেন্টের @[নাম|id] টোকেন যাচাই করে: আসল নাম বসায়, ভুল/অ্যাডমিন id হলে সাধারণ লেখা বানায়।
+     * @return array{0:string,1:int[]} [পরিষ্কার লেখা, মেনশন হওয়া ইউজার Id]
+     */
+    public function NormalizeMentions(string $text): array
+    {
+        $ids = [];
+        $out = preg_replace_callback('/@\[([^\]|]{1,80})\|(\d{1,10})\]/u', function ($m) use (&$ids) {
+            $u = $this->one('SELECT `Id`, `FullName`, `UserName`, `Role` FROM `Users` WHERE `Id` = :id', ['id' => (int)$m[2]]);
+            if (!$u || $u->Role === 'Admin') return '@' . $m[1];
+            $name = !is_blank($u->FullName) ? trim((string)$u->FullName) : (string)$u->UserName;
+            $name = str_replace([']', '|'], '', $name);
+            $ids[(int)$u->Id] = true;
+            return '@[' . $name . '|' . (int)$u->Id . ']';
+        }, $text);
+        return [$out ?? $text, array_keys($ids)];
     }
 
     public function UpdateProfilePost(int $postId, string $content, ?string $imageUrl, string $privacy, bool $contentChanged): bool
@@ -2582,6 +2746,9 @@ class Db
             foreach ($this->all('SELECT `Id` FROM `ProfilePostComments` WHERE `UserId` = :u', ['u' => $userId]) as $c) $this->DeletePostComment((int)$c->Id);
             $this->exec('DELETE FROM `ProfilePostReactions` WHERE `UserId` = :u', ['u' => $userId]);
             $this->exec('DELETE FROM `ProfileCommentReactions` WHERE `UserId` = :u', ['u' => $userId]);
+            $extras = $this->GetProfileExtras($userId);
+            delete_upload($extras->CoverImageUrl);
+            $this->exec('DELETE FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]);
         } catch (Throwable $e) { error_log('[DeleteProfileContentOfUser] ' . $e->getMessage()); }
     }
 

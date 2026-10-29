@@ -6,13 +6,11 @@ $rx = reaction_meta();
 $mine = $c->MyReaction;
 $isMine = (int)$viewerId === $c->UserId;
 $canDelete = $isMine || (int)$viewerId === $post->UserId || $viewerIsAdmin;
-$text = $c->Content;
-$mention = null;
-if (preg_match('/^@\[([^\]]{1,80})\]\s?/u', $text, $m)) { $mention = $m[1]; $text = substr($text, strlen($m[0])); }
+[$plain, $mentionMap] = mention_plain($c->Content);
 $replies = $c->Replies ?? [];
 ?>
 <div class="cm<?= $isReply ? ' is-reply' : '' ?>" id="cm-<?= $c->Id ?>" data-id="<?= $c->Id ?>" data-root="<?= $c->ParentId ?? $c->Id ?>"
-     data-uid="<?= $c->UserId ?>" data-name="<?= e($c->AuthorName) ?>" data-raw="<?= e($text) ?>" data-mention="<?= e((string)$mention) ?>"<?= !empty($hidden) ? ' hidden' : '' ?>>
+     data-uid="<?= $c->UserId ?>" data-name="<?= e($c->AuthorName) ?>" data-raw="<?= e($plain) ?>" data-mentions="<?= e(json_encode((object)$mentionMap, JSON_UNESCAPED_UNICODE)) ?>"<?= !empty($hidden) ? ' hidden' : '' ?>>
     <a href="/Profile/Show/<?= $c->UserId ?>" class="cm-avatar<?= $isReply ? ' sm' : '' ?>" aria-label="<?= e($c->AuthorName) ?>">
         <?= e($c->AuthorInitials) ?>
         <?php if ($c->AuthorImage): ?><img src="<?= e($c->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
@@ -21,7 +19,7 @@ $replies = $c->Replies ?? [];
         <div class="cm-bubble-row">
             <div class="cm-bubble<?= $c->ReactionTotal ? ' has-rx' : '' ?>">
                 <a href="/Profile/Show/<?= $c->UserId ?>" class="cm-name"><?= e($c->AuthorName) ?></a>
-                <div class="cm-text"><?php if ($mention !== null): ?><span class="cm-mention"><?= e($mention) ?></span> <?php endif; ?><?= linkify_text($text) ?></div>
+                <div class="cm-text"><?= comment_text_html($c->Content) ?></div>
                 <button type="button" class="cm-rx" data-pc="comment-reactors" <?= $c->ReactionTotal ? '' : 'hidden' ?>>
                     <span class="cm-rx-icons"><?php foreach (array_slice(array_keys($c->Reactions), 0, 3) as $k): ?><span><?= $rx[$k][0] ?></span><?php endforeach; ?></span>
                     <span class="cm-rx-n"><?= $c->ReactionTotal > 1 ? (int)$c->ReactionTotal : '' ?></span>

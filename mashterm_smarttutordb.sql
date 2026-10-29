@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 29, 2026 at 08:00 AM
+-- Generation Time: Oct 29, 2026 at 08:33 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -547,6 +547,19 @@ CREATE TABLE `tutorrequests` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `userprofileextras`
+--
+
+CREATE TABLE `userprofileextras` (
+  `UserId` int(11) NOT NULL,
+  `CoverImageUrl` varchar(500) DEFAULT NULL,
+  `CoverPosY` tinyint(4) NOT NULL DEFAULT 50,
+  `UpdatedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -810,6 +823,12 @@ ALTER TABLE `tutorrequests`
   ADD PRIMARY KEY (`Id`),
   ADD KEY `IX_TutorRequests_TutorName` (`TutorName`),
   ADD KEY `IX_TutorRequests_Status` (`Status`);
+
+--
+-- Indexes for table `userprofileextras`
+--
+ALTER TABLE `userprofileextras`
+  ADD PRIMARY KEY (`UserId`);
 
 --
 -- Indexes for table `users`

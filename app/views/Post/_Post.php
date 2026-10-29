@@ -9,13 +9,19 @@ $canDelete = $isOwner || $viewerIsAdmin;
 $text = $post->Content;
 $lineCount = substr_count($text, "\n") + 1;
 $isLong = mb_strlen($text) > 420 || $lineCount > 8;
-$isBig = !$post->ImageUrl && $text !== '' && mb_strlen($text) <= 85 && $lineCount <= 2;
+$isShare = $post->SharedPostId !== null;
+$orig = $post->Shared ?? null;           // Obj | false (দেখা যায় না) | null
+$isBig = !$isShare && !$post->ImageUrl && $text !== '' && mb_strlen($text) <= 85 && $lineCount <= 2;
+// কোন পোস্টটা শেয়ার হবে (শেয়ার করা পোস্ট আবার শেয়ার করলে মূলটা)
+$shareTarget = $isShare ? ($orig ? $orig : null) : $post;
+$canShare = !$viewerIsAdmin && $shareTarget && $shareTarget->Privacy === 'Public';
 $roots = $post->Comments;
 $hiddenRoots = max(0, count($roots) - 2);
 $mine = $post->MyReaction;
 ?>
 <article class="pc" id="post-<?= $post->Id ?>" data-id="<?= $post->Id ?>" data-privacy="<?= e($post->Privacy) ?>"
-         data-owner="<?= $isOwner ? '1' : '0' ?>" data-content="<?= e($text) ?>" data-image="<?= e((string)$post->ImageUrl) ?>">
+         data-owner="<?= $isOwner ? '1' : '0' ?>" data-content="<?= e($text) ?>" data-image="<?= e((string)$post->ImageUrl) ?>"
+         data-share="<?= $isShare ? '1' : '0' ?>" data-share-target="<?= $canShare ? $shareTarget->Id : '' ?>">
     <header class="pc-head">
         <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-avatar" aria-label="<?= e($post->AuthorName) ?>">
             <?= e($post->AuthorInitials) ?>
@@ -24,6 +30,7 @@ $mine = $post->MyReaction;
         <div class="pc-who">
             <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-name"><?= e($post->AuthorName) ?></a>
             <?php if ($post->AuthorRole === 'Teacher'): ?><i class="fas fa-circle-check pc-verified" title="Teacher"></i><?php endif; ?>
+            <?php if ($isShare): ?><span class="pc-shared-lbl">shared a post</span><?php endif; ?>
             <div class="pc-sub">
                 <a href="/Post/Details/<?= $post->Id ?>" title="<?= e(fmt_date($post->CreatedAt, 'l, d F Y \a\t h:i A')) ?>"><?= e($post->TimeAgo) ?></a>
                 <span>·</span>
@@ -57,14 +64,50 @@ $mine = $post->MyReaction;
         <div class="pc-media"><img src="<?= e($post->ImageUrl) ?>" alt="Post photo" loading="lazy" data-pc="zoom" /></div>
     <?php endif; ?>
 
+    <?php if ($isShare): ?>
+        <?php if ($orig):
+            $opv = post_privacy_meta()[$orig->Privacy] ?? post_privacy_meta()['Public'];
+            $oLong = mb_strlen($orig->Content) > 300 || substr_count($orig->Content, "\n") > 6;
+        ?>
+            <div class="pc-shared">
+                <?php if ($orig->ImageUrl): ?>
+                    <div class="pc-media"><img src="<?= e($orig->ImageUrl) ?>" alt="Post photo" loading="lazy" data-pc="zoom" /></div>
+                <?php endif; ?>
+                <div class="pc-shared-in">
+                    <div class="pc-head">
+                        <a href="/Profile/Show/<?= $orig->UserId ?>" class="pc-avatar sm"><?= e($orig->AuthorInitials) ?><?php if ($orig->AuthorImage): ?><img src="<?= e($orig->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                        <div class="pc-who">
+                            <a href="/Profile/Show/<?= $orig->UserId ?>" class="pc-name"><?= e($orig->AuthorName) ?></a>
+                            <?php if ($orig->AuthorRole === 'Teacher'): ?><i class="fas fa-circle-check pc-verified"></i><?php endif; ?>
+                            <div class="pc-sub"><a href="/Post/Details/<?= $orig->Id ?>"><?= e($orig->TimeAgo) ?></a><span>·</span><i class="fas <?= $opv[0] ?>" title="<?= e($opv[1]) ?>"></i></div>
+                        </div>
+                    </div>
+                    <?php if ($orig->Content !== ''): ?>
+                        <div class="pc-body"><div class="pc-text<?= $oLong ? ' clamp' : '' ?>"><?= linkify_text($orig->Content) ?></div>
+                            <?php if ($oLong): ?><button type="button" class="pc-more" data-pc="more">See more</button><?php endif; ?></div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="pc-shared pc-unavail">
+                <i class="fas fa-lock"></i>
+                <div><strong>This content isn't available right now</strong>
+                    <p>পোস্টটি মুছে ফেলা হয়েছে, অথবা এখন শুধু নির্দিষ্ট মানুষ দেখতে পারে।</p></div>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <div class="pc-stats">
         <button type="button" class="pc-rx-sum" data-pc="reactors" <?= $post->ReactionTotal ? '' : 'hidden' ?>>
             <span class="pc-rx-icons"><?php foreach (array_slice(array_keys($post->Reactions), 0, 3) as $k): ?><span><?= $rx[$k][0] ?></span><?php endforeach; ?></span>
             <span class="pc-rx-n"><?= (int)$post->ReactionTotal ?></span>
         </button>
-        <button type="button" class="pc-cm-n" data-pc="toggle-comments" <?= $post->CommentCount ? '' : 'hidden' ?>>
-            <span><?= (int)$post->CommentCount ?></span> comment<?= $post->CommentCount === 1 ? '' : 's' ?>
-        </button>
+        <span class="pc-stat-right">
+            <button type="button" class="pc-cm-n" data-pc="toggle-comments" <?= $post->CommentCount ? '' : 'hidden' ?>>
+                <span><?= (int)$post->CommentCount ?></span> comment<?= $post->CommentCount === 1 ? '' : 's' ?>
+            </button>
+            <button type="button" class="pc-sh-n" data-pc="sharers" <?= $post->ShareCount ? '' : 'hidden' ?>><span><?= (int)$post->ShareCount ?></span> share<?= $post->ShareCount === 1 ? '' : 's' ?></button>
+        </span>
     </div>
 
     <div class="pc-actions">
@@ -73,8 +116,8 @@ $mine = $post->MyReaction;
             <span class="pc-like-lbl"><?= $mine ? $rx[$mine][1] : 'Like' ?></span>
         </button>
         <button type="button" class="pc-act" data-pc="comment"><i class="far fa-comment"></i> Comment</button>
-        <?php if ($post->Privacy === 'Public'): ?>
-            <button type="button" class="pc-act" data-pc="copy"><i class="far fa-share-from-square"></i> Share</button>
+        <?php if ($canShare): ?>
+            <button type="button" class="pc-act" data-pc="share"><i class="far fa-share-from-square"></i> Share</button>
         <?php endif; ?>
     </div>
 

@@ -9,6 +9,9 @@
  *  POST /Post/React          (postId, reaction — খালি হলে রিয়েক্ট তুলে নেয়)
  *  POST /Post/Comment        (postId, content, parentId?)
  *  POST /Post/EditComment | DeleteComment | ReactComment
+ *  POST /Post/Share          (postId, content, privacy) — পাবলিক পোস্ট নিজের প্রোফাইলে শেয়ার
+ *  GET  /Post/Sharers?id=     → কে কে শেয়ার করেছে (JSON)
+ *  GET  /Post/MentionSuggest?postId=&q= → কমেন্টে @ লিখলে নামের তালিকা (JSON)
  *
  * প্রাইভেসি: Public = সবাই, Friends = শুধু ফ্রেন্ড, OnlyMe = শুধু নিজে। অ্যাডমিন সব দেখতে ও মুছতে পারে।
  */
@@ -65,7 +68,7 @@ class PostController extends Controller
 
     private function renderPost(Obj $post, int $me): string
     {
-        $post = $this->db->hydrateProfilePosts([$post], $me)[0];
+        $post = $this->db->hydrateProfilePosts([$post], $me, $this->isAdmin())[0];
         ob_start();
         partial('Post/_Post', ['post' => $post, 'viewerId' => $me, 'viewerIsAdmin' => $this->isAdmin()]);
         return ob_get_clean();
@@ -93,7 +96,7 @@ class PostController extends Controller
         if ($me === null) redirect('/Account/Login?returnUrl=' . rawurlencode('/Post/Details/' . (int)input_int('id', 0)));
         $post = $this->db->GetProfilePostById(input_int('id', 0) ?? 0);
         if (!$post || !$this->db->CanViewProfilePost($post, $me, $this->isAdmin())) not_found('পোস্টটি পাওয়া যায়নি, মুছে ফেলা হয়েছে, অথবা আপনার দেখার অনুমতি নেই।');
-        $post = $this->db->hydrateProfilePosts([$post], $me)[0];
+        $post = $this->db->hydrateProfilePosts([$post], $me, $this->isAdmin())[0];
         $this->view('Post/Details', $post, ['ViewerIsAdmin' => $this->isAdmin()]);
     }
 
@@ -160,10 +163,11 @@ class PostController extends Controller
 
         $content = $this->cleanText(input_str('content'));
         if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
-        $newImage = $this->saveImage($me);
+        $isShare = $post->SharedPostId !== null;
+        $newImage = $isShare ? null : $this->saveImage($me);
         $image = $post->ImageUrl;
         if ($newImage !== null || input_bool('removeImage')) $image = $newImage;
-        if ($content === '' && $image === null) {
+        if (!$isShare && $content === '' && $image === null) {
             if ($newImage) delete_upload($newImage);
             $this->fail('পোস্ট খালি রাখা যাবে না — কিছু লিখুন অথবা ছবি রাখুন।');
         }
@@ -228,11 +232,13 @@ class PostController extends Controller
             if ($parent->ParentId) $parentId = $parent->ParentId; // রিপ্লাইয়ের রিপ্লাই → একই থ্রেডে
         }
 
+        [$content, $mentioned] = $this->db->NormalizeMentions($content);
         $id = $this->db->AddPostComment($post->Id, $me, $parentId, $content);
         $c = $this->db->GetPostCommentById($id, $me);
 
         $name = $this->name();
         $notified = [$me => true];
+        $this->notifyMentions($mentioned, $post, $content, $notified);
         if ($parent && !isset($notified[$parent->UserId])) {
             $this->db->CreateNotification($parent->UserId, 'New Reply 💬', "$name আপনার কমেন্টে রিপ্লাই দিয়েছেন: " . str_preview($content, 60), 'info', $this->postLink($post->Id), 'fa-reply');
             $notified[$parent->UserId] = true;
@@ -255,9 +261,17 @@ class PostController extends Controller
         $content = $this->cleanText(input_str('content'));
         if ($content === '') $this->fail('কমেন্ট খালি রাখা যাবে না।');
         if (mb_strlen($content) > self::MAX_COMMENT_LEN) $this->fail('কমেন্ট সর্বোচ্চ ' . self::MAX_COMMENT_LEN . ' অক্ষর।');
-        if ($content !== $c->Content) $this->db->UpdatePostComment($c->Id, $content);
+        [$content, $mentioned] = $this->db->NormalizeMentions($content);
+        if ($content !== $c->Content) {
+            [, $oldMap] = mention_plain($c->Content);
+            $this->db->UpdatePostComment($c->Id, $content);
+            $notified = [$me => true];
+            foreach ($oldMap as $uid) $notified[$uid] = true; // আগে যাদের মেনশন করা ছিল তাদের আবার জানানো হয় না
+            $this->notifyMentions($mentioned, $post, $content, $notified);
+        }
         $c = $this->db->GetPostCommentById($c->Id, $me);
-        json_response(['success' => true, 'contentHtml' => linkify_text($c->Content), 'content' => $c->Content, 'isEdited' => $c->IsEdited]);
+        [$plain, $map] = mention_plain($c->Content);
+        json_response(['success' => true, 'contentHtml' => comment_text_html($c->Content), 'raw' => $plain, 'mentions' => (object)$map, 'isEdited' => $c->IsEdited]);
     }
 
     /** POST /Post/DeleteComment (commentId) — কমেন্টকারী, পোস্টের মালিক বা অ্যাডমিন */
@@ -271,6 +285,79 @@ class PostController extends Controller
         if ($c->UserId !== $me && $post->UserId !== $me && !$this->isAdmin()) $this->fail('এই কমেন্ট মোছার অনুমতি নেই।');
         $n = $this->db->DeletePostComment($c->Id);
         json_response(['success' => true, 'removed' => $n, 'count' => $this->db->CountPostComments($post->Id)]);
+    }
+
+    /** মেনশন হওয়া মানুষদের নোটিফিকেশন (যারা পোস্টটি দেখতে পারে শুধু তারা) */
+    private function notifyMentions(array $userIds, Obj $post, string $content, array &$notified): void
+    {
+        $name = $this->name();
+        [$plain] = mention_plain($content);
+        foreach (array_slice($userIds, 0, 20) as $uid) {
+            if (isset($notified[$uid])) continue;
+            $notified[$uid] = true;
+            $u = $this->db->GetUserById($uid);
+            if (!$u || !$this->db->CanViewProfilePost($post, $uid, $u->Role === 'Admin')) continue;
+            $this->db->CreateNotification($uid, 'You were mentioned 📣', "$name একটি কমেন্টে আপনাকে mention করেছেন: " . str_preview($plain, 60),
+                'info', $this->postLink($post->Id), 'fa-at');
+        }
+    }
+
+    /** GET /Post/MentionSuggest?postId=&q= */
+    public function MentionSuggest(): void
+    {
+        $me = $this->me();
+        $postId = input_int('postId', 0) ?: null;
+        if ($postId) $this->viewablePost($postId, $me);
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 40);
+        json_response(['success' => true, 'people' => $this->db->MentionSuggestions($me, $postId, $q, 8)]);
+    }
+
+    // ============================================================
+    // SHARE
+    // ============================================================
+
+    /** POST /Post/Share (postId, content, privacy) — শুধু পাবলিক পোস্ট শেয়ার করা যায় */
+    public function Share_POST(): void
+    {
+        $me = $this->me();
+        if ($this->isAdmin()) $this->fail('অ্যাডমিন অ্যাকাউন্ট থেকে শেয়ার করা যায় না।');
+        $post = $this->viewablePost(input_int('postId', 0) ?? 0, $me);
+        // শেয়ার করা পোস্ট আবার শেয়ার করলে মূল পোস্টটাই শেয়ার হয়
+        if ($post->SharedPostId) {
+            $orig = $this->db->GetProfilePostById($post->SharedPostId);
+            if (!$orig) $this->fail('মূল পোস্টটি আর নেই।');
+            $post = $orig;
+        }
+        if ($post->Privacy !== 'Public') $this->fail('শুধু Public পোস্ট শেয়ার করা যায়।');
+        $content = $this->cleanText(input_str('content'));
+        if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('লেখা সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর।');
+        if ($this->db->CountRecentProfileActivity('post', $me, 60) >= 20) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+        if ($this->db->CountRecentShares($me, $post->Id, 2) > 0) $this->fail('এই পোস্টটি এইমাত্র শেয়ার করেছেন।');
+
+        $id = $this->db->CreateProfilePost($me, $content, null, $this->privacyInput(), $post->Id);
+        if ($post->UserId !== $me) {
+            $this->db->CreateNotification($post->UserId, 'Post Shared 🔁', $this->name() . ' আপনার পোস্ট শেয়ার করেছেন।', 'info', $this->postLink($id), 'fa-share');
+        }
+        $new = $this->db->GetProfilePostById($id);
+        $shareCount = count($this->db->GetSharers($post->Id));
+        json_response(['success' => true, 'message' => 'আপনার প্রোফাইলে শেয়ার হয়েছে।', 'id' => $id, 'originalId' => $post->Id,
+            'shareCount' => $shareCount, 'html' => $this->renderPost($new, $me), 'ownerId' => $me]);
+    }
+
+    /** GET /Post/Sharers?id= */
+    public function Sharers(): void
+    {
+        $me = $this->me();
+        $this->viewablePost(input_int('id', 0) ?? 0, $me);
+        $list = [];
+        foreach ($this->db->GetSharers(input_int('id', 0) ?? 0) as $p) {
+            // যার শেয়ার পোস্ট দর্শক দেখতে পারে না, তার নাম দেখাই না
+            $share = $this->db->GetProfilePostById($p->ShareId);
+            if (!$share || !$this->db->CanViewProfilePost($share, $me, $this->isAdmin())) continue;
+            $list[] = ['id' => $p->Id, 'name' => $p->Name, 'image' => $p->Image, 'initials' => $p->Initials,
+                'role' => $p->Role === 'Teacher' ? 'Teacher' : 'Student', 'shareId' => $p->ShareId];
+        }
+        json_response(['success' => true, 'people' => $list]);
     }
 
     /** POST /Post/ReactComment (commentId, reaction) */

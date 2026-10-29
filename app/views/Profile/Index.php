@@ -31,6 +31,16 @@ $activeSection = (string)(input_str('section') ?? '');
         margin-right: auto;
     }
 
+    .avatar-click { position: relative; display: inline-block; cursor: pointer; margin: 0 auto 12px; border-radius: 50%; }
+    .avatar-click .profile-avatar { margin-bottom: 0; transition: filter .2s; }
+    .avatar-cam { position: absolute; right: 2px; bottom: 4px; width: 32px; height: 32px; border-radius: 50%; background: #E4E6EB; color: #1C1E21;
+        border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .avatar-hover { position: absolute; inset: 0; border-radius: 50%; background: rgba(8,34,74,.55); color: #fff; font-size: 12px; font-weight: 600;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; line-height: 1.3; }
+    .avatar-hover i { font-size: 20px; }
+    .avatar-click:hover .avatar-hover { opacity: 1; }
+    .avatar-click.uploading .avatar-hover { opacity: 1; }
+
     .profile-name-sidebar {
         font-size: 18px;
         font-weight: 700;
@@ -105,8 +115,12 @@ $activeSection = (string)(input_str('section') ?? '');
 <div class="profile-wrapper">
     <div class="profile-sidebar">
         <div class="profile-avatar-section">
-            <img src="<?= e((string)$Model->ProfileImageLink === '' ? 'https://i.ibb.co/fd9sY88Y/IMG-6916-1.png' : $Model->ProfileImageLink) ?>"
-                 alt="Profile" class="profile-avatar" id="profileAvatar" />
+            <label for="profileImageInput" class="avatar-click" title="ছবি বদলাতে ক্লিক করুন">
+                <img src="<?= e((string)$Model->ProfileImageLink === '' ? 'https://i.ibb.co/fd9sY88Y/IMG-6916-1.png' : $Model->ProfileImageLink) ?>"
+                     alt="Profile" class="profile-avatar" id="profileAvatar" />
+                <span class="avatar-cam"><i class="fas fa-camera"></i></span>
+                <span class="avatar-hover"><i class="fas fa-camera"></i><br />Change</span>
+            </label>
 
             <h3 class="profile-name-sidebar"><?= e($Model->FullName) ?></h3>
 

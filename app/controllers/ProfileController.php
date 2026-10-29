@@ -67,7 +67,7 @@ class ProfileController extends Controller
             'TeacherInfo' => $user->Role === 'Teacher' || $isOwner ? $teacherInfo : null, 'TeacherStatus' => $teacherStatus,
             'Posts' => $posts, 'HasMore' => count($posts) === 10,
             'PostCount' => $this->db->CountProfilePosts($id, $me, $isAdminViewer),
-            'Tab' => $tab, 'IsSuspended' => $suspended,
+            'Tab' => $tab, 'IsSuspended' => $suspended, 'Extras' => $this->db->GetProfileExtras($id),
         ]));
     }
 
@@ -223,13 +223,16 @@ class ProfileController extends Controller
         $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, self::IMAGE_EXTS, true)) json_response(['success' => false, 'message' => 'Only JPG, PNG, GIF, or WEBP images are allowed.']);
         if ($file['size'] > 5 * 1024 * 1024) json_response(['success' => false, 'message' => 'Image size must be less than 5MB.']);
+        if (@getimagesize($file['tmp_name']) === false) json_response(['success' => false, 'message' => 'ফাইলটি সঠিক ছবি নয়।']);
 
         try {
             $url = save_upload($file, 'profiles', $userId . '_' . ticks(), $ext);
             $user = $this->db->GetUserById($userId);
             if ($user) {
+                $old = (string)$user->ProfileImageLink;
                 $user->ProfileImageLink = $url;
                 if ($this->db->UpdateUserProfile($user)) {
+                    if (str_starts_with($old, '/uploads/profiles/')) delete_upload($old);
                     session_set('ProfileImageLink', $url);
                     json_response(['success' => true, 'message' => 'Profile image uploaded successfully!', 'imageUrl' => $url]);
                 }
@@ -238,6 +241,47 @@ class ProfileController extends Controller
         } catch (Throwable $e) {
             json_response(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * POST /Profile/SaveCover (cover = ছবি [ঐচ্ছিক], posY = 0–100)
+     * ছবি দিলে নতুন কভার, না দিলে শুধু পজিশন (Reposition) সেভ হয়।
+     */
+    public function SaveCover_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null || current_role() === 'Admin') json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        $posY = max(0, min(100, input_int('posY', 50) ?? 50));
+        $extras = $this->db->GetProfileExtras($me);
+        $file = upload_file('cover');
+        $url = null;
+        if ($file) {
+            $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['.jpg', '.jpeg', '.png', '.webp'], true)) json_response(['success' => false, 'message' => 'শুধু JPG, PNG বা WEBP ছবি দেওয়া যাবে।']);
+            if ($file['size'] > 8 * 1024 * 1024) json_response(['success' => false, 'message' => 'কভার ছবি ৮ MB এর কম হতে হবে।']);
+            $info = @getimagesize($file['tmp_name']);
+            if ($info === false) json_response(['success' => false, 'message' => 'ফাইলটি সঠিক ছবি নয়।']);
+            if ($info[0] < 400) json_response(['success' => false, 'message' => 'ছবিটা খুব ছোট — অন্তত ৪০০ পিক্সেল চওড়া ছবি দিন।']);
+            try { $url = save_upload($file, 'covers', $me . '_' . ticks(), $ext); }
+            catch (Throwable $e) { json_response(['success' => false, 'message' => 'ছবি সেভ করা যায়নি।']); }
+        } elseif (!$extras->CoverImageUrl) {
+            json_response(['success' => false, 'message' => 'একটি ছবি বেছে নিন।']);
+        }
+        $this->db->SaveCover($me, $url, $posY);
+        if ($url && $extras->CoverImageUrl) delete_upload($extras->CoverImageUrl);
+        json_response(['success' => true, 'message' => $url ? 'কভার ফটো আপডেট হয়েছে।' : 'কভার ফটোর পজিশন সেভ হয়েছে।',
+            'url' => $url ?? $extras->CoverImageUrl, 'posY' => $posY]);
+    }
+
+    /** POST /Profile/RemoveCover */
+    public function RemoveCover_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        $extras = $this->db->GetProfileExtras($me);
+        $this->db->SaveCover($me, '', 50);
+        delete_upload($extras->CoverImageUrl);
+        json_response(['success' => true, 'message' => 'কভার ফটো সরানো হয়েছে।']);
     }
 
     /** GET /Profile/GetProfileData */

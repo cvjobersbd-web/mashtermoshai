@@ -62,6 +62,40 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     .pc-rx-sum, .pc-cm-n { border: none; background: none; color: inherit; padding: 0; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
     .pc-rx-sum:hover, .pc-cm-n:hover { text-decoration: underline; }
     .pc-cm-n { margin-left: auto; }
+    .pc-stat-right { margin-left: auto; display: inline-flex; gap: 14px; align-items: center; }
+    .pc-sh-n { border: none; background: none; color: inherit; padding: 0; cursor: pointer; font-size: 14px; }
+    .pc-sh-n:hover { text-decoration: underline; }
+    .pc-shared-lbl { color: var(--pc-muted); font-size: 14.5px; font-weight: 400; margin-left: 2px; }
+    .pc-avatar.sm { width: 36px; height: 36px; font-size: 13px; }
+    .pc-shared { margin: 0 14px 10px; border: 1px solid #DADDE1; border-radius: 10px; overflow: hidden; background: #fff; }
+    .pc-shared .pc-media { border-top: 0; }
+    .pc-shared .pc-head { padding: 12px 12px 6px; }
+    .pc-shared .pc-body { padding: 0 12px 12px; }
+    .pc-shared .pc-text { font-size: 14.5px; }
+    .pc-unavail { display: flex; gap: 14px; align-items: center; padding: 16px; background: #F7F8FA; color: var(--pc-muted); }
+    .pc-unavail > i { font-size: 22px; color: #8C939D; }
+    .pc-unavail strong { color: var(--pc-text); font-size: 15px; }
+    .pc-unavail p { margin: 2px 0 0; font-size: 13px; }
+    .pm-shared { margin-top: 8px; pointer-events: none; }
+    .pm-shared .pc-shared { margin: 0; }
+    .pm-shared .pc-media img { max-height: 220px; }
+    .pm-copy { width: 100%; height: 38px; border: none; border-radius: 8px; background: #E4E6EB; color: var(--pc-text); font-weight: 600; font-size: 14.5px; cursor: pointer; margin-bottom: 8px; }
+    .pm-copy:hover { background: #D8DADF; }
+
+    /* ===== @mention ===== */
+    .cm-text a.cm-mention { color: var(--pc-blue); font-weight: 600; text-decoration: none; background: #E7F3FF; border-radius: 4px; padding: 0 2px; }
+    .cm-text a.cm-mention:hover { text-decoration: underline; }
+    .mn-box {
+        position: fixed; z-index: 3100; width: 290px; max-width: calc(100vw - 20px); max-height: 300px; overflow-y: auto; background: #fff; border-radius: 10px;
+        padding: 6px; box-shadow: 0 12px 32px rgba(8,34,74,.22), 0 0 0 1px rgba(8,34,74,.06); display: none;
+    }
+    .mn-box.open { display: block; }
+    .mn-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: none; background: none; border-radius: 8px; cursor: pointer; text-align: left; }
+    .mn-item.active, .mn-item:hover { background: #F0F2F5; }
+    .mn-item .pc-avatar { width: 34px; height: 34px; font-size: 12px; }
+    .mn-item strong { display: block; font-size: 14px; color: var(--pc-text); line-height: 1.2; }
+    .mn-item small { font-size: 12px; color: var(--pc-muted); }
+    .mn-empty { padding: 10px; font-size: 13px; color: var(--pc-muted); text-align: center; }
     .pc-rx-icons { display: inline-flex; }
     .pc-rx-icons span, .cm-rx-icons span {
         width: 20px; height: 20px; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center;
@@ -126,7 +160,6 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         flex: 1; min-width: 0; border: none; outline: none; background: transparent; resize: none; font: inherit; font-size: 14.5px;
         line-height: 1.4; padding: 6px 0; max-height: 140px; color: var(--pc-text);
     }
-    .cm-tag { color: var(--pc-blue); font-weight: 600; font-size: 14px; align-self: center; white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
     .cm-send { width: 32px; height: 32px; flex-shrink: 0; border: none; border-radius: 50%; background: transparent; color: var(--pc-blue); cursor: pointer; }
     .cm-send:hover:not(:disabled) { background: #E4E6EB; }
     .cm-send:disabled { color: #BCC0C4; cursor: default; }
@@ -280,13 +313,15 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                 <img id="pmPreviewImg" alt="Preview" />
                 <button type="button" data-pm="remove-image" aria-label="Remove photo"><i class="fas fa-xmark"></i></button>
             </div>
-            <div class="pm-add">
+            <div class="pm-shared" id="pmShared" hidden></div>
+            <div class="pm-add" id="pmAdd">
                 <span>Add to your post</span>
                 <label for="pmFile" title="Photo"><i class="fas fa-images"></i></label>
                 <input type="file" id="pmFile" accept="image/jpeg,image/png,image/gif,image/webp" hidden />
             </div>
         </div>
         <div class="pm-foot">
+            <button type="button" class="pm-copy" id="pmCopy" hidden><i class="fas fa-link"></i> Copy link</button>
             <button type="submit" class="pm-submit" id="pmSubmit" disabled>Post</button>
         </div>
     </form>
@@ -483,10 +518,10 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         var text = ta.value.trim();
         if (!text) return;
         var parentId = form.getAttribute('data-parent') || '';
-        var mention = form.getAttribute('data-mention') || '';
+        closeMention();
         ta.disabled = true; send.disabled = true;
         try {
-            var d = await post('/Post/Comment', { postId: card.getAttribute('data-id'), content: (mention ? '@[' + mention + '] ' : '') + text, parentId: parentId });
+            var d = await post('/Post/Comment', { postId: card.getAttribute('data-id'), content: encodeMentions(ta), parentId: parentId });
             if (!d.success) { toast(d.message || 'Failed', true); return; }
             var el = htmlToEl(d.html); el.classList.add('cm-new');
             if (d.parentId) {
@@ -497,7 +532,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                 form.remove();
             } else {
                 $('.cm-list', card).appendChild(el);
-                ta.value = ''; autoGrow(ta);
+                ta.value = ''; setMap(ta, {}); autoGrow(ta);
             }
             fillMe(el);
             setCommentCount(card, d.count);
@@ -519,14 +554,20 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         f.className = 'cm-form cm-reply-form';
         f.setAttribute('autocomplete', 'off');
         f.setAttribute('data-parent', cm.getAttribute('data-id'));
-        if (isNested && Number(cm.dataset.uid || 0) !== ME.id) f.setAttribute('data-mention', name);
         f.innerHTML = '<span class="cm-avatar sm me-avatar"></span><div class="cm-pill">'
-            + (f.getAttribute('data-mention') ? '<span class="cm-tag">' + esc(name) + '</span>' : '')
             + '<textarea rows="1" maxlength="1500" placeholder="Reply to ' + esc(name) + '..."></textarea>'
             + '<button type="submit" class="cm-send" aria-label="Send" disabled><i class="fas fa-paper-plane"></i></button></div>';
         replies.appendChild(f);
-        fillMe(f); bindForm(f);
-        $('textarea', f).focus();
+        fillMe(f);
+        var rta = $('textarea', f);
+        // রিপ্লাইয়ের রিপ্লাই হলে নামটা আগে থেকেই মেনশন করে দিই (নিজেকে ছাড়া)
+        var uid = Number(cm.dataset.uid || 0);
+        if (isNested && uid && uid !== ME.id) {
+            var mp = {}; mp[name] = uid; setMap(rta, mp);
+            rta.value = '@' + name + ' ';
+            $('.cm-send', f).disabled = false;
+        }
+        rta.focus(); rta.setSelectionRange(rta.value.length, rta.value.length);
     }
 
     // ============================================================
@@ -599,6 +640,8 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                 openComposer(card, act === 'audience');
                 break;
             case 'reactors': openReactors('post', card.getAttribute('data-id')); break;
+            case 'sharers': openSharers(card.getAttribute('data-id')); break;
+            case 'share': openShare(card); break;
             case 'comment-reactors': openReactors('comment', cm.getAttribute('data-id')); break;
             case 'delete-comment': {
                 if (!confirm('কমেন্টটি মুছে ফেলবেন?')) return;
@@ -624,6 +667,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         box.innerHTML = '<textarea maxlength="1500"></textarea><div class="cm-edit-actions">Esc চাপলে বাতিল · <button type="button" data-e="save">Save</button><button type="button" data-e="cancel">Cancel</button></div>';
         var ta = $('textarea', box);
         ta.value = cm.getAttribute('data-raw');
+        try { setMap(ta, JSON.parse(cm.getAttribute('data-mentions') || '{}')); } catch (e) { setMap(ta, {}); }
         bubbleRow.hidden = true; meta.hidden = true;
         bubbleRow.after(box);
         autoGrow(ta); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
@@ -631,20 +675,21 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         async function save() {
             var text = ta.value.trim();
             if (!text) { toast('কমেন্ট খালি রাখা যাবে না।', true); return; }
-            var mention = cm.getAttribute('data-mention');
+            closeMention();
             ta.disabled = true;
             try {
-                var d = await post('/Post/EditComment', { commentId: cm.getAttribute('data-id'), content: (mention ? '@[' + mention + '] ' : '') + text });
+                var d = await post('/Post/EditComment', { commentId: cm.getAttribute('data-id'), content: encodeMentions(ta) });
                 if (!d.success) { toast(d.message, true); ta.disabled = false; return; }
-                cm.setAttribute('data-raw', text);
-                var html = d.contentHtml.replace(/^@\[([^\]]+)\]\s?/, function (m, n) { return '<span class="cm-mention">' + n + '</span> '; });
-                $('.cm-text', cm).innerHTML = html;
+                cm.setAttribute('data-raw', d.raw);
+                cm.setAttribute('data-mentions', JSON.stringify(d.mentions || {}));
+                $('.cm-text', cm).innerHTML = d.contentHtml;
                 $('.cm-edited', cm).hidden = !d.isEdited;
                 done();
             } catch (err) { ta.disabled = false; toast('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
         }
         ta.addEventListener('input', function () { autoGrow(ta); });
         ta.addEventListener('keydown', function (e) {
+            if (mnOpen()) return; // মেনশন তালিকা খোলা থাকলে Enter/Esc ওটার জন্য
             if (e.key === 'Escape') done();
             if (e.key === 'Enter' && !e.shiftKey && matchMedia('(hover: hover)').matches) { e.preventDefault(); save(); }
         });
@@ -661,6 +706,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     function closeRl() { rl.classList.remove('open'); document.documentElement.style.overflow = ''; }
     rl.addEventListener('click', function (e) { if (e.target === rl || e.target.closest('[data-rl="close"]')) closeRl(); });
     async function openReactors(type, id) {
+        $('#rlTitle').textContent = 'Reactions';
         $('#rlTabs').innerHTML = ''; $('#rlList').innerHTML = '<p style="text-align:center;color:#65676B;padding:20px;"><i class="fas fa-spinner fa-spin"></i></p>';
         rl.classList.add('open'); document.documentElement.style.overflow = 'hidden';
         try {
@@ -688,12 +734,123 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         } catch (err) { $('#rlList').innerHTML = '<p style="padding:20px;text-align:center;">লোড করা যায়নি।</p>'; }
     }
 
+    async function openSharers(id) {
+        $('#rlTitle').textContent = 'People who shared this';
+        $('#rlTabs').innerHTML = ''; $('#rlList').innerHTML = '<p style="text-align:center;color:#65676B;padding:20px;"><i class="fas fa-spinner fa-spin"></i></p>';
+        rl.classList.add('open'); document.documentElement.style.overflow = 'hidden';
+        try {
+            var d = await (await fetch('/Post/Sharers?id=' + encodeURIComponent(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            $('#rlList').innerHTML = (d.people || []).map(function (p) {
+                return '<a class="rl-item" href="/Post/Details/' + p.shareId + '"><span class="rl-av"><span class="pc-avatar">' + esc(p.initials)
+                    + (p.image ? '<img src="' + esc(p.image) + '" alt="" onerror="this.remove()" />' : '') + '</span><span class="rl-emo">🔁</span></span>'
+                    + '<span><strong>' + esc(p.name) + '</strong><small>' + esc(p.role) + '</small></span></a>';
+            }).join('') || '<p style="padding:20px;text-align:center;color:#65676B;">দেখানোর মতো কোনো শেয়ার নেই।</p>';
+        } catch (err) { $('#rlList').innerHTML = '<p style="padding:20px;text-align:center;">লোড করা যায়নি।</p>'; }
+    }
+
+    // ============================================================
+    // @MENTION — কমেন্টে @ লিখলে নামের তালিকা
+    // ============================================================
+    var mnBox = document.createElement('div');
+    mnBox.className = 'mn-box'; mnBox.setAttribute('role', 'listbox');
+    document.body.appendChild(mnBox);
+    var mn = { ta: null, start: 0, items: [], idx: 0, seq: 0, timer: null, cache: {} };
+
+    function getMap(ta) { try { return JSON.parse(ta.dataset.mentions || '{}'); } catch (e) { return {}; } }
+    function setMap(ta, m) { ta.dataset.mentions = JSON.stringify(m || {}); }
+    /** "@নাম" → "@[নাম|id]" (যেগুলো তালিকা থেকে বাছাই করা হয়েছে শুধু সেগুলো) */
+    function encodeMentions(ta) {
+        var text = ta.value, map = getMap(ta);
+        Object.keys(map).sort(function (a, b) { return b.length - a.length; }).forEach(function (name) {
+            var safe = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            text = text.replace(new RegExp('@' + safe + '(?![\\w\\u0980-\\u09FF])', 'g'), '@[' + name.replace(/[\]|]/g, '') + '|' + map[name] + ']');
+        });
+        return text;
+    }
+    function mnOpen() { return mnBox.classList.contains('open'); }
+    function closeMention() { mnBox.classList.remove('open'); mn.ta = null; mn.items = []; }
+    function placeBox(ta) {
+        var r = ta.getBoundingClientRect(), h = Math.min(300, mnBox.scrollHeight || 200);
+        var top = r.bottom + 6;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+        mnBox.style.top = top + 'px';
+        mnBox.style.left = Math.max(10, Math.min(r.left, window.innerWidth - mnBox.offsetWidth - 10)) + 'px';
+    }
+    function renderMn() {
+        if (!mn.items.length) { mnBox.innerHTML = '<div class="mn-empty">কাউকে পাওয়া যায়নি — শুধু ফ্রেন্ড ও এই পোস্টের মানুষদের mention করা যায়।</div>'; }
+        else mnBox.innerHTML = mn.items.map(function (p, i) {
+            return '<button type="button" class="mn-item' + (i === mn.idx ? ' active' : '') + '" data-i="' + i + '" role="option">'
+                + '<span class="pc-avatar">' + esc(p.initials) + (p.image ? '<img src="' + esc(p.image) + '" alt="" onerror="this.remove()" />' : '') + '</span>'
+                + '<span><strong>' + esc(p.name) + '</strong><small>' + esc(p.role) + ' · @' + esc(p.username) + '</small></span></button>';
+        }).join('');
+        mnBox.classList.add('open');
+        placeBox(mn.ta);
+    }
+    function pickMn(i) {
+        var p = mn.items[i], ta = mn.ta; if (!p || !ta) return;
+        var caret = ta.selectionStart, before = ta.value.slice(0, mn.start), after = ta.value.slice(caret);
+        var name = p.name.replace(/[\]|]/g, '');
+        ta.value = before + '@' + name + ' ' + after.replace(/^\s+/, '');
+        var m = getMap(ta); m[name] = p.id; setMap(ta, m);
+        var pos = (before + '@' + name + ' ').length;
+        ta.focus(); ta.setSelectionRange(pos, pos);
+        closeMention();
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function checkMention(ta) {
+        var caret = ta.selectionStart;
+        var upto = ta.value.slice(0, caret);
+        var m = upto.match(/(^|[\s(])@([^\s@\[\]]{0,30})$/);
+        if (!m) { if (mn.ta === ta) closeMention(); return; }
+        var q = m[2];
+        mn.ta = ta; mn.start = caret - q.length - 1;
+        var card = ta.closest('.pc'), postId = card ? card.getAttribute('data-id') : '';
+        var key = postId + '|' + q.toLowerCase();
+        clearTimeout(mn.timer);
+        var my = ++mn.seq;
+        function show(list) { if (my !== mn.seq || mn.ta !== ta) return; mn.items = list; mn.idx = 0; renderMn(); }
+        if (mn.cache[key]) { show(mn.cache[key]); return; }
+        mn.timer = setTimeout(async function () {
+            try {
+                var d = await (await fetch('/Post/MentionSuggest?postId=' + encodeURIComponent(postId) + '&q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                mn.cache[key] = d.people || [];
+                show(mn.cache[key]);
+            } catch (e) { }
+        }, 140);
+    }
+    document.addEventListener('input', function (e) {
+        var ta = e.target.closest('.cm-form textarea, .cm-edit-box textarea');
+        if (ta) checkMention(ta);
+    });
+    document.addEventListener('click', function (e) {
+        var it = e.target.closest('.mn-item');
+        if (it) { e.preventDefault(); pickMn(+it.getAttribute('data-i')); return; }
+        if (mnOpen() && !e.target.closest('.mn-box') && e.target !== mn.ta) closeMention();
+    });
+    mnBox.addEventListener('mousedown', function (e) { e.preventDefault(); }); // টেক্সটবক্স থেকে ফোকাস না সরে
+    // কিবোর্ড: ↑ ↓ Enter Tab Esc (capture — যেন কমেন্ট পাঠানোর আগে এটা চলে)
+    document.addEventListener('keydown', function (e) {
+        if (!mnOpen() || e.target !== mn.ta) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault(); e.stopImmediatePropagation();
+            if (!mn.items.length) return;
+            mn.idx = (mn.idx + (e.key === 'ArrowDown' ? 1 : -1) + mn.items.length) % mn.items.length; renderMn();
+        } else if ((e.key === 'Enter' || e.key === 'Tab') && mn.items.length) {
+            e.preventDefault(); e.stopImmediatePropagation(); pickMn(mn.idx);
+        } else if (e.key === 'Escape') {
+            e.preventDefault(); e.stopImmediatePropagation(); closeMention();
+        }
+    }, true);
+    window.addEventListener('scroll', function () { if (mnOpen() && mn.ta) placeBox(mn.ta); }, { passive: true });
+
     // ============================================================
     // পোস্ট লেখা / এডিট
     // ============================================================
     var pm = $('#pmOverlay'), pmForm = $('#pmForm'), pmText = $('#pmText'), pmFile = $('#pmFile'), pmPriv = $('#pmPrivacy');
     var pmSubmit = $('#pmSubmit'), pmPreview = $('#pmPreview'), pmImg = $('#pmPreviewImg');
-    var editing = null, removeImage = false, hadImage = false, busy = false;
+    var editing = null, removeImage = false, hadImage = false, busy = false, sharing = null;
+    var pmShared = $('#pmShared'), pmAdd = $('#pmAdd'), pmCopy = $('#pmCopy');
+    var PH_DEFAULT = pmText.getAttribute('placeholder');
 
     function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
     function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
@@ -709,13 +866,59 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         var n = pmText.value.length;
         pmText.classList.toggle('small', n > 120 || hasImage());
         $('#pmCount').textContent = n > 4000 ? n + ' / 5000' : '';
-        pmSubmit.disabled = busy || (!pmText.value.trim() && !hasImage());
+        var shareMode = !!sharing || !!(editing && editing.getAttribute('data-share') === '1');
+        pmSubmit.disabled = busy || (!shareMode && !pmText.value.trim() && !hasImage());
     }
     function setPreview(src) {
         if (src) { pmImg.src = src; pmPreview.classList.add('show'); } else { pmImg.removeAttribute('src'); pmPreview.classList.remove('show'); }
         refresh();
     }
+    /** শেয়ার মডালে মূল পোস্টের ছোট প্রিভিউ */
+    function sharePreview(card) {
+        var inner = $('.pc-shared', card);
+        if (inner) return inner.cloneNode(true);
+        var box = document.createElement('div'); box.className = 'pc-shared';
+        var media = $(':scope > .pc-media', card); if (media) box.appendChild(media.cloneNode(true));
+        var wrap = document.createElement('div'); wrap.className = 'pc-shared-in';
+        var head = $(':scope > .pc-head', card).cloneNode(true);
+        var mw = $('.pc-menu-wrap', head); if (mw) mw.remove();
+        var lbl = $('.pc-shared-lbl', head); if (lbl) lbl.remove();
+        var av = $('.pc-avatar', head); if (av) av.classList.add('sm');
+        wrap.appendChild(head);
+        var body = $(':scope > .pc-body', card);
+        if (body) { var b = body.cloneNode(true); var t = $('.pc-text', b); if (t) t.classList.remove('big'); wrap.appendChild(b); }
+        box.appendChild(wrap);
+        return box;
+    }
+    function setShareUi(on, card) {
+        pmAdd.hidden = on; pmShared.hidden = !on; pmShared.innerHTML = '';
+        if (on && card) pmShared.appendChild(sharePreview(card));
+        pmText.setAttribute('placeholder', on ? 'এটা নিয়ে কিছু বলুন... (না লিখলেও চলবে)' : PH_DEFAULT);
+    }
+    function openShare(card) {
+        var target = card.getAttribute('data-share-target');
+        if (!target) return;
+        sharing = { id: target, card: card };
+        editing = null; removeImage = false; pmFile.value = ''; setPreview(null);
+        $('#pmTitle').textContent = 'Share post';
+        pmSubmit.textContent = 'Share now';
+        pmText.value = ''; pmPriv.value = 'Public'; paintPrivacy();
+        // শেয়ার করা পোস্ট আবার শেয়ার করলে মূলটার প্রিভিউ
+        setShareUi(true, card);
+        pmCopy.hidden = false;
+        pm.classList.add('open'); document.documentElement.style.overflow = 'hidden';
+        refresh();
+        setTimeout(function () { autoGrow(pmText); pmText.focus(); }, 30);
+    }
+    pmCopy.addEventListener('click', async function () {
+        if (!sharing) return;
+        var url = location.origin + '/Post/Details/' + sharing.id;
+        try { await navigator.clipboard.writeText(url); toast('লিংক কপি হয়েছে।'); } catch (err) { window.prompt('লিংকটি কপি করুন:', url); }
+    });
+
     function openComposer(card, focusAudience) {
+        sharing = null; pmCopy.hidden = true;
+        setShareUi(!!(card && card.getAttribute('data-share') === '1'), card && $('.pc-shared', card) ? card : null);
         editing = card || null; removeImage = false; pmFile.value = '';
         $('#pmTitle').textContent = card ? (focusAudience ? 'Edit audience' : 'Edit post') : 'Create post';
         pmSubmit.textContent = card ? 'Save' : 'Post';
@@ -730,12 +933,13 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     }
     window.pcOpenComposer = openComposer;
     function closeComposer() {
-        if (!editing && pmText.value.trim()) lsSet('pc_draft', pmText.value); else if (!editing) lsSet('pc_draft', '');
-        pm.classList.remove('open'); document.documentElement.style.overflow = ''; editing = null;
+        if (!editing && !sharing && pmText.value.trim()) lsSet('pc_draft', pmText.value); else if (!editing && !sharing) lsSet('pc_draft', '');
+        pm.classList.remove('open'); document.documentElement.style.overflow = ''; editing = null; sharing = null;
+        setShareUi(false); pmCopy.hidden = true;
     }
     pm.addEventListener('click', function (e) { if (e.target === pm || e.target.closest('[data-pm="close"]')) closeComposer(); });
     document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape') return;
+        if (e.key !== 'Escape' || e.defaultPrevented) return;
         if (pm.classList.contains('open')) closeComposer();
         if (rl.classList.contains('open')) closeRl();
         $('#pcLightbox').classList.remove('open');
@@ -759,6 +963,24 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         var fd = new FormData();
         fd.append('content', pmText.value);
         fd.append('privacy', pmPriv.value);
+        if (sharing) {
+            fd.append('postId', sharing.id);
+            try {
+                var ds = await post('/Post/Share', fd);
+                if (!ds.success) { toast(ds.message || 'Failed', true); return; }
+                $$('.pc[data-id="' + ds.originalId + '"] .pc-sh-n').forEach(function (b) {
+                    b.hidden = !ds.shareCount; b.innerHTML = '<span>' + ds.shareCount + '</span> share' + (ds.shareCount === 1 ? '' : 's');
+                });
+                var sel = htmlToEl(ds.html); sel.classList.add('pc-new');
+                fillMe(sel); initCard(sel);
+                pmText.value = '';
+                closeComposer();
+                if (window.PC_TIMELINE_OWNER === ME.id) document.dispatchEvent(new CustomEvent('pc:created', { detail: { el: sel } }));
+                toast(ds.message + ' প্রোফাইলে দেখতে My Profile এ যান।');
+            } catch (err) { toast('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
+            finally { busy = false; pmSubmit.textContent = label; refresh(); }
+            return;
+        }
         if (pmFile.files[0]) fd.append('image', pmFile.files[0]);
         if (editing) { fd.append('postId', editing.getAttribute('data-id')); if (removeImage && !pmFile.files[0]) fd.append('removeImage', 'true'); }
         try {
@@ -772,7 +994,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                 lsSet('pc_draft', ''); lsSet('pc_privacy', pmPriv.value);
                 document.dispatchEvent(new CustomEvent('pc:created', { detail: { el: el } }));
             }
-            fillMe(el); $$('.cm-form', el).forEach(bindForm); initCard(el);
+            fillMe(el); initCard(el);
             editing = null; pmText.value = '';
             closeComposer();
             toast(d.message);
@@ -784,6 +1006,6 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     function initCard(card) { if ($('.cm-list > .cm', card)) card.classList.add('has-comments'); }
     function initPage() { fillMe(document); $$('.pc').forEach(initCard); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPage); else initPage();
-    window.pcInitCards = function (root) { $$('.pc', root).forEach(function (c) { fillMe(c); $$('.cm-form', c).forEach(bindForm); initCard(c); }); };
+    window.pcInitCards = function (root) { $$('.pc', root).forEach(function (c) { fillMe(c); initCard(c); }); };
 })();
 </script>

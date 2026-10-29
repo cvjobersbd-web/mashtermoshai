@@ -67,6 +67,8 @@ if ($val($u->Gender)) $intro[] = ['fa-venus-mars', $u->Gender];
 $intro[] = ['fa-clock', 'Joined ' . fmt_date($u->CreatedAt, 'F Y', '—')];
 
 $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
+$cover = $Model->Extras->CoverImageUrl;
+$coverY = $Model->Extras->CoverPosY;
 ?>
 <?= csrf_field() ?>
 <?php partial('Friends/_Assets'); ?>
@@ -95,6 +97,49 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
     .ps-avatar-edit { position: absolute; right: 8px; bottom: 8px; z-index: 3; width: 38px; height: 38px; border-radius: 50%; background: #E4E6EB;
         color: #1C1E21; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid #fff; text-decoration: none; }
     .ps-avatar-wrap { position: relative; }
+    .ps-avatar { cursor: pointer; }
+    .ps-avatar-edit { cursor: pointer; }
+    .ps-avatar-edit:hover { background: #D8DADF; }
+    .av-menu, .cv-menu {
+        position: absolute; z-index: 30; min-width: 230px; background: #fff; border-radius: 10px; padding: 6px; display: none; text-align: left;
+        box-shadow: 0 12px 32px rgba(8,34,74,.2), 0 0 0 1px rgba(8,34,74,.05);
+    }
+    .av-menu { left: 0; top: calc(100% + 6px); }
+    .av-menu.open, .cv-menu.open { display: block; }
+    .av-menu button, .cv-menu button {
+        display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px 12px; border: none; background: none; border-radius: 8px;
+        font-weight: 600; font-size: 14.5px; color: #1C1E21; cursor: pointer; text-align: left;
+    }
+    .av-menu button[hidden], .cv-menu button[hidden] { display: none; }
+    .av-menu button:hover, .cv-menu button:hover { background: #F0F2F5; }
+    .av-menu button i, .cv-menu button i { width: 18px; color: #65676B; }
+    .cv-menu button.danger, .cv-menu button.danger i { color: #D93025; }
+    .ps-avatar.uploading::after { content: ''; position: absolute; inset: 0; z-index: 2; background: rgba(255,255,255,.55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Ccircle cx='25' cy='25' r='20' fill='none' stroke='%2302B8F5' stroke-width='5' stroke-dasharray='90 40'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 25 25' to='360 25 25' dur='0.8s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E") center/42px no-repeat; }
+
+    /* ===== Cover photo ===== */
+    .ps-cover > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; user-select: none; -webkit-user-drag: none; }
+    .ps-cover.has-img::before, .ps-cover.has-img::after { display: none; }
+    .ps-cover.has-img { background: #1C1E21; }
+    .ps-cover.has-img > img { cursor: zoom-in; }
+    .ps-cover.repo > img { cursor: grab; touch-action: none; }
+    .ps-cover.repo.dragging > img { cursor: grabbing; }
+    .ps-cover::before, .ps-cover::after { z-index: 0; }
+    .cv-edit-wrap { position: absolute; right: 16px; bottom: 16px; z-index: 4; }
+    .cv-menu { right: 0; bottom: calc(100% + 6px); }
+    .cv-btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; border: none; font-weight: 600; font-size: 14.5px; cursor: pointer; }
+    .cv-btn.light { background: #fff; color: #1C1E21; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+    .cv-btn.light:hover { background: #F0F2F5; }
+    .cv-btn.primary { background: #02B8F5; color: #fff; }
+    .cv-btn.primary:hover { background: #0099D6; }
+    .cv-btn.ghost { background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.4); }
+    .cv-btn:disabled { opacity: .6; cursor: default; }
+    .cv-bar { position: absolute; z-index: 5; left: 0; right: 0; top: 0; display: none; justify-content: flex-end; gap: 8px; padding: 12px 16px;
+        background: linear-gradient(rgba(0,0,0,.55), transparent); }
+    .cv-hint { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none;
+        background: rgba(0,0,0,.6); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .ps-cover.repo .cv-bar { display: flex; }
+    .ps-cover.repo .cv-hint { display: block; }
+    .ps-cover.repo .cv-edit-wrap { display: none; }
     .ps-id { flex: 1; min-width: 240px; padding-top: 96px; }
     .ps-name { font-family: var(--font-heading); font-size: 32px; font-weight: 700; color: #1C1E21; margin: 0; line-height: 1.15; word-break: break-word; }
     .ps-name .fa-circle-check { color: #02B8F5; font-size: 22px; vertical-align: 3px; }
@@ -127,7 +172,7 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
     .ps-body { max-width: 1050px; margin: 16px auto 0; padding: 0 16px; }
     .ps-panel { display: none; }
     .ps-panel.active { display: block; }
-    .ps-grid { display: grid; grid-template-columns: 2fr 3fr; gap: 16px; align-items: start; }
+    .ps-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; align-items: start; }
     .ps-side { position: sticky; top: 96px; display: flex; flex-direction: column; gap: 16px; }
     .ps-card { background: #fff; border-radius: 14px; border: 1px solid #E3EEF5; padding: 16px; box-shadow: 0 1px 3px rgba(8,34,74,.06); }
     .ps-card h4 { font-size: 19px; font-weight: 700; color: #1C1E21; margin: 0 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -148,7 +193,7 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
     .ps-feed-head span { color: #65676B; font-size: 14px; }
 
     /* ===== About ===== */
-    .ab-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: start; }
+    .ab-wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; align-items: start; }
     .ab-nav { position: sticky; top: 96px; background: #fff; border-radius: 14px; border: 1px solid #E3EEF5; padding: 10px; }
     .ab-nav h4 { font-size: 19px; font-weight: 700; margin: 4px 8px 10px; color: #1C1E21; }
     .ab-nav a { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; color: #1C1E21; text-decoration: none; font-weight: 600; font-size: 14.5px; }
@@ -192,9 +237,9 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
     .pw-msg.ok { color: #157347; } .pw-msg.err { color: #B42318; }
 
     @media (max-width: 900px) {
-        .ps-grid { grid-template-columns: 1fr; }
+        .ps-grid { grid-template-columns: minmax(0, 1fr); }
         .ps-side { position: static; }
-        .ab-wrap { grid-template-columns: 1fr; }
+        .ab-wrap { grid-template-columns: minmax(0, 1fr); }
         .ab-nav { position: static; display: flex; gap: 6px; overflow-x: auto; padding: 8px; scrollbar-width: none; }
         .ab-nav h4 { display: none; }
         .ab-nav a { flex: 0 0 auto; padding: 8px 12px; background: #F0F2F5; }
@@ -203,6 +248,11 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
     @media (max-width: 640px) {
         .ps-header-in { padding: 0; }
         .ps-cover { height: 170px; border-radius: 0; }
+        .cv-edit-wrap { right: 10px; bottom: 10px; }
+        .cv-edit-wrap .cv-btn.light span { display: none; }
+        .cv-edit-wrap .cv-btn.light { width: 36px; padding: 0; justify-content: center; }
+        .cv-hint { font-size: 12px; white-space: normal; text-align: center; width: 80%; }
+        .av-menu { left: 50%; transform: translateX(-50%); }
         .ps-top { flex-direction: column; align-items: center; text-align: center; margin-top: -78px; gap: 10px; padding: 0 12px 12px; }
         .ps-avatar { width: 146px; height: 146px; font-size: 46px; }
         .ps-id { min-width: 0; width: 100%; padding: 0; }
@@ -228,14 +278,39 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
     <!-- ======================= HEADER ======================= -->
     <div class="ps-header">
         <div class="ps-header-in">
-            <div class="ps-cover"></div>
+            <div class="ps-cover<?= $cover ? ' has-img' : '' ?>" id="psCover">
+                <img id="psCoverImg" alt="Cover photo" <?= $cover ? 'src="' . e($cover) . '"' : 'hidden' ?> style="object-position: 50% <?= (int)$coverY ?>%;" draggable="false" />
+                <?php if ($isOwner): ?>
+                    <div class="cv-hint" id="cvHint"><i class="fas fa-up-down"></i> উপরে-নিচে টেনে ছবিটা ঠিক জায়গায় বসান</div>
+                    <div class="cv-bar" id="cvBar">
+                        <button type="button" class="cv-btn ghost" data-cv="cancel">Cancel</button>
+                        <button type="button" class="cv-btn primary" data-cv="save"><i class="fas fa-check"></i> Save changes</button>
+                    </div>
+                    <div class="cv-edit-wrap" id="cvEditWrap">
+                        <button type="button" class="cv-btn light" data-cv="menu"><i class="fas fa-camera"></i> <span><?= $cover ? 'Edit cover photo' : 'Add cover photo' ?></span></button>
+                        <div class="cv-menu" id="cvMenu">
+                            <button type="button" data-cv="upload"><i class="fas fa-upload"></i> Upload photo</button>
+                            <button type="button" data-cv="reposition" <?= $cover ? '' : 'hidden' ?>><i class="fas fa-arrows-up-down"></i> Reposition</button>
+                            <button type="button" data-cv="remove" class="danger" <?= $cover ? '' : 'hidden' ?>><i class="fas fa-trash-can"></i> Remove</button>
+                        </div>
+                    </div>
+                    <input type="file" id="cvFile" accept="image/jpeg,image/png,image/webp" hidden />
+                <?php endif; ?>
+            </div>
             <div class="ps-top">
                 <div class="ps-avatar-wrap">
-                    <div class="ps-avatar">
+                    <div class="ps-avatar" id="psAvatar" role="button" tabindex="0" aria-label="Profile picture">
                         <?= e(initials($name, 'U')) ?>
                         <?php if ($img): ?><img src="<?= e($img) ?>" alt="<?= e($name) ?>" onerror="this.remove()" /><?php endif; ?>
                     </div>
-                    <?php if ($isOwner): ?><a href="/Profile?section=basic" class="ps-avatar-edit" title="ছবি বদলান"><i class="fas fa-camera"></i></a><?php endif; ?>
+                    <?php if ($isOwner): ?>
+                        <button type="button" class="ps-avatar-edit" id="avEditBtn" title="প্রোফাইল ছবি বদলান" aria-label="Update profile picture"><i class="fas fa-camera"></i></button>
+                        <div class="av-menu" id="avMenu">
+                            <button type="button" data-av="view" <?= $img ? '' : 'hidden' ?>><i class="fas fa-user-circle"></i> See profile picture</button>
+                            <button type="button" data-av="upload"><i class="fas fa-images"></i> Update profile picture</button>
+                        </div>
+                        <input type="file" id="avFile" accept="image/jpeg,image/png,image/gif,image/webp" hidden />
+                    <?php endif; ?>
                 </div>
                 <div class="ps-id">
                     <h1 class="ps-name"><?= e($name) ?><?php if ($isTeacher): ?> <i class="fas fa-circle-check" title="Verified Teacher"></i><?php endif; ?>
@@ -471,6 +546,7 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
 <script>
 (function () {
     var OWNER = <?= (int)$u->Id ?>;
+    window.PC_TIMELINE_OWNER = OWNER;
 
     // ===== ট্যাব =====
     function showTab(key) {
@@ -545,6 +621,135 @@ $tabs = ['posts' => 'Posts', 'about' => 'About', 'friends' => 'Friends'];
         var was = <?= js($rel === 'friends') ?>;
         if ((e.detail.rel === 'friends') !== was) setTimeout(function () { location.reload(); }, 900);
     });
+
+    function tokenVal() { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; }
+    function say(m, err) { if (window.pcToast) pcToast(m, err); else alert(m); }
+    function lightbox(src) { var lb = document.getElementById('pcLightbox'); if (!lb || !src) return; lb.querySelector('img').src = src; lb.classList.add('open'); }
+    function closeMenus(except) { document.querySelectorAll('.av-menu.open, .cv-menu.open').forEach(function (m) { if (m !== except) m.classList.remove('open'); }); }
+    document.addEventListener('click', function (e) { if (!e.target.closest('.av-menu, .cv-menu, #psAvatar, #avEditBtn, [data-cv="menu"]')) closeMenus(); });
+
+    // ===== প্রোফাইল ছবি =====
+    var IS_OWNER = <?= js($isOwner) ?>;
+    var av = document.getElementById('psAvatar'), avMenu = document.getElementById('avMenu'), avFile = document.getElementById('avFile');
+    function avImg() { return av.querySelector('img'); }
+    av.addEventListener('click', function () {
+        if (IS_OWNER) { closeMenus(avMenu); avMenu.classList.toggle('open'); }
+        else if (avImg()) lightbox(avImg().src);
+    });
+    av.addEventListener('keydown', function (e) { if (e.key === 'Enter') av.click(); });
+    if (IS_OWNER) {
+        document.getElementById('avEditBtn').addEventListener('click', function () { closeMenus(); avFile.click(); });
+        avMenu.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-av]'); if (!b) return;
+            avMenu.classList.remove('open');
+            if (b.getAttribute('data-av') === 'view') lightbox(avImg() && avImg().src); else avFile.click();
+        });
+        avFile.addEventListener('change', async function () {
+            var f = avFile.files[0]; avFile.value = '';
+            if (!f) return;
+            if (!/^image\/(jpeg|png|gif|webp)$/.test(f.type)) { say('শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।', true); return; }
+            if (f.size > 5 * 1024 * 1024) { say('ছবি ৫ MB এর কম হতে হবে।', true); return; }
+            var fd = new FormData(); fd.append('profileImage', f); fd.append('__RequestVerificationToken', tokenVal());
+            av.classList.add('uploading');
+            try {
+                var d = await (await fetch('/Profile/UploadProfileImage', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                if (!d.success) { say(d.message || 'Upload failed', true); return; }
+                var url = d.imageUrl + '?t=' + Date.now();
+                var im = avImg();
+                if (!im) { im = document.createElement('img'); im.alt = ''; av.appendChild(im); }
+                im.src = url;
+                document.querySelectorAll('.me-avatar').forEach(function (m) {
+                    var i = m.querySelector('img'); if (!i) { i = document.createElement('img'); i.alt = ''; m.appendChild(i); } i.src = url;
+                });
+                document.querySelectorAll('.pc[data-owner="1"] .pc-head .pc-avatar').forEach(function (m) {
+                    var i = m.querySelector('img'); if (!i) { i = document.createElement('img'); i.alt = ''; m.appendChild(i); } i.src = url;
+                });
+                avMenu.querySelector('[data-av="view"]').hidden = false;
+                say('প্রোফাইল ছবি আপডেট হয়েছে।');
+            } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
+            finally { av.classList.remove('uploading'); }
+        });
+    }
+
+    // ===== কভার ফটো =====
+    var cover = document.getElementById('psCover'), cImg = document.getElementById('psCoverImg');
+    cImg.addEventListener('click', function () { if (!cover.classList.contains('repo') && !cImg.hidden) lightbox(cImg.src); });
+    if (IS_OWNER) {
+        var cvMenu = document.getElementById('cvMenu'), cvFile = document.getElementById('cvFile');
+        var saved = { src: cImg.hidden ? '' : cImg.getAttribute('src'), y: <?= (int)$coverY ?> };
+        var pending = null, posY = saved.y, drag = null;
+
+        function setPos(y) { posY = Math.max(0, Math.min(100, y)); cImg.style.objectPosition = '50% ' + posY + '%'; }
+        function enterRepo() { cover.classList.add('repo'); closeMenus(); }
+        function exitRepo() { cover.classList.remove('repo', 'dragging'); pending = null; }
+        function paintMenu() {
+            var has = !!saved.src;
+            cover.classList.toggle('has-img', has || !cImg.hidden);
+            cvMenu.querySelector('[data-cv="reposition"]').hidden = !has;
+            cvMenu.querySelector('[data-cv="remove"]').hidden = !has;
+            cover.querySelector('[data-cv="menu"] span').textContent = has ? 'Edit cover photo' : 'Add cover photo';
+        }
+
+        cover.addEventListener('click', async function (e) {
+            var b = e.target.closest('[data-cv]'); if (!b) return;
+            var act = b.getAttribute('data-cv');
+            if (act === 'menu') { closeMenus(cvMenu); cvMenu.classList.toggle('open'); return; }
+            cvMenu.classList.remove('open');
+            if (act === 'upload') cvFile.click();
+            else if (act === 'reposition') { setPos(saved.y); enterRepo(); }
+            else if (act === 'cancel') {
+                exitRepo();
+                if (saved.src) { cImg.src = saved.src; cImg.hidden = false; } else { cImg.hidden = true; cImg.removeAttribute('src'); }
+                setPos(saved.y); paintMenu();
+            }
+            else if (act === 'save') {
+                b.disabled = true; var old = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                var fd = new FormData(); fd.append('posY', Math.round(posY)); fd.append('__RequestVerificationToken', tokenVal());
+                if (pending) fd.append('cover', pending);
+                try {
+                    var d = await (await fetch('/Profile/SaveCover', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                    if (!d.success) { say(d.message || 'Failed', true); return; }
+                    saved = { src: d.url, y: d.posY }; cImg.src = d.url; exitRepo(); paintMenu(); say(d.message);
+                } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
+                finally { b.disabled = false; b.innerHTML = old; }
+            }
+            else if (act === 'remove') {
+                if (!confirm('কভার ফটো সরিয়ে ফেলবেন?')) return;
+                var fd2 = new FormData(); fd2.append('__RequestVerificationToken', tokenVal());
+                var d2 = await (await fetch('/Profile/RemoveCover', { method: 'POST', body: fd2, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                if (!d2.success) { say(d2.message, true); return; }
+                saved = { src: '', y: 50 }; cImg.hidden = true; cImg.removeAttribute('src'); setPos(50); paintMenu(); say(d2.message);
+            }
+        });
+
+        cvFile.addEventListener('change', function () {
+            var f = cvFile.files[0]; cvFile.value = '';
+            if (!f) return;
+            if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { say('শুধু JPG, PNG বা WEBP ছবি দেওয়া যাবে।', true); return; }
+            if (f.size > 8 * 1024 * 1024) { say('কভার ছবি ৮ MB এর কম হতে হবে।', true); return; }
+            pending = f;
+            cImg.src = URL.createObjectURL(f); cImg.hidden = false; cover.classList.add('has-img');
+            setPos(50); enterRepo();
+        });
+
+        // টেনে পজিশন ঠিক করা (মাউস + টাচ)
+        cImg.addEventListener('pointerdown', function (e) {
+            if (!cover.classList.contains('repo')) return;
+            e.preventDefault();
+            var rect = cover.getBoundingClientRect();
+            var shown = rect.width * (cImg.naturalHeight / Math.max(1, cImg.naturalWidth));
+            drag = { y: e.clientY, start: posY, overflow: Math.max(1, shown - rect.height) };
+            cover.classList.add('dragging');
+            cImg.setPointerCapture(e.pointerId);
+        });
+        cImg.addEventListener('pointermove', function (e) {
+            if (!drag) return;
+            setPos(drag.start - (e.clientY - drag.y) / drag.overflow * 100);
+        });
+        function endDrag() { drag = null; cover.classList.remove('dragging'); }
+        cImg.addEventListener('pointerup', endDrag);
+        cImg.addEventListener('pointercancel', endDrag);
+    }
 
     // ===== পাসওয়ার্ড বদলানো =====
     var pw = document.getElementById('pwForm');

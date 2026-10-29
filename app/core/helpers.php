@@ -203,6 +203,27 @@ function linkify_text(?string $text): string
 }
 
 /**
+ * কমেন্টের লেখা → HTML: escape + লিংক + @[নাম|id] মেনশনকে প্রোফাইল লিংক বানায়।
+ * পুরোনো রিপ্লাইয়ের শুরুর "@[নাম] " (id ছাড়া) শুধু নীল লেখা হয়।
+ */
+function comment_text_html(?string $text): string
+{
+    $html = linkify_text($text);
+    $html = preg_replace_callback('/@\[([^\]|<>]{1,120})\|(\d{1,10})\]/u', fn($m) =>
+        '<a class="cm-mention" href="/Profile/Show/' . (int)$m[2] . '">' . $m[1] . '</a>', $html) ?? $html;
+    $html = preg_replace('/^@\[([^\]|<>]{1,120})\]\s?/u', '<span class="cm-mention">$1</span> ', $html) ?? $html;
+    return $html;
+}
+
+/** এডিট বক্সের জন্য: @[নাম|id] → @নাম, আর নাম→id ম্যাপ */
+function mention_plain(?string $text): array
+{
+    $map = [];
+    $plain = preg_replace_callback('/@\[([^\]|]{1,80})\|(\d{1,10})\]/u', function ($m) use (&$map) { $map[$m[1]] = (int)$m[2]; return '@' . $m[1]; }, (string)$text);
+    return [$plain ?? (string)$text, $map];
+}
+
+/**
  * ফ্রেন্ড বাটন (সম্পর্ক অনুযায়ী)। JS এর frRenderActions() একই HTML বানায় —
  * একটা বদলালে অন্যটাও বদলাতে হবে।
  * $rel: none | sent | received | friends | self
