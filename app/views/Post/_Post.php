@@ -11,7 +11,12 @@ $lineCount = substr_count($text, "\n") + 1;
 $isLong = mb_strlen($text) > 420 || $lineCount > 8;
 $isShare = $post->SharedPostId !== null;
 $orig = $post->Shared ?? null;           // Obj | false (দেখা যায় না) | null
-$isBig = !$isShare && !$post->ImageUrl && $text !== '' && mb_strlen($text) <= 85 && $lineCount <= 2;
+$ptype = $post->PostType ?? 'post';
+$meta = $post->Meta ?? [];
+$isBig = !$isShare && $ptype === 'post' && !$post->ImageUrl && $text !== '' && mb_strlen($text) <= 85 && $lineCount <= 2;
+$typeMeta = ['study' => ['fa-book-open', 'Study Update', 'st'], 'question' => ['fa-circle-question', 'Question', 'qu'],
+             'achievement' => ['fa-trophy', 'Achievement', 'ac'], 'poll' => ['fa-square-poll-vertical', 'Poll', 'po']];
+$fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return ($h ? $h . 'h ' : '') . ($r || !$h ? $r . 'm' : ''); };
 // কোন পোস্টটা শেয়ার হবে (শেয়ার করা পোস্ট আবার শেয়ার করলে মূলটা)
 $shareTarget = $isShare ? ($orig ? $orig : null) : $post;
 $canShare = !$viewerIsAdmin && $shareTarget && $shareTarget->Privacy === 'Public';
@@ -21,7 +26,8 @@ $mine = $post->MyReaction;
 ?>
 <article class="pc" id="post-<?= $post->Id ?>" data-id="<?= $post->Id ?>" data-privacy="<?= e($post->Privacy) ?>"
          data-owner="<?= $isOwner ? '1' : '0' ?>" data-content="<?= e($text) ?>" data-image="<?= e((string)$post->ImageUrl) ?>"
-         data-share="<?= $isShare ? '1' : '0' ?>" data-share-target="<?= $canShare ? $shareTarget->Id : '' ?>">
+         data-share="<?= $isShare ? '1' : '0' ?>" data-share-target="<?= $canShare ? $shareTarget->Id : '' ?>"
+         data-type="<?= e($ptype) ?>" data-meta="<?= e(json_encode((object)$meta, JSON_UNESCAPED_UNICODE)) ?>">
     <header class="pc-head">
         <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-avatar" aria-label="<?= e($post->AuthorName) ?>">
             <?= e($post->AuthorInitials) ?>
@@ -53,11 +59,26 @@ $mine = $post->MyReaction;
         </div>
     </header>
 
+    <?php if (isset($typeMeta[$ptype])): [$tIcon, $tLabel, $tCls] = $typeMeta[$ptype]; ?>
+        <div class="pc-type pc-type-<?= $tCls ?>">
+            <span class="pc-type-pill"><i class="fas <?= $tIcon ?>"></i> <?= $tLabel ?></span>
+            <?php if (!empty($meta['subject'])): ?><span class="pc-type-chip"><i class="fas fa-book"></i> <?= e($meta['subject']) ?></span><?php endif; ?>
+            <?php if (!empty($meta['minutes'])): ?><span class="pc-type-chip"><i class="far fa-clock"></i> <?= e($fmtMin((int)$meta['minutes'])) ?> পড়েছি</span><?php endif; ?>
+        </div>
+        <?php if ($ptype === 'achievement' && !empty($meta['title'])): ?>
+            <div class="pc-achieve"><span class="pc-achieve-ico">🏆</span><div><small>Achievement unlocked</small><strong><?= e($meta['title']) ?></strong></div></div>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <?php if ($text !== ''): ?>
-        <div class="pc-body">
+        <div class="pc-body<?= $ptype === 'question' ? ' pc-q' : '' ?>">
             <div class="pc-text<?= $isBig ? ' big' : '' ?><?= $isLong ? ' clamp' : '' ?>"><?= linkify_text($text) ?></div>
             <?php if ($isLong): ?><button type="button" class="pc-more" data-pc="more">See more</button><?php endif; ?>
         </div>
+    <?php endif; ?>
+
+    <?php if ($ptype === 'poll'): ?>
+        <div class="pc-poll-wrap"><?php partial('Post/_Poll', ['poll' => $post->Poll, 'postId' => $post->Id]); ?></div>
     <?php endif; ?>
 
     <?php if ($post->ImageUrl): ?>
@@ -115,9 +136,14 @@ $mine = $post->MyReaction;
             <span class="pc-like-ico"><?= $mine ? $rx[$mine][0] : '<i class="far fa-thumbs-up"></i>' ?></span>
             <span class="pc-like-lbl"><?= $mine ? $rx[$mine][1] : 'Like' ?></span>
         </button>
-        <button type="button" class="pc-act" data-pc="comment"><i class="far fa-comment"></i> Comment</button>
+        <button type="button" class="pc-act" data-pc="comment"><i class="far fa-comment"></i> <?= $ptype === 'question' ? 'Answer' : 'Comment' ?></button>
         <?php if ($canShare): ?>
             <button type="button" class="pc-act" data-pc="share"><i class="far fa-share-from-square"></i> Share</button>
+        <?php endif; ?>
+        <?php if (!$viewerIsAdmin): ?>
+            <button type="button" class="pc-act pc-save<?= $post->IsSaved ? ' on' : '' ?>" data-save-type="post" data-save-id="<?= $post->Id ?>">
+                <i class="<?= $post->IsSaved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $post->IsSaved ? 'Saved' : 'Save' ?></span>
+            </button>
         <?php endif; ?>
     </div>
 

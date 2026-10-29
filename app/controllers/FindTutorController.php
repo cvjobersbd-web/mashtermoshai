@@ -43,6 +43,9 @@ class FindTutorController extends Controller
             'GithubProfile', 'PortfolioLink', 'LinkedInProfile', 'ProfileImageLink'];
         $out = [];
         foreach ($keys as $k) $out[$k] = $user->$k;
+        $me = current_user_id();
+        $out['IsSaved'] = $me !== null && $user->Role === 'Teacher' ? $this->db->IsSaved($me, 'tutor', (int)$user->Id) : false;
+        $out['CanSave'] = $me !== null && current_role() !== 'Admin' && $user->Role === 'Teacher' && $me !== (int)$user->Id;
         json_camel(['success' => true, 'user' => $out]);
     }
 

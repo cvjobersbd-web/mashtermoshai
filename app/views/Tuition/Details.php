@@ -1,6 +1,8 @@
 <?php
 $ViewData['Title'] = $Model->Title . ' - Tuition Details';
 $isLoggedIn = session_get('UserName') != null;
+$canSave = $isLoggedIn && session_get('UserRole') !== 'Admin';
+$isSv = $canSave && db()->IsSaved((int)current_user_id(), 'tuition', (int)$Model->Id);
 ?>
 
 <style>
@@ -374,6 +376,13 @@ $isLoggedIn = session_get('UserName') != null;
     }
 </style>
 
+
+<style>
+    .sv-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #DCE6F0; background: #fff;
+        color: #334155; font-weight: 600; font-size: 13.5px; cursor: pointer; transition: background .15s, color .15s; }
+    .sv-btn:hover { background: #F4F7FB; }
+    .sv-btn.on { background: #EAF1FE; border-color: #C7D9FB; color: #1D63E0; }
+</style>
 <div class="td-page">
     <div class="td-container">
 
@@ -513,6 +522,13 @@ $isLoggedIn = session_get('UserName') != null;
             <!-- ======================
                  APPLY BUTTON
                  ====================== -->
+            <?php if ($canSave): ?>
+                <div style="display:flex; justify-content:flex-end; margin:-6px 0 14px;">
+                    <button type="button" class="sv-btn<?= $isSv ? ' on' : '' ?>" data-save-type="tuition" data-save-id="<?= (int)$Model->Id ?>">
+                        <i class="<?= $isSv ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $isSv ? 'Saved' : 'Save' ?></span>
+                    </button>
+                </div>
+            <?php endif; ?>
             <div class="td-apply-section">
                 <?php if ($Model->Status != 'Open'): ?>
                     <p class="td-apply-text">

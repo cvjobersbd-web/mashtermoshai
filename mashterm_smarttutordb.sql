@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 29, 2026 at 08:33 AM
+-- Generation Time: Oct 29, 2026 at 11:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -36,6 +36,20 @@ CREATE TABLE `friendships` (
   `Status` varchar(20) NOT NULL DEFAULT 'Pending',
   `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
   `RespondedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `goaltasks`
+--
+
+CREATE TABLE `goaltasks` (
+  `Id` int(11) NOT NULL,
+  `GoalId` int(11) NOT NULL,
+  `Title` varchar(150) NOT NULL,
+  `IsDone` tinyint(1) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -160,6 +174,33 @@ INSERT INTO `passwordresets` (`Id`, `UserId`, `TokenHash`, `ExpiresAt`, `UsedAt`
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `polloptions`
+--
+
+CREATE TABLE `polloptions` (
+  `Id` int(11) NOT NULL,
+  `PostId` int(11) NOT NULL,
+  `Text` varchar(100) NOT NULL,
+  `SortOrder` int(11) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pollvotes`
+--
+
+CREATE TABLE `pollvotes` (
+  `Id` int(11) NOT NULL,
+  `PostId` int(11) NOT NULL,
+  `OptionId` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `profilecommentreactions`
 --
 
@@ -243,6 +284,20 @@ CREATE TABLE `reviews` (
 
 INSERT INTO `reviews` (`Id`, `UserId`, `Rating`, `Subtitle`, `Content`, `Status`, `AdminNote`, `CreatedAt`, `UpdatedAt`) VALUES
 (1, 3, 5, 'Officiis est odit eos id doloribus', 'Cupidatat odio occaecat maxime fugiat et eum quae excepturi laborum labore omnis tempore officiis elit et sed voluptatum vel omnis', 'Approved', NULL, '2026-10-28 12:51:01', '2026-10-28 12:51:35');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `saveditems`
+--
+
+CREATE TABLE `saveditems` (
+  `Id` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `ItemType` varchar(12) NOT NULL,
+  `ItemId` int(11) NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -547,6 +602,37 @@ CREATE TABLE `tutorrequests` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `useractivitydays`
+--
+
+CREATE TABLE `useractivitydays` (
+  `UserId` int(11) NOT NULL,
+  `Day` date NOT NULL,
+  `Points` int(11) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `usergoals`
+--
+
+CREATE TABLE `usergoals` (
+  `Id` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `Title` varchar(120) NOT NULL,
+  `Category` varchar(30) NOT NULL DEFAULT 'Custom',
+  `TargetDate` date DEFAULT NULL,
+  `ManualProgress` tinyint(4) NOT NULL DEFAULT 0,
+  `IsPrimary` tinyint(1) NOT NULL DEFAULT 0,
+  `Status` varchar(12) NOT NULL DEFAULT 'Active',
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `UpdatedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `userprofileextras`
 --
 
@@ -645,6 +731,13 @@ ALTER TABLE `friendships`
   ADD KEY `IX_Friendships_Requester` (`RequesterId`,`Status`);
 
 --
+-- Indexes for table `goaltasks`
+--
+ALTER TABLE `goaltasks`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_GoalTasks_Goal` (`GoalId`);
+
+--
 -- Indexes for table `helpdeskcomments`
 --
 ALTER TABLE `helpdeskcomments`
@@ -682,6 +775,21 @@ ALTER TABLE `passwordresets`
   ADD KEY `IX_PasswordResets_Ip` (`RequestIp`,`CreatedAt`);
 
 --
+-- Indexes for table `polloptions`
+--
+ALTER TABLE `polloptions`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_PollOptions_Post` (`PostId`);
+
+--
+-- Indexes for table `pollvotes`
+--
+ALTER TABLE `pollvotes`
+  ADD PRIMARY KEY (`Id`),
+  ADD UNIQUE KEY `UX_PollVotes` (`PostId`,`UserId`),
+  ADD KEY `IX_PollVotes_Option` (`OptionId`);
+
+--
 -- Indexes for table `profilecommentreactions`
 --
 ALTER TABLE `profilecommentreactions`
@@ -716,6 +824,13 @@ ALTER TABLE `reviews`
   ADD PRIMARY KEY (`Id`),
   ADD UNIQUE KEY `UX_Reviews_User` (`UserId`),
   ADD KEY `IX_Reviews_Status` (`Status`);
+
+--
+-- Indexes for table `saveditems`
+--
+ALTER TABLE `saveditems`
+  ADD PRIMARY KEY (`Id`),
+  ADD UNIQUE KEY `UX_Saved` (`UserId`,`ItemType`,`ItemId`);
 
 --
 -- Indexes for table `sitecontents`
@@ -825,6 +940,19 @@ ALTER TABLE `tutorrequests`
   ADD KEY `IX_TutorRequests_Status` (`Status`);
 
 --
+-- Indexes for table `useractivitydays`
+--
+ALTER TABLE `useractivitydays`
+  ADD PRIMARY KEY (`UserId`,`Day`);
+
+--
+-- Indexes for table `usergoals`
+--
+ALTER TABLE `usergoals`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_UserGoals_User` (`UserId`);
+
+--
 -- Indexes for table `userprofileextras`
 --
 ALTER TABLE `userprofileextras`
@@ -854,6 +982,12 @@ ALTER TABLE `usersuspensions`
 -- AUTO_INCREMENT for table `friendships`
 --
 ALTER TABLE `friendships`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `goaltasks`
+--
+ALTER TABLE `goaltasks`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -887,6 +1021,18 @@ ALTER TABLE `passwordresets`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `polloptions`
+--
+ALTER TABLE `polloptions`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pollvotes`
+--
+ALTER TABLE `pollvotes`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `profilecommentreactions`
 --
 ALTER TABLE `profilecommentreactions`
@@ -915,6 +1061,12 @@ ALTER TABLE `profileposts`
 --
 ALTER TABLE `reviews`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `saveditems`
+--
+ALTER TABLE `saveditems`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `sitesettings`
@@ -998,6 +1150,12 @@ ALTER TABLE `tuitionposts`
 -- AUTO_INCREMENT for table `tutorrequests`
 --
 ALTER TABLE `tutorrequests`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `usergoals`
+--
+ALTER TABLE `usergoals`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --

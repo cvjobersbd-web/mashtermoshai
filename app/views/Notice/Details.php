@@ -2,6 +2,13 @@
 $ViewData['Title'] = $Model->Title;
 $moreNews = is_array($ViewBag->MoreNews) ? $ViewBag->MoreNews : [];
 ?>
+<style>
+    .sv-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #DCE6F0; background: #fff;
+        color: #334155; font-weight: 600; font-size: 13.5px; cursor: pointer; transition: background .15s, color .15s; }
+    .sv-btn:hover { background: #F4F7FB; }
+    .sv-btn.on { background: #EAF1FE; border-color: #C7D9FB; color: #1D63E0; }
+</style>
+
 
 <style>
     .detail-page {
@@ -438,9 +445,14 @@ $moreNews = is_array($ViewBag->MoreNews) ? $ViewBag->MoreNews : [];
                 </div>
             <?php endif; ?>
 
-            <div class="article-meta">
+            <div class="article-meta" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <i class="far fa-calendar"></i>
                 <span><?= e(fmt_date($Model->PublishedDate, 'F d, Y')) ?></span>
+                <?php if (session_get('UserName') !== null && session_get('UserRole') !== 'Admin'): $isSv = db()->IsSaved((int)current_user_id(), 'notice', (int)$Model->Id); ?>
+                    <button type="button" class="sv-btn<?= $isSv ? ' on' : '' ?>" style="margin-left:auto;" data-save-type="notice" data-save-id="<?= (int)$Model->Id ?>">
+                        <i class="<?= $isSv ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $isSv ? 'Saved' : 'Save' ?></span>
+                    </button>
+                <?php endif; ?>
             </div>
 
             <div class="article-content">

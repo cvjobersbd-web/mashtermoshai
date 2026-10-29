@@ -3548,7 +3548,12 @@ $CommentIso = function ($dt): string {
                                         </div>`;
                     }
 
-                    // ✅ পুরো প্রোফাইল + Add Friend
+                    // ✅ পুরো প্রোফাইল + Add Friend (+ টিউটর Save)
+                    if (u.canSave) html += `
+                                        <button type="button" data-save-type="tutor" data-save-id="${encodeURIComponent(u.id)}" class="${u.isSaved ? 'on' : ''}"
+                                            style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:16px; padding:11px; border-radius:12px; border:1px solid #DCE6F0; background:#fff; color:#08224A; font-weight:700; cursor:pointer;">
+                                            <i class="${u.isSaved ? 'fas' : 'far'} fa-bookmark"></i> <span>${u.isSaved ? 'Saved' : 'Save'}</span>
+                                        </button>`;
                     html += `
                                         <a href="/Profile/Show/${encodeURIComponent(u.id)}" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; padding:12px; border-radius:12px; background:#02B8F5; color:#fff; font-weight:700; text-decoration:none;">
                                             <i class="fas fa-user-plus"></i> Full Profile &amp; Add Friend

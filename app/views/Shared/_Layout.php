@@ -1618,6 +1618,43 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <?= render_section('Scripts') ?>
+    <script>
+        // ✅ Save / Saved বাটন (পুরো সাইটে): <button data-save-type="post|tutor|circular|tuition|notice" data-save-id="..">
+        (function () {
+            var toastEl, t;
+            function toast(m, err) {
+                if (window.pcToast) return window.pcToast(m, err);
+                if (!toastEl) { toastEl = document.createElement('div'); toastEl.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:3300;background:#08224A;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;box-shadow:0 12px 30px rgba(8,34,74,.3);max-width:calc(100vw - 32px);text-align:center;transition:opacity .25s;'; document.body.appendChild(toastEl); }
+                toastEl.textContent = m; toastEl.style.background = err ? '#B42318' : '#08224A'; toastEl.style.opacity = 1;
+                clearTimeout(t); t = setTimeout(function () { toastEl.style.opacity = 0; }, 2600);
+            }
+            document.addEventListener('click', async function (e) {
+                var b = e.target.closest('[data-save-type]');
+                if (!b || b.disabled) return;
+                e.preventDefault();
+                var tok = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (!tok) { location.href = '/Account/Login'; return; }
+                var fd = new FormData();
+                fd.append('type', b.getAttribute('data-save-type')); fd.append('id', b.getAttribute('data-save-id'));
+                fd.append('__RequestVerificationToken', tok.value);
+                b.disabled = true;
+                try {
+                    var d = await (await fetch('/Saved/Toggle', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                    if (!d.success) { toast(d.message || 'Failed', true); return; }
+                    document.querySelectorAll('[data-save-type="' + b.getAttribute('data-save-type') + '"][data-save-id="' + b.getAttribute('data-save-id') + '"]').forEach(function (x) {
+                        x.classList.toggle('on', d.saved);
+                        var i = x.querySelector('i.fa-bookmark'); if (i) i.className = (d.saved ? 'fas' : 'far') + ' fa-bookmark';
+                        var sp = x.querySelector('span'); if (sp) sp.textContent = d.saved ? 'Saved' : 'Save';
+                        x.setAttribute('aria-pressed', d.saved ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('[data-saved-count]').forEach(function (c) { c.textContent = d.count; });
+                    document.dispatchEvent(new CustomEvent('saved:changed', { detail: { type: b.getAttribute('data-save-type'), id: b.getAttribute('data-save-id'), saved: d.saved } }));
+                    toast(d.message);
+                } catch (err) { toast('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
+                finally { b.disabled = false; }
+            });
+        })();
+    </script>
 
 </body>
 </html>

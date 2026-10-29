@@ -16,6 +16,8 @@ try
 catch (Throwable $ex) { error_log($ex->getMessage()); }
 
 // ✅ টিচার কোন কোন পোস্টে আগেই Apply করেছে (বাটনে "Applied" দেখানোর জন্য)
+$savedKeys = ($isLoggedIn && $userId && $userRole !== 'Admin') ? db()->SavedKeys((int)$userId) : [];
+$canSave = $isLoggedIn && $userRole !== 'Admin';
 $myApplied = [];
 $myPhone = '';
 if ($isLoggedIn && $isTeacher && $userId) {
@@ -687,6 +689,11 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
         gap: 20px;
     }
 
+    .fb-action-btn.sv-inline.on { color: #1D63E0; }
+    .sv-ico { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #DCE6F0; background: #fff; color: #475569; cursor: pointer; }
+    .sv-ico:hover { background: #F4F7FB; }
+    .sv-ico.on { background: #EAF1FE; border-color: #C7D9FB; color: #1D63E0; }
+
     .ac-card {
         background: white;
         border-radius: 14px;
@@ -1014,6 +1021,11 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
                                 <button class="fb-action-btn" onclick="toggleCircularComments(<?= e($post->Id) ?>)">
                                     <i class="far fa-comment"></i> Comment
                                 </button>
+                                <?php if ($canSave): $isSv = isset($savedKeys['circular:' . (int)$post->Id]); ?>
+                                    <button type="button" class="fb-action-btn sv-inline<?= $isSv ? ' on' : '' ?>" data-save-type="circular" data-save-id="<?= (int)$post->Id ?>">
+                                        <i class="<?= $isSv ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $isSv ? 'Saved' : 'Save' ?></span>
+                                    </button>
+                                <?php endif; ?>
 
                                 <?php if ($isLoggedIn && $isTeacher && (int)$post->UserId !== (int)$userId): ?>
                                     <?php if (isset($myApplied[$post->Id])): ?>
@@ -1128,9 +1140,14 @@ $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimes
                 <?php else: ?>
                     <?php foreach ($Model ?? [] as $post): ?>
                         <div class="ac-card">
-                            <div class="d-flex justify-content-between mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
                                 <?php if (!is_blank($post->TuitionCode)): ?>
                                     <span class="badge" style="background:#08224A; color:#FFB300; padding:5px 10px; border-radius:10px; font-family:monospace;"><?= e($post->TuitionCode) ?></span>
+                                <?php else: ?><span></span><?php endif; ?>
+                                <?php if ($canSave): $isSv = isset($savedKeys['tuition:' . (int)$post->Id]); ?>
+                                    <button type="button" class="sv-ico<?= $isSv ? ' on' : '' ?>" data-save-type="tuition" data-save-id="<?= (int)$post->Id ?>" title="Save" aria-label="Save tuition">
+                                        <i class="<?= $isSv ? 'fas' : 'far' ?> fa-bookmark"></i>
+                                    </button>
                                 <?php endif; ?>
                             </div>
                             <h3 style="font-size:18px; color:#08224A; font-weight:700; font-family: var(--font-heading);"><?= e($post->Title) ?></h3>

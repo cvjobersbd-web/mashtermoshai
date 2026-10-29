@@ -240,6 +240,62 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     .pm-submit:hover:not(:disabled) { background: var(--pc-sky-d); }
     .pm-submit:disabled { background: #E4E6EB; color: #BCC0C4; cursor: not-allowed; }
 
+    /* post type tabs + fields */
+    .pm-types { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 0 10px; padding-bottom: 2px; }
+    .pm-types::-webkit-scrollbar { display: none; }
+    .pm-types button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #E3E8EF;
+        background: #fff; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; }
+    .pm-types button.active { background: #E7F6FD; border-color: #9ADCF7; color: #0B7FB0; }
+    .pm-types[hidden] { display: none; }
+    .pm-fields { display: none; margin-bottom: 8px; }
+    .pm-fields.show { display: block; }
+    .pm-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pm-row label { flex: 1 1 180px; margin: 0; }
+    .pm-row label.sm { flex: 1 1 200px; }
+    .pm-row label > span { display: block; font-size: 12px; font-weight: 700; color: #64748B; margin-bottom: 4px; }
+    .pm-row label > span b { color: #e74c3c; }
+    .pm-row input, .pm-opts input { width: 100%; height: 40px; border: 1.5px solid #E3E8EF; border-radius: 10px; padding: 0 12px; font-size: 14.5px; outline: none; background: #F8FAFC; }
+    .pm-row input:focus, .pm-opts input:focus { border-color: #02B8F5; background: #fff; }
+    .pm-time { display: flex !important; align-items: center; gap: 6px; }
+    .pm-time input { width: 64px !important; text-align: center; padding: 0 6px !important; }
+    .pm-time em { font-style: normal; font-size: 13px; color: #64748B; }
+    .pm-opts { display: flex; flex-direction: column; gap: 8px; }
+    .pm-opt { display: flex; gap: 6px; align-items: center; }
+    .pm-opt button { width: 34px; height: 34px; border: none; border-radius: 50%; background: #F0F2F5; color: #64748B; cursor: pointer; flex-shrink: 0; }
+    .pm-addopt { margin-top: 8px; border: 1.5px dashed #CBD5E1; background: none; width: 100%; height: 38px; border-radius: 10px; font-weight: 600; color: #475569; cursor: pointer; font-size: 13.5px; }
+    .pm-addopt:hover { border-color: #02B8F5; color: #0B7FB0; }
+    .pm-note { font-size: 12.5px; color: #64748B; margin: 6px 0 0; }
+
+    /* post type display */
+    .pc-type { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 8px; }
+    .pc-type-pill, .pc-type-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12.5px; font-weight: 700; }
+    .pc-type-chip { background: #F1F5F9; color: #334155; font-weight: 600; }
+    .pc-type-st .pc-type-pill { background: #EDE9FE; color: #6D28D9; }
+    .pc-type-qu .pc-type-pill { background: #FCE7F3; color: #BE185D; }
+    .pc-type-ac .pc-type-pill { background: #FEF3C7; color: #B45309; }
+    .pc-type-po .pc-type-pill { background: #DBEAFE; color: #1D4ED8; }
+    .pc-q .pc-text { font-size: 17px; font-weight: 600; }
+    .pc-achieve { margin: 0 14px 10px; display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 14px;
+        background: linear-gradient(135deg, #FFF7E0 0%, #FFE8B0 100%); border: 1px solid #FDE2A1; }
+    .pc-achieve-ico { font-size: 38px; line-height: 1; filter: drop-shadow(0 4px 8px rgba(180,120,0,.3)); }
+    .pc-achieve small { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: #B45309; }
+    .pc-achieve strong { display: block; font-size: 18px; color: #3B2A06; line-height: 1.3; }
+    .pc-poll-wrap { padding: 0 14px 12px; }
+    .pl { display: flex; flex-direction: column; gap: 8px; }
+    .pl-opt { position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+        border: 1.5px solid #E3E8EF; background: #fff; cursor: pointer; text-align: left; font-size: 14.5px; color: #1C1E21; font-weight: 600; }
+    .pl-opt:hover { border-color: #9ADCF7; }
+    .pl-bar { position: absolute; left: 0; top: 0; bottom: 0; background: #E7F6FD; transition: width .5s cubic-bezier(.22,1,.36,1); z-index: 0; }
+    .pl-opt.mine { border-color: #02B8F5; }
+    .pl-opt.mine .pl-bar { background: #CDEFFC; }
+    .pl-radio, .pl-txt, .pl-pct { position: relative; z-index: 1; }
+    .pl-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #CBD5E1; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
+    .pl-opt.mine .pl-radio { background: #02B8F5; border-color: #02B8F5; }
+    .pl-txt { flex: 1; min-width: 0; word-break: break-word; }
+    .pl-pct { font-weight: 700; color: #0B7FB0; }
+    .pl-foot { font-size: 12.5px; color: #65676B; }
+    .pc-save.on { color: #0B7FB0; }
+
     /* reactors list */
     .rl-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--pc-line); padding: 0 12px; scrollbar-width: none; }
     .rl-tabs button { border: none; background: none; padding: 12px 10px; font-weight: 600; font-size: 14.5px; color: var(--pc-muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
@@ -307,8 +363,35 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                     <div class="pm-privacy-hint" id="pmPrivHint"></div>
                 </div>
             </div>
+            <div class="pm-types" id="pmTypes" role="tablist">
+                <button type="button" data-type="post" class="active"><i class="fas fa-pen"></i> Post</button>
+                <button type="button" data-type="study"><i class="fas fa-book-open"></i> Study Update</button>
+                <button type="button" data-type="question"><i class="fas fa-circle-question"></i> Question</button>
+                <button type="button" data-type="achievement"><i class="fas fa-trophy"></i> Achievement</button>
+                <button type="button" data-type="poll"><i class="fas fa-square-poll-vertical"></i> Poll</button>
+            </div>
+            <div class="pm-fields" data-for="study">
+                <div class="pm-row">
+                    <label><span>কোন বিষয়?</span><input type="text" id="pmSubject" maxlength="40" placeholder="যেমন: Physics" list="pmSubjList" /></label>
+                    <label class="sm"><span>কতক্ষণ পড়েছেন?</span>
+                        <span class="pm-time"><input type="number" id="pmHours" min="0" max="16" placeholder="0" inputmode="numeric" /><em>ঘণ্টা</em>
+                        <input type="number" id="pmMins" min="0" max="59" placeholder="0" inputmode="numeric" /><em>মিনিট</em></span></label>
+                </div>
+            </div>
+            <div class="pm-fields" data-for="question">
+                <div class="pm-row"><label><span>বিষয় (ঐচ্ছিক)</span><input type="text" id="pmQSubject" maxlength="40" placeholder="যেমন: Chemistry" list="pmSubjList" /></label></div>
+            </div>
+            <div class="pm-fields" data-for="achievement">
+                <div class="pm-row"><label><span>কী অর্জন করলেন? <b>*</b></span><input type="text" id="pmAchTitle" maxlength="80" placeholder="যেমন: SSC তে GPA 5 পেয়েছি!" /></label></div>
+            </div>
+            <datalist id="pmSubjList"><option value="Bangla"><option value="English"><option value="Mathematics"><option value="Higher Math"><option value="Physics"><option value="Chemistry"><option value="Biology"><option value="ICT"><option value="Accounting"><option value="Economics"></datalist>
             <textarea class="pm-text" id="pmText" maxlength="5000" placeholder="আপনার মনে কী আছে, <?= e(explode(' ', trim($me->Name))[0]) ?>?"></textarea>
             <div class="pm-count" id="pmCount"></div>
+            <div class="pm-fields" data-for="poll">
+                <div class="pm-opts" id="pmOpts"></div>
+                <button type="button" class="pm-addopt" id="pmAddOpt"><i class="fas fa-plus"></i> অপশন যোগ করুন</button>
+                <p class="pm-note" id="pmPollNote" hidden>পোলের অপশন পোস্ট করার পর বদলানো যায় না।</p>
+            </div>
             <div class="pm-preview" id="pmPreview">
                 <img id="pmPreviewImg" alt="Preview" />
                 <button type="button" data-pm="remove-image" aria-label="Remove photo"><i class="fas fa-xmark"></i></button>
@@ -641,6 +724,19 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                 break;
             case 'reactors': openReactors('post', card.getAttribute('data-id')); break;
             case 'sharers': openSharers(card.getAttribute('data-id')); break;
+            case 'vote': {
+                var pl = a.closest('.pl');
+                var mineNow = a.classList.contains('mine');
+                $$('.pl-opt', pl).forEach(function (b) { b.disabled = true; });
+                try {
+                    var dv = await post('/Post/Vote', { postId: pl.getAttribute('data-post'), optionId: mineNow ? 0 : a.getAttribute('data-opt') });
+                    if (!dv.success) { toast(dv.message, true); $$('.pl-opt', pl).forEach(function (b) { b.disabled = false; }); return; }
+                    var np = htmlToEl(dv.html); pl.replaceWith(np);
+                    // অ্যানিমেশনের জন্য বার ০ থেকে শুরু
+                    $$('.pl-bar', np).forEach(function (b) { var w = b.style.width; b.style.width = '0'; requestAnimationFrame(function () { requestAnimationFrame(function () { b.style.width = w; }); }); });
+                } catch (err) { toast('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); $$('.pl-opt', pl).forEach(function (b) { b.disabled = false; }); }
+                break;
+            }
             case 'share': openShare(card); break;
             case 'comment-reactors': openReactors('comment', cm.getAttribute('data-id')); break;
             case 'delete-comment': {
@@ -848,7 +944,49 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     // ============================================================
     var pm = $('#pmOverlay'), pmForm = $('#pmForm'), pmText = $('#pmText'), pmFile = $('#pmFile'), pmPriv = $('#pmPrivacy');
     var pmSubmit = $('#pmSubmit'), pmPreview = $('#pmPreview'), pmImg = $('#pmPreviewImg');
-    var editing = null, removeImage = false, hadImage = false, busy = false, sharing = null;
+    var editing = null, removeImage = false, hadImage = false, busy = false, sharing = null, ptype = 'post';
+    var TYPE_TITLES = { post: 'Create post', study: 'Study Update', question: 'Ask a question', achievement: 'Share an achievement', poll: 'Create a poll' };
+    var TYPE_PH = { post: null, study: 'আজ কী পড়লেন? কী শিখলেন? (ঐচ্ছিক)', question: 'আপনার প্রশ্নটি লিখুন...', achievement: 'অর্জনটা নিয়ে কিছু বলুন... (ঐচ্ছিক)', poll: 'পোলের প্রশ্ন লিখুন...' };
+    var pmOpts = $('#pmOpts');
+    function optRow(v) {
+        var d = document.createElement('div'); d.className = 'pm-opt';
+        d.innerHTML = '<input type="text" maxlength="80" placeholder="Option" /><button type="button" aria-label="Remove option"><i class="fas fa-xmark"></i></button>';
+        $('input', d).value = v || '';
+        return d;
+    }
+    function resetOpts() { pmOpts.innerHTML = ''; pmOpts.appendChild(optRow()); pmOpts.appendChild(optRow()); paintOpts(); }
+    function paintOpts() {
+        var rows = $$('.pm-opt', pmOpts);
+        rows.forEach(function (r, i) { $('input', r).placeholder = 'Option ' + (i + 1); $('button', r).hidden = rows.length <= 2; });
+        $('#pmAddOpt').hidden = rows.length >= 6;
+    }
+    $('#pmAddOpt').addEventListener('click', function () { var r = optRow(); pmOpts.appendChild(r); paintOpts(); $('input', r).focus(); });
+    pmOpts.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { b.parentNode.remove(); paintOpts(); refresh(); } });
+    pmOpts.addEventListener('input', function () { refresh(); });
+    ['#pmSubject', '#pmHours', '#pmMins', '#pmQSubject', '#pmAchTitle'].forEach(function (s) { $(s).addEventListener('input', function () { refresh(); }); });
+    function setType(t, keepTitle) {
+        ptype = TYPE_TITLES[t] ? t : 'post';
+        $$('#pmTypes button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-type') === ptype); });
+        $$('.pm-fields').forEach(function (f) { f.classList.toggle('show', f.getAttribute('data-for') === ptype); });
+        if (!keepTitle) $('#pmTitle').textContent = TYPE_TITLES[ptype];
+        pmText.setAttribute('placeholder', TYPE_PH[ptype] || PH_DEFAULT);
+        pmAdd.hidden = ptype === 'poll' || !!sharing || !!(editing && editing.getAttribute('data-share') === '1');
+        if (ptype === 'poll') { pmFile.value = ''; if (!editing) setPreview(null); }
+        if (ptype === 'poll' && !editing && $$('.pm-opt', pmOpts).length < 2) resetOpts();
+        refresh();
+    }
+    $('#pmTypes').addEventListener('click', function (e) { var b = e.target.closest('button[data-type]'); if (b) { setType(b.getAttribute('data-type')); pmText.focus(); } });
+    function pollOptions() { return $$('.pm-opt input', pmOpts).map(function (i) { return i.value.trim(); }).filter(Boolean); }
+    function typeValid() {
+        var txt = pmText.value.trim();
+        switch (ptype) {
+            case 'study': return !!($('#pmSubject').value.trim() || +$('#pmHours').value || +$('#pmMins').value || txt);
+            case 'question': return !!txt;
+            case 'achievement': return !!$('#pmAchTitle').value.trim();
+            case 'poll': return !!txt && (editing ? true : pollOptions().length >= 2);
+        }
+        return !!(txt || hasImage());
+    }
     var pmShared = $('#pmShared'), pmAdd = $('#pmAdd'), pmCopy = $('#pmCopy');
     var PH_DEFAULT = pmText.getAttribute('placeholder');
 
@@ -867,7 +1005,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         pmText.classList.toggle('small', n > 120 || hasImage());
         $('#pmCount').textContent = n > 4000 ? n + ' / 5000' : '';
         var shareMode = !!sharing || !!(editing && editing.getAttribute('data-share') === '1');
-        pmSubmit.disabled = busy || (!shareMode && !pmText.value.trim() && !hasImage());
+        pmSubmit.disabled = busy || (!shareMode && !typeValid());
     }
     function setPreview(src) {
         if (src) { pmImg.src = src; pmPreview.classList.add('show'); } else { pmImg.removeAttribute('src'); pmPreview.classList.remove('show'); }
@@ -900,6 +1038,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         if (!target) return;
         sharing = { id: target, card: card };
         editing = null; removeImage = false; pmFile.value = ''; setPreview(null);
+        $('#pmTypes').hidden = true; setType('post', true);
         $('#pmTitle').textContent = 'Share post';
         pmSubmit.textContent = 'Share now';
         pmText.value = ''; pmPriv.value = 'Public'; paintPrivacy();
@@ -908,7 +1047,7 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         pmCopy.hidden = false;
         pm.classList.add('open'); document.documentElement.style.overflow = 'hidden';
         refresh();
-        setTimeout(function () { autoGrow(pmText); pmText.focus(); }, 30);
+        setTimeout(function () { autoGrow(pmText); if (!pm.contains(document.activeElement)) pmText.focus(); }, 30);
     }
     pmCopy.addEventListener('click', async function () {
         if (!sharing) return;
@@ -916,8 +1055,16 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         try { await navigator.clipboard.writeText(url); toast('লিংক কপি হয়েছে।'); } catch (err) { window.prompt('লিংকটি কপি করুন:', url); }
     });
 
-    function openComposer(card, focusAudience) {
+    function openComposer(card, focusAudience, type) {
         sharing = null; pmCopy.hidden = true;
+        // ধরন: এডিটে পোস্টেরটা (বদলানো যায় না), নতুন হলে যেটা বাছাই করা হয়েছে
+        var meta = {};
+        if (card) { try { meta = JSON.parse(card.getAttribute('data-meta') || '{}'); } catch (e) { meta = {}; } }
+        $('#pmSubject').value = meta.subject || ''; $('#pmQSubject').value = meta.subject || ''; $('#pmAchTitle').value = meta.title || '';
+        $('#pmHours').value = meta.minutes ? Math.floor(meta.minutes / 60) || '' : ''; $('#pmMins').value = meta.minutes ? (meta.minutes % 60) || '' : '';
+        $('#pmTypes').hidden = !!card;
+        $('#pmPollNote').hidden = !card; pmOpts.hidden = !!card; $('#pmAddOpt').hidden = !!card;
+        if (!card) resetOpts();
         setShareUi(!!(card && card.getAttribute('data-share') === '1'), card && $('.pc-shared', card) ? card : null);
         editing = card || null; removeImage = false; pmFile.value = '';
         $('#pmTitle').textContent = card ? (focusAudience ? 'Edit audience' : 'Edit post') : 'Create post';
@@ -927,14 +1074,16 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         if (!PV[pmPriv.value]) pmPriv.value = 'Public';
         hadImage = !!(card && card.getAttribute('data-image'));
         setPreview(hadImage ? card.getAttribute('data-image') : null);
+        setType(card ? (card.getAttribute('data-type') || 'post') : (type || 'post'), !!card);
+        if (card && !focusAudience) $('#pmTitle').textContent = 'Edit ' + (TYPE_TITLES[ptype] === 'Create post' ? 'post' : TYPE_TITLES[ptype].toLowerCase());
         paintPrivacy();
         pm.classList.add('open'); document.documentElement.style.overflow = 'hidden';
-        setTimeout(function () { autoGrow(pmText); (focusAudience ? pmPriv : pmText).focus(); }, 30);
+        setTimeout(function () { autoGrow(pmText); if (!pm.contains(document.activeElement) || document.activeElement === pm) (focusAudience ? pmPriv : pmText).focus(); }, 30);
     }
     window.pcOpenComposer = openComposer;
     function closeComposer() {
         if (!editing && !sharing && pmText.value.trim()) lsSet('pc_draft', pmText.value); else if (!editing && !sharing) lsSet('pc_draft', '');
-        pm.classList.remove('open'); document.documentElement.style.overflow = ''; editing = null; sharing = null;
+        pm.classList.remove('open'); document.documentElement.style.overflow = ''; editing = null; sharing = null; $('#pmTypes').hidden = false;
         setShareUi(false); pmCopy.hidden = true;
     }
     pm.addEventListener('click', function (e) { if (e.target === pm || e.target.closest('[data-pm="close"]')) closeComposer(); });
@@ -981,7 +1130,12 @@ $meInitials = initials($me->Name ?? 'U', 'U');
             finally { busy = false; pmSubmit.textContent = label; refresh(); }
             return;
         }
-        if (pmFile.files[0]) fd.append('image', pmFile.files[0]);
+        if (pmFile.files[0] && ptype !== 'poll') fd.append('image', pmFile.files[0]);
+        fd.append('type', ptype);
+        if (ptype === 'study') { fd.append('subject', $('#pmSubject').value); fd.append('minutes', (+$('#pmHours').value || 0) * 60 + (+$('#pmMins').value || 0)); }
+        if (ptype === 'question') fd.append('subject', $('#pmQSubject').value);
+        if (ptype === 'achievement') fd.append('title', $('#pmAchTitle').value);
+        if (ptype === 'poll' && !editing) pollOptions().forEach(function (o) { fd.append('options[]', o); });
         if (editing) { fd.append('postId', editing.getAttribute('data-id')); if (removeImage && !pmFile.files[0]) fd.append('removeImage', 'true'); }
         try {
             var d = await post(editing ? '/Post/Update' : '/Post/Create', fd);

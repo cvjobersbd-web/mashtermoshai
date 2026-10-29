@@ -2246,6 +2246,7 @@ class Db
     // ============================================================
     public const POST_PRIVACY = ['Public', 'Friends', 'OnlyMe'];
     public const REACTIONS = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
+    public const POST_TYPES = ['post', 'study', 'question', 'achievement', 'poll'];
     private bool $profilePostsReady = false;
 
     public function EnsureProfilePostTables(): void
@@ -2292,6 +2293,14 @@ class Db
         if (!$this->columnExists('ProfilePosts', 'SharedPostId')) {
             try { $this->pdo->exec('ALTER TABLE `ProfilePosts` ADD COLUMN `SharedPostId` INT NULL'); } catch (Throwable $e) { error_log('[SharedPostId] ' . $e->getMessage()); }
         }
+        // পোস্টের ধরন (post | study | question | achievement | poll) + বাড়তি তথ্য (JSON)
+        $sqlite = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
+        if (!$this->columnExists('ProfilePosts', 'PostType')) {
+            try { $this->pdo->exec('ALTER TABLE `ProfilePosts` ADD COLUMN `PostType` ' . ($sqlite ? "TEXT NOT NULL DEFAULT 'post'" : "VARCHAR(12) NOT NULL DEFAULT 'post'")); } catch (Throwable $e) { error_log('[PostType] ' . $e->getMessage()); }
+        }
+        if (!$this->columnExists('ProfilePosts', 'Meta')) {
+            try { $this->pdo->exec('ALTER TABLE `ProfilePosts` ADD COLUMN `Meta` TEXT NULL'); } catch (Throwable $e) { error_log('[Meta] ' . $e->getMessage()); }
+        }
         $this->profilePostsReady = true;
     }
 
@@ -2306,7 +2315,7 @@ class Db
         } catch (Throwable $e) { return true; } // যাচাই না করা গেলে ALTER চেষ্টা করি না
     }
 
-    private const PROFILE_POST_SELECT = 'SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`Privacy`, p.`IsEdited`, p.`CreatedAt`, p.`UpdatedAt`, p.`SharedPostId`,
+    private const PROFILE_POST_SELECT = 'SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`Privacy`, p.`IsEdited`, p.`CreatedAt`, p.`UpdatedAt`, p.`SharedPostId`, p.`PostType`, p.`Meta`,
             u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
         FROM `ProfilePosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`';
 
@@ -2323,6 +2332,8 @@ class Db
             'AuthorInitials' => initials($name, 'U'), 'TimeAgo' => time_ago($r->CreatedAt),
             'Reactions' => [], 'ReactionTotal' => 0, 'MyReaction' => null, 'Comments' => [], 'CommentCount' => 0,
             'SharedPostId' => isset($r->SharedPostId) && $r->SharedPostId !== null ? (int)$r->SharedPostId : null, 'Shared' => null, 'ShareCount' => 0,
+            'PostType' => in_array($r->PostType ?? 'post', self::POST_TYPES, true) ? $r->PostType : 'post',
+            'Meta' => is_array($m = json_decode((string)($r->Meta ?? ''), true)) ? $m : [], 'Poll' => null, 'IsSaved' => false,
         ]);
     }
 
@@ -2445,6 +2456,23 @@ class Db
         foreach ($this->all("SELECT `SharedPostId`, COUNT(*) AS N FROM `ProfilePosts` WHERE `SharedPostId` IN ($in) GROUP BY `SharedPostId`") as $r) {
             if (isset($byId[(int)$r->SharedPostId])) $byId[(int)$r->SharedPostId]->ShareCount = (int)$r->N;
         }
+        // পোল (শেয়ার করা মূল পোস্টের পোলও)
+        $pollIds = [];
+        foreach ($posts as $p) {
+            if ($p->PostType === 'poll') $pollIds[] = $p->Id;
+            if ($p->Shared && $p->Shared->PostType === 'poll') $pollIds[] = $p->Shared->Id;
+        }
+        if ($pollIds) {
+            $polls = $this->GetPolls(array_unique($pollIds), $viewerId);
+            foreach ($posts as $p) {
+                if ($p->PostType === 'poll') $p->Poll = $polls[$p->Id] ?? null;
+                if ($p->Shared && $p->Shared->PostType === 'poll') $p->Shared->Poll = $polls[$p->Shared->Id] ?? null;
+            }
+        }
+        if ($viewerId) {
+            $saved = $this->SavedKeys($viewerId, 'post');
+            foreach ($posts as $p) $p->IsSaved = isset($saved['post:' . $p->Id]);
+        }
         return $posts;
     }
 
@@ -2479,11 +2507,17 @@ class Db
         } catch (Throwable $e) { error_log('[GetPostCommentById] ' . $e->getMessage()); return null; }
     }
 
-    public function CreateProfilePost(int $userId, string $content, ?string $imageUrl, string $privacy, ?int $sharedPostId = null): int
+    public function CreateProfilePost(int $userId, string $content, ?string $imageUrl, string $privacy, ?int $sharedPostId = null, string $type = 'post', array $meta = []): int
     {
         $this->EnsureProfilePostTables();
-        return $this->insert('INSERT INTO `ProfilePosts` (`UserId`, `Content`, `ImageUrl`, `Privacy`, `IsEdited`, `CreatedAt`, `SharedPostId`) VALUES (:u, :c, :i, :p, 0, :t, :s)',
-            ['u' => $userId, 'c' => $content, 'i' => $imageUrl, 'p' => $privacy, 't' => now(), 's' => $sharedPostId]);
+        return $this->insert('INSERT INTO `ProfilePosts` (`UserId`, `Content`, `ImageUrl`, `Privacy`, `IsEdited`, `CreatedAt`, `SharedPostId`, `PostType`, `Meta`) VALUES (:u, :c, :i, :p, 0, :t, :s, :ty, :m)',
+            ['u' => $userId, 'c' => $content, 'i' => $imageUrl, 'p' => $privacy, 't' => now(), 's' => $sharedPostId, 'ty' => $type,
+             'm' => $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null]);
+    }
+
+    public function UpdateProfilePostMeta(int $postId, array $meta): void
+    {
+        $this->exec('UPDATE `ProfilePosts` SET `Meta` = :m WHERE `Id` = :id', ['m' => $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null, 'id' => $postId]);
     }
 
     public function CountRecentShares(int $userId, int $postId, int $minutes): int
@@ -2632,6 +2666,8 @@ class Db
             $this->exec('DELETE FROM `ProfileCommentReactions` WHERE `CommentId` IN (SELECT `Id` FROM `ProfilePostComments` WHERE `PostId` = :p)', ['p' => $postId]);
             $this->exec('DELETE FROM `ProfilePostComments` WHERE `PostId` = :p', ['p' => $postId]);
             $this->exec('DELETE FROM `ProfilePostReactions` WHERE `PostId` = :p', ['p' => $postId]);
+            $this->DeletePollOf($postId);
+            try { $this->exec("DELETE FROM `SavedItems` WHERE `ItemType` = 'post' AND `ItemId` = :p", ['p' => $postId]); } catch (Throwable $e) { }
             return $this->exec('DELETE FROM `ProfilePosts` WHERE `Id` = :p', ['p' => $postId]) > 0;
         } catch (Throwable $e) { error_log('[DeleteProfilePost] ' . $e->getMessage()); return false; }
     }
@@ -2749,11 +2785,472 @@ class Db
             $extras = $this->GetProfileExtras($userId);
             delete_upload($extras->CoverImageUrl);
             $this->exec('DELETE FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]);
+            $this->EnsureLearningTables();
+            $this->exec('DELETE FROM `GoalTasks` WHERE `GoalId` IN (SELECT `Id` FROM `UserGoals` WHERE `UserId` = :u)', ['u' => $userId]);
+            foreach (['UserGoals', 'SavedItems', 'UserActivityDays', 'PollVotes'] as $t) $this->exec("DELETE FROM `$t` WHERE `UserId` = :u", ['u' => $userId]);
         } catch (Throwable $e) { error_log('[DeleteProfileContentOfUser] ' . $e->getMessage()); }
     }
 
     public function CountPostComments(int $postId): int
     {
         return (int)$this->scalar('SELECT COUNT(*) FROM `ProfilePostComments` WHERE `PostId` = :p', ['p' => $postId]);
+    }
+
+    // ============================================================
+    // ===== LEARNING PROFILE: Intro, Streak, Goals, Saved, Poll =====
+    // ============================================================
+    private bool $learnReady = false;
+
+    private function isSqlite(): bool { return $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'; }
+
+    public function EnsureLearningTables(): void
+    {
+        if ($this->learnReady) return;
+        $this->EnsureProfileExtrasTable();
+        $this->EnsureProfilePostTables();
+        // Intro কলাম (Bio, শহর, আগ্রহের বিষয়, প্রিয় উক্তি)
+        foreach (['Bio' => 'VARCHAR(160)', 'City' => 'VARCHAR(80)', 'Subjects' => 'VARCHAR(300)', 'Quote' => 'VARCHAR(160)'] as $col => $type) {
+            if (!$this->columnExists('UserProfileExtras', $col)) {
+                try { $this->pdo->exec("ALTER TABLE `UserProfileExtras` ADD COLUMN `$col` " . ($this->isSqlite() ? 'TEXT' : $type) . ' NULL'); } catch (Throwable $e) { error_log("[extras $col] " . $e->getMessage()); }
+            }
+        }
+        if ($this->isSqlite()) {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "UserActivityDays" ("UserId" INTEGER NOT NULL, "Day" TEXT NOT NULL, "Points" INTEGER NOT NULL DEFAULT 1, PRIMARY KEY ("UserId", "Day"))');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "UserGoals" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "Title" TEXT NOT NULL,
+                "Category" TEXT NOT NULL DEFAULT \'Custom\', "TargetDate" TEXT NULL, "ManualProgress" INTEGER NOT NULL DEFAULT 0, "IsPrimary" INTEGER NOT NULL DEFAULT 0,
+                "Status" TEXT NOT NULL DEFAULT \'Active\', "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NULL)');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "GoalTasks" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "GoalId" INTEGER NOT NULL, "Title" TEXT NOT NULL,
+                "IsDone" INTEGER NOT NULL DEFAULT 0, "CreatedAt" TEXT NOT NULL)');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "SavedItems" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "ItemType" TEXT NOT NULL,
+                "ItemId" INTEGER NOT NULL, "CreatedAt" TEXT NOT NULL, UNIQUE ("UserId", "ItemType", "ItemId"))');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "PollOptions" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "PostId" INTEGER NOT NULL, "Text" TEXT NOT NULL, "SortOrder" INTEGER NOT NULL DEFAULT 0)');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "PollVotes" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "PostId" INTEGER NOT NULL, "OptionId" INTEGER NOT NULL,
+                "UserId" INTEGER NOT NULL, "CreatedAt" TEXT NOT NULL, UNIQUE ("PostId", "UserId"))');
+        } else {
+            $e = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `UserActivityDays` (`UserId` INT NOT NULL, `Day` DATE NOT NULL, `Points` INT NOT NULL DEFAULT 1,
+                PRIMARY KEY (`UserId`, `Day`)) $e");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `UserGoals` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `Title` VARCHAR(120) NOT NULL,
+                `Category` VARCHAR(30) NOT NULL DEFAULT 'Custom', `TargetDate` DATE NULL, `ManualProgress` TINYINT NOT NULL DEFAULT 0, `IsPrimary` TINYINT(1) NOT NULL DEFAULT 0,
+                `Status` VARCHAR(12) NOT NULL DEFAULT 'Active', `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, `UpdatedAt` DATETIME NULL,
+                PRIMARY KEY (`Id`), KEY `IX_UserGoals_User` (`UserId`)) $e");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `GoalTasks` (`Id` INT NOT NULL AUTO_INCREMENT, `GoalId` INT NOT NULL, `Title` VARCHAR(150) NOT NULL,
+                `IsDone` TINYINT(1) NOT NULL DEFAULT 0, `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`Id`), KEY `IX_GoalTasks_Goal` (`GoalId`)) $e");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `SavedItems` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `ItemType` VARCHAR(12) NOT NULL,
+                `ItemId` INT NOT NULL, `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`Id`), UNIQUE KEY `UX_Saved` (`UserId`, `ItemType`, `ItemId`)) $e");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `PollOptions` (`Id` INT NOT NULL AUTO_INCREMENT, `PostId` INT NOT NULL, `Text` VARCHAR(100) NOT NULL,
+                `SortOrder` INT NOT NULL DEFAULT 0, PRIMARY KEY (`Id`), KEY `IX_PollOptions_Post` (`PostId`)) $e");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `PollVotes` (`Id` INT NOT NULL AUTO_INCREMENT, `PostId` INT NOT NULL, `OptionId` INT NOT NULL, `UserId` INT NOT NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`Id`), UNIQUE KEY `UX_PollVotes` (`PostId`, `UserId`), KEY `IX_PollVotes_Option` (`OptionId`)) $e");
+        }
+        $this->learnReady = true;
+    }
+
+    // ---------- Intro ----------
+    /** @return Obj Bio, City, Subjects[], Quote (+ কভার) */
+    public function GetIntro(int $userId): Obj
+    {
+        $out = $this->GetProfileExtras($userId);
+        $out->Bio = ''; $out->City = ''; $out->Subjects = []; $out->Quote = '';
+        try {
+            $this->EnsureLearningTables();
+            $r = $this->one('SELECT `Bio`, `City`, `Subjects`, `Quote` FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]);
+            if ($r) {
+                $out->Bio = (string)($r->Bio ?? ''); $out->City = (string)($r->City ?? ''); $out->Quote = (string)($r->Quote ?? '');
+                $out->Subjects = array_values(array_filter(array_map('trim', explode(',', (string)($r->Subjects ?? ''))), fn($x) => $x !== ''));
+            }
+        } catch (Throwable $e) { error_log('[GetIntro] ' . $e->getMessage()); }
+        return $out;
+    }
+
+    public function SaveIntro(int $userId, string $bio, string $city, array $subjects, string $quote): bool
+    {
+        $this->EnsureLearningTables();
+        $exists = (int)$this->scalar('SELECT COUNT(*) FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]) > 0;
+        $p = ['u' => $userId, 'b' => $bio, 'c' => $city, 's' => implode(', ', $subjects), 'q' => $quote, 't' => now()];
+        if (!$exists) {
+            $this->insert('INSERT INTO `UserProfileExtras` (`UserId`, `CoverPosY`, `Bio`, `City`, `Subjects`, `Quote`, `UpdatedAt`) VALUES (:u, 50, :b, :c, :s, :q, :t)', $p);
+            return true;
+        }
+        return $this->exec('UPDATE `UserProfileExtras` SET `Bio` = :b, `City` = :c, `Subjects` = :s, `Quote` = :q, `UpdatedAt` = :t WHERE `UserId` = :u', $p) >= 0;
+    }
+
+    // ---------- Learning streak ----------
+    /** আজকের দিনে অ্যাক্টিভিটি লেখা (একই দিনে বারবার হলে পয়েন্ট বাড়ে) */
+    public function TouchActivity(int $userId, int $points = 1): void
+    {
+        try {
+            $this->EnsureLearningTables();
+            $day = date('Y-m-d');
+            $n = $this->exec('UPDATE `UserActivityDays` SET `Points` = `Points` + :p WHERE `UserId` = :u AND `Day` = :d', ['p' => $points, 'u' => $userId, 'd' => $day]);
+            if ($n === 0) {
+                try { $this->insert('INSERT INTO `UserActivityDays` (`UserId`, `Day`, `Points`) VALUES (:u, :d, :p)', ['u' => $userId, 'd' => $day, 'p' => $points]); }
+                catch (Throwable $e) { /* একই মুহূর্তে আরেক রিকোয়েস্ট লিখে ফেলেছে */ }
+            }
+        } catch (Throwable $e) { error_log('[TouchActivity] ' . $e->getMessage()); }
+    }
+
+    /** @return array<string,int> 'Y-m-d' => points (শেষ $days দিন) */
+    public function GetActivityDays(int $userId, int $days = 120): array
+    {
+        try {
+            $this->EnsureLearningTables();
+            $from = date('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
+            $out = [];
+            foreach ($this->all('SELECT `Day`, `Points` FROM `UserActivityDays` WHERE `UserId` = :u AND `Day` >= :f', ['u' => $userId, 'f' => $from]) as $r) {
+                $out[substr((string)$r->Day, 0, 10)] = (int)$r->Points;
+            }
+            return $out;
+        } catch (Throwable $e) { return []; }
+    }
+
+    /**
+     * টানা কতদিন — আজ বা গতকাল পর্যন্ত (আজ এখনো না এলে গতকালের streak ধরে রাখা হয়)।
+     * @return array{current:int, best:int, last7:array<int,bool>, activeToday:bool, totalDays:int}
+     */
+    public function GetStreak(int $userId): array
+    {
+        $map = $this->GetActivityDays($userId, 400);
+        $current = 0;
+        $d = new DateTime('today');
+        if (!isset($map[$d->format('Y-m-d')])) $d->modify('-1 day');
+        while (isset($map[$d->format('Y-m-d')])) { $current++; $d->modify('-1 day'); }
+        $best = 0; $run = 0; $prev = null;
+        $keys = array_keys($map); sort($keys);
+        foreach ($keys as $k) {
+            $run = ($prev !== null && (new DateTime($prev))->modify('+1 day')->format('Y-m-d') === $k) ? $run + 1 : 1;
+            $best = max($best, $run); $prev = $k;
+        }
+        $last7 = [];
+        for ($i = 6; $i >= 0; $i--) $last7[] = isset($map[date('Y-m-d', strtotime("-$i days"))]);
+        return ['current' => $current, 'best' => max($best, $current), 'last7' => $last7, 'activeToday' => isset($map[date('Y-m-d')]), 'totalDays' => count($map)];
+    }
+
+    /** অ্যাক্টিভিটি পেজের সংখ্যা */
+    public function GetActivityStats(int $userId): array
+    {
+        try {
+            $this->EnsureLearningTables();
+            $q = fn($sql) => (int)$this->scalar($sql, ['u' => $userId]);
+            $minutes = 0;
+            foreach ($this->all("SELECT `Meta` FROM `ProfilePosts` WHERE `UserId` = :u AND `PostType` = 'study'", ['u' => $userId]) as $r) {
+                $m = json_decode((string)$r->Meta, true); $minutes += (int)($m['minutes'] ?? 0);
+            }
+            return [
+                'posts' => $q('SELECT COUNT(*) FROM `ProfilePosts` WHERE `UserId` = :u'),
+                'study' => $q("SELECT COUNT(*) FROM `ProfilePosts` WHERE `UserId` = :u AND `PostType` = 'study'"),
+                'questions' => $q("SELECT COUNT(*) FROM `ProfilePosts` WHERE `UserId` = :u AND `PostType` = 'question'"),
+                'achievements' => $q("SELECT COUNT(*) FROM `ProfilePosts` WHERE `UserId` = :u AND `PostType` = 'achievement'"),
+                'comments' => $q('SELECT COUNT(*) FROM `ProfilePostComments` WHERE `UserId` = :u'),
+                'reactions' => $q('SELECT COUNT(*) FROM `ProfilePostReactions` WHERE `UserId` = :u'),
+                'minutes' => $minutes,
+            ];
+        } catch (Throwable $e) { return ['posts' => 0, 'study' => 0, 'questions' => 0, 'achievements' => 0, 'comments' => 0, 'reactions' => 0, 'minutes' => 0]; }
+    }
+
+    // ---------- Goals ----------
+    public const GOAL_CATEGORIES = ['SSC', 'HSC', 'Admission', 'University', 'IELTS', 'Subject', 'Skill', 'Custom'];
+
+    private function mapGoal(Obj $g, array $tasks): Obj
+    {
+        $done = count(array_filter($tasks, fn($t) => $t->IsDone));
+        $progress = $tasks ? (int)round($done / count($tasks) * 100) : max(0, min(100, (int)$g->ManualProgress));
+        $daysLeft = null;
+        if (!is_blank($g->TargetDate)) $daysLeft = (int)floor((strtotime(substr((string)$g->TargetDate, 0, 10)) - strtotime(date('Y-m-d'))) / 86400);
+        return obj([
+            'Id' => (int)$g->Id, 'UserId' => (int)$g->UserId, 'Title' => (string)$g->Title, 'Category' => (string)$g->Category,
+            'TargetDate' => is_blank($g->TargetDate) ? null : substr((string)$g->TargetDate, 0, 10), 'DaysLeft' => $daysLeft,
+            'ManualProgress' => (int)$g->ManualProgress, 'Progress' => $progress, 'IsPrimary' => (bool)(int)$g->IsPrimary,
+            'Status' => $progress >= 100 ? 'Completed' : 'Active', 'Tasks' => $tasks, 'TaskDone' => $done, 'UsesTasks' => (bool)$tasks,
+        ]);
+    }
+
+    /** @return Obj[] প্রধান লক্ষ্য আগে */
+    public function GetGoals(int $userId): array
+    {
+        try {
+            $this->EnsureLearningTables();
+            $goals = $this->all('SELECT * FROM `UserGoals` WHERE `UserId` = :u ORDER BY `IsPrimary` DESC, `Id` DESC', ['u' => $userId]);
+            if (!$goals) return [];
+            $ids = implode(',', array_map(fn($g) => (int)$g->Id, $goals));
+            $tasks = [];
+            foreach ($this->all("SELECT * FROM `GoalTasks` WHERE `GoalId` IN ($ids) ORDER BY `Id`") as $t) {
+                $tasks[(int)$t->GoalId][] = obj(['Id' => (int)$t->Id, 'Title' => (string)$t->Title, 'IsDone' => (bool)(int)$t->IsDone]);
+            }
+            return array_map(fn($g) => $this->mapGoal($g, $tasks[(int)$g->Id] ?? []), $goals);
+        } catch (Throwable $e) { error_log('[GetGoals] ' . $e->getMessage()); return []; }
+    }
+
+    public function GetGoal(int $goalId): ?Obj
+    {
+        $this->EnsureLearningTables();
+        $g = $this->one('SELECT * FROM `UserGoals` WHERE `Id` = :id', ['id' => $goalId]);
+        if (!$g) return null;
+        $tasks = array_map(fn($t) => obj(['Id' => (int)$t->Id, 'Title' => (string)$t->Title, 'IsDone' => (bool)(int)$t->IsDone]),
+            $this->all('SELECT * FROM `GoalTasks` WHERE `GoalId` = :g ORDER BY `Id`', ['g' => $goalId]));
+        return $this->mapGoal($g, $tasks);
+    }
+
+    public function CountGoals(int $userId): int
+    {
+        $this->EnsureLearningTables();
+        return (int)$this->scalar('SELECT COUNT(*) FROM `UserGoals` WHERE `UserId` = :u', ['u' => $userId]);
+    }
+
+    public function SaveGoal(int $userId, ?int $goalId, string $title, string $category, ?string $targetDate, int $manual, bool $primary): int
+    {
+        $this->EnsureLearningTables();
+        $manual = max(0, min(100, $manual));
+        if ($primary || $this->CountGoals($userId) === 0) {
+            $this->exec('UPDATE `UserGoals` SET `IsPrimary` = 0 WHERE `UserId` = :u', ['u' => $userId]);
+            $primary = true;
+        }
+        if ($goalId) {
+            $this->exec('UPDATE `UserGoals` SET `Title` = :t, `Category` = :c, `TargetDate` = :d, `ManualProgress` = :m, `IsPrimary` = :p, `UpdatedAt` = :n
+                WHERE `Id` = :id AND `UserId` = :u', ['t' => $title, 'c' => $category, 'd' => $targetDate, 'm' => $manual, 'p' => $primary ? 1 : 0, 'n' => now(), 'id' => $goalId, 'u' => $userId]);
+            return $goalId;
+        }
+        return $this->insert('INSERT INTO `UserGoals` (`UserId`, `Title`, `Category`, `TargetDate`, `ManualProgress`, `IsPrimary`, `Status`, `CreatedAt`)
+            VALUES (:u, :t, :c, :d, :m, :p, \'Active\', :n)', ['u' => $userId, 't' => $title, 'c' => $category, 'd' => $targetDate, 'm' => $manual, 'p' => $primary ? 1 : 0, 'n' => now()]);
+    }
+
+    public function DeleteGoal(int $userId, int $goalId): bool
+    {
+        $this->EnsureLearningTables();
+        $g = $this->one('SELECT `IsPrimary` FROM `UserGoals` WHERE `Id` = :id AND `UserId` = :u', ['id' => $goalId, 'u' => $userId]);
+        if (!$g) return false;
+        $this->exec('DELETE FROM `GoalTasks` WHERE `GoalId` = :g', ['g' => $goalId]);
+        $this->exec('DELETE FROM `UserGoals` WHERE `Id` = :g', ['g' => $goalId]);
+        if ((int)$g->IsPrimary) { // অন্য একটাকে প্রধান বানাই
+            $next = $this->scalar('SELECT `Id` FROM `UserGoals` WHERE `UserId` = :u ORDER BY `Id` DESC LIMIT 1', ['u' => $userId]);
+            if ($next) $this->exec('UPDATE `UserGoals` SET `IsPrimary` = 1 WHERE `Id` = :id', ['id' => $next]);
+        }
+        return true;
+    }
+
+    public function AddGoalTask(int $goalId, string $title): int
+    {
+        $this->EnsureLearningTables();
+        return $this->insert('INSERT INTO `GoalTasks` (`GoalId`, `Title`, `IsDone`, `CreatedAt`) VALUES (:g, :t, 0, :n)', ['g' => $goalId, 't' => $title, 'n' => now()]);
+    }
+
+    /** টাস্কের মালিক যাচাই করে টাস্কের GoalId ফেরত দেয় */
+    public function GoalIdOfTask(int $taskId, int $userId): ?int
+    {
+        $this->EnsureLearningTables();
+        $g = $this->scalar('SELECT t.`GoalId` FROM `GoalTasks` t INNER JOIN `UserGoals` g ON g.`Id` = t.`GoalId` WHERE t.`Id` = :t AND g.`UserId` = :u', ['t' => $taskId, 'u' => $userId]);
+        return $g ? (int)$g : null;
+    }
+
+    public function SetGoalTask(int $taskId, ?bool $done, bool $delete = false): void
+    {
+        if ($delete) { $this->exec('DELETE FROM `GoalTasks` WHERE `Id` = :t', ['t' => $taskId]); return; }
+        $this->exec('UPDATE `GoalTasks` SET `IsDone` = :d WHERE `Id` = :t', ['d' => $done ? 1 : 0, 't' => $taskId]);
+    }
+
+    public function CountGoalTasks(int $goalId): int
+    {
+        return (int)$this->scalar('SELECT COUNT(*) FROM `GoalTasks` WHERE `GoalId` = :g', ['g' => $goalId]);
+    }
+
+    // ---------- Saved items ----------
+    public const SAVE_TYPES = ['post', 'tutor', 'circular', 'tuition', 'notice'];
+
+    public function IsSaved(int $userId, string $type, int $itemId): bool
+    {
+        $this->EnsureLearningTables();
+        return (int)$this->scalar('SELECT COUNT(*) FROM `SavedItems` WHERE `UserId` = :u AND `ItemType` = :t AND `ItemId` = :i', ['u' => $userId, 't' => $type, 'i' => $itemId]) > 0;
+    }
+
+    /** @return array<string,true> "type:id" => true (পেজে অনেকগুলো বাটনের অবস্থা একবারে) */
+    public function SavedKeys(int $userId, ?string $type = null): array
+    {
+        try {
+            $this->EnsureLearningTables();
+            $sql = 'SELECT `ItemType`, `ItemId` FROM `SavedItems` WHERE `UserId` = :u';
+            $p = ['u' => $userId];
+            if ($type) { $sql .= ' AND `ItemType` = :t'; $p['t'] = $type; }
+            $out = [];
+            foreach ($this->all($sql, $p) as $r) $out[$r->ItemType . ':' . (int)$r->ItemId] = true;
+            return $out;
+        } catch (Throwable $e) { return []; }
+    }
+
+    /** সেভ/আনসেভ টগল — নতুন অবস্থা ফেরত দেয় */
+    public function ToggleSaved(int $userId, string $type, int $itemId): bool
+    {
+        $this->EnsureLearningTables();
+        if ($this->IsSaved($userId, $type, $itemId)) {
+            $this->exec('DELETE FROM `SavedItems` WHERE `UserId` = :u AND `ItemType` = :t AND `ItemId` = :i', ['u' => $userId, 't' => $type, 'i' => $itemId]);
+            return false;
+        }
+        try { $this->insert('INSERT INTO `SavedItems` (`UserId`, `ItemType`, `ItemId`, `CreatedAt`) VALUES (:u, :t, :i, :n)', ['u' => $userId, 't' => $type, 'i' => $itemId, 'n' => now()]); }
+        catch (Throwable $e) { /* already */ }
+        return true;
+    }
+
+    public function CountSaved(int $userId): int
+    {
+        try { $this->EnsureLearningTables(); return (int)$this->scalar('SELECT COUNT(*) FROM `SavedItems` WHERE `UserId` = :u', ['u' => $userId]); }
+        catch (Throwable $e) { return 0; }
+    }
+
+    /** সেভ করা জিনিসগুলো দেখানোর মতো করে (মুছে যাওয়া/দেখার অনুমতি নেই এমনগুলো "Unavailable") @return Obj[] */
+    public function GetSavedItems(int $userId, bool $isAdmin = false): array
+    {
+        try {
+            $this->EnsureLearningTables();
+            $rows = $this->all('SELECT * FROM `SavedItems` WHERE `UserId` = :u ORDER BY `Id` DESC', ['u' => $userId]);
+        } catch (Throwable $e) { return []; }
+        $out = [];
+        foreach ($rows as $r) {
+            $type = (string)$r->ItemType; $id = (int)$r->ItemId;
+            $it = obj(['SaveId' => (int)$r->Id, 'Type' => $type, 'ItemId' => $id, 'SavedAt' => $r->CreatedAt, 'Title' => '', 'Sub' => '', 'Image' => null, 'Link' => '#', 'Available' => true]);
+            try {
+                switch ($type) {
+                    case 'post':
+                        $p = $this->GetProfilePostById($id);
+                        if (!$p || !$this->CanViewProfilePost($p, $userId, $isAdmin)) { $it->Available = false; break; }
+                        $it->Title = $p->Content !== '' ? str_preview($p->Content, 90) : 'Photo post';
+                        $it->Sub = $p->AuthorName . ' · ' . time_ago($p->CreatedAt);
+                        $it->Image = $p->ImageUrl ?: $p->AuthorImage; $it->Link = '/Post/Details/' . $p->Id;
+                        break;
+                    case 'tutor':
+                        $u = $this->GetUserById($id);
+                        if (!$u || $u->Role !== 'Teacher') { $it->Available = false; break; }
+                        $subj = (string)$this->scalar('SELECT `SubjectExpertise` FROM `TeacherRequests` WHERE `UserId` = :u ORDER BY `Id` DESC LIMIT 1', ['u' => $id]);
+                        $it->Title = $u->FullName ?: $u->UserName; $it->Sub = trim(($subj !== '' ? $subj . ' · ' : '') . ($u->InstitutionName ?? ''), ' ·') ?: 'Teacher';
+                        $it->Image = $u->ProfileImageLink ?: null; $it->Link = '/Profile/Show/' . $id;
+                        break;
+                    case 'circular':
+                        $c = $this->one('SELECT p.*, u.`FullName` FROM `TuitionCircularPosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId` WHERE p.`Id` = :id', ['id' => $id]);
+                        if (!$c) { $it->Available = false; break; }
+                        $it->Title = str_preview($c->Content, 90);
+                        $it->Sub = implode(' · ', array_filter([$c->FullName, $c->ClassLevel, $c->PreferredArea, !is_blank($c->Budget) ? '৳' . $c->Budget : null]));
+                        $it->Image = $c->ImageUrl ?: null; $it->Link = '/Tuition/Circular#circular-post-' . $id;
+                        break;
+                    case 'tuition':
+                        $t = $this->one('SELECT * FROM `TuitionPosts` WHERE `Id` = :id', ['id' => $id]);
+                        if (!$t) { $it->Available = false; break; }
+                        $it->Title = (string)$t->Title;
+                        $it->Sub = implode(' · ', array_filter([$t->TuitionCode, $t->Area, !is_blank($t->Salary) ? '৳' . $t->Salary : null, $t->Status]));
+                        $it->Link = '/Tuition/Details/' . $id;
+                        break;
+                    case 'notice':
+                        $n = $this->one('SELECT * FROM `Notices` WHERE `Id` = :id AND `IsActive` = 1', ['id' => $id]);
+                        if (!$n) { $it->Available = false; break; }
+                        $it->Title = (string)$n->Title; $it->Sub = $n->Category . ' · ' . fmt_date($n->PublishedDate, 'd M Y');
+                        $it->Image = !is_blank($n->ImageUrl) ? $n->ImageUrl : null; $it->Link = '/Notice/Details/' . $id;
+                        break;
+                    default: $it->Available = false;
+                }
+            } catch (Throwable $e) { $it->Available = false; }
+            $out[] = $it;
+        }
+        return $out;
+    }
+
+    // ---------- My Tutors / My Students ----------
+    /**
+     * স্টুডেন্টের টিউটর = যেসব টিচারের অ্যাপ্লিকেশন স্টুডেন্ট Accept করেছে।
+     * টিচারের ক্ষেত্রে উল্টো: যেসব স্টুডেন্ট তার অ্যাপ্লিকেশন Accept করেছে।
+     * @return Obj[]
+     */
+    public function GetConnectedPeople(int $userId, bool $asTeacher): array
+    {
+        try {
+            $this->EnsureCircularApplicationsTable();
+            $sql = $asTeacher
+                ? "SELECT DISTINCT p.`UserId` AS Pid FROM `TuitionCircularApplications` a INNER JOIN `TuitionCircularPosts` p ON p.`Id` = a.`PostId` WHERE a.`TeacherId` = :u AND a.`Status` = 'Accepted'"
+                : "SELECT DISTINCT a.`TeacherId` AS Pid FROM `TuitionCircularApplications` a INNER JOIN `TuitionCircularPosts` p ON p.`Id` = a.`PostId` WHERE p.`UserId` = :u AND a.`Status` = 'Accepted'";
+            $ids = array_map(fn($r) => (int)$r->Pid, $this->all($sql, ['u' => $userId]));
+            if (!$ids) return [];
+            $out = [];
+            foreach ($this->all('SELECT `Id`, `FullName`, `UserName`, `Role`, `ProfileImageLink`, `InstitutionName`, `EducationLevel` FROM `Users` WHERE `Id` IN (' . implode(',', $ids) . ')') as $u) {
+                $name = !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName;
+                $sub = '';
+                if (!$asTeacher) {
+                    $subj = (string)$this->scalar('SELECT `SubjectExpertise` FROM `TeacherRequests` WHERE `UserId` = :u ORDER BY `Id` DESC LIMIT 1', ['u' => (int)$u->Id]);
+                    $first = trim(explode(',', $subj)[0] ?? '');
+                    $sub = $first !== '' ? $first . ' Tutor' : 'Tutor';
+                } else {
+                    $sub = !is_blank($u->EducationLevel) ? $u->EducationLevel . ' Student' : 'Student';
+                }
+                $out[] = obj(['Id' => (int)$u->Id, 'Name' => $name, 'Sub' => $sub, 'Image' => is_blank($u->ProfileImageLink) ? null : $u->ProfileImageLink,
+                    'Initials' => initials($name, 'U'), 'Institution' => (string)($u->InstitutionName ?? '')]);
+            }
+            return $out;
+        } catch (Throwable $e) { error_log('[GetConnectedPeople] ' . $e->getMessage()); return []; }
+    }
+
+    /** স্টুডেন্টের নিজের সার্কুলার পোস্ট (অ্যাপ্লিকেশন সংখ্যাসহ) @return Obj[] */
+    public function GetMyCirculars(int $userId): array
+    {
+        try {
+            $this->EnsureCircularApplicationsTable();
+            $rows = $this->all('SELECT p.*, (SELECT COUNT(*) FROM `TuitionCircularApplications` a WHERE a.`PostId` = p.`Id`) AS Apps,
+                    (SELECT COUNT(*) FROM `TuitionCircularApplications` a WHERE a.`PostId` = p.`Id` AND a.`Status` = \'Pending\') AS PendingApps
+                FROM `TuitionCircularPosts` p WHERE p.`UserId` = :u ORDER BY p.`Id` DESC', ['u' => $userId]);
+            return array_map(fn($r) => obj(['Id' => (int)$r->Id, 'Content' => (string)$r->Content, 'Area' => $r->PreferredArea, 'Class' => $r->ClassLevel,
+                'Subjects' => $r->Subjects, 'Budget' => $r->Budget, 'Image' => $r->ImageUrl, 'CreatedAt' => $r->CreatedAt, 'Apps' => (int)$r->Apps,
+                'PendingApps' => (int)$r->PendingApps, 'Likes' => (int)$r->LikeCount]), $rows);
+        } catch (Throwable $e) { return []; }
+    }
+
+    // ---------- Polls ----------
+    public function CreatePollOptions(int $postId, array $options): void
+    {
+        $this->EnsureLearningTables();
+        foreach (array_values($options) as $i => $t) {
+            $this->insert('INSERT INTO `PollOptions` (`PostId`, `Text`, `SortOrder`) VALUES (:p, :t, :s)', ['p' => $postId, 't' => $t, 's' => $i]);
+        }
+    }
+
+    /** @return array<int, array{options: Obj[], total:int, mine:?int}> postId => poll */
+    public function GetPolls(array $postIds, ?int $viewerId): array
+    {
+        if (!$postIds) return [];
+        $this->EnsureLearningTables();
+        $in = implode(',', array_map('intval', $postIds));
+        $polls = [];
+        foreach ($this->all("SELECT * FROM `PollOptions` WHERE `PostId` IN ($in) ORDER BY `SortOrder`, `Id`") as $o) {
+            $polls[(int)$o->PostId]['options'][(int)$o->Id] = obj(['Id' => (int)$o->Id, 'Text' => (string)$o->Text, 'Votes' => 0]);
+        }
+        foreach ($this->all("SELECT `PostId`, `OptionId`, COUNT(*) AS N FROM `PollVotes` WHERE `PostId` IN ($in) GROUP BY `PostId`, `OptionId`") as $v) {
+            $pid = (int)$v->PostId; $oid = (int)$v->OptionId;
+            if (isset($polls[$pid]['options'][$oid])) { $polls[$pid]['options'][$oid]->Votes = (int)$v->N; }
+        }
+        $mine = [];
+        if ($viewerId) foreach ($this->all("SELECT `PostId`, `OptionId` FROM `PollVotes` WHERE `PostId` IN ($in) AND `UserId` = :u", ['u' => $viewerId]) as $v) $mine[(int)$v->PostId] = (int)$v->OptionId;
+        foreach ($polls as $pid => &$p) {
+            $p['options'] = array_values($p['options']);
+            $p['total'] = array_sum(array_map(fn($o) => $o->Votes, $p['options']));
+            $p['mine'] = $mine[$pid] ?? null;
+        }
+        return $polls;
+    }
+
+    /** ভোট দেওয়া / বদলানো / তুলে নেওয়া ($optionId = 0) */
+    public function VotePoll(int $postId, int $userId, int $optionId): bool
+    {
+        $this->EnsureLearningTables();
+        if ($optionId === 0) { $this->exec('DELETE FROM `PollVotes` WHERE `PostId` = :p AND `UserId` = :u', ['p' => $postId, 'u' => $userId]); return true; }
+        $ok = (int)$this->scalar('SELECT COUNT(*) FROM `PollOptions` WHERE `Id` = :o AND `PostId` = :p', ['o' => $optionId, 'p' => $postId]) > 0;
+        if (!$ok) return false;
+        $n = $this->exec('UPDATE `PollVotes` SET `OptionId` = :o WHERE `PostId` = :p AND `UserId` = :u', ['o' => $optionId, 'p' => $postId, 'u' => $userId]);
+        if ($n === 0) {
+            try { $this->insert('INSERT INTO `PollVotes` (`PostId`, `OptionId`, `UserId`, `CreatedAt`) VALUES (:p, :o, :u, :n)', ['p' => $postId, 'o' => $optionId, 'u' => $userId, 'n' => now()]); }
+            catch (Throwable $e) { $this->exec('UPDATE `PollVotes` SET `OptionId` = :o WHERE `PostId` = :p AND `UserId` = :u', ['o' => $optionId, 'p' => $postId, 'u' => $userId]); }
+        }
+        return true;
+    }
+
+    public function DeletePollOf(int $postId): void
+    {
+        try {
+            $this->EnsureLearningTables();
+            $this->exec('DELETE FROM `PollVotes` WHERE `PostId` = :p', ['p' => $postId]);
+            $this->exec('DELETE FROM `PollOptions` WHERE `PostId` = :p', ['p' => $postId]);
+        } catch (Throwable $e) { }
     }
 }

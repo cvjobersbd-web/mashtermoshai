@@ -72,6 +72,12 @@ if (!empty($_SESSION['UserId']) && ($_SESSION['UserRole'] ?? '') !== 'Admin'
     }
 }
 
+// ✅ Learning streak: লগইন করা স্টুডেন্ট/টিচার দিনে প্রথমবার এলে আজকের দিনটা অ্যাক্টিভ ধরা হয়
+if (!empty($_SESSION['UserId']) && ($_SESSION['UserRole'] ?? '') !== 'Admin' && ($_SESSION['_act_day'] ?? '') !== date('Y-m-d')) {
+    $_SESSION['_act_day'] = date('Y-m-d');
+    try { db()->TouchActivity((int)$_SESSION['UserId'], 1); } catch (Throwable $e) { }
+}
+
 // ---------- Routing ----------
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';

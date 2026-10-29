@@ -146,12 +146,70 @@ class PostController extends Controller
         $content = $this->cleanText(input_str('content'));
         if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
         if ($this->db->CountRecentProfileActivity('post', $me, 60) >= 20) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।');
-        $image = $this->saveImage($me);
-        if ($content === '' && $image === null) $this->fail('কিছু লিখুন অথবা একটি ছবি দিন।');
+        $type = (string)input_str('type', 'post');
+        if (!in_array($type, Db::POST_TYPES, true)) $type = 'post';
+        [$meta, $options] = $this->typeInput($type, $content);
+        $image = $type === 'poll' ? null : $this->saveImage($me);
+        if ($type === 'post' && $content === '' && $image === null) $this->fail('কিছু লিখুন অথবা একটি ছবি দিন।');
 
-        $id = $this->db->CreateProfilePost($me, $content, $image, $this->privacyInput());
+        $id = $this->db->CreateProfilePost($me, $content, $image, $this->privacyInput(), null, $type, $meta);
+        if ($type === 'poll') $this->db->CreatePollOptions($id, $options);
+        $this->db->TouchActivity($me, $type === 'study' ? 5 : 3);
         $post = $this->db->GetProfilePostById($id);
-        json_response(['success' => true, 'message' => 'পোস্ট হয়েছে।', 'id' => $id, 'html' => $this->renderPost($post, $me)]);
+        $msg = ['study' => 'স্টাডি আপডেট পোস্ট হয়েছে। দারুণ! 📚', 'question' => 'প্রশ্ন পোস্ট হয়েছে।', 'achievement' => 'অভিনন্দন! 🏆', 'poll' => 'পোল পোস্ট হয়েছে।'][$type] ?? 'পোস্ট হয়েছে।';
+        json_response(['success' => true, 'message' => $msg, 'id' => $id, 'html' => $this->renderPost($post, $me)]);
+    }
+
+    /**
+     * পোস্টের ধরন অনুযায়ী বাড়তি ঘর যাচাই।
+     * @return array{0: array, 1: string[]} [meta, poll options]
+     */
+    private function typeInput(string $type, string $content): array
+    {
+        $one = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
+        switch ($type) {
+            case 'study':
+                $subject = $one('subject', 40);
+                $minutes = input_int('minutes', 0) ?? 0;
+                if ($minutes < 0 || $minutes > 960) $this->fail('পড়ার সময় ০ থেকে ৯৬০ মিনিটের মধ্যে দিন।');
+                if ($subject === '' && $minutes === 0 && $content === '') $this->fail('কোন বিষয় পড়েছেন বা কতক্ষণ পড়েছেন লিখুন।');
+                return [array_filter(['subject' => $subject, 'minutes' => $minutes]), []];
+            case 'question':
+                if ($content === '') $this->fail('আপনার প্রশ্নটি লিখুন।');
+                $subject = $one('subject', 40);
+                return [$subject !== '' ? ['subject' => $subject] : [], []];
+            case 'achievement':
+                $title = $one('title', 80);
+                if ($title === '') $this->fail('অর্জনের শিরোনাম লিখুন (যেমন: SSC তে GPA 5)।');
+                return [['title' => $title], []];
+            case 'poll':
+                if ($content === '') $this->fail('পোলের প্রশ্ন লিখুন।');
+                $raw = $_POST['options'] ?? [];
+                if (!is_array($raw)) $raw = [];
+                $opts = [];
+                foreach ($raw as $o) {
+                    $o = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$o)), 0, 80);
+                    if ($o !== '' && !in_array(mb_strtolower($o), array_map('mb_strtolower', $opts), true)) $opts[] = $o;
+                }
+                if (count($opts) < 2) $this->fail('অন্তত ২টা আলাদা অপশন দিন।');
+                if (count($opts) > 6) $this->fail('সর্বোচ্চ ৬টা অপশন দেওয়া যায়।');
+                return [[], $opts];
+        }
+        return [[], []];
+    }
+
+    /** POST /Post/Vote (postId, optionId — 0 দিলে ভোট তুলে নেয়) */
+    public function Vote_POST(): void
+    {
+        $me = $this->me();
+        $post = $this->viewablePost(input_int('postId', 0) ?? 0, $me);
+        if ($post->PostType !== 'poll') $this->fail('এটা পোল নয়।');
+        if (!$this->db->VotePoll($post->Id, $me, input_int('optionId', 0) ?? 0)) $this->fail('অপশনটি পাওয়া যায়নি।');
+        $this->db->TouchActivity($me, 1);
+        $poll = $this->db->GetPolls([$post->Id], $me)[$post->Id] ?? null;
+        ob_start();
+        partial('Post/_Poll', ['poll' => $poll, 'postId' => $post->Id]);
+        json_response(['success' => true, 'html' => ob_get_clean()]);
     }
 
     /** POST /Post/Update  (postId, content, privacy, removeImage, image?) */
@@ -164,16 +222,21 @@ class PostController extends Controller
         $content = $this->cleanText(input_str('content'));
         if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
         $isShare = $post->SharedPostId !== null;
-        $newImage = $isShare ? null : $this->saveImage($me);
+        $type = $post->PostType;
+        $meta = $post->Meta;
+        if (!$isShare && in_array($type, ['study', 'question', 'achievement'], true)) [$meta] = $this->typeInput($type, $content);
+        if ($type === 'poll' && $content === '') $this->fail('পোলের প্রশ্ন খালি রাখা যাবে না।');
+        $newImage = ($isShare || $type === 'poll') ? null : $this->saveImage($me);
         $image = $post->ImageUrl;
         if ($newImage !== null || input_bool('removeImage')) $image = $newImage;
-        if (!$isShare && $content === '' && $image === null) {
+        if (!$isShare && $type === 'post' && $content === '' && $image === null) {
             if ($newImage) delete_upload($newImage);
             $this->fail('পোস্ট খালি রাখা যাবে না — কিছু লিখুন অথবা ছবি রাখুন।');
         }
 
-        $changed = $content !== $post->Content || $image !== $post->ImageUrl;
+        $changed = $content !== $post->Content || $image !== $post->ImageUrl || $meta != $post->Meta;
         $this->db->UpdateProfilePost($post->Id, $content, $image, $this->privacyInput(), $changed);
+        if ($meta != $post->Meta) $this->db->UpdateProfilePostMeta($post->Id, $meta);
         if ($post->ImageUrl && $image !== $post->ImageUrl) delete_upload($post->ImageUrl);
 
         $fresh = $this->db->GetProfilePostById($post->Id);
@@ -234,6 +297,7 @@ class PostController extends Controller
 
         [$content, $mentioned] = $this->db->NormalizeMentions($content);
         $id = $this->db->AddPostComment($post->Id, $me, $parentId, $content);
+        $this->db->TouchActivity($me, 1);
         $c = $this->db->GetPostCommentById($id, $me);
 
         $name = $this->name();

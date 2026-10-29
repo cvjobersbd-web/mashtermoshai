@@ -53,8 +53,13 @@ class ProfileController extends Controller
             if ($user->Role !== 'Teacher' && $teacherInfo) $teacherStatus = (string)($teacherInfo->Status ?? 'Pending');
         } catch (Throwable $e) { $teacherInfo = null; }
 
-        $tab = (string)input_str('tab', 'posts');
-        if (!in_array($tab, ['posts', 'about', 'friends'], true)) $tab = 'posts';
+        // ট্যাব (পুরোনো লিংক posts/about ও কাজ করে)
+        $tab = (string)input_str('tab', 'overview');
+        $tab = ['posts' => 'overview', 'about' => 'profile'][$tab] ?? $tab;
+        $isTeacherProfile = $user->Role === 'Teacher';
+        $allowed = ['overview', 'profile', 'friends', 'goals', 'activities'];
+        if ($isOwner) $allowed = array_merge($allowed, ['tutors', 'saved', 'settings'], $isTeacherProfile ? [] : ['circulars']);
+        if (!in_array($tab, $allowed, true)) $tab = 'overview';
 
         $posts = $this->db->GetProfilePosts($id, $me, $isAdminViewer, null, 10);
         $friends = $this->db->GetFriendsOfUserForViewer($id, $me);
@@ -68,6 +73,15 @@ class ProfileController extends Controller
             'Posts' => $posts, 'HasMore' => count($posts) === 10,
             'PostCount' => $this->db->CountProfilePosts($id, $me, $isAdminViewer),
             'Tab' => $tab, 'IsSuspended' => $suspended, 'Extras' => $this->db->GetProfileExtras($id),
+            'Intro' => $this->db->GetIntro($id),
+            'Streak' => $this->db->GetStreak($id),
+            'ActivityDays' => $this->db->GetActivityDays($id, 119),
+            'ActivityStats' => $this->db->GetActivityStats($id),
+            'Goals' => $this->db->GetGoals($id),
+            'Connected' => $isOwner ? $this->db->GetConnectedPeople($id, $isTeacherProfile) : [],
+            'SavedItems' => $isOwner ? $this->db->GetSavedItems($id, $isAdminViewer) : [],
+            'MyCirculars' => $isOwner && !$isTeacherProfile ? $this->db->GetMyCirculars($id) : [],
+            'TutorSaved' => !$isOwner && $isTeacherProfile && !$isAdminViewer ? $this->db->IsSaved($me, 'tutor', $id) : false,
         ]));
     }
 
@@ -271,6 +285,23 @@ class ProfileController extends Controller
         if ($url && $extras->CoverImageUrl) delete_upload($extras->CoverImageUrl);
         json_response(['success' => true, 'message' => $url ? 'কভার ফটো আপডেট হয়েছে।' : 'কভার ফটোর পজিশন সেভ হয়েছে।',
             'url' => $url ?? $extras->CoverImageUrl, 'posY' => $posY]);
+    }
+
+    /** POST /Profile/SaveIntro (bio, city, subjects = কমা দিয়ে, quote) */
+    public function SaveIntro_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null || current_role() === 'Admin') json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        $clean = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
+        $bio = $clean('bio', 160); $city = $clean('city', 80); $quote = $clean('quote', 160);
+        $subjects = [];
+        foreach (explode(',', (string)input_str('subjects', '')) as $sj) {
+            $sj = mb_substr(trim(preg_replace('/\s+/u', ' ', $sj)), 0, 30);
+            if ($sj !== '' && !in_array(mb_strtolower($sj), array_map('mb_strtolower', $subjects), true)) $subjects[] = $sj;
+        }
+        if (count($subjects) > 10) json_response(['success' => false, 'message' => 'সর্বোচ্চ ১০টা বিষয় দেওয়া যায়।']);
+        $this->db->SaveIntro($me, $bio, $city, $subjects, $quote);
+        json_response(['success' => true, 'message' => 'আপডেট হয়েছে।', 'bio' => $bio, 'city' => $city, 'subjects' => $subjects, 'quote' => $quote]);
     }
 
     /** POST /Profile/RemoveCover */
