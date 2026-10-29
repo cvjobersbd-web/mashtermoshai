@@ -562,6 +562,23 @@ function become_tutor_content(): array
     return $c;
 }
 
+/** প্রোফাইল পেজের বাম পাশের প্রোমো ছবি (অ্যাডমিন Settings থেকে বদলানো যায়) */
+function profile_promo_defaults(): array
+{
+    return [
+        'pp_image'   => 'https://i.ibb.co.com/ksWwwdSY/Student-Study-Desk-with-Tutor-Message.png',
+        'pp_link'    => '',   // খালি = স্টুডেন্টকে Find Tutor, টিচারকে Tuition Circular এ নেয়
+        'pp_enabled' => '1',
+    ];
+}
+
+function profile_promo(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(profile_promo_defaults());
+    return $c;
+}
+
 /** লেখা escape করে [শব্দ] অংশটুকু হাইলাইট span এ মুড়ে দেয় */
 function highlight_brackets(?string $text, string $class): string
 {

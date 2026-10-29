@@ -144,6 +144,9 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
     .pf-nav a.active i { color: var(--pf-blue); }
     .pf-nav a .pf-n { margin-left: auto; font-size: 12px; font-weight: 700; background: #F1F5F9; color: #475569; padding: 1px 8px; border-radius: 10px; }
     .pf-nav a.active .pf-n { background: #fff; color: var(--pf-blue); }
+    .pf-promo-img { display: block; overflow: hidden; padding: 0; transition: transform .2s, box-shadow .2s; }
+    .pf-promo-img:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15,27,45,.1); }
+    .pf-promo-img img { display: block; width: 100%; height: auto; }
     .pf-promo { position: relative; overflow: hidden; padding: 20px 18px 18px; min-height: 196px; display: flex; flex-direction: column; justify-content: space-between;
         background: linear-gradient(160deg, #FFF7E8 0%, #EAF6FF 100%); border-color: #F2E7D0; }
     .pf-promo h5 { position: relative; z-index: 1; margin: 0; font-size: 22px; line-height: 1.35; font-weight: 800; color: #0B3B8C; text-align: right; }
@@ -458,7 +461,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
         .pf-nav::-webkit-scrollbar { display: none; }
         .pf-nav a { flex: 0 0 auto; padding: 9px 14px; font-size: 14px; gap: 8px; }
         .pf-nav a i { width: auto; font-size: 15px; }
-        .pf-promo { display: none; }
+        .pf-promo, .pf-promo-img { display: none; }
         .pf-info { flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 0 16px 18px; }
         .ps-avatar-wrap { margin-top: -84px; }
         .ps-avatar { width: 156px; height: 156px; font-size: 48px; }
@@ -590,15 +593,13 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                         </a>
                     <?php endforeach; ?>
                 </nav>
-                <div class="pf-card pf-promo">
-                    <h5>সঠিক Tutor<br />সঠিক ভবিষ্যৎ</h5>
-                    <div class="pf-promo-art" aria-hidden="true">🧑‍💻<span style="left:58px; top:-18px;">📚</span><span style="left:70px; top:24px;">🌱</span></div>
-                    <?php if ($isTeacher): ?>
-                        <a href="/Tuition/Circular"><i class="fas fa-bullhorn"></i> Tuition খুঁজুন</a>
-                    <?php else: ?>
-                        <a href="/FindTutor"><i class="fas fa-magnifying-glass"></i> Tutor খুঁজুন</a>
-                    <?php endif; ?>
-                </div>
+                <?php $promo = profile_promo(); if ($promo['pp_enabled'] !== '0' && !is_blank($promo['pp_image'])):
+                    $promoLink = !is_blank($promo['pp_link']) ? $promo['pp_link'] : ($isTeacher ? '/Tuition/Circular' : '/FindTutor');
+                    $promoExt = preg_match('#^https?://#i', $promoLink); ?>
+                    <a class="pf-card pf-promo-img" href="<?= e($promoLink) ?>"<?= $promoExt ? ' target="_blank" rel="noopener"' : '' ?> aria-label="<?= $isTeacher ? 'Tuition Circular' : 'Find Tutor' ?>">
+                        <img src="<?= e($promo['pp_image']) ?>" alt="সঠিক Tutor, সঠিক ভবিষ্যৎ" loading="lazy" onerror="this.closest('.pf-promo-img').remove()" />
+                    </a>
+                <?php endif; ?>
             </div>
 
             <div class="pf-main">

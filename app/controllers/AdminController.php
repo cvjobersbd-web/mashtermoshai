@@ -600,6 +600,37 @@ class AdminController extends Controller
             'Image size must be less than 5MB.', 'Only JPG, PNG, GIF, or WEBP images are allowed.', 'Image uploaded!');
     }
 
+    /** POST /Admin/UploadProfilePromo — প্রোফাইল পেজের প্রোমো ছবি আপলোড */
+    public function UploadProfilePromo_POST(): void
+    {
+        $this->uploadImage('promoImage', 'promo', 'promo_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'Image size must be less than 5MB.', 'Only JPG, PNG, GIF, or WEBP images are allowed.', 'Image uploaded!');
+    }
+
+    /** POST /Admin/SaveProfilePromo (pp_image, pp_link, pp_enabled, reset) */
+    public function SaveProfilePromo_POST(): void
+    {
+        $this->requireAdminJson();
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent(profile_promo_defaults());
+            json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ছবিতে ফেরত নেওয়া হয়েছে।'] + profile_promo_defaults());
+        }
+        $img = trim((string)input_str('pp_image', ''));
+        $link = trim((string)input_str('pp_link', ''));
+        // শুধু http(s) লিংক বা এই সাইটের /uploads/ ফাইল
+        if ($img === '' || !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img))) {
+            json_response(['success' => false, 'message' => 'ছবির লিংক ঠিক নেই — https:// দিয়ে শুরু হওয়া লিংক দিন অথবা ছবি আপলোড করুন।']);
+        }
+        if (mb_strlen($img) > 500) json_response(['success' => false, 'message' => 'লিংক খুব বড়।']);
+        if ($link !== '' && !(preg_match('#^https?://[^\s"\'<>]+$#i', $link) || is_local_url($link))) {
+            json_response(['success' => false, 'message' => 'ক্লিক লিংক ঠিক নেই — /FindTutor এর মতো সাইটের পাথ বা https:// লিংক দিন।']);
+        }
+        $vals = ['pp_image' => $img, 'pp_link' => mb_substr($link, 0, 300), 'pp_enabled' => input_bool('pp_enabled') ? '1' : '0'];
+        $err = null;
+        if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
+        json_response(['success' => true, 'message' => 'প্রোফাইল প্রোমো ছবি সেভ হয়েছে।'] + $vals);
+    }
+
     public function UploadLogo_POST(): void
     {
         $prefix = input_str('target', 'navbar') === 'footer' ? 'footer' : 'navbar';
