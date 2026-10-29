@@ -18,6 +18,9 @@
 class PostController extends Controller
 {
     private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    /** টিচারের Study Material এ যে ফাইল দেওয়া যায় */
+    private const FILE_EXTS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.jpg', '.jpeg', '.png', '.webp', '.zip'];
+    private const MAX_FILE = 10 * 1024 * 1024;
     private const MAX_POST_LEN = 5000;
     private const MAX_COMMENT_LEN = 1500;
 
@@ -66,6 +69,25 @@ class PostController extends Controller
         return save_upload($file, 'profile-posts', $userId . '_' . ticks() . '_' . bin2hex(random_bytes(3)), $ext);
     }
 
+    /** Study Material এর ফাইল সেভ করে → ['url','name','size','ext'] অথবা null */
+    private function saveAttachment(int $userId): ?array
+    {
+        $file = upload_file('file');
+        if (!$file) return null;
+        $ext = strtolower('.' . pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, self::FILE_EXTS, true)) $this->fail('শুধু PDF, Word, PowerPoint, Excel, TXT, ZIP বা ছবি ফাইল দেওয়া যাবে।');
+        if ($file['size'] > self::MAX_FILE) $this->fail('ফাইল ১০ MB এর কম হতে হবে।');
+        if (in_array($ext, self::IMAGE_EXTS, true) && @getimagesize($file['tmp_name']) === false) $this->fail('ছবিটি সঠিক নয়।');
+        if ($ext === '.pdf') {
+            $head = (string)@file_get_contents($file['tmp_name'], false, null, 0, 5);
+            if ($head !== '%PDF-') $this->fail('ফাইলটি সঠিক PDF নয়।');
+        }
+        $name = preg_replace('/[^\p{L}\p{N} ._()\-]+/u', '_', pathinfo((string)$file['name'], PATHINFO_FILENAME)) ?: 'file';
+        $name = mb_substr(trim($name), 0, 80) . $ext;
+        $url = save_upload($file, 'post-files', $userId . '_' . ticks() . '_' . bin2hex(random_bytes(4)), $ext);
+        return ['url' => $url, 'name' => $name, 'size' => (int)$file['size'], 'ext' => ltrim($ext, '.')];
+    }
+
     private function renderPost(Obj $post, int $me): string
     {
         $post = $this->db->hydrateProfilePosts([$post], $me, $this->isAdmin())[0];
@@ -107,7 +129,8 @@ class PostController extends Controller
         if ($me === null) { http_response_code(401); exit; }
         $owner = input_int('userId', 0) ?? 0;
         $before = input_int('before', 0) ?: null;
-        $posts = $this->db->GetProfilePosts($owner, $me, $this->isAdmin(), $before, 10);
+        $types = ['materials' => ['material'], 'achievements' => ['achievement'], 'updates' => []][(string)input_str('tab', '')] ?? [];
+        $posts = $this->db->GetProfilePosts($owner, $me, $this->isAdmin(), $before, 10, $types);
         header('Content-Type: text/html; charset=utf-8');
         header('X-Has-More: ' . (count($posts) === 10 ? '1' : '0'));
         foreach ($posts as $p) partial('Post/_Post', ['post' => $p, 'viewerId' => $me, 'viewerIsAdmin' => $this->isAdmin()]);
@@ -148,15 +171,20 @@ class PostController extends Controller
         if ($this->db->CountRecentProfileActivity('post', $me, 60) >= 20) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।');
         $type = (string)input_str('type', 'post');
         if (!in_array($type, Db::POST_TYPES, true)) $type = 'post';
+        if (in_array($type, Db::TEACHER_POST_TYPES, true) && current_role() !== 'Teacher') $this->fail('এই ধরনের পোস্ট শুধু টিচাররা দিতে পারেন।');
         [$meta, $options] = $this->typeInput($type, $content);
-        $image = $type === 'poll' ? null : $this->saveImage($me);
+        if ($type === 'material') {
+            $meta['file'] = $this->saveAttachment($me);
+            if ($meta['file'] === null) { unset($meta['file']); if ($content === '') $this->fail('ফাইল (PDF/Doc) দিন অথবা কিছু লিখুন।'); }
+        }
+        $image = in_array($type, ['poll', 'material'], true) ? null : $this->saveImage($me);
         if ($type === 'post' && $content === '' && $image === null) $this->fail('কিছু লিখুন অথবা একটি ছবি দিন।');
 
         $id = $this->db->CreateProfilePost($me, $content, $image, $this->privacyInput(), null, $type, $meta);
         if ($type === 'poll') $this->db->CreatePollOptions($id, $options);
         $this->db->TouchActivity($me, $type === 'study' ? 5 : 3);
         $post = $this->db->GetProfilePostById($id);
-        $msg = ['study' => 'স্টাডি আপডেট পোস্ট হয়েছে। দারুণ! 📚', 'question' => 'প্রশ্ন পোস্ট হয়েছে।', 'achievement' => 'অভিনন্দন! 🏆', 'poll' => 'পোল পোস্ট হয়েছে।'][$type] ?? 'পোস্ট হয়েছে।';
+        $msg = ['study' => 'স্টাডি আপডেট পোস্ট হয়েছে। দারুণ! 📚', 'material' => 'স্টাডি ম্যাটেরিয়াল শেয়ার হয়েছে। 📎', 'notice' => 'নোটিশ পোস্ট হয়েছে।', 'update' => 'ক্লাস আপডেট পোস্ট হয়েছে।', 'question' => 'প্রশ্ন পোস্ট হয়েছে।', 'achievement' => 'অভিনন্দন! 🏆', 'poll' => 'পোল পোস্ট হয়েছে।'][$type] ?? 'পোস্ট হয়েছে।';
         json_response(['success' => true, 'message' => $msg, 'id' => $id, 'html' => $this->renderPost($post, $me)]);
     }
 
@@ -182,6 +210,19 @@ class PostController extends Controller
                 $title = $one('title', 80);
                 if ($title === '') $this->fail('অর্জনের শিরোনাম লিখুন (যেমন: SSC তে GPA 5)।');
                 return [['title' => $title], []];
+            case 'material':
+                $title = $one('title', 100);
+                $subject = $one('subject', 40);
+                if ($title === '') $this->fail('ম্যাটেরিয়ালের নাম লিখুন (যেমন: Quadratic Equation Notes)।');
+                return [array_filter(['title' => $title, 'subject' => $subject]), []];
+            case 'update':
+                if ($content === '') $this->fail('ক্লাস আপডেট লিখুন।');
+                $subject = $one('subject', 40);
+                return [$subject !== '' ? ['subject' => $subject] : [], []];
+            case 'notice':
+                if ($content === '') $this->fail('নোটিশটি লিখুন।');
+                $title = $one('title', 80);
+                return [$title !== '' ? ['title' => $title] : [], []];
             case 'poll':
                 if ($content === '') $this->fail('পোলের প্রশ্ন লিখুন।');
                 $raw = $_POST['options'] ?? [];
@@ -224,9 +265,16 @@ class PostController extends Controller
         $isShare = $post->SharedPostId !== null;
         $type = $post->PostType;
         $meta = $post->Meta;
-        if (!$isShare && in_array($type, ['study', 'question', 'achievement'], true)) [$meta] = $this->typeInput($type, $content);
+        $oldFile = $meta['file'] ?? null;
+        if (!$isShare && in_array($type, ['study', 'question', 'achievement', 'material', 'update', 'notice'], true)) {
+            [$meta] = $this->typeInput($type, $content);
+            if ($type === 'material') {
+                $newFile = $this->saveAttachment($me);
+                if ($newFile) $meta['file'] = $newFile; elseif ($oldFile) $meta['file'] = $oldFile;
+            }
+        }
         if ($type === 'poll' && $content === '') $this->fail('পোলের প্রশ্ন খালি রাখা যাবে না।');
-        $newImage = ($isShare || $type === 'poll') ? null : $this->saveImage($me);
+        $newImage = ($isShare || in_array($type, ['poll', 'material'], true)) ? null : $this->saveImage($me);
         $image = $post->ImageUrl;
         if ($newImage !== null || input_bool('removeImage')) $image = $newImage;
         if (!$isShare && $type === 'post' && $content === '' && $image === null) {
@@ -238,6 +286,7 @@ class PostController extends Controller
         $this->db->UpdateProfilePost($post->Id, $content, $image, $this->privacyInput(), $changed);
         if ($meta != $post->Meta) $this->db->UpdateProfilePostMeta($post->Id, $meta);
         if ($post->ImageUrl && $image !== $post->ImageUrl) delete_upload($post->ImageUrl);
+        if ($oldFile && ($meta['file']['url'] ?? null) !== $oldFile['url']) delete_upload($oldFile['url']);
 
         $fresh = $this->db->GetProfilePostById($post->Id);
         json_response(['success' => true, 'message' => 'পোস্ট আপডেট হয়েছে।', 'html' => $this->renderPost($fresh, $me)]);
@@ -252,6 +301,7 @@ class PostController extends Controller
         if ($post->UserId !== $me && !$this->isAdmin()) $this->fail('এই পোস্ট মোছার অনুমতি নেই।');
         if (!$this->db->DeleteProfilePost($post->Id)) $this->fail('মোছা যায়নি। আবার চেষ্টা করুন।');
         delete_upload($post->ImageUrl);
+        if (!empty($post->Meta['file']['url'])) delete_upload((string)$post->Meta['file']['url']);
         if ($post->UserId !== $me) {
             $this->db->CreateNotification($post->UserId, 'Post Removed', 'আপনার একটি প্রোফাইল পোস্ট অ্যাডমিন সরিয়ে দিয়েছেন।', 'warning', '/Profile/Show/' . $post->UserId, 'fa-trash');
         }

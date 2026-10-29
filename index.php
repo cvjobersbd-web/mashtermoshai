@@ -77,6 +77,11 @@ if (!empty($_SESSION['UserId']) && ($_SESSION['UserRole'] ?? '') !== 'Admin' && 
     $_SESSION['_act_day'] = date('Y-m-d');
     try { db()->TouchActivity((int)$_SESSION['UserId'], 1); } catch (Throwable $e) { }
 }
+// টিচার "অনলাইন" দেখানোর জন্য (প্রতি মিনিটে একবার)
+if (!empty($_SESSION['UserId']) && ($_SESSION['UserRole'] ?? '') === 'Teacher' && (int)($_SESSION['_seen_at'] ?? 0) < time() - 60) {
+    $_SESSION['_seen_at'] = time();
+    try { db()->TouchLastSeen((int)$_SESSION['UserId']); } catch (Throwable $e) { }
+}
 
 // ---------- Routing ----------
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';

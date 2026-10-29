@@ -611,24 +611,28 @@ class AdminController extends Controller
     public function SaveProfilePromo_POST(): void
     {
         $this->requireAdminJson();
+        // which = student (pp_*) | teacher (tp_*)
+        $isT = input_str('which', 'student') === 'teacher';
+        $k = $isT ? 'tp_' : 'pp_';
+        $defaults = $isT ? teacher_promo_defaults() : profile_promo_defaults();
         if (input_bool('reset')) {
-            $this->db->SaveSiteContent(profile_promo_defaults());
-            json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ছবিতে ফেরত নেওয়া হয়েছে।'] + profile_promo_defaults());
+            $this->db->SaveSiteContent($defaults);
+            json_response(['success' => true, 'message' => $isT ? 'ডিফল্ট কার্ডে ফেরত নেওয়া হয়েছে।' : 'আগের (ডিফল্ট) ছবিতে ফেরত নেওয়া হয়েছে।'] + $defaults);
         }
-        $img = trim((string)input_str('pp_image', ''));
-        $link = trim((string)input_str('pp_link', ''));
-        // শুধু http(s) লিংক বা এই সাইটের /uploads/ ফাইল
-        if ($img === '' || !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img))) {
+        $img = trim((string)input_str($k . 'image', ''));
+        $link = trim((string)input_str($k . 'link', ''));
+        // শুধু http(s) লিংক বা এই সাইটের /uploads/ ফাইল (টিচারের বেলায় খালি = ডিজাইন করা কার্ড)
+        if (($img === '' && !$isT) || ($img !== '' && !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img)))) {
             json_response(['success' => false, 'message' => 'ছবির লিংক ঠিক নেই — https:// দিয়ে শুরু হওয়া লিংক দিন অথবা ছবি আপলোড করুন।']);
         }
         if (mb_strlen($img) > 500) json_response(['success' => false, 'message' => 'লিংক খুব বড়।']);
         if ($link !== '' && !(preg_match('#^https?://[^\s"\'<>]+$#i', $link) || is_local_url($link))) {
             json_response(['success' => false, 'message' => 'ক্লিক লিংক ঠিক নেই — /FindTutor এর মতো সাইটের পাথ বা https:// লিংক দিন।']);
         }
-        $vals = ['pp_image' => $img, 'pp_link' => mb_substr($link, 0, 300), 'pp_enabled' => input_bool('pp_enabled') ? '1' : '0'];
+        $vals = [$k . 'image' => $img, $k . 'link' => mb_substr($link, 0, 300), $k . 'enabled' => input_bool($k . 'enabled') ? '1' : '0'];
         $err = null;
         if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
-        json_response(['success' => true, 'message' => 'প্রোফাইল প্রোমো ছবি সেভ হয়েছে।'] + $vals);
+        json_response(['success' => true, 'message' => $isT ? 'টিচার প্রোফাইলের প্রোমো সেভ হয়েছে।' : 'প্রোফাইল প্রোমো ছবি সেভ হয়েছে।'] + $vals);
     }
 
     public function UploadLogo_POST(): void

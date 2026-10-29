@@ -7,8 +7,12 @@
  *  property নাম ডাটাবেস কলামের নামের মতো (PascalCase)।
  * =============================================================
  */
+require_once __DIR__ . '/TeacherProfileData.php';
+
 class Db
 {
+    use TeacherProfileData;
+
     private PDO $pdo;
 
     public const USER_COLUMNS = '`Id`, `UserName`, `Password`, `FullName`, `Email`, `CreatedAt`, `LastLoginAt`, `Role`, `IsActive`,
@@ -344,7 +348,7 @@ class Db
             $this->exec('DELETE FROM `TeacherRequests` WHERE `UserId` = :id', ['id' => $userId]);
             $n = $this->exec('DELETE FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
             $this->pdo->commit();
-            if ($n > 0) { $this->DeleteFriendshipsOfUser($userId); $this->DeleteProfileContentOfUser($userId); }
+            if ($n > 0) { $this->DeleteFriendshipsOfUser($userId); $this->DeleteProfileContentOfUser($userId); $this->DeleteTeacherDataOf($userId); }
             return $n > 0;
         } catch (Throwable $e) {
             $this->pdo->rollBack();
@@ -2246,7 +2250,9 @@ class Db
     // ============================================================
     public const POST_PRIVACY = ['Public', 'Friends', 'OnlyMe'];
     public const REACTIONS = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
-    public const POST_TYPES = ['post', 'study', 'question', 'achievement', 'poll'];
+    public const POST_TYPES = ['post', 'study', 'question', 'achievement', 'poll', 'material', 'update', 'notice'];
+    /** শুধু টিচাররা যে ধরনের পোস্ট দিতে পারে */
+    public const TEACHER_POST_TYPES = ['material', 'update', 'notice'];
     private bool $profilePostsReady = false;
 
     public function EnsureProfilePostTables(): void
@@ -2360,7 +2366,7 @@ class Db
      * কারো টাইমলাইনের পোস্ট (দর্শকের অনুমতি অনুযায়ী ফিল্টার করা), নতুন আগে।
      * $beforeId দিলে তার আগের (পুরোনো) পোস্ট — "আরো দেখুন" এর জন্য।
      */
-    public function GetProfilePosts(int $ownerId, ?int $viewerId, bool $viewerIsAdmin, ?int $beforeId = null, int $limit = 10): array
+    public function GetProfilePosts(int $ownerId, ?int $viewerId, bool $viewerIsAdmin, ?int $beforeId = null, int $limit = 10, array $types = []): array
     {
         try {
             $this->EnsureProfilePostTables();
@@ -2371,6 +2377,8 @@ class Db
                 $where[] = $isFriend ? "p.`Privacy` IN ('Public','Friends')" : "p.`Privacy` = 'Public'";
             }
             if ($beforeId) { $where[] = 'p.`Id` < :b'; $p['b'] = $beforeId; }
+            $types = array_values(array_intersect($types, self::POST_TYPES));
+            if ($types) $where[] = "p.`PostType` IN ('" . implode("','", $types) . "') AND p.`SharedPostId` IS NULL";
             $limit = max(1, min(30, $limit));
             $rows = $this->all(self::PROFILE_POST_SELECT . ' WHERE ' . implode(' AND ', $where) . " ORDER BY p.`Id` DESC LIMIT $limit", $p);
             return $this->hydrateProfilePosts(array_map(fn($r) => $this->mapProfilePost($r), $rows), $viewerId, $viewerIsAdmin);
@@ -2775,9 +2783,11 @@ class Db
     {
         try {
             $this->EnsureProfilePostTables();
-            foreach ($this->all('SELECT `Id`, `ImageUrl` FROM `ProfilePosts` WHERE `UserId` = :u', ['u' => $userId]) as $p) {
+            foreach ($this->all('SELECT `Id`, `ImageUrl`, `Meta` FROM `ProfilePosts` WHERE `UserId` = :u', ['u' => $userId]) as $p) {
                 $this->DeleteProfilePost((int)$p->Id);
                 delete_upload($p->ImageUrl);
+                $m = json_decode((string)($p->Meta ?? ''), true);
+                if (is_array($m) && !empty($m['file']['url'])) delete_upload((string)$m['file']['url']);
             }
             foreach ($this->all('SELECT `Id` FROM `ProfilePostComments` WHERE `UserId` = :u', ['u' => $userId]) as $c) $this->DeletePostComment((int)$c->Id);
             $this->exec('DELETE FROM `ProfilePostReactions` WHERE `UserId` = :u', ['u' => $userId]);

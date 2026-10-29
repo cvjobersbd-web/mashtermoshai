@@ -15,7 +15,26 @@ $ptype = $post->PostType ?? 'post';
 $meta = $post->Meta ?? [];
 $isBig = !$isShare && $ptype === 'post' && !$post->ImageUrl && $text !== '' && mb_strlen($text) <= 85 && $lineCount <= 2;
 $typeMeta = ['study' => ['fa-book-open', 'Study Update', 'st'], 'question' => ['fa-circle-question', 'Question', 'qu'],
-             'achievement' => ['fa-trophy', 'Achievement', 'ac'], 'poll' => ['fa-square-poll-vertical', 'Poll', 'po']];
+             'achievement' => ['fa-trophy', 'Achievement', 'ac'], 'poll' => ['fa-square-poll-vertical', 'Poll', 'po'],
+             'material' => ['fa-file-lines', 'Study Material', 'ma'], 'update' => ['fa-chalkboard-user', 'Class Update', 'up'], 'notice' => ['fa-bullhorn', 'Notice', 'no']];
+/** Study Material এর ফাইল কার্ড */
+$fileCard = function (array $m): void {
+    $f = $m['file'] ?? null;
+    if (!is_array($f) || empty($f['url']) || !str_starts_with((string)$f['url'], '/uploads/')) return;
+    $ext = strtolower((string)($f['ext'] ?? pathinfo((string)$f['url'], PATHINFO_EXTENSION)));
+    $ico = ['pdf' => ['fa-file-pdf', 'pdf'], 'doc' => ['fa-file-word', 'doc'], 'docx' => ['fa-file-word', 'doc'], 'ppt' => ['fa-file-powerpoint', 'ppt'],
+            'pptx' => ['fa-file-powerpoint', 'ppt'], 'xls' => ['fa-file-excel', 'xls'], 'xlsx' => ['fa-file-excel', 'xls'], 'zip' => ['fa-file-zipper', 'zip'],
+            'jpg' => ['fa-file-image', 'img'], 'jpeg' => ['fa-file-image', 'img'], 'png' => ['fa-file-image', 'img'], 'webp' => ['fa-file-image', 'img']][$ext] ?? ['fa-file-lines', 'txt'];
+    $size = (int)($f['size'] ?? 0);
+    $sz = $size >= 1048576 ? round($size / 1048576, 1) . ' MB' : max(1, (int)round($size / 1024)) . ' KB';
+    $name = (string)($f['name'] ?? basename((string)$f['url']));
+    ?>
+    <a class="pc-file pc-file-<?= $ico[1] ?>" href="<?= e($f['url']) ?>" target="_blank" rel="noopener" download="<?= e($name) ?>">
+        <span class="pc-file-ico"><i class="fas <?= $ico[0] ?>"></i></span>
+        <span class="pc-file-txt"><strong><?= e($name) ?></strong><small><?= strtoupper(e($ext)) ?> · <?= $sz ?></small></span>
+        <span class="pc-file-dl" title="Download"><i class="fas fa-download"></i></span>
+    </a>
+<?php };
 $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return ($h ? $h . 'h ' : '') . ($r || !$h ? $r . 'm' : ''); };
 // কোন পোস্টটা শেয়ার হবে (শেয়ার করা পোস্ট আবার শেয়ার করলে মূলটা)
 $shareTarget = $isShare ? ($orig ? $orig : null) : $post;
@@ -68,6 +87,9 @@ $mine = $post->MyReaction;
         <?php if ($ptype === 'achievement' && !empty($meta['title'])): ?>
             <div class="pc-achieve"><span class="pc-achieve-ico">🏆</span><div><small>Achievement unlocked</small><strong><?= e($meta['title']) ?></strong></div></div>
         <?php endif; ?>
+        <?php if (in_array($ptype, ['material', 'notice'], true) && !empty($meta['title'])): ?>
+            <h4 class="pc-title"><?= e($meta['title']) ?></h4>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php if ($text !== ''): ?>
@@ -76,6 +98,8 @@ $mine = $post->MyReaction;
             <?php if ($isLong): ?><button type="button" class="pc-more" data-pc="more">See more</button><?php endif; ?>
         </div>
     <?php endif; ?>
+
+    <?php if ($ptype === 'material') $fileCard($meta); ?>
 
     <?php if ($ptype === 'poll'): ?>
         <div class="pc-poll-wrap"><?php partial('Post/_Poll', ['poll' => $post->Poll, 'postId' => $post->Id]); ?></div>
@@ -107,6 +131,7 @@ $mine = $post->MyReaction;
                         <div class="pc-body"><div class="pc-text<?= $oLong ? ' clamp' : '' ?>"><?= linkify_text($orig->Content) ?></div>
                             <?php if ($oLong): ?><button type="button" class="pc-more" data-pc="more">See more</button><?php endif; ?></div>
                     <?php endif; ?>
+                    <?php if (($orig->PostType ?? '') === 'material') { if (!empty($orig->Meta['title'])) echo '<h4 class="pc-title">' . e($orig->Meta['title']) . '</h4>'; $fileCard($orig->Meta ?? []); } ?>
                 </div>
             </div>
         <?php else: ?>

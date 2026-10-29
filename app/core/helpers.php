@@ -579,6 +579,23 @@ function profile_promo(): array
     return $c;
 }
 
+/** টিচার প্রোফাইলের বাম পাশের প্রোমো (ছবি খালি = ডিজাইন করা কার্ড "আরও বেশি শিক্ষার্থীর কাছে পৌঁছান") */
+function teacher_promo_defaults(): array
+{
+    return [
+        'tp_image'   => '',
+        'tp_link'    => '',   // খালি = /FindTutor (Create Tuition Post)
+        'tp_enabled' => '1',
+    ];
+}
+
+function teacher_promo(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(teacher_promo_defaults());
+    return $c;
+}
+
 /** লেখা escape করে [শব্দ] অংশটুকু হাইলাইট span এ মুড়ে দেয় */
 function highlight_brackets(?string $text, string $class): string
 {

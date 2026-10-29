@@ -6,6 +6,11 @@
 $rxMeta = reaction_meta();
 $pvMeta = post_privacy_meta();
 $meInitials = initials($me->Name ?? 'U', 'U');
+// কোন কোন ধরনের পোস্ট লেখা যাবে (টিচার প্রোফাইলে আলাদা তালিকা)
+$composerTypes = $composerTypes ?? ['post', 'study', 'question', 'achievement', 'poll'];
+$typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Update'], 'question' => ['fa-circle-question', 'Question'],
+    'material' => ['fa-file-lines', 'Study Material'], 'update' => ['fa-chalkboard-user', 'Class Update'], 'notice' => ['fa-bullhorn', 'Notice'],
+    'achievement' => ['fa-trophy', 'Achievement'], 'poll' => ['fa-square-poll-vertical', 'Poll']];
 ?>
 <style>
     :root {
@@ -274,6 +279,27 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     .pc-type-qu .pc-type-pill { background: #FCE7F3; color: #BE185D; }
     .pc-type-ac .pc-type-pill { background: #FEF3C7; color: #B45309; }
     .pc-type-po .pc-type-pill { background: #DBEAFE; color: #1D4ED8; }
+    .pc-type-ma .pc-type-pill { background: #DCFCE7; color: #15803D; }
+    .pc-type-up .pc-type-pill { background: #E0F2FE; color: #0369A1; }
+    .pc-type-no .pc-type-pill { background: #FFEDD5; color: #C2410C; }
+    .pc-title { margin: 0 14px 6px; font-size: 16.5px; font-weight: 800; color: #0F172A; line-height: 1.35; }
+    .pc-file { margin: 4px 14px 12px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #E3E8EF; border-radius: 12px;
+        background: #F8FAFC; text-decoration: none; color: inherit; transition: border-color .15s, background .15s; }
+    .pc-file:hover { border-color: #9ADCF7; background: #F0F9FF; }
+    .pc-file-ico { width: 42px; height: 46px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; background: #E2E8F0; color: #475569; }
+    .pc-file-pdf .pc-file-ico { background: #FEE2E2; color: #DC2626; }
+    .pc-file-doc .pc-file-ico { background: #DBEAFE; color: #2563EB; }
+    .pc-file-ppt .pc-file-ico { background: #FFEDD5; color: #EA580C; }
+    .pc-file-xls .pc-file-ico { background: #DCFCE7; color: #16A34A; }
+    .pc-file-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .pc-file-txt strong { font-size: 14.5px; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pc-file-txt small { font-size: 12.5px; color: #64748B; margin-top: 2px; }
+    .pc-file-dl { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 1px solid #E3E8EF; display: inline-flex; align-items: center; justify-content: center; color: #0B7FB0; flex-shrink: 0; }
+    .pc-shared .pc-title { margin-left: 0; margin-right: 0; } .pc-shared .pc-file { margin-left: 0; margin-right: 0; }
+    .pm-doc { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px; border: 1.5px dashed #CBD5E1; border-radius: 12px; cursor: pointer;
+        color: #475569; font-size: 13.5px; font-weight: 600; }
+    .pm-doc:hover, .pm-doc.has { border-color: #02B8F5; color: #0B7FB0; background: #F0F9FF; }
+    .pm-doc span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pc-q .pc-text { font-size: 17px; font-weight: 600; }
     .pc-achieve { margin: 0 14px 10px; display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 14px;
         background: linear-gradient(135deg, #FFF7E0 0%, #FFE8B0 100%); border: 1px solid #FDE2A1; }
@@ -364,12 +390,29 @@ $meInitials = initials($me->Name ?? 'U', 'U');
                 </div>
             </div>
             <div class="pm-types" id="pmTypes" role="tablist">
-                <button type="button" data-type="post" class="active"><i class="fas fa-pen"></i> Post</button>
-                <button type="button" data-type="study"><i class="fas fa-book-open"></i> Study Update</button>
-                <button type="button" data-type="question"><i class="fas fa-circle-question"></i> Question</button>
-                <button type="button" data-type="achievement"><i class="fas fa-trophy"></i> Achievement</button>
-                <button type="button" data-type="poll"><i class="fas fa-square-poll-vertical"></i> Poll</button>
+                <?php foreach ($composerTypes as $i => $t): if (!isset($typeBtns[$t])) continue; ?>
+                    <button type="button" data-type="<?= $t ?>"<?= $i === 0 ? ' class="active"' : '' ?>><i class="fas <?= $typeBtns[$t][0] ?>"></i> <?= $typeBtns[$t][1] ?></button>
+                <?php endforeach; ?>
             </div>
+            <?php if (in_array('material', $composerTypes, true)): ?>
+            <div class="pm-fields" data-for="material">
+                <div class="pm-row">
+                    <label><span>ম্যাটেরিয়ালের নাম <b>*</b></span><input type="text" id="pmMatTitle" maxlength="100" placeholder="যেমন: Quadratic Equation Notes" /></label>
+                    <label class="sm"><span>বিষয়</span><input type="text" id="pmMatSubject" maxlength="40" placeholder="Mathematics" list="pmSubjList" /></label>
+                </div>
+                <label class="pm-doc" for="pmDoc">
+                    <i class="fas fa-paperclip"></i>
+                    <span id="pmDocName">PDF / Word / PPT / Excel ফাইল বাছাই করুন (সর্বোচ্চ 10 MB)</span>
+                </label>
+                <input type="file" id="pmDoc" hidden accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.jpg,.jpeg,.png,.webp" />
+            </div>
+            <div class="pm-fields" data-for="update">
+                <div class="pm-row"><label><span>কোন ক্লাস / বিষয়? (ঐচ্ছিক)</span><input type="text" id="pmUpSubject" maxlength="40" placeholder="যেমন: Class 9 Math" list="pmSubjList" /></label></div>
+            </div>
+            <div class="pm-fields" data-for="notice">
+                <div class="pm-row"><label><span>নোটিশের শিরোনাম (ঐচ্ছিক)</span><input type="text" id="pmNoTitle" maxlength="80" placeholder="যেমন: আগামীকাল ক্লাস বন্ধ" /></label></div>
+            </div>
+            <?php endif; ?>
             <div class="pm-fields" data-for="study">
                 <div class="pm-row">
                     <label><span>কোন বিষয়?</span><input type="text" id="pmSubject" maxlength="40" placeholder="যেমন: Physics" list="pmSubjList" /></label>
@@ -945,8 +988,22 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     var pm = $('#pmOverlay'), pmForm = $('#pmForm'), pmText = $('#pmText'), pmFile = $('#pmFile'), pmPriv = $('#pmPrivacy');
     var pmSubmit = $('#pmSubmit'), pmPreview = $('#pmPreview'), pmImg = $('#pmPreviewImg');
     var editing = null, removeImage = false, hadImage = false, busy = false, sharing = null, ptype = 'post';
-    var TYPE_TITLES = { post: 'Create post', study: 'Study Update', question: 'Ask a question', achievement: 'Share an achievement', poll: 'Create a poll' };
-    var TYPE_PH = { post: null, study: 'আজ কী পড়লেন? কী শিখলেন? (ঐচ্ছিক)', question: 'আপনার প্রশ্নটি লিখুন...', achievement: 'অর্জনটা নিয়ে কিছু বলুন... (ঐচ্ছিক)', poll: 'পোলের প্রশ্ন লিখুন...' };
+    var TYPE_TITLES = { post: 'Create post', study: 'Study Update', question: 'Ask a question', achievement: 'Share an achievement', poll: 'Create a poll',
+        material: 'Share study material', update: 'Class Update', notice: 'Post a notice' };
+    var TYPE_PH = { post: null, study: 'আজ কী পড়লেন? কী শিখলেন? (ঐচ্ছিক)', question: 'আপনার প্রশ্নটি লিখুন...', achievement: 'অর্জনটা নিয়ে কিছু বলুন... (ঐচ্ছিক)', poll: 'পোলের প্রশ্ন লিখুন...',
+        material: 'ম্যাটেরিয়াল নিয়ে কিছু বলুন... (ঐচ্ছিক)', update: 'স্টুডেন্টদের জন্য ক্লাস আপডেট লিখুন...', notice: 'নোটিশটি লিখুন...' };
+    var pmDoc = $('#pmDoc');
+    function val(s) { var el = $(s); return el ? el.value : ''; }
+    function setVal(s, v) { var el = $(s); if (el) el.value = v; }
+    if (pmDoc) pmDoc.addEventListener('change', function () {
+        var f = pmDoc.files[0];
+        if (f && f.size > 10 * 1024 * 1024) { toast('ফাইল ১০ MB এর কম হতে হবে।', true); pmDoc.value = ''; f = null; }
+        $('#pmDocName').textContent = f ? f.name + ' (' + (f.size >= 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') + ')'
+            : (editing && docName ? docName + ' — নতুন ফাইল দিলে বদলে যাবে' : 'PDF / Word / PPT / Excel ফাইল বাছাই করুন (সর্বোচ্চ 10 MB)');
+        $('.pm-doc').classList.toggle('has', !!f);
+        refresh();
+    });
+    var docName = '';
     var pmOpts = $('#pmOpts');
     function optRow(v) {
         var d = document.createElement('div'); d.className = 'pm-opt';
@@ -963,15 +1020,15 @@ $meInitials = initials($me->Name ?? 'U', 'U');
     $('#pmAddOpt').addEventListener('click', function () { var r = optRow(); pmOpts.appendChild(r); paintOpts(); $('input', r).focus(); });
     pmOpts.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { b.parentNode.remove(); paintOpts(); refresh(); } });
     pmOpts.addEventListener('input', function () { refresh(); });
-    ['#pmSubject', '#pmHours', '#pmMins', '#pmQSubject', '#pmAchTitle'].forEach(function (s) { $(s).addEventListener('input', function () { refresh(); }); });
+    ['#pmSubject', '#pmHours', '#pmMins', '#pmQSubject', '#pmAchTitle', '#pmMatTitle', '#pmMatSubject', '#pmUpSubject', '#pmNoTitle'].forEach(function (s) { var el = $(s); if (el) el.addEventListener('input', function () { refresh(); }); });
     function setType(t, keepTitle) {
         ptype = TYPE_TITLES[t] ? t : 'post';
         $$('#pmTypes button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-type') === ptype); });
         $$('.pm-fields').forEach(function (f) { f.classList.toggle('show', f.getAttribute('data-for') === ptype); });
         if (!keepTitle) $('#pmTitle').textContent = TYPE_TITLES[ptype];
         pmText.setAttribute('placeholder', TYPE_PH[ptype] || PH_DEFAULT);
-        pmAdd.hidden = ptype === 'poll' || !!sharing || !!(editing && editing.getAttribute('data-share') === '1');
-        if (ptype === 'poll') { pmFile.value = ''; if (!editing) setPreview(null); }
+        pmAdd.hidden = ptype === 'poll' || ptype === 'material' || !!sharing || !!(editing && editing.getAttribute('data-share') === '1');
+        if (ptype === 'poll' || ptype === 'material') { pmFile.value = ''; if (!editing) setPreview(null); }
         if (ptype === 'poll' && !editing && $$('.pm-opt', pmOpts).length < 2) resetOpts();
         refresh();
     }
@@ -983,6 +1040,8 @@ $meInitials = initials($me->Name ?? 'U', 'U');
             case 'study': return !!($('#pmSubject').value.trim() || +$('#pmHours').value || +$('#pmMins').value || txt);
             case 'question': return !!txt;
             case 'achievement': return !!$('#pmAchTitle').value.trim();
+            case 'material': return !!val('#pmMatTitle').trim() && !!(txt || (pmDoc && pmDoc.files[0]) || (editing && docName));
+            case 'update': case 'notice': return !!txt;
             case 'poll': return !!txt && (editing ? true : pollOptions().length >= 2);
         }
         return !!(txt || hasImage());
@@ -1062,6 +1121,9 @@ $meInitials = initials($me->Name ?? 'U', 'U');
         if (card) { try { meta = JSON.parse(card.getAttribute('data-meta') || '{}'); } catch (e) { meta = {}; } }
         $('#pmSubject').value = meta.subject || ''; $('#pmQSubject').value = meta.subject || ''; $('#pmAchTitle').value = meta.title || '';
         $('#pmHours').value = meta.minutes ? Math.floor(meta.minutes / 60) || '' : ''; $('#pmMins').value = meta.minutes ? (meta.minutes % 60) || '' : '';
+        setVal('#pmMatTitle', meta.title || ''); setVal('#pmMatSubject', meta.subject || ''); setVal('#pmUpSubject', meta.subject || ''); setVal('#pmNoTitle', meta.title || '');
+        docName = meta.file && meta.file.name ? meta.file.name : '';
+        if (pmDoc) { pmDoc.value = ''; $('.pm-doc').classList.remove('has'); $('#pmDocName').textContent = card && docName ? docName + ' — নতুন ফাইল দিলে বদলে যাবে' : 'PDF / Word / PPT / Excel ফাইল বাছাই করুন (সর্বোচ্চ 10 MB)'; }
         $('#pmTypes').hidden = !!card;
         $('#pmPollNote').hidden = !card; pmOpts.hidden = !!card; $('#pmAddOpt').hidden = !!card;
         if (!card) resetOpts();
@@ -1130,7 +1192,10 @@ $meInitials = initials($me->Name ?? 'U', 'U');
             finally { busy = false; pmSubmit.textContent = label; refresh(); }
             return;
         }
-        if (pmFile.files[0] && ptype !== 'poll') fd.append('image', pmFile.files[0]);
+        if (pmFile.files[0] && ptype !== 'poll' && ptype !== 'material') fd.append('image', pmFile.files[0]);
+        if (ptype === 'material') { fd.append('title', val('#pmMatTitle')); fd.append('subject', val('#pmMatSubject')); if (pmDoc && pmDoc.files[0]) fd.append('file', pmDoc.files[0]); }
+        if (ptype === 'update') fd.append('subject', val('#pmUpSubject'));
+        if (ptype === 'notice') fd.append('title', val('#pmNoTitle'));
         fd.append('type', ptype);
         if (ptype === 'study') { fd.append('subject', $('#pmSubject').value); fd.append('minutes', (+$('#pmHours').value || 0) * 60 + (+$('#pmMins').value || 0)); }
         if (ptype === 'question') fd.append('subject', $('#pmQSubject').value);

@@ -53,6 +53,9 @@ class ProfileController extends Controller
             if ($user->Role !== 'Teacher' && $teacherInfo) $teacherStatus = (string)($teacherInfo->Status ?? 'Pending');
         } catch (Throwable $e) { $teacherInfo = null; }
 
+        // টিচারের প্রোফাইল আলাদা ডিজাইনে
+        if ($user->Role === 'Teacher') { $this->showTeacher($user, $me, $isOwner, $isAdminViewer, $relation, $suspended, $teacherInfo); return; }
+
         // ট্যাব (পুরোনো লিংক posts/about ও কাজ করে)
         $tab = (string)input_str('tab', 'overview');
         $tab = ['posts' => 'overview', 'about' => 'profile'][$tab] ?? $tab;
@@ -82,6 +85,59 @@ class ProfileController extends Controller
             'SavedItems' => $isOwner ? $this->db->GetSavedItems($id, $isAdminViewer) : [],
             'MyCirculars' => $isOwner && !$isTeacherProfile ? $this->db->GetMyCirculars($id) : [],
             'TutorSaved' => !$isOwner && $isTeacherProfile && !$isAdminViewer ? $this->db->IsSaved($me, 'tutor', $id) : false,
+        ]));
+    }
+
+    /** টিচার প্রোফাইল (Profile/ShowTeacher) */
+    private function showTeacher(Obj $user, int $me, bool $isOwner, bool $isAdminViewer, string $relation, bool $suspended, ?Obj $teacherInfo): void
+    {
+        $id = (int)$user->Id;
+        $tab = (string)input_str('tab', 'overview');
+        $tab = ['posts' => 'overview', 'about' => 'profile', 'dashboard' => 'overview', 'tutors' => 'students', 'activities' => 'overview', 'goals' => 'overview'][$tab] ?? $tab;
+        $allowed = ['overview', 'profile', 'subjects', 'reviews', 'certificates', 'friends'];
+        if ($isOwner) $allowed = array_merge($allowed, ['students', 'schedule', 'tuitionposts', 'saved', 'earnings', 'settings']);
+        if (!in_array($tab, $allowed, true)) $tab = 'overview';
+
+        $db = $this->db;
+        $db->EnsureTeacherTables();
+        if ($isOwner) $db->SyncTeacherStudents($id);
+        $students = $db->GetTeacherStudents($id);
+        $classes = $isOwner ? $db->GetTeacherClasses($id) : [];
+        $posts = $db->GetProfilePosts($id, $me, $isAdminViewer, null, 10);
+        $friends = $db->GetFriendsOfUserForViewer($id, $me);
+        $tIntro = $db->GetTeacherIntro($id);
+        $myReview = null; $canReview = false;
+        if (!$isOwner && !$isAdminViewer) {
+            $canReview = $db->CanReviewTeacher($me, $id);
+            $myReview = $db->GetMyTeacherReview($id, $me);
+        }
+        $expRaw = (string)($teacherInfo->Experience ?? '') ?: (string)($user->YearsOfExperience ?? '');
+        $expYears = preg_match('/(\d+)/', $expRaw, $m) ? (int)$m[1] : null;
+
+        $this->view('Profile/ShowTeacher', obj([
+            'User' => $user, 'IsOwner' => $isOwner, 'Relation' => $relation, 'IsAdminViewer' => $isAdminViewer,
+            'CanSeePrivate' => $isOwner || $isAdminViewer || $relation === 'friends',
+            'FriendCount' => count($friends), 'Friends' => $friends,
+            'MutualCount' => $isOwner ? 0 : $db->CountMutualFriends($me, $id),
+            'TeacherInfo' => $teacherInfo, 'TeacherStatus' => 'Approved',
+            'Posts' => $posts, 'HasMore' => count($posts) === 10,
+            'PostCount' => $db->CountProfilePosts($id, $me, $isAdminViewer),
+            'Tab' => $tab, 'IsSuspended' => $suspended, 'Extras' => $db->GetProfileExtras($id),
+            'Intro' => $db->GetIntro($id), 'TIntro' => $tIntro,
+            'IsOnline' => $isOwner || ($tIntro->LastSeenAt && strtotime((string)$tIntro->LastSeenAt) >= time() - 300),
+            'ExpYears' => $expYears, 'ExpText' => $expRaw,
+            'Students' => $isOwner ? $students : [], 'StudentCount' => count($students),
+            'ActiveStudents' => count(array_filter($students, fn($s) => $s->Status === 'Active')),
+            'Classes' => $classes, 'Upcoming' => $isOwner ? $db->UpcomingClassOccurrences($classes, 7, 40) : [],
+            'TodayClasses' => $isOwner ? $db->CountTodayClasses($classes) : 0,
+            'Earnings' => $isOwner ? $db->EarningsSummary($id) : null, 'Payments' => $isOwner ? $db->GetTeacherPayments($id) : [],
+            'Reviews' => $db->GetTeacherReviews($id), 'ReviewStats' => $db->TeacherReviewStats($id),
+            'CanReview' => $canReview, 'MyReview' => $myReview,
+            'Certificates' => $db->GetTeacherCertificates($id),
+            'TeachPosts' => $isOwner ? $db->GetTeacherTeachPosts($id) : [],
+            'SavedItems' => $isOwner ? $db->GetSavedItems($id, $isAdminViewer) : [],
+            'MaterialCount' => $db->CountTeacherMaterials($id, $me, $isAdminViewer),
+            'TutorSaved' => !$isOwner && !$isAdminViewer ? $db->IsSaved($me, 'tutor', $id) : false,
         ]));
     }
 

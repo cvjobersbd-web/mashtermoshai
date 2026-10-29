@@ -880,9 +880,9 @@ $heroImages = $Model->GetHeroImageList();
     <!-- ===== ✅ Profile Page — Promo Image ===== -->
     <?php $ppc = profile_promo(); ?>
     <div class="settings-card" id="ppSettings">
-        <h5><i class="fas fa-image"></i> Profile Page — বাম পাশের ছবি</h5>
+        <h5><i class="fas fa-image"></i> Student Profile — বাম পাশের ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
-            স্টুডেন্ট/টিচারের প্রোফাইল পেজে বাম মেনুর নিচের ছবি ("সঠিক Tutor সঠিক ভবিষ্যৎ")। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে সব প্রোফাইলে বদলে যাবে।
+            স্টুডেন্টের প্রোফাইল পেজে বাম মেনুর নিচের ছবি ("সঠিক Tutor সঠিক ভবিষ্যৎ")। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে সব প্রোফাইলে বদলে যাবে।
         </p>
         <div class="pp-grid">
             <div class="pp-prev-wrap">
@@ -903,10 +903,48 @@ $heroImages = $Model->GetHeroImageList();
                 <input type="text" class="form-control mb-1" id="pp_image" value="<?= e($ppc['pp_image']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." oninput="document.getElementById('ppPreview').src = this.value; document.getElementById('ppPreview').style.opacity = 1;" />
                 <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. JPG, PNG, GIF, WEBP. খাড়া/বর্গাকার ছবি ভালো দেখায় (যেমন <strong>600×700 px</strong>)।</span>
                 <label class="form-label fw-semibold mt-3" for="pp_link">ছবিতে ক্লিক করলে কোথায় যাবে <span style="color:#7A8CA0; font-weight:400;">(ঐচ্ছিক)</span></label>
-                <input type="text" class="form-control" id="pp_link" value="<?= e($ppc['pp_link']) ?>" placeholder="খালি রাখলে: স্টুডেন্ট → Find Tutor, টিচার → Tuition Circular" />
+                <input type="text" class="form-control" id="pp_link" value="<?= e($ppc['pp_link']) ?>" placeholder="খালি রাখলে: Find Tutor পেজে যাবে" />
                 <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
                     <button type="button" class="upload-btn" onclick="savePromo(true)"><i class="fas fa-rotate-left"></i> Default ছবি</button>
                     <button type="button" class="btn-save" id="ppSaveBtn" onclick="savePromo(false)"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ✅ Teacher Profile — Promo Image ===== -->
+    <?php $tpc = teacher_promo(); ?>
+    <div class="settings-card" id="tpSettings">
+        <h5><i class="fas fa-chalkboard-user"></i> Teacher Profile — বাম পাশের ছবি</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            শুধু টিচারদের প্রোফাইল পেজে বাম মেনুর নিচে দেখায়। ছবি না দিলে ডিজাইন করা কার্ড ("আরও বেশি শিক্ষার্থীর কাছে পৌঁছান" + Create Tuition Post) দেখাবে।
+            নিজের ছবি আপলোড করলে সেটা দেখাবে — সাথে সাথে সব টিচার প্রোফাইলে বদলে যাবে।
+        </p>
+        <div class="pp-grid">
+            <div class="pp-prev-wrap">
+                <div class="pp-prev-label"><i class="fas fa-eye"></i> Preview</div>
+                <a class="pp-prev" id="tpPrevBox" <?= is_blank($tpc['tp_image']) ? 'hidden' : '' ?>><img id="tpPreview" src="<?= e($tpc['tp_image']) ?>" alt="Teacher promo preview" onerror="this.style.opacity=.25" /></a>
+                <div id="tpPrevCard" <?= is_blank($tpc['tp_image']) ? '' : 'hidden' ?>><?php partial('Profile/_TeacherPromoCard', ['preview' => true]); ?></div>
+                <div class="pp-prev-off" id="tpPrevOff" <?= $tpc['tp_enabled'] !== '0' ? 'hidden' : '' ?>><i class="fas fa-eye-slash"></i> এখন টিচার প্রোফাইলে লুকানো</div>
+            </div>
+            <div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="tp_enabled" <?= $tpc['tp_enabled'] !== '0' ? 'checked' : '' ?> onchange="document.getElementById('tpPrevOff').hidden = this.checked" />
+                    <label class="form-check-label fw-semibold" for="tp_enabled">টিচার প্রোফাইলে দেখাও</label>
+                </div>
+                <label class="form-label fw-semibold">ছবি <span style="color:#7A8CA0; font-weight:400;">(খালি = ডিজাইন করা কার্ড)</span></label>
+                <div class="d-flex gap-2 mb-2 flex-wrap">
+                    <label for="tpFile" class="upload-btn" id="tpUploadLbl"><i class="fas fa-upload"></i> Upload New Image</label>
+                    <input type="file" id="tpFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
+                    <button type="button" class="upload-btn" id="tpClearImg"><i class="fas fa-xmark"></i> ছবি সরাও</button>
+                </div>
+                <input type="text" class="form-control mb-1" id="tp_image" value="<?= e($tpc['tp_image']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." />
+                <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. JPG, PNG, GIF, WEBP. খাড়া/বর্গাকার ছবি ভালো দেখায় (যেমন <strong>600×700 px</strong>)।</span>
+                <label class="form-label fw-semibold mt-3" for="tp_link">ক্লিক করলে কোথায় যাবে <span style="color:#7A8CA0; font-weight:400;">(ঐচ্ছিক)</span></label>
+                <input type="text" class="form-control" id="tp_link" value="<?= e($tpc['tp_link']) ?>" placeholder="খালি রাখলে: Find Tutor পেজে (টিউশন পোস্ট দেওয়ার জায়গা)" />
+                <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+                    <button type="button" class="upload-btn" onclick="saveTeacherPromo(true)"><i class="fas fa-rotate-left"></i> Default কার্ড</button>
+                    <button type="button" class="btn-save" id="tpSaveBtn" onclick="saveTeacherPromo(false)"><i class="fas fa-save"></i> Save</button>
                 </div>
             </div>
         </div>
@@ -1720,6 +1758,59 @@ $heroImages = $Model->GetHeroImageList();
                         document.getElementById('pp_enabled').checked = d.pp_enabled !== '0';
                         document.getElementById('ppPrevOff').hidden = d.pp_enabled !== '0';
                         var pv = document.getElementById('ppPreview'); pv.src = d.pp_image; pv.style.opacity = 1;
+                    }
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                })
+                .catch(function (e) { btn.innerHTML = html; btn.disabled = false; alert('Error: ' + e.message); });
+        }
+
+        // ===== Teacher profile promo =====
+        function tpPaint() {
+            var v = document.getElementById('tp_image').value.trim();
+            document.getElementById('tpPrevBox').hidden = !v;
+            document.getElementById('tpPrevCard').hidden = !!v;
+            if (v) { var pv = document.getElementById('tpPreview'); pv.src = v; pv.style.opacity = 1; }
+        }
+        document.getElementById('tp_image').addEventListener('input', tpPaint);
+        document.getElementById('tpClearImg').addEventListener('click', function () { document.getElementById('tp_image').value = ''; tpPaint(); });
+        document.getElementById('tpFile').addEventListener('change', function () {
+            var f = this.files[0]; if (!f) return;
+            if (f.size > 5 * 1024 * 1024) { alert('Image must be less than 5MB'); this.value = ''; return; }
+            var fd = new FormData(); fd.append('promoImage', f); fd.append('__RequestVerificationToken', getToken());
+            var lbl = document.getElementById('tpUploadLbl'), html = lbl.innerHTML;
+            lbl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            var inp = this;
+            fetch('/Admin/UploadProfilePromo', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    lbl.innerHTML = html; inp.value = '';
+                    if (!d.success) { alert('❌ ' + (d.message || 'Upload failed')); return; }
+                    document.getElementById('tp_image').value = d.imageUrl; tpPaint();
+                    alert('✅ ছবি আপলোড হয়েছে — এখন Save চাপুন।');
+                })
+                .catch(function (e) { lbl.innerHTML = html; alert('Error: ' + e.message); });
+        });
+        function saveTeacherPromo(reset) {
+            if (reset && !confirm('ডিফল্ট কার্ডে ফেরত যাবেন?')) return;
+            var fd = new FormData();
+            fd.append('which', 'teacher');
+            fd.append('tp_image', document.getElementById('tp_image').value);
+            fd.append('tp_link', document.getElementById('tp_link').value);
+            fd.append('tp_enabled', document.getElementById('tp_enabled').checked ? 'true' : 'false');
+            if (reset) fd.append('reset', 'true');
+            fd.append('__RequestVerificationToken', getToken());
+            var btn = document.getElementById('tpSaveBtn'), html = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; btn.disabled = true;
+            fetch('/Admin/SaveProfilePromo', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    btn.innerHTML = html; btn.disabled = false;
+                    if (d.success) {
+                        document.getElementById('tp_image').value = d.tp_image || '';
+                        document.getElementById('tp_link').value = d.tp_link || '';
+                        document.getElementById('tp_enabled').checked = d.tp_enabled !== '0';
+                        document.getElementById('tpPrevOff').hidden = d.tp_enabled !== '0';
+                        tpPaint();
                     }
                     alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
                 })
