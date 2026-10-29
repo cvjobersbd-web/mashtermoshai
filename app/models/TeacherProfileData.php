@@ -60,12 +60,14 @@ trait TeacherProfileData
     /** টিচারের হেডলাইন ("Mathematics Tutor") আর লেভেল (SSC, HSC...) */
     public function GetTeacherIntro(int $userId): Obj
     {
-        $out = obj(['Headline' => '', 'Levels' => [], 'LastSeenAt' => null]);
+        // IntroSaved: টিচার নিজে একবার Edit intro সেভ করেছেন কিনা (তাহলে খালি রাখলে খালিই থাকবে)
+        $out = obj(['Headline' => '', 'Levels' => [], 'LastSeenAt' => null, 'IntroSaved' => false]);
         try {
             $this->EnsureTeacherTables();
             $r = $this->one('SELECT `Headline`, `Levels`, `LastSeenAt` FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId]);
             if ($r) {
                 $out->Headline = (string)($r->Headline ?? '');
+                $out->IntroSaved = $r->Headline !== null;
                 $out->Levels = array_values(array_filter(array_map('trim', explode(',', (string)($r->Levels ?? ''))), fn($x) => $x !== ''));
                 $out->LastSeenAt = $r->LastSeenAt;
             }

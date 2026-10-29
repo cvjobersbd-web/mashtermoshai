@@ -29,10 +29,12 @@ $reviews = $Model->Reviews;
 $certs = $Model->Certificates;
 $earn = $Model->Earnings;
 // বিষয় না দিলে Become a Tutor ফর্মের Subject Expertise থেকে নেওয়া
-if (!$intro->Subjects && !is_blank($ti->SubjectExpertise ?? null)) {
+if (!$tIntro->IntroSaved && !$intro->Subjects && !is_blank($ti->SubjectExpertise ?? null)) {
     $intro->Subjects = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => mb_substr(trim($x), 0, 30), preg_split('#[,/|;]+#u', (string)$ti->SubjectExpertise)), fn($x) => $x !== ''))), 0, 12);
 }
-$headline = $tIntro->Headline !== '' ? $tIntro->Headline : (count($intro->Subjects) ? $intro->Subjects[0] . ' Tutor' : 'Tutor');
+// হেডলাইন: টিচার নিজে লিখলে সেটা; নিজে মুছে দিলে কিছুই দেখাবে না; কখনো সেট না করলে বিষয় থেকে ("Math Tutor")
+$headline = $tIntro->Headline !== '' ? $tIntro->Headline
+    : ($tIntro->IntroSaved ? '' : (count($intro->Subjects) ? $intro->Subjects[0] . ' Tutor' : 'Tutor'));
 
 $me = obj(['Id' => (int)current_user_id(), 'Name' => session_get('UserFullName') ?? session_get('UserName') ?? 'User', 'Image' => session_get('ProfileImageLink')]);
 
@@ -288,7 +290,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <i class="fas fa-circle-check" title="Verified Teacher"></i>
                         <?php if ($Model->IsSuspended): ?><span class="pf-warn"><i class="fas fa-ban"></i> Suspended</span><?php endif; ?>
                     </h1>
-                    <div class="tp-headline" id="tpHeadline"><?= e($headline) ?></div>
+                    <?php if ($headline !== ''): ?><div class="tp-headline" id="tpHeadline"><?= e($headline) ?></div><?php endif; ?>
                     <div class="pf-meta">
                         <?php if ($location !== ''): ?><span><i class="fas fa-location-dot"></i> <?= e($location) ?></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></span>
@@ -532,7 +534,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                 <div class="pf-card rc">
                                     <div class="rc-h"><h4>About</h4></div>
                                     <ul class="am-list">
-                                        <li><i class="fas fa-chalkboard-user"></i> <?= e($headline) ?></li>
+                                        <li><i class="fas fa-chalkboard-user"></i> <?= e($headline !== '' ? $headline : 'Tutor') ?></li>
                                         <?php $inst = !is_blank($ti->Institution ?? null) ? $ti->Institution : $u->InstitutionName; if (!is_blank($inst)): ?><li><i class="fas fa-building-columns"></i> <?= e($inst) ?></li><?php endif; ?>
                                         <?php if ($location !== ''): ?><li><i class="fas fa-location-dot"></i> <?= e($location) ?></li><?php endif; ?>
                                         <?php if ($Model->ExpText !== ''): ?><li><i class="fas fa-briefcase"></i> <?= e($Model->ExpText) ?> experience</li><?php endif; ?>
