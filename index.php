@@ -20,6 +20,7 @@ $GLOBALS['__config'] = file_exists(APP_ROOT . '/config.local.php')
     : require APP_ROOT . '/config.php';
 
 require APP_ROOT . '/app/core/helpers.php';
+require APP_ROOT . '/app/core/Mailer.php';
 require APP_ROOT . '/app/core/View.php';
 require APP_ROOT . '/app/core/Controller.php';
 require APP_ROOT . '/app/models/SiteSettings.php';

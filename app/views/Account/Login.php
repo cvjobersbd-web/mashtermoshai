@@ -70,6 +70,8 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
     .susp-reason span { font-size: 12px; font-weight: 700; color: #A0443B; }
     .susp-reason p { margin: 4px 0 0; font-size: 13.5px; white-space: pre-wrap; color: #333; }
     .susp-help { margin: 10px 0 0; font-size: 12px; color: #A0443B; }
+    .forgot-link { font-size: 13px; font-weight: 600; color: #028EA5; text-decoration: none; margin-bottom: 8px; }
+    .forgot-link:hover { text-decoration: underline; color: #08224A; }
 </style>
 
 <div class="container-fluid py-5" style="background-image: url('https://i.ibb.co.com/93m2hpJS/Chat-GPT-Image-Sep-26-2026-06-11-52-PM.png'); background-size: cover; background-position: center; min-height: 80vh; display: flex; align-items: center;">
@@ -144,13 +146,16 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
                         <input type="hidden" name="returnUrl" value="<?= e($returnUrl) ?>" />
 
                         <div class="mb-3">
-                            <label class="form-label">Username</label>
-                            <input name="username" id="loginUsername" type="text" class="form-control form-control-transparent" required />
-                            <div class="invalid-feedback">Please enter your username.</div>
+                            <label class="form-label">Username / Email / Phone</label>
+                            <input name="username" id="loginUsername" type="text" class="form-control form-control-transparent" autocomplete="username" placeholder="Username, Email অথবা মোবাইল নম্বর" required />
+                            <div class="invalid-feedback">Username, Email অথবা মোবাইল নম্বর দিন।</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input name="password" id="loginPassword" type="password" class="form-control form-control-transparent" required />
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label">Password</label>
+                                <a href="/Account/ForgotPassword" class="forgot-link">Forgot password?</a>
+                            </div>
+                            <input name="password" id="loginPassword" type="password" class="form-control form-control-transparent" autocomplete="current-password" required />
                             <div class="invalid-feedback">Please enter your password.</div>
                         </div>
                         <button type="submit" class="btn btn-primary-custom text-white w-100">Login</button>

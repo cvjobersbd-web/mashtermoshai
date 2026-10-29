@@ -543,6 +543,51 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 
+    /** POST /Admin/SaveMailSettings — Forgot Password ইত্যাদির ইমেইল পাঠানোর SMTP সেটিং */
+    public function SaveMailSettings_POST(): void
+    {
+        $this->requireAdminJson();
+        $cur = mail_settings();
+        $v = [
+            'mail_site_url'   => rtrim(trim((string)input_str('mail_site_url', '')), '/'),
+            'mail_host'       => trim((string)input_str('mail_host', '')),
+            'mail_port'       => trim((string)input_str('mail_port', '465')),
+            'mail_secure'     => strtolower(trim((string)input_str('mail_secure', 'ssl'))),
+            'mail_user'       => trim((string)input_str('mail_user', '')),
+            'mail_from_email' => trim((string)input_str('mail_from_email', '')),
+            'mail_from_name'  => trim((string)input_str('mail_from_name', '')),
+        ];
+        if (!preg_match('#^https?://[A-Za-z0-9.\-]+(:\d+)?$#', $v['mail_site_url'])) json_response(['success' => false, 'message' => 'Site URL ঠিক নেই — যেমন: https://mashtermoshai.com']);
+        if ($v['mail_host'] !== '' && !preg_match('/^[A-Za-z0-9.\-]{3,120}$/', $v['mail_host'])) json_response(['success' => false, 'message' => 'SMTP Host ঠিক নেই — যেমন: mail.mashtermoshai.com']);
+        if (!ctype_digit($v['mail_port']) || (int)$v['mail_port'] < 1 || (int)$v['mail_port'] > 65535) json_response(['success' => false, 'message' => 'Port ঠিক নেই (465 অথবা 587)।']);
+        if (!in_array($v['mail_secure'], ['ssl', 'tls', 'none'], true)) $v['mail_secure'] = 'ssl';
+        if ($v['mail_user'] !== '' && !filter_var($v['mail_user'], FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'message' => 'Username হিসেবে পুরো ইমেইল ঠিকানা দিন — যেমন: noreply@mashtermoshai.com']);
+        if ($v['mail_from_email'] !== '' && !filter_var($v['mail_from_email'], FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'message' => 'From Email ঠিক নেই।']);
+        if (mb_strlen($v['mail_from_name']) > 80) json_response(['success' => false, 'message' => 'From Name সর্বোচ্চ ৮০ অক্ষর।']);
+        $pass = (string)input_str('mail_pass', '');
+        $v['mail_pass'] = $pass !== '' ? $pass : (string)$cur['mail_pass'];   // খালি রাখলে আগের পাসওয়ার্ডই থাকবে
+        if (input_bool('clear_pass')) $v['mail_pass'] = '';
+        $err = null;
+        if ($this->db->SaveSiteContent($v, $err)) json_response(['success' => true, 'message' => 'ইমেইল সেটিং সেভ হয়েছে! এবার "Send Test Email" দিয়ে পরীক্ষা করুন।', 'hasPass' => $v['mail_pass'] !== '']);
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
+    /** POST /Admin/SendTestEmail */
+    public function SendTestEmail_POST(): void
+    {
+        $this->requireAdminJson();
+        $to = trim((string)input_str('to', ''));
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'message' => 'সঠিক ইমেইল ঠিকানা দিন।']);
+        $m = Mailer::fromSettings();
+        $site = site_settings()->GetSafeSiteName();
+        $html = Mailer::template('টেস্ট ইমেইল ✅', '<p>অভিনন্দন! আপনার সাইটের ইমেইল সেটিং ঠিকমতো কাজ করছে। এখন থেকে Forgot Password এর ইমেইল ইউজারদের কাছে পৌঁছাবে।</p>');
+        $err = null;
+        if ($m->send($to, '', "$site — Test Email", $html, "আপনার সাইটের ইমেইল সেটিং ঠিকমতো কাজ করছে।", $err)) {
+            json_response(['success' => true, 'message' => "টেস্ট ইমেইল পাঠানো হয়েছে: $to — ইনবক্স চেক করুন।"]);
+        }
+        json_response(['success' => false, 'message' => 'ইমেইল পাঠানো যায়নি: ' . $err]);
+    }
+
     public function UploadHeroImage_POST(): void
     {
         $this->uploadImage('heroImage', 'hero', 'hero_', self::IMAGE_EXTS, 5 * 1024 * 1024,

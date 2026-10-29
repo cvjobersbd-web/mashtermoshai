@@ -563,6 +563,47 @@ function social_links(): array
 }
 
 // ============================================================
+// ===== ফোন নম্বর ও ইমেইল (SMTP) সেটিং =====
+// ============================================================
+/** ফোন নম্বর থেকে শুধু ডিজিট; বাংলাদেশি নম্বর হলে 01XXXXXXXXX ফরম্যাটে। নম্বর না হলে '' */
+function phone_digits(string $v): string
+{
+    $v = strtr(trim($v), ['০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9']);
+    if (!preg_match('/^\+?[\d\s\-()]{6,20}$/', $v)) return '';
+    $d = preg_replace('/\D/', '', $v);
+    if (str_starts_with($d, '880') && strlen($d) === 13) $d = '0' . substr($d, 3);
+    return strlen($d) >= 6 ? $d : '';
+}
+
+function mail_settings_defaults(): array
+{
+    return [
+        'mail_site_url'   => 'https://mashtermoshai.com',
+        'mail_host'       => '',
+        'mail_port'       => '465',
+        'mail_secure'     => 'ssl',
+        'mail_user'       => '',
+        'mail_pass'       => '',
+        'mail_from_email' => '',
+        'mail_from_name'  => '',
+    ];
+}
+
+function mail_settings(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(mail_settings_defaults());
+    return $c;
+}
+
+/** ইমেইলের লিংকের জন্য সাইটের ঠিকানা (Host header থেকে না — নিরাপত্তার জন্য সেটিং থেকে) */
+function site_public_url(): string
+{
+    $u = rtrim(trim(mail_settings()['mail_site_url'] ?? ''), '/');
+    return preg_match('#^https?://[^\s/]+#i', $u) ? $u : 'https://mashtermoshai.com';
+}
+
+// ============================================================
 // ===== USER SUSPENSION helpers =====
 // ============================================================
 /** লগইন পেজে দেখানোর জন্য Suspension এর তথ্য */

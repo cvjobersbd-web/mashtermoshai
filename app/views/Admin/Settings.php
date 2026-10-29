@@ -871,6 +871,112 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+    <!-- ===== ✅ Email (SMTP) Settings — Forgot Password ===== -->
+    <?php $ms = mail_settings(); $msHasPass = $ms['mail_pass'] !== ''; ?>
+    <div class="settings-card" id="mailSettings">
+        <h5><i class="fas fa-envelope"></i> Email (SMTP) Settings — Forgot Password</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:6px;">
+            ইউজার "Forgot password?" দিলে তার ইমেইলে রিসেট লিংক যাবে — সেই ইমেইল পাঠানোর জন্য এখানে cPanel এর ইমেইল অ্যাকাউন্টের তথ্য দিন।
+        </p>
+        <div class="mail-tip">
+            <i class="fas fa-lightbulb"></i>
+            <div>cPanel → <b>Email Accounts</b> → <b>Create</b> দিয়ে <code>noreply@mashtermoshai.com</code> বানান। তারপর ঐ অ্যাকাউন্টের <b>Connect Devices</b> এ যে
+                <b>Outgoing Server</b> ও <b>SMTP Port</b> দেখায় সেগুলো নিচে বসান (সাধারণত Host: <code>mail.mashtermoshai.com</code>, Port: <code>465</code>, SSL)।</div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="mail_host">SMTP Host (Outgoing Server)</label>
+                <input type="text" class="form-control" id="mail_host" value="<?= e($ms['mail_host']) ?>" placeholder="mail.mashtermoshai.com" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold" for="mail_port">Port</label>
+                <input type="number" class="form-control" id="mail_port" value="<?= e($ms['mail_port']) ?>" placeholder="465" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold" for="mail_secure">Security</label>
+                <select class="form-select" id="mail_secure">
+                    <?php foreach (['ssl' => 'SSL (465)', 'tls' => 'TLS (587)', 'none' => 'None'] as $k => $l): ?>
+                        <option value="<?= e($k) ?>" <?= $ms['mail_secure'] === $k ? 'selected' : '' ?>><?= e($l) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="mail_user">Username (পুরো ইমেইল ঠিকানা)</label>
+                <input type="email" class="form-control" id="mail_user" value="<?= e($ms['mail_user']) ?>" placeholder="noreply@mashtermoshai.com" autocomplete="off" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="mail_pass">ইমেইল অ্যাকাউন্টের Password</label>
+                <input type="password" class="form-control" id="mail_pass" value="" autocomplete="new-password"
+                       placeholder="<?= $msHasPass ? '•••••••• (সেভ করা আছে — বদলাতে চাইলে নতুনটা লিখুন)' : 'ইমেইল অ্যাকাউন্টের পাসওয়ার্ড' ?>" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="mail_from_email">From Email <span style="color:#7A8CA0; font-weight:400;">(ঐচ্ছিক)</span></label>
+                <input type="email" class="form-control" id="mail_from_email" value="<?= e($ms['mail_from_email']) ?>" placeholder="খালি রাখলে Username টাই" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" for="mail_from_name">From Name <span style="color:#7A8CA0; font-weight:400;">(ঐচ্ছিক)</span></label>
+                <input type="text" class="form-control" id="mail_from_name" maxlength="80" value="<?= e($ms['mail_from_name']) ?>" placeholder="<?= e(site_settings()->GetSafeSiteName()) ?>" />
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold" for="mail_site_url">Site URL <span style="color:#7A8CA0; font-weight:400;">(ইমেইলের লিংক এই ঠিকানায় যাবে)</span></label>
+                <input type="url" class="form-control" id="mail_site_url" value="<?= e($ms['mail_site_url']) ?>" placeholder="https://mashtermoshai.com" />
+            </div>
+        </div>
+
+        <div class="mail-actions">
+            <div class="mail-test">
+                <input type="email" class="form-control" id="mail_test_to" value="<?= e(session_get('UserEmail') ?? '') ?>" placeholder="টেস্ট ইমেইল যাবে এই ঠিকানায়" />
+                <button type="button" class="btn btn-outline-primary" id="mailTestBtn" onclick="mailTest()"><i class="fas fa-paper-plane"></i> Send Test Email</button>
+            </div>
+            <button type="button" class="btn-save" id="mailSaveBtn" onclick="mailSave()"><i class="fas fa-save"></i> Save Email Settings</button>
+        </div>
+        <div class="mail-result" id="mailResult"></div>
+    </div>
+    <style>
+        .mail-tip { display: flex; gap: 10px; background: #F5FBFF; border: 1px solid #DCECF5; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #334155; line-height: 1.6; margin: 10px 0 16px; }
+        .mail-tip > i { color: #FFB300; margin-top: 3px; }
+        .mail-tip code { background: #EAF5FB; color: #028EA5; padding: 1px 6px; border-radius: 6px; }
+        .mail-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+        .mail-test { display: flex; gap: 8px; flex: 1 1 340px; max-width: 520px; }
+        .mail-test input { min-width: 0; }
+        .mail-test .btn { white-space: nowrap; }
+        .mail-result { margin-top: 12px; font-size: 13.5px; border-radius: 10px; padding: 0; }
+        .mail-result.ok { background: #E8F8EF; color: #155724; border: 1px solid #A8E2C0; padding: 10px 14px; }
+        .mail-result.err { background: #FDECEA; color: #8B1E15; border: 1px solid #F5B7B1; padding: 10px 14px; }
+        @media (max-width: 576px) { .mail-test { flex-direction: column; } .mail-actions .btn-save { width: 100%; justify-content: center; } }
+    </style>
+    <script>
+        function mailRes(ok, msg) { var r = document.getElementById('mailResult'); r.className = 'mail-result ' + (ok ? 'ok' : 'err'); r.textContent = msg; }
+        function mailFd() {
+            var fd = new FormData();
+            ['mail_host', 'mail_port', 'mail_secure', 'mail_user', 'mail_pass', 'mail_from_email', 'mail_from_name', 'mail_site_url'].forEach(function (k) { fd.append(k, document.getElementById(k).value); });
+            var tok = document.querySelector('input[name="__RequestVerificationToken"]'); if (tok) fd.append('__RequestVerificationToken', tok.value);
+            return fd;
+        }
+        function mailPost(url, fd, btn) {
+            var html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> অপেক্ষা করুন...';
+            return fetch(url, { method: 'POST', body: fd }).then(function (r) { return r.json(); })
+                .then(function (d) { btn.disabled = false; btn.innerHTML = html; mailRes(!!d.success, d.message || (d.success ? 'Done' : 'Failed')); return d; })
+                .catch(function (e) { btn.disabled = false; btn.innerHTML = html; mailRes(false, 'Error: ' + e.message); return {}; });
+        }
+        function mailSave() {
+            return mailPost('/Admin/SaveMailSettings', mailFd(), document.getElementById('mailSaveBtn')).then(function (d) {
+                if (d.success) { var p = document.getElementById('mail_pass'); p.value = ''; if (d.hasPass) p.placeholder = '•••••••• (সেভ করা আছে — বদলাতে চাইলে নতুনটা লিখুন)'; }
+                return d;
+            });
+        }
+        function mailTest() {
+            // আগে সেভ, তারপর টেস্ট
+            mailSave().then(function (d) {
+                if (!d.success) return;
+                var fd = new FormData(); fd.append('to', document.getElementById('mail_test_to').value.trim());
+                var tok = document.querySelector('input[name="__RequestVerificationToken"]'); if (tok) fd.append('__RequestVerificationToken', tok.value);
+                mailPost('/Admin/SendTestEmail', fd, document.getElementById('mailTestBtn'));
+            });
+        }
+    </script>
+
     <!-- ===== ✅ Footer Social Media ===== -->
     <?php $smLinks = social_links(); $smPl = social_platforms(); ?>
     <style>

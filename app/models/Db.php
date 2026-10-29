@@ -173,19 +173,122 @@ class Db
      */
     public function AuthenticateUser(string $username, string $password): ?Obj
     {
-        $u = $this->one('SELECT ' . self::USER_COLUMNS . ' FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u) AND `IsActive` = 1', ['u' => $username]);
-        if (!$u) return null;
-        $stored = (string)$u->Password;
-        $ok = false;
-        $info = password_get_info($stored);
-        if (!empty($info['algo'])) {
-            $ok = password_verify($password, $stored);
-        } elseif ($stored !== '' && hash_equals($stored, $password)) {
-            $ok = true;
-            // পুরোনো plain text পাসওয়ার্ড → hash এ রূপান্তর
-            try { $this->exec('UPDATE `Users` SET `Password` = :p WHERE `Id` = :id', ['p' => password_hash($password, PASSWORD_DEFAULT), 'id' => (int)$u->Id]); } catch (Throwable $e) {}
+        // ✅ Username, Email অথবা মোবাইল নম্বর — যেকোনোটা দিয়ে লগইন
+        $id = trim($username);
+        if ($id === '' || $password === '') return null;
+        $cols = 'SELECT ' . self::USER_COLUMNS . ' FROM `Users` WHERE `IsActive` = 1 AND ';
+        $candidates = $this->all($cols . 'LOWER(`UserName`) = LOWER(:u)', ['u' => $id]);
+        if (!$candidates && str_contains($id, '@')) {
+            $candidates = $this->all($cols . 'LOWER(`Email`) = LOWER(:e) ORDER BY `Id`', ['e' => $id]);
         }
-        return $ok ? $this->mapUser($u) : null;
+        if (!$candidates && ($digits = phone_digits($id)) !== '') {
+            // শেষ ১০ ডিজিট দিয়ে খুঁজে PHP তে মিলিয়ে দেখা (+880 / 0 / স্পেস / ড্যাশ যেভাবেই লেখা থাকুক)
+            // প্রতিটা ডিজিটের মাঝে % — তাই নম্বরে স্পেস/ড্যাশ থাকলেও খুঁজে পাবে
+            $rows = $this->all($cols . '`MobileNumber` LIKE :m ORDER BY `Id` LIMIT 50', ['m' => '%' . implode('%', str_split(substr($digits, -10))) . '%']);
+            $candidates = array_values(array_filter($rows, fn($r) => phone_digits((string)$r->MobileNumber) === $digits));
+        }
+        foreach ($candidates as $u) {
+            if ($this->verifyUserPassword($u, $password)) return $this->mapUser($u);
+        }
+        return null;
+    }
+
+    /** পুরোনো (plain text) পাসওয়ার্ড এবং নতুন (hashed) — দুটোই সাপোর্ট করে; plain text মিললে hash করে সেভ */
+    private function verifyUserPassword(Obj $u, string $password): bool
+    {
+        $stored = (string)$u->Password;
+        $info = password_get_info($stored);
+        if (!empty($info['algo'])) return password_verify($password, $stored);
+        if ($stored !== '' && hash_equals($stored, $password)) {
+            try { $this->exec('UPDATE `Users` SET `Password` = :p WHERE `Id` = :id', ['p' => password_hash($password, PASSWORD_DEFAULT), 'id' => (int)$u->Id]); } catch (Throwable $e) {}
+            return true;
+        }
+        return false;
+    }
+
+    // ============================================================
+    // ===== PASSWORD RESET (Forgot Password — ইমেইলে লিংক) =====
+    // ============================================================
+    private bool $resetReady = false;
+
+    public function EnsurePasswordResetsTable(): void
+    {
+        if ($this->resetReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "PasswordResets" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "TokenHash" TEXT NOT NULL,
+                "ExpiresAt" TEXT NOT NULL, "UsedAt" TEXT NULL, "RequestIp" TEXT NULL, "CreatedAt" TEXT NOT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `PasswordResets` (
+                `Id` INT NOT NULL AUTO_INCREMENT,
+                `UserId` INT NOT NULL,
+                `TokenHash` CHAR(64) NOT NULL,
+                `ExpiresAt` DATETIME NOT NULL,
+                `UsedAt` DATETIME NULL,
+                `RequestIp` VARCHAR(64) NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`Id`),
+                UNIQUE KEY `UX_PasswordResets_Token` (`TokenHash`),
+                KEY `IX_PasswordResets_User` (`UserId`, `CreatedAt`),
+                KEY `IX_PasswordResets_Ip` (`RequestIp`, `CreatedAt`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->resetReady = true;
+    }
+
+    /** @return Obj[] রিসেট লিংক পাঠানোর মতো অ্যাকাউন্ট (ইমেইল বা ইউজারনেম দিয়ে) */
+    public function FindUsersForReset(string $emailOrUsername): array
+    {
+        $v = trim($emailOrUsername);
+        if ($v === '') return [];
+        $sql = 'SELECT `Id`, `UserName`, `FullName`, `Email` FROM `Users` WHERE `IsActive` = 1 AND `Email` IS NOT NULL AND `Email` <> \'\' AND ';
+        return str_contains($v, '@')
+            ? $this->all($sql . 'LOWER(`Email`) = LOWER(:v) ORDER BY `Id` LIMIT 5', ['v' => $v])
+            : $this->all($sql . 'LOWER(`UserName`) = LOWER(:v) LIMIT 1', ['v' => $v]);
+    }
+
+    public function CountRecentResets(?int $userId, ?string $ip, int $minutes): int
+    {
+        $this->EnsurePasswordResetsTable();
+        $since = date('Y-m-d H:i:s', time() - $minutes * 60);
+        if ($userId !== null) return (int)$this->scalar('SELECT COUNT(*) FROM `PasswordResets` WHERE `UserId` = :u AND `CreatedAt` >= :s', ['u' => $userId, 's' => $since]);
+        return (int)$this->scalar('SELECT COUNT(*) FROM `PasswordResets` WHERE `RequestIp` = :ip AND `CreatedAt` >= :s', ['ip' => (string)$ip, 's' => $since]);
+    }
+
+    /** নতুন টোকেন বানায় (ডাটাবেসে শুধু hash থাকে) — আসল টোকেন রিটার্ন করে */
+    public function CreatePasswordReset(int $userId, string $ip, int $validMinutes = 30): string
+    {
+        $this->EnsurePasswordResetsTable();
+        $token = bin2hex(random_bytes(32));
+        // আগের না-ব্যবহৃত লিংকগুলো বাতিল
+        $this->exec('UPDATE `PasswordResets` SET `UsedAt` = :t WHERE `UserId` = :u AND `UsedAt` IS NULL', ['t' => now(), 'u' => $userId]);
+        $this->insert('INSERT INTO `PasswordResets` (`UserId`, `TokenHash`, `ExpiresAt`, `RequestIp`, `CreatedAt`) VALUES (:u, :h, :x, :ip, :c)', [
+            'u' => $userId, 'h' => hash('sha256', $token), 'x' => date('Y-m-d H:i:s', time() + $validMinutes * 60), 'ip' => mb_substr($ip, 0, 64), 'c' => now(),
+        ]);
+        return $token;
+    }
+
+    /** বৈধ (মেয়াদ আছে, ব্যবহার হয়নি) টোকেন হলে রিসেট + ইউজারের তথ্য */
+    public function GetValidPasswordReset(string $token): ?Obj
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) return null;
+        $this->EnsurePasswordResetsTable();
+        return $this->one('SELECT r.`Id` AS ResetId, r.`UserId`, r.`ExpiresAt`, u.`UserName`, u.`FullName`, u.`Email`
+            FROM `PasswordResets` r JOIN `Users` u ON u.`Id` = r.`UserId`
+            WHERE r.`TokenHash` = :h AND r.`UsedAt` IS NULL AND r.`ExpiresAt` > :n AND u.`IsActive` = 1', ['h' => hash('sha256', $token), 'n' => now()]);
+    }
+
+    public function CompletePasswordReset(int $resetId, int $userId, string $newPassword): bool
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $n = $this->exec('UPDATE `PasswordResets` SET `UsedAt` = :t WHERE `Id` = :id AND `UsedAt` IS NULL', ['t' => now(), 'id' => $resetId]);
+            if ($n < 1) { $this->pdo->rollBack(); return false; }   // একই লিংক দুবার ব্যবহার করা যাবে না
+            $this->exec('UPDATE `Users` SET `Password` = :p WHERE `Id` = :u', ['p' => password_hash($newPassword, PASSWORD_DEFAULT), 'u' => $userId]);
+            $this->exec('UPDATE `PasswordResets` SET `UsedAt` = :t WHERE `UserId` = :u AND `UsedAt` IS NULL', ['t' => now(), 'u' => $userId]);
+            $this->pdo->commit();
+            return true;
+        } catch (Throwable $e) { $this->pdo->rollBack(); error_log('[CompletePasswordReset] ' . $e->getMessage()); return false; }
     }
 
     public function UpdateUserProfile(Obj $user): bool
