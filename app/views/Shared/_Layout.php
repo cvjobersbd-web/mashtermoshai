@@ -50,7 +50,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <meta property="og:title" content="<?= e($__pageTitle) ?>" />
     <meta property="og:description" content="<?= e($__desc) ?>" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="<?= e($__origin . ($_SERVER['REQUEST_URI'] ?? '/')) ?>" />
+    <meta property="og:url" content="<?= e($__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>" />
     <meta property="og:image" content="<?= e($__favicon) ?>" />
     <meta name="application-name" content="<?= e($safeSiteName) ?>" />
     <meta name="apple-mobile-web-app-title" content="<?= e($safeSiteName) ?>" />

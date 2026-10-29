@@ -38,7 +38,7 @@ class AccountController extends Controller
             $this->redirectToAction('Index', 'Home');
         }
 
-        $this->view('Login', null, ['Error' => 'Username/Email/Phone অথবা পাসওয়ার্ড ভুল।', 'ReturnUrl' => $returnUrl]);
+        $this->view('Login', null, ['Error' => 'Username/Email অথবা পাসওয়ার্ড ভুল।', 'ReturnUrl' => $returnUrl]);
     }
 
     /** GET /Account/Register */

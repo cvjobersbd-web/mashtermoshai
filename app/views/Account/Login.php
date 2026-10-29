@@ -146,9 +146,9 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
                         <input type="hidden" name="returnUrl" value="<?= e($returnUrl) ?>" />
 
                         <div class="mb-3">
-                            <label class="form-label">Username / Email / Phone</label>
-                            <input name="username" id="loginUsername" type="text" class="form-control form-control-transparent" autocomplete="username" placeholder="Username, Email অথবা মোবাইল নম্বর" required />
-                            <div class="invalid-feedback">Username, Email অথবা মোবাইল নম্বর দিন।</div>
+                            <label class="form-label">Username / Email</label>
+                            <input name="username" id="loginUsername" type="text" class="form-control form-control-transparent" autocomplete="username" placeholder="Username অথবা Email" required />
+                            <div class="invalid-feedback">Username অথবা Email দিন।</div>
                         </div>
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center">
