@@ -87,6 +87,16 @@
     .pf-nav a.active i { color: var(--pf-blue); }
     .pf-nav a .pf-n { margin-left: auto; font-size: 12px; font-weight: 700; background: #F1F5F9; color: #475569; padding: 1px 8px; border-radius: 10px; }
     .pf-nav a.active .pf-n { background: #fff; color: var(--pf-blue); }
+    /* বাম মেনু: Become a Tutor (হাইলাইট) */
+    .pf-nav a.pf-become { margin: 6px 0; background: linear-gradient(135deg, #FFF4D6 0%, #FFE7A8 100%); border: 1px solid #F8D57E; color: #7A4B00; font-weight: 700;
+        box-shadow: 0 4px 12px rgba(245,166,35,.18); }
+    .pf-nav a.pf-become i { color: #D97706; }
+    .pf-nav a.pf-become:hover { background: linear-gradient(135deg, #FFEDBF 0%, #FFDC86 100%); color: #7A4B00; }
+    .pf-nav a.pf-become.pending { background: #F1F5F9; border-color: #E2E8F0; color: #475569; box-shadow: none; }
+    .pf-nav a.pf-become.pending i { color: #64748B; }
+    .pf-become-tag { margin-left: auto; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 10px; background: #D97706; color: #fff; }
+    .pf-become.pending .pf-become-tag { background: #CBD5E1; color: #334155; }
+    .pf-become .pf-become-tag i { color: inherit !important; width: auto !important; font-size: 10px !important; }
     .pf-promo-img { display: block; overflow: hidden; padding: 0; transition: transform .2s, box-shadow .2s; }
     .pf-promo-img:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15,27,45,.1); }
     .pf-promo-img img { display: block; width: 100%; height: auto; }

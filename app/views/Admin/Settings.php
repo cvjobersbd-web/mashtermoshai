@@ -531,6 +531,26 @@ $heroImages = $Model->GetHeroImageList();
         .bt-prev-perks { justify-content: center; }
     }
     .tcb-prev-wrap { max-width: 760px; }
+    .opt-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; border-bottom: 1px solid #E8EEF5; }
+    .opt-tabs button { border: none; background: none; padding: 10px 14px; font-weight: 600; color: #64748B; border-bottom: 3px solid transparent; margin-bottom: -1px; cursor: pointer; }
+    .opt-tabs button.active { color: #08224A; border-bottom-color: #02B8F5; }
+    .opt-tabs span { font-size: 11.5px; background: #EEF3F9; color: #334155; padding: 1px 7px; border-radius: 9px; margin-left: 4px; }
+    .opt-add { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .opt-add .form-control { flex: 1; min-width: 180px; }
+    .opt-add .btn-save { white-space: nowrap; }
+    .opt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .opt-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 16px; background: #EEF3F9; color: #1E293B; font-size: 13.5px; }
+    .opt-chip button { width: 22px; height: 22px; border-radius: 50%; border: none; background: #fff; color: #64748B; cursor: pointer; font-size: 11px; line-height: 1; }
+    .opt-chip button:hover { background: #FEE2E2; color: #DC2626; }
+    .opt-locs { max-height: 460px; overflow-y: auto; border: 1px solid #E8EEF5; border-radius: 12px; }
+    .opt-d { padding: 10px 14px; border-top: 1px solid #F1F5F9; }
+    .opt-d:first-child { border-top: none; }
+    .opt-d-h { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #08224A; font-size: 14.5px; }
+    .opt-d-h small { font-weight: 500; color: #94A3B8; }
+    .opt-d-h .del { margin-left: auto; border: none; background: none; color: #94A3B8; cursor: pointer; font-size: 13px; }
+    .opt-d-h .del:hover { color: #DC2626; }
+    .opt-d .opt-chips { margin-top: 8px; }
+    .opt-d .opt-chip { font-size: 12.5px; padding: 3px 5px 3px 10px; }
     .pp-grid { display: grid; grid-template-columns: 240px 1fr; gap: 22px; align-items: start; }
     .pp-prev-label { font-size: 12px; font-weight: 700; color: #08224A; margin-bottom: 8px; }
     .pp-prev { display: block; border-radius: 16px; overflow: hidden; border: 1px solid #E8EEF5; background: #F4F7FB; box-shadow: 0 4px 16px rgba(15,27,45,.06); }
@@ -910,6 +930,45 @@ $heroImages = $Model->GetHeroImageList();
                     <button type="button" class="btn-save" id="ppSaveBtn" onclick="savePromo(false)"><i class="fas fa-save"></i> Save</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== ✅ টিউশনের অপশন: লোকেশন / ক্লাস / বিষয় ===== -->
+    <?php $topt = tuition_options(); ?>
+    <div class="settings-card" id="optSettings">
+        <h5><i class="fas fa-list-check"></i> টিউশনের অপশন — লোকেশন, ক্লাস ও বিষয়</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            Find Tutor আর Tuition Circular পেজের ফিল্টার আর পোস্ট লেখার ঘরে এই তালিকাগুলো দেখায়। নতুন যোগ করুন বা × দিয়ে বাদ দিন, তারপর <b>Save</b> চাপুন।
+        </p>
+        <div class="opt-tabs" role="tablist">
+            <button type="button" class="active" data-opt-tab="locations"><i class="fas fa-location-dot"></i> লোকেশন <span id="optCntLoc"></span></button>
+            <button type="button" data-opt-tab="classes"><i class="fas fa-graduation-cap"></i> ক্লাস <span id="optCntCls"></span></button>
+            <button type="button" data-opt-tab="subjects"><i class="fas fa-book"></i> বিষয় <span id="optCntSub"></span></button>
+        </div>
+
+        <div class="opt-pane" data-opt-pane="locations">
+            <div class="opt-add">
+                <select id="optDistrict" class="form-control"><option value="">— জেলা বাছাই করুন —</option></select>
+                <input type="text" id="optArea" class="form-control" maxlength="60" placeholder="এলাকার নাম (যেমন: Mirpur) — খালি রাখলে শুধু জেলা যোগ হবে" />
+                <input type="text" id="optNewDistrict" class="form-control" maxlength="60" placeholder="নতুন জেলা/শহরের নাম" hidden />
+                <button type="button" class="btn-save" id="optAddLoc"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <input type="search" id="optLocSearch" class="form-control mb-2" placeholder="জেলা বা এলাকা খুঁজুন..." />
+            <div class="opt-locs" id="optLocs"></div>
+        </div>
+        <div class="opt-pane" data-opt-pane="classes" hidden>
+            <div class="opt-add"><input type="text" id="optClassIn" class="form-control" maxlength="60" placeholder="নতুন ক্লাস (যেমন: Class 5, HSC, University)" />
+                <button type="button" class="btn-save" data-opt-add="classes"><i class="fas fa-plus"></i> Add</button></div>
+            <div class="opt-chips" id="optClasses"></div>
+        </div>
+        <div class="opt-pane" data-opt-pane="subjects" hidden>
+            <div class="opt-add"><input type="text" id="optSubjectIn" class="form-control" maxlength="60" placeholder="নতুন বিষয় (যেমন: Physics, Bangla)" />
+                <button type="button" class="btn-save" data-opt-add="subjects"><i class="fas fa-plus"></i> Add</button></div>
+            <div class="opt-chips" id="optSubjects"></div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <button type="button" class="upload-btn" id="optReset"><i class="fas fa-rotate-left"></i> এই তালিকা Default করুন</button>
+            <button type="button" class="btn-save" id="optSave"><i class="fas fa-save"></i> Save</button>
         </div>
     </div>
 
@@ -1794,6 +1853,93 @@ $heroImages = $Model->GetHeroImageList();
                 })
                 .catch(function (e) { btn.innerHTML = html; btn.disabled = false; alert('Error: ' + e.message); });
         }
+
+        // ===== টিউশনের অপশন (লোকেশন / ক্লাস / বিষয়) =====
+        (function () {
+            var OPT = { locations: <?= js((object)$topt['locations']) ?>, classes: <?= js($topt['classes']) ?>, subjects: <?= js($topt['subjects']) ?> };
+            var cur = 'locations';
+            function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+            function has(list, v) { return list.some(function (x) { return x.toLowerCase() === v.toLowerCase(); }); }
+            function counts() {
+                var n = 0; Object.keys(OPT.locations).forEach(function (d) { n += 1 + OPT.locations[d].length; });
+                document.getElementById('optCntLoc').textContent = n;
+                document.getElementById('optCntCls').textContent = OPT.classes.length;
+                document.getElementById('optCntSub').textContent = OPT.subjects.length;
+            }
+            function chips(list, kind) {
+                return list.map(function (v, i) { return '<span class="opt-chip">' + esc(v) + '<button type="button" data-opt-rm="' + kind + '" data-i="' + i + '" aria-label="Remove">✕</button></span>'; }).join('');
+            }
+            function paintList(kind) { document.getElementById(kind === 'classes' ? 'optClasses' : 'optSubjects').innerHTML = chips(OPT[kind], kind); counts(); }
+            function paintLocs() {
+                var q = document.getElementById('optLocSearch').value.trim().toLowerCase();
+                var sel = document.getElementById('optDistrict'), keep = sel.value;
+                sel.innerHTML = '<option value="">— জেলা বাছাই করুন —</option>' + Object.keys(OPT.locations).map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('') + '<option value="__new">+ নতুন জেলা / শহর</option>';
+                sel.value = keep;
+                document.getElementById('optLocs').innerHTML = Object.keys(OPT.locations).filter(function (d) {
+                    return !q || d.toLowerCase().indexOf(q) > -1 || OPT.locations[d].some(function (a) { return a.toLowerCase().indexOf(q) > -1; });
+                }).map(function (d) {
+                    var areas = OPT.locations[d];
+                    return '<div class="opt-d"><div class="opt-d-h"><i class="fas fa-location-dot" style="color:#02B8F5;"></i> ' + esc(d) + ' <small>' + areas.length + ' এলাকা</small>'
+                        + '<button type="button" class="del" data-opt-rmd="' + esc(d) + '"><i class="fas fa-trash-can"></i> জেলা বাদ দিন</button></div>'
+                        + (areas.length ? '<div class="opt-chips">' + areas.map(function (a, i) { return '<span class="opt-chip">' + esc(a) + '<button type="button" data-opt-rma="' + esc(d) + '" data-i="' + i + '" aria-label="Remove">✕</button></span>'; }).join('') + '</div>' : '')
+                        + '</div>';
+                }).join('') || '<p style="padding:14px;margin:0;color:#94A3B8;">কিছু পাওয়া যায়নি।</p>';
+                counts();
+            }
+            document.querySelectorAll('[data-opt-tab]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    cur = b.getAttribute('data-opt-tab');
+                    document.querySelectorAll('[data-opt-tab]').forEach(function (x) { x.classList.toggle('active', x === b); });
+                    document.querySelectorAll('[data-opt-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-opt-pane') !== cur; });
+                });
+            });
+            document.getElementById('optDistrict').addEventListener('change', function () { document.getElementById('optNewDistrict').hidden = this.value !== '__new'; });
+            document.getElementById('optLocSearch').addEventListener('input', paintLocs);
+            document.getElementById('optAddLoc').addEventListener('click', function () {
+                var d = document.getElementById('optDistrict').value, a = document.getElementById('optArea').value.trim();
+                if (d === '__new') d = document.getElementById('optNewDistrict').value.trim();
+                if (!d) { alert('জেলা বাছাই করুন বা নতুন জেলার নাম লিখুন।'); return; }
+                var exist = Object.keys(OPT.locations).filter(function (x) { return x.toLowerCase() === d.toLowerCase(); })[0];
+                if (!exist) { OPT.locations[d] = []; exist = d; }
+                if (a) { if (has(OPT.locations[exist], a)) { alert('এই এলাকা আগেই আছে।'); return; } OPT.locations[exist].push(a); }
+                document.getElementById('optArea').value = ''; document.getElementById('optNewDistrict').value = '';
+                document.getElementById('optDistrict').value = exist; document.getElementById('optNewDistrict').hidden = true;
+                document.getElementById('optLocSearch').value = exist; paintLocs();
+            });
+            document.querySelectorAll('[data-opt-add]').forEach(function (b) {
+                var kind = b.getAttribute('data-opt-add'), inp = document.getElementById(kind === 'classes' ? 'optClassIn' : 'optSubjectIn');
+                function add() {
+                    var v = inp.value.trim(); if (!v) return;
+                    if (has(OPT[kind], v)) { alert('এটা আগেই আছে।'); return; }
+                    OPT[kind].push(v); inp.value = ''; paintList(kind); inp.focus();
+                }
+                b.addEventListener('click', add);
+                inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+            });
+            document.getElementById('optSettings').addEventListener('click', function (e) {
+                var r = e.target.closest('[data-opt-rm]');
+                if (r) { var k = r.getAttribute('data-opt-rm'); OPT[k].splice(+r.getAttribute('data-i'), 1); paintList(k); return; }
+                var ra = e.target.closest('[data-opt-rma]');
+                if (ra) { OPT.locations[ra.getAttribute('data-opt-rma')].splice(+ra.getAttribute('data-i'), 1); paintLocs(); return; }
+                var rd = e.target.closest('[data-opt-rmd]');
+                if (rd && confirm(rd.getAttribute('data-opt-rmd') + ' জেলা আর এর সব এলাকা বাদ দেবেন?')) { delete OPT.locations[rd.getAttribute('data-opt-rmd')]; paintLocs(); }
+            });
+            async function send(reset) {
+                if (reset && !confirm('এই তালিকা আগের (ডিফল্ট) অবস্থায় ফেরত যাবে। নিশ্চিত?')) return;
+                var fd = new FormData(); fd.append('which', cur); fd.append('data', JSON.stringify(OPT[cur])); if (reset) fd.append('reset', 'true');
+                fd.append('__RequestVerificationToken', getToken());
+                var btn = document.getElementById('optSave'), html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                try {
+                    var d = await (await fetch('/Admin/SaveTuitionOptions', { method: 'POST', body: fd })).json();
+                    if (d.success) { OPT[cur] = d.data; if (cur === 'locations') paintLocs(); else paintList(cur); }
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                } catch (err) { alert('Error: ' + err.message); }
+                btn.disabled = false; btn.innerHTML = html;
+            }
+            document.getElementById('optSave').addEventListener('click', function () { send(false); });
+            document.getElementById('optReset').addEventListener('click', function () { send(true); });
+            paintLocs(); paintList('classes'); paintList('subjects');
+        })();
 
         // ===== Tuition Circular / Find Tutor banner =====
         document.querySelectorAll('input[type=file][data-banner]').forEach(function (inp) {

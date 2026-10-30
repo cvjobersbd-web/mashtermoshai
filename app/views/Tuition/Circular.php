@@ -36,13 +36,10 @@ $merge = function (array $base, array $extra): array {
     foreach ($extra as $v) if (!in_array(mb_strtolower($v), array_map('mb_strtolower', $out), true)) $out[] = $v;
     return $out;
 };
-$locOptions = $merge(['Dhanmondi', 'Mirpur', 'Uttara', 'Mohammadpur', 'Gulshan', 'Banani', 'Bashundhara', 'Badda', 'Rampura', 'Motijheel', 'Farmgate',
-    'Khilgaon', 'Jatrabari', 'Old Dhaka', 'Savar', 'Gazipur', 'Narayanganj', 'Chawkbazar', 'Agrabad', 'Nasirabad', 'Sylhet', 'Rajshahi', 'Khulna',
-    'Barishal', 'Rangpur', 'Mymensingh', 'Cumilla', 'Online'], $fv['location']);
-$classOptions = $merge(['Play / Nursery', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10',
-    'SSC', 'Class 11', 'Class 12', 'HSC', 'Admission', 'O Level', 'A Level', 'University'], $fv['class']);
-$subjectOptions = $merge(['All Subjects', 'Bangla', 'English', 'Mathematics', 'Higher Math', 'General Math', 'Science', 'Physics', 'Chemistry', 'Biology',
-    'ICT', 'Accounting', 'Finance', 'Economics', 'Business Studies', 'Religion', 'Arabic', 'Quran', 'Drawing'], $fv['subject']);
+$topt = tuition_options();
+$locOptions = [];  // লোকেশন এখন জেলা অনুযায়ী গ্রুপ করা (location_select_options)
+$classOptions = $merge($topt['classes'], $fv['class']);
+$subjectOptions = $merge($topt['subjects'], $fv['subject']);
 $mediumLabel = ['Bangla' => 'Bangla Medium', 'English' => 'English Medium', 'Both' => 'Bangla & English'];
 $typeLabel = ['Home' => 'Home Tuition', 'Online' => 'Online Tuition', 'Both' => 'Home & Online'];
 
@@ -706,7 +703,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                             <div class="tc-sel"><i class="fas <?= $ic ?> lead"></i>
                                 <select name="<?= $key ?>" id="f-<?= $key ?>" class="<?= $f[$key] === '' ? 'empty' : '' ?>">
                                     <option value=""><?= $ph ?></option>
-                                    <?php foreach ($opts as $o): ?><option value="<?= e($o) ?>"<?= strcasecmp($f[$key], $o) === 0 ? ' selected' : '' ?>><?= e($o) ?></option><?php endforeach; ?>
+                                    <?php if ($key === 'location'): ?><?= location_select_options($f['location'], $fv['location']) ?>
+                                    <?php else: foreach ($opts as $o): ?><option value="<?= e($o) ?>"<?= strcasecmp($f[$key], $o) === 0 ? ' selected' : '' ?>><?= e($o) ?></option><?php endforeach; endif; ?>
                                 </select>
                             </div>
                         </div>
@@ -1030,7 +1028,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
         </div>
     </form>
 </div>
-<datalist id="tcLocList"><?php foreach ($locOptions as $o): ?><option value="<?= e($o) ?>"><?php endforeach; ?></datalist>
+<datalist id="tcLocList"><?= location_datalist_options() ?></datalist>
 <datalist id="tcClassList"><?php foreach ($classOptions as $o): ?><option value="<?= e($o) ?>"><?php endforeach; ?></datalist>
 <datalist id="tcSubjList"><?php foreach ($subjectOptions as $o): ?><option value="<?= e($o) ?>"><?php endforeach; ?></datalist>
 <?php endif; ?>

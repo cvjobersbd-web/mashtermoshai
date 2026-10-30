@@ -135,6 +135,13 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             <div class="pf-nav-col">
                 <nav class="pf-card pf-nav" aria-label="Profile sections">
                     <?php foreach ($nav as [$k, $label, $icon]): ?>
+                        <?php if ($k === 'settings' && $isOwner && !$isTeacher):
+                            $bts = $Model->TeacherStatus; ?>
+                            <a href="?tab=profile#ab-tutor" data-ab-go="tutor" class="pf-become<?= $bts === 'Pending' ? ' pending' : '' ?>">
+                                <i class="fas fa-chalkboard-user"></i> <?= $bts === 'Pending' ? 'আবেদন যাচাই হচ্ছে' : 'Become a Tutor' ?>
+                                <span class="pf-become-tag"><?= $bts === 'Pending' ? '<i class="fas fa-hourglass-half"></i>' : ($bts === 'Rejected' ? 'Retry' : 'Apply') ?></span>
+                            </a>
+                        <?php endif; ?>
                         <a href="?tab=<?= $k ?>" data-tab="<?= $k ?>" class="<?= $tab === $k ? 'active' : '' ?>"><i class="fas <?= $icon ?>"></i> <?= e($label) ?>
                             <?php if ($k === 'saved' && $Model->SavedItems): ?><span class="pf-n" data-saved-count><?= count($saved) ?></span><?php endif; ?>
                             <?php if ($k === 'friends' && $Model->FriendCount): ?><span class="pf-n"><?= (int)$Model->FriendCount ?></span><?php endif; ?>
@@ -535,7 +542,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             <div class="pf-f"><label for="inBio">Bio <small>— নামের নিচে দেখাবে</small></label>
                 <textarea id="inBio" maxlength="160" rows="2" placeholder="যেমন: শিখছি, এগিয়ে যাচ্ছি, আরও ভালো একটা আগামির জন্য।"><?= e($intro->Bio) ?></textarea><div class="cnt"><span id="inBioN"><?= mb_strlen($intro->Bio) ?></span>/160</div></div>
             <div class="pf-f"><label for="inCity">শহর / জেলা</label><input type="text" id="inCity" maxlength="80" value="<?= e($intro->City) ?>" placeholder="যেমন: Chattogram" list="inCityList" />
-                <datalist id="inCityList"><?php foreach (['Dhaka', 'Chattogram', 'Sylhet', 'Rajshahi', 'Khulna', 'Barishal', 'Rangpur', 'Mymensingh', 'Cumilla', 'Gazipur', 'Narayanganj', 'Bogura', "Cox's Bazar"] as $c): ?><option value="<?= e($c) ?>"><?php endforeach; ?></datalist></div>
+                <datalist id="inCityList"><?= location_datalist_options() ?></datalist></div>
             <div class="pf-f"><label>Interested Subjects <small>— Enter বা কমা দিয়ে আলাদা করুন</small></label>
                 <div class="sj-box" id="sjBox"><input type="text" id="sjIn" maxlength="30" placeholder="Mathematics, Physics..." list="pmSubjList" /></div></div>
             <div class="pf-f"><label for="inQuote">প্রিয় উক্তি</label><input type="text" id="inQuote" maxlength="160" value="<?= e($intro->Quote) ?>" placeholder="Learning today for a brighter tomorrow." /></div>

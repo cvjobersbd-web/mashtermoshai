@@ -430,7 +430,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
             <div class="pm-fields" data-for="achievement">
                 <div class="pm-row"><label><span>কী অর্জন করলেন? <b>*</b></span><input type="text" id="pmAchTitle" maxlength="80" placeholder="যেমন: SSC তে GPA 5 পেয়েছি!" /></label></div>
             </div>
-            <datalist id="pmSubjList"><option value="Bangla"><option value="English"><option value="Mathematics"><option value="Higher Math"><option value="Physics"><option value="Chemistry"><option value="Biology"><option value="ICT"><option value="Accounting"><option value="Economics"></datalist>
+            <datalist id="pmSubjList"><?php foreach (tuition_options()['subjects'] as $o): ?><option value="<?= e($o) ?>"><?php endforeach; ?></datalist>
             <textarea class="pm-text" id="pmText" maxlength="5000" placeholder="আপনার মনে কী আছে, <?= e(explode(' ', trim($me->Name))[0]) ?>?"></textarea>
             <div class="pm-count" id="pmCount"></div>
             <div class="pm-fields" data-for="poll">

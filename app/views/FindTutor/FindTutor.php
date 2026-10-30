@@ -2033,7 +2033,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 <!-- ===== পড়াতে চাই (Teach Wanted) ===== -->
                 <div class="ft2-card ft2-compose">
                     <div class="ft2-compose-h">
-                        <h2><i class="fas fa-pen"></i> পড়াতে চাই (Teach Wanted) <span class="ft2-free">Free</span></h2>
+                        <h2><i class="fas fa-pen"></i> পড়াতে চাই (Teacher Wanted) <span class="ft2-free">Free</span></h2>
                         <button type="button" class="ft2-rules-btn" data-bs-toggle="modal" data-bs-target="#postRulesModal"><i class="far fa-clock"></i> পোস্ট করার নিয়ম</button>
                     </div>
                     <div class="ft2-compose-top">
@@ -2279,9 +2279,9 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 <div class="ft2-card ft2-qf">
                     <h3><i class="fas fa-filter"></i> Quick Filters</h3>
-                    <div class="ft2-fg"><label for="qfClass">Class / Level</label><select id="qfClass"><option value="">Select class</option></select></div>
-                    <div class="ft2-fg"><label for="qfSubject">Subject</label><select id="qfSubject"><option value="">Select subject</option></select></div>
-                    <div class="ft2-fg"><label for="qfLocation">Location</label><select id="qfLocation"><option value="">Select location</option></select></div>
+                    <div class="ft2-fg"><label for="qfClass">Class / Level</label><select id="qfClass"><option value="">Select class</option><?php foreach (array_merge(tuition_options()['classes'], ['Bangla Medium', 'English Medium']) as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
+                    <div class="ft2-fg"><label for="qfSubject">Subject</label><select id="qfSubject"><option value="">Select subject</option><?php foreach (tuition_options()['subjects'] as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
+                    <div class="ft2-fg"><label for="qfLocation">Location</label><select id="qfLocation"><option value="">Select location</option><?= location_select_options() ?></select></div>
                     <div class="ft2-fg"><label for="qfMode">Teaching Mode</label>
                         <select id="qfMode"><option value="">Select mode</option><option value="Online">Online</option><option value="Home">Home Visit</option></select></div>
                     <div class="ft2-fg"><label>Budget (৳)</label>
@@ -3151,13 +3151,15 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
             // ===== ফিল্টার (সার্চ + Quick Filters) =====
             function norm(s) { return String(s || '').toLowerCase(); }
             function uniq(arr) { var seen = {}, out = []; arr.forEach(function (x) { var k = norm(x); if (x && !seen[k]) { seen[k] = 1; out.push(x); } }); return out.sort(function (a, b) { return a.localeCompare(b); }); }
+            // তালিকায় নেই এমন মান (টিউটরের প্রোফাইল থেকে) শেষে যোগ হয়
             function fillSelect(id, values) {
                 var sel = document.getElementById(id); if (!sel) return;
-                values.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+                var have = {}; Array.prototype.forEach.call(sel.options, function (o) { have[norm(o.value)] = 1; });
+                values.forEach(function (v) { if (!v || have[norm(v)]) return; have[norm(v)] = 1; var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
             }
             fillSelect('qfClass', uniq([].concat.apply([], allTutors.map(function (t) { return (t.levels || []).concat(t.mediums || []); }))));
             fillSelect('qfSubject', uniq([].concat.apply([], allTutors.map(function (t) { return t.subjects || []; }))).filter(function (x) { return x !== 'General'; }));
-            fillSelect('qfLocation', uniq(allTutors.map(function (t) { return t.city; })));
+
 
             var QF = {};
             function readQF() {
@@ -3175,7 +3177,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 }
                 if (QF.cls && (t.levels || []).concat(t.mediums || []).map(norm).indexOf(norm(QF.cls)) === -1) return false;
                 if (QF.subject && (t.subjects || []).map(norm).indexOf(norm(QF.subject)) === -1) return false;
-                if (QF.location && norm(t.city) !== norm(QF.location)) return false;
+                if (QF.location && norm(t.location).indexOf(norm(QF.location)) === -1) return false;
                 if (QF.mode && t.teachingMode !== QF.mode && t.teachingMode !== 'Both') return false;
                 var lo = t.monthlyFee || 0, hi = t.feeMax || t.monthlyFee || 0;
                 if ((QF.min || QF.max) && !lo) return false;

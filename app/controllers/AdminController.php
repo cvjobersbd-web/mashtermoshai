@@ -658,6 +658,46 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => "$page ব্যানার সেভ হয়েছে।"] + $vals);
     }
 
+    /** POST /Admin/SaveTuitionOptions (which = locations|classes|subjects, data = JSON, reset) — টিউশনের লোকেশন / ক্লাস / বিষয়ের তালিকা */
+    public function SaveTuitionOptions_POST(): void
+    {
+        $this->requireAdminJson();
+        $which = (string)input_str('which', '');
+        if (!in_array($which, ['locations', 'classes', 'subjects'], true)) json_response(['success' => false, 'message' => 'ভুল অনুরোধ।']);
+        $key = 'opt_' . $which;
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent([$key => '']);
+            $def = ['locations' => default_bd_locations(), 'classes' => default_tuition_classes(), 'subjects' => default_tuition_subjects()][$which];
+            json_response(['success' => true, 'message' => 'ডিফল্ট তালিকায় ফেরত নেওয়া হয়েছে।', 'data' => $def]);
+        }
+        $data = json_decode((string)input_str('data', ''), true);
+        if (!is_array($data)) json_response(['success' => false, 'message' => 'তালিকা ঠিক নেই।']);
+        $clean = function ($v) { return mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$v))), 0, 60); };
+        $uniq = function (array $list) use ($clean) {
+            $out = []; $seen = [];
+            foreach ($list as $v) { $v = $clean($v); $k = mb_strtolower($v); if ($v !== '' && !isset($seen[$k])) { $seen[$k] = 1; $out[] = $v; } }
+            return $out;
+        };
+        if ($which === 'locations') {
+            $out = [];
+            foreach ($data as $district => $areas) {
+                $d = $clean($district);
+                if ($d === '' || isset($out[$d])) continue;
+                $out[$d] = $uniq(is_array($areas) ? $areas : []);
+                if (count($out[$d]) > 200) $out[$d] = array_slice($out[$d], 0, 200);
+            }
+            if (!$out) json_response(['success' => false, 'message' => 'অন্তত একটা জেলা রাখুন।']);
+            if (count($out) > 200) json_response(['success' => false, 'message' => 'অনেক বেশি জেলা।']);
+        } else {
+            $out = $uniq($data);
+            if (!$out) json_response(['success' => false, 'message' => 'অন্তত একটা রাখুন।']);
+            if (count($out) > 300) json_response(['success' => false, 'message' => 'অনেক বেশি আইটেম।']);
+        }
+        $err = null;
+        if (!$this->db->SaveSiteContent([$key => json_encode($out, JSON_UNESCAPED_UNICODE)], $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।', 'data' => $out]);
+    }
+
     public function UploadLogo_POST(): void
     {
         $prefix = input_str('target', 'navbar') === 'footer' ? 'footer' : 'navbar';

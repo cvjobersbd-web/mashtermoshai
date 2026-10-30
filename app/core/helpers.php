@@ -812,3 +812,114 @@ function feed_comment_buttons(Obj $c, int $postOwnerId): string
     return $h;
 }
 
+
+// ============================================================
+// টিউশনের অপশন: লোকেশন (জেলা → এলাকা), ক্লাস, বিষয়
+// অ্যাডমিন সেটিংস থেকে যোগ / বাদ দেওয়া যায় (SiteContents এ JSON হিসেবে থাকে)
+// ============================================================
+function default_bd_locations(): array
+{
+    $divisions = [
+        'Dhaka' => ['Dhaka', 'Gazipur', 'Narayanganj', 'Narsingdi', 'Manikganj', 'Munshiganj', 'Tangail', 'Kishoreganj', 'Faridpur', 'Madaripur', 'Shariatpur', 'Rajbari', 'Gopalganj'],
+        'Chattogram' => ['Chattogram', "Cox's Bazar", 'Cumilla', 'Feni', 'Noakhali', 'Lakshmipur', 'Chandpur', 'Brahmanbaria', 'Rangamati', 'Khagrachhari', 'Bandarban'],
+        'Rajshahi' => ['Rajshahi', 'Bogura', 'Pabna', 'Sirajganj', 'Natore', 'Naogaon', 'Chapainawabganj', 'Joypurhat'],
+        'Khulna' => ['Khulna', 'Jashore', 'Satkhira', 'Bagerhat', 'Kushtia', 'Jhenaidah', 'Magura', 'Narail', 'Chuadanga', 'Meherpur'],
+        'Barishal' => ['Barishal', 'Patuakhali', 'Bhola', 'Pirojpur', 'Barguna', 'Jhalokathi'],
+        'Sylhet' => ['Sylhet', 'Moulvibazar', 'Habiganj', 'Sunamganj'],
+        'Rangpur' => ['Rangpur', 'Dinajpur', 'Kurigram', 'Gaibandha', 'Nilphamari', 'Lalmonirhat', 'Thakurgaon', 'Panchagarh'],
+        'Mymensingh' => ['Mymensingh', 'Jamalpur', 'Sherpur', 'Netrokona'],
+    ];
+    $areas = [
+        'Dhaka' => ['Dhanmondi', 'Mirpur', 'Uttara', 'Mohammadpur', 'Gulshan', 'Banani', 'Bashundhara', 'Badda', 'Rampura', 'Motijheel', 'Farmgate', 'Tejgaon',
+            'Khilgaon', 'Jatrabari', 'Old Dhaka', 'Lalbagh', 'Wari', 'Shyamoli', 'Malibagh', 'Mohakhali', 'Banasree', 'Khilkhet', 'Savar', 'Keraniganj'],
+        'Chattogram' => ['Chawkbazar', 'Agrabad', 'Nasirabad', 'Khulshi', 'GEC', 'Panchlaish', 'Halishahar', 'Bahaddarhat', 'Muradpur', 'Pahartali', 'Kotwali',
+            'Patenga', 'Chandgaon', 'Hathazari', 'Oxygen', 'Lalkhan Bazar'],
+        'Gazipur' => ['Tongi', 'Joydebpur', 'Board Bazar', 'Chandra', 'Kaliakair'],
+        'Narayanganj' => ['Chashara', 'Fatullah', 'Siddhirganj', 'Rupganj'],
+        'Cumilla' => ['Kandirpar', 'Tomsom Bridge', 'Kotbari', 'Laksam'],
+        "Cox's Bazar" => ['Kolatoli', 'Teknaf', 'Ukhia'],
+        'Sylhet' => ['Zindabazar', 'Amberkhana', 'Shibganj', 'Subidbazar', 'Tilagor', 'Mirabazar'],
+        'Rajshahi' => ['Shaheb Bazar', 'Kazla', 'Binodpur', 'Laxmipur', 'Talaimari'],
+        'Khulna' => ['Sonadanga', 'Boyra', 'Khalishpur', 'Daulatpur', 'Gollamari'],
+        'Barishal' => ['Nathullabad', 'Band Road', 'Rupatali', 'Chowmatha'],
+        'Rangpur' => ['Jahaj Company More', 'Modern More', 'Lalbag (Rangpur)'],
+        'Mymensingh' => ['Ganginar Par', 'Charpara', 'Kachari'],
+        'Bogura' => ['Satmatha', 'Sherpur (Bogura)'],
+    ];
+    $out = ['Online' => []];
+    foreach ($divisions as $districts) foreach ($districts as $d) $out[$d] = $areas[$d] ?? [];
+    return $out;
+}
+
+function default_tuition_classes(): array
+{
+    return ['Play / Nursery', 'KG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'SSC',
+        'Class 11', 'Class 12', 'HSC', 'O Level', 'A Level', 'University Admission', 'Medical Admission', 'Engineering Admission', 'Diploma',
+        'University (Honours)', 'Masters', 'IELTS', 'Job Preparation'];
+}
+
+function default_tuition_subjects(): array
+{
+    return ['All Subjects', 'Bangla', 'English', 'Mathematics', 'General Math', 'Higher Math', 'Science', 'Physics', 'Chemistry', 'Biology', 'ICT',
+        'Bangladesh & Global Studies', 'Religion', 'Islam Studies', 'Hindu Religion', 'Accounting', 'Finance & Banking', 'Business Studies', 'Economics',
+        'Agriculture', 'Geography', 'History', 'Civics', 'Statistics', 'Arabic', 'Quran', 'Computer Science', 'Programming', 'Spoken English', 'IELTS',
+        'Drawing', 'Music'];
+}
+
+/** @return array{locations: array<string,string[]>, classes: string[], subjects: string[]} */
+function tuition_options(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $raw = db()->GetSiteContent(['opt_locations' => '', 'opt_classes' => '', 'opt_subjects' => '']);
+    $dec = function ($v) { $j = json_decode((string)$v, true); return is_array($j) ? $j : null; };
+    $loc = $dec($raw['opt_locations']);
+    $c = [
+        'locations' => is_array($loc) && $loc ? $loc : default_bd_locations(),
+        'classes' => $dec($raw['opt_classes']) ?: default_tuition_classes(),
+        'subjects' => $dec($raw['opt_subjects']) ?: default_tuition_subjects(),
+    ];
+    return $c;
+}
+
+/**
+ * লোকেশনের <select> অপশন (জেলা অনুযায়ী গ্রুপ করা)। $extra = তালিকায় নেই এমন মান (পোস্ট/টিউটরের)।
+ */
+function location_select_options(string $selected = '', array $extra = []): string
+{
+    $html = '';
+    $known = [];
+    foreach (tuition_options()['locations'] as $district => $areas) {
+        $known[mb_strtolower($district)] = true;
+        if (!$areas) {
+            $html .= '<option value="' . e($district) . '"' . (strcasecmp($selected, $district) === 0 ? ' selected' : '') . '>' . e($district) . '</option>';
+            continue;
+        }
+        $html .= '<optgroup label="' . e($district) . '">';
+        $html .= '<option value="' . e($district) . '"' . (strcasecmp($selected, $district) === 0 ? ' selected' : '') . '>' . e($district) . ' (সব এলাকা)</option>';
+        foreach ($areas as $a) {
+            $known[mb_strtolower($a)] = true;
+            $html .= '<option value="' . e($a) . '"' . (strcasecmp($selected, $a) === 0 ? ' selected' : '') . '>' . e($a) . '</option>';
+        }
+        $html .= '</optgroup>';
+    }
+    $other = array_values(array_filter(array_unique($extra), fn($x) => $x !== '' && !isset($known[mb_strtolower($x)])));
+    if ($selected !== '' && !isset($known[mb_strtolower($selected)]) && !in_array($selected, $other, true)) $other[] = $selected;
+    if ($other) {
+        $html .= '<optgroup label="অন্যান্য">';
+        foreach ($other as $o) $html .= '<option value="' . e($o) . '"' . (strcasecmp($selected, $o) === 0 ? ' selected' : '') . '>' . e($o) . '</option>';
+        $html .= '</optgroup>';
+    }
+    return $html;
+}
+
+/** লোকেশনের datalist অপশন ("এলাকা, জেলা") — লেখার ঘরে সাজেশন */
+function location_datalist_options(): string
+{
+    $html = '';
+    foreach (tuition_options()['locations'] as $district => $areas) {
+        $html .= '<option value="' . e($district) . '">';
+        foreach ($areas as $a) $html .= '<option value="' . e($a . ', ' . $district) . '">';
+    }
+    return $html;
+}
