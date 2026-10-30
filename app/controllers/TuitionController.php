@@ -85,6 +85,12 @@ class TuitionController extends Controller
         $this->fail('পোস্ট করা যায়নি। আবার চেষ্টা করুন।');
     }
 
+    /** POST /Tuition/EditCircularComment (commentId, content) */
+    public function EditCircularComment_POST(): void { feed_comment_action('circular', 'edit'); }
+
+    /** POST /Tuition/DeleteCircularComment (commentId) */
+    public function DeleteCircularComment_POST(): void { feed_comment_action('circular', 'delete'); }
+
     /** POST /Tuition/ViewCircular (ids = কমা দিয়ে) — একই সেশনে একবারই গোনা হয় */
     public function ViewCircular_POST(): void
     {

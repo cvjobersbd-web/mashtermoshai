@@ -148,4 +148,54 @@ trait CircularData
                 ['u' => $userId, 't' => date('Y-m-d H:i:s', time() - $minutes * 60)]);
         } catch (Throwable $e) { return 0; }
     }
+
+    // ============================================================
+    // কমেন্ট এডিট / ডিলিট (Tuition Circular আর Find Tutor — দুটোতেই)
+    // ============================================================
+    private function feedCommentTables(string $kind): array
+    {
+        return $kind === 'teach'
+            ? ['TeachWantedComments', 'TeachWantedCommentLikes', 'TeachWantedPosts']
+            : ['TuitionCircularComments', 'TuitionCircularCommentLikes', 'TuitionCircularPosts'];
+    }
+
+    /** কমেন্ট + পোস্টের মালিক */
+    public function GetFeedComment(string $kind, int $id): ?Obj
+    {
+        [$ct, , $pt] = $this->feedCommentTables($kind);
+        try {
+            $r = $this->one("SELECT c.`Id`, c.`PostId`, c.`UserId`, c.`Content`, c.`ParentId`, p.`UserId` AS PostOwnerId
+                FROM `$ct` c LEFT JOIN `$pt` p ON p.`Id` = c.`PostId` WHERE c.`Id` = :id", ['id' => $id]);
+            if (!$r) return null;
+            foreach (['Id', 'PostId', 'UserId', 'PostOwnerId'] as $k) $r->$k = (int)$r->$k;
+            return $r;
+        } catch (Throwable $e) { return null; }
+    }
+
+    public function UpdateFeedComment(string $kind, int $id, string $content): bool
+    {
+        [$ct] = $this->feedCommentTables($kind);
+        try { $this->exec("UPDATE `$ct` SET `Content` = :c WHERE `Id` = :id", ['c' => $content, 'id' => $id]); return true; }
+        catch (Throwable $e) { return false; }
+    }
+
+    /** কমেন্ট আর এর নিচের সব রিপ্লাই মুছে ফেলে। @return int[] মুছে যাওয়া কমেন্টের Id */
+    public function DeleteFeedCommentTree(string $kind, int $id): array
+    {
+        [$ct, $lt] = $this->feedCommentTables($kind);
+        try {
+            $c = $this->one("SELECT `PostId` FROM `$ct` WHERE `Id` = :id", ['id' => $id]);
+            if (!$c) return [];
+            $children = [];
+            foreach ($this->all("SELECT `Id`, `ParentId` FROM `$ct` WHERE `PostId` = :p", ['p' => (int)$c->PostId]) as $r) {
+                if ($r->ParentId !== null) $children[(int)$r->ParentId][] = (int)$r->Id;
+            }
+            $ids = [$id]; $queue = [$id];
+            while ($queue) { $x = array_shift($queue); foreach ($children[$x] ?? [] as $ch) if (!in_array($ch, $ids, true)) { $ids[] = $ch; $queue[] = $ch; } }
+            $in = implode(',', array_map('intval', $ids));
+            $this->exec("DELETE FROM `$lt` WHERE `CommentId` IN ($in)");
+            $this->exec("DELETE FROM `$ct` WHERE `Id` IN ($in)");
+            return $ids;
+        } catch (Throwable $e) { error_log('[DeleteFeedCommentTree] ' . $e->getMessage()); return []; }
+    }
 }

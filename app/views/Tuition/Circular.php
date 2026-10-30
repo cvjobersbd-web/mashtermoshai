@@ -848,7 +848,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                             <div class="fb-comments-area" id="circular-comments-<?= $pid ?>">
                                 <div class="fb-comment-list" id="circular-comment-list-<?= $pid ?>">
                                     <?php foreach ($post->Comments ?? [] as $comment): ?>
-                                        <div class="fbc" id="cfbc-<?= e($comment->Id) ?>" data-id="<?= e($comment->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($comment->UserFullName) ?>">
+                                        <div class="fbc" id="cfbc-<?= e($comment->Id) ?>" data-id="<?= e($comment->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($comment->UserFullName) ?>" data-raw="<?= e($comment->Content) ?>">
                                             <div class="fbc-avatar"><?php if (!is_blank($comment->UserProfileImage)): ?><img src="<?= e($comment->UserProfileImage) ?>" alt="user" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$comment->UserFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
                                             <div class="fbc-main">
                                                 <div class="fbc-bubble <?= $comment->LikeCount > 0 ? 'has-likes' : '' ?>">
@@ -859,7 +859,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                                 <div class="fbc-meta">
                                                     <?php if ($isLoggedIn): ?>
                                                         <button type="button" class="fbc-like-btn <?= $comment->IsLikedByMe ? 'liked' : '' ?>" onclick="cfbcToggleLike(this, <?= e($comment->Id) ?>)">Like</button>
-                                                        <button type="button" onclick="cfbcOpenReply(<?= $pid ?>, <?= e($comment->Id) ?>, <?= e($comment->Id) ?>)">Reply</button>
+                                                        <button type="button" onclick="cfbcOpenReply(<?= $pid ?>, <?= e($comment->Id) ?>, <?= e($comment->Id) ?>)">Reply</button><?= feed_comment_buttons($comment, (int)$post->UserId) ?>
                                                     <?php endif; ?>
                                                     <span class="fbc-time" data-utc="<?= e($CommentIso($comment->CreatedAt)) ?>"><?= e(fmt_date($comment->CreatedAt, 'd M')) ?></span>
                                                 </div>
@@ -869,7 +869,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                                     <?php endif; ?>
                                                     <div class="fbc-replies" id="cfbc-replies-<?= e($comment->Id) ?>">
                                                         <?php foreach ($comment->Replies ?? [] as $reply): ?>
-                                                            <div class="fbc is-reply" id="cfbc-<?= e($reply->Id) ?>" data-id="<?= e($reply->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($reply->UserFullName) ?>">
+                                                            <div class="fbc is-reply" id="cfbc-<?= e($reply->Id) ?>" data-id="<?= e($reply->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($reply->UserFullName) ?>" data-raw="<?= e($reply->Content) ?>">
                                                                 <div class="fbc-avatar"><?php if (!is_blank($reply->UserProfileImage)): ?><img src="<?= e($reply->UserProfileImage) ?>" alt="user" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$reply->UserFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
                                                                 <div class="fbc-main">
                                                                     <div class="fbc-bubble <?= $reply->LikeCount > 0 ? 'has-likes' : '' ?>">
@@ -880,7 +880,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                                                     <div class="fbc-meta">
                                                                         <?php if ($isLoggedIn): ?>
                                                                             <button type="button" class="fbc-like-btn <?= $reply->IsLikedByMe ? 'liked' : '' ?>" onclick="cfbcToggleLike(this, <?= e($reply->Id) ?>)">Like</button>
-                                                                            <button type="button" onclick="cfbcOpenReply(<?= $pid ?>, <?= e($comment->Id) ?>, <?= e($reply->Id) ?>)">Reply</button>
+                                                                            <button type="button" onclick="cfbcOpenReply(<?= $pid ?>, <?= e($comment->Id) ?>, <?= e($reply->Id) ?>)">Reply</button><?= feed_comment_buttons($reply, (int)$post->UserId) ?>
                                                                         <?php endif; ?>
                                                                         <span class="fbc-time" data-utc="<?= e($CommentIso($reply->CreatedAt)) ?>"><?= e(fmt_date($reply->CreatedAt, 'd M')) ?></span>
                                                                     </div>
@@ -1086,7 +1086,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
             var liked = c.isLiked ? ' liked' : '';
             var zero = (c.likeCount > 0) ? '' : ' zero';
             var h = ''
-                + '<div class="fbc' + (isReply ? ' is-reply' : '') + '" id="cfbc-' + c.id + '" data-id="' + c.id + '" data-root="' + rootId + '" data-name="' + cfbcEsc(c.userFullName) + '">'
+                + '<div class="fbc' + (isReply ? ' is-reply' : '') + '" id="cfbc-' + c.id + '" data-id="' + c.id + '" data-root="' + rootId + '" data-name="' + cfbcEsc(c.userFullName) + '" data-raw="' + cfbcEsc(c.content) + '">'
                 + '  <div class="fbc-avatar">' + cfbcAvatarHtml(c.userProfileImage, c.userFullName) + '</div>'
                 + '  <div class="fbc-main">'
                 + '    <div class="fbc-bubble' + (c.likeCount > 0 ? ' has-likes' : '') + '">'
@@ -1097,6 +1097,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 + '    <div class="fbc-meta">'
                 + '      <button type="button" class="fbc-like-btn' + liked + '" onclick="cfbcToggleLike(this, ' + c.id + ')">Like</button>'
                 + '      <button type="button" onclick="cfbcOpenReply(' + postId + ', ' + rootId + ', ' + c.id + ')">Reply</button>'
+                + '      <button type="button" data-cm-edit>Edit</button><button type="button" data-cm-del class="fbc-del">Delete</button>'
                 + '      <span class="fbc-time" data-utc="' + cfbcEsc(c.createdAtUtc) + '">Just now</span>'
                 + '    </div>';
             if (!isReply) { h += '    <div class="fbc-replies-wrap"><div class="fbc-replies" id="cfbc-replies-' + c.id + '"></div></div>'; }
@@ -1427,4 +1428,5 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
             });
         })();
     </script>
+<?php partial('Shared/_FeedCommentEdit', ['prefix' => 'cfbc-', 'editUrl' => '/Tuition/EditCircularComment', 'delUrl' => '/Tuition/DeleteCircularComment', 'countPrefix' => 'comment-count-', 'countSuffix' => '', 'postPrefix' => 'circular-post-']); ?>
 <?php section_end(); ?>

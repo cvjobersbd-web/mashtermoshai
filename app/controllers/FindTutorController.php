@@ -211,6 +211,12 @@ class FindTutorController extends Controller
         if ($url && str_starts_with($url, '/uploads/teach-posts/')) delete_upload('/uploads/teach-posts/' . basename($url));
     }
 
+    /** POST /FindTutor/EditTeachComment (commentId, content) */
+    public function EditTeachComment_POST(): void { feed_comment_action('teach', 'edit'); }
+
+    /** POST /FindTutor/DeleteTeachComment (commentId) */
+    public function DeleteTeachComment_POST(): void { feed_comment_action('teach', 'delete'); }
+
     /** POST /FindTutor/AddTeachComment */
     public function AddTeachComment_POST(): void
     {

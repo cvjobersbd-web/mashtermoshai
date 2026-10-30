@@ -2172,7 +2172,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                             <div class="fb-comments-area" id="comments-<?= e($post->Id) ?>">
                                 <div class="fb-comment-list" id="comment-list-<?= e($post->Id) ?>">
                                     <?php foreach (($post->Comments ?? []) as $comment): ?>
-                                        <div class="fbc" id="fbc-<?= e($comment->Id) ?>" data-id="<?= e($comment->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($comment->UserFullName) ?>">
+                                        <div class="fbc" id="fbc-<?= e($comment->Id) ?>" data-id="<?= e($comment->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($comment->UserFullName) ?>" data-raw="<?= e($comment->Content) ?>">
                                             <div class="fbc-avatar">
                                                 <?php if (!is_blank($comment->UserProfileImage)): ?>
                                                     <img src="<?= e($comment->UserProfileImage) ?>" alt="user" />
@@ -2189,7 +2189,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                                 <div class="fbc-meta">
                                                     <?php if ($isLoggedIn): ?>
                                                         <button type="button" class="fbc-like-btn <?= $comment->IsLikedByMe ? 'liked' : '' ?>" onclick="fbcToggleLike(this, <?= (int)$comment->Id ?>)">Like</button>
-                                                        <button type="button" onclick="fbcOpenReply(<?= (int)$post->Id ?>, <?= (int)$comment->Id ?>, <?= (int)$comment->Id ?>)">Reply</button>
+                                                        <button type="button" onclick="fbcOpenReply(<?= (int)$post->Id ?>, <?= (int)$comment->Id ?>, <?= (int)$comment->Id ?>)">Reply</button><?= feed_comment_buttons($comment, (int)$post->UserId) ?>
                                                     <?php else: ?>
                                                         <button type="button" onclick="alert('লাইক করতে লগইন করুন!')">Like</button>
                                                         <button type="button" onclick="alert('রিপ্লাই করতে লগইন করুন!')">Reply</button>
@@ -2206,7 +2206,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                                     <?php endif; ?>
                                                     <div class="fbc-replies" id="fbc-replies-<?= e($comment->Id) ?>">
                                                         <?php foreach (($comment->Replies ?? []) as $reply): ?>
-                                                            <div class="fbc is-reply" id="fbc-<?= e($reply->Id) ?>" data-id="<?= e($reply->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($reply->UserFullName) ?>">
+                                                            <div class="fbc is-reply" id="fbc-<?= e($reply->Id) ?>" data-id="<?= e($reply->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($reply->UserFullName) ?>" data-raw="<?= e($reply->Content) ?>">
                                                                 <div class="fbc-avatar">
                                                                     <?php if (!is_blank($reply->UserProfileImage)): ?>
                                                                         <img src="<?= e($reply->UserProfileImage) ?>" alt="user" />
@@ -2223,7 +2223,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                                                     <div class="fbc-meta">
                                                                         <?php if ($isLoggedIn): ?>
                                                                             <button type="button" class="fbc-like-btn <?= $reply->IsLikedByMe ? 'liked' : '' ?>" onclick="fbcToggleLike(this, <?= (int)$reply->Id ?>)">Like</button>
-                                                                            <button type="button" onclick="fbcOpenReply(<?= (int)$post->Id ?>, <?= (int)$comment->Id ?>, <?= (int)$reply->Id ?>)">Reply</button>
+                                                                            <button type="button" onclick="fbcOpenReply(<?= (int)$post->Id ?>, <?= (int)$comment->Id ?>, <?= (int)$reply->Id ?>)">Reply</button><?= feed_comment_buttons($reply, (int)$post->UserId) ?>
                                                                         <?php else: ?>
                                                                             <button type="button" onclick="alert('লাইক করতে লগইন করুন!')">Like</button>
                                                                             <button type="button" onclick="alert('রিপ্লাই করতে লগইন করুন!')">Reply</button>
@@ -2814,7 +2814,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
             var liked = c.isLiked ? ' liked' : '';
             var zero = (c.likeCount > 0) ? '' : ' zero';
             var h = ''
-                + '<div class="fbc' + (isReply ? ' is-reply' : '') + '" id="fbc-' + c.id + '" data-id="' + c.id + '" data-root="' + rootId + '" data-name="' + fbcEsc(c.userFullName) + '">'
+                + '<div class="fbc' + (isReply ? ' is-reply' : '') + '" id="fbc-' + c.id + '" data-id="' + c.id + '" data-root="' + rootId + '" data-name="' + fbcEsc(c.userFullName) + '" data-raw="' + fbcEsc(c.content) + '">'
                 + '  <div class="fbc-avatar">' + fbcAvatarHtml(c.userProfileImage, c.userFullName) + '</div>'
                 + '  <div class="fbc-main">'
                 + '    <div class="fbc-bubble' + (c.likeCount > 0 ? ' has-likes' : '') + '">'
@@ -2825,6 +2825,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 + '    <div class="fbc-meta">'
                 + '      <button type="button" class="fbc-like-btn' + liked + '" onclick="fbcToggleLike(this, ' + c.id + ')">Like</button>'
                 + '      <button type="button" onclick="fbcOpenReply(' + postId + ', ' + rootId + ', ' + c.id + ')">Reply</button>'
+                + '      <button type="button" data-cm-edit>Edit</button><button type="button" data-cm-del class="fbc-del">Delete</button>'
                 + '      <span class="fbc-time" data-utc="' + fbcEsc(c.createdAtUtc) + '">Just now</span>'
                 + '    </div>';
             if (!isReply) {
@@ -3846,4 +3847,5 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
             });
         })();
     </script>
+<?php partial('Shared/_FeedCommentEdit', ['prefix' => 'fbc-', 'editUrl' => '/FindTutor/EditTeachComment', 'delUrl' => '/FindTutor/DeleteTeachComment', 'countPrefix' => 'comment-count-', 'countSuffix' => ' Comments', 'postPrefix' => 'post-']); ?>
 <?php section_end(); ?>

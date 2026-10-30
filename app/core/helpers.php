@@ -776,3 +776,39 @@ function suspension_info(Obj $s): array
     ];
 }
 
+/**
+ * Tuition Circular / Find Tutor কমেন্ট এডিট-ডিলিট (POST: commentId, content)।
+ * এডিট: শুধু যে লিখেছে। ডিলিট: যে লিখেছে, পোস্টের মালিক, অথবা অ্যাডমিন।
+ */
+function feed_comment_action(string $kind, string $action): void
+{
+    $me = current_user_id();
+    if ($me === null) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+    $c = db()->GetFeedComment($kind, (int)(input_int('commentId', 0) ?? 0));
+    if (!$c) json_response(['success' => false, 'message' => 'কমেন্টটি পাওয়া যায়নি — হয়তো আগেই মুছে গেছে।']);
+    $isAdmin = current_role() === 'Admin';
+    if ($action === 'edit') {
+        if ($c->UserId !== $me) json_response(['success' => false, 'message' => 'শুধু নিজের কমেন্ট এডিট করা যায়।']);
+        $content = trim(str_replace("\r", '', (string)input_str('content', '')));
+        if ($content === '' || preg_replace('/^@\[[^\]]+\]\s*/u', '', $content) === '') json_response(['success' => false, 'message' => 'কমেন্ট খালি রাখা যাবে না।']);
+        if (mb_strlen($content) > 2000) json_response(['success' => false, 'message' => 'কমেন্ট সর্বোচ্চ ২০০০ অক্ষর।']);
+        if (!db()->UpdateFeedComment($kind, $c->Id, $content)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি।']);
+        json_response(['success' => true, 'content' => $content, 'message' => 'কমেন্ট আপডেট হয়েছে।']);
+    }
+    if ($c->UserId !== $me && $c->PostOwnerId !== $me && !$isAdmin) json_response(['success' => false, 'message' => 'এই কমেন্ট মোছার অনুমতি নেই।']);
+    $ids = db()->DeleteFeedCommentTree($kind, $c->Id);
+    if (!$ids) json_response(['success' => false, 'message' => 'মোছা যায়নি। আবার চেষ্টা করুন।']);
+    json_response(['success' => true, 'ids' => $ids, 'message' => 'কমেন্ট মুছে ফেলা হয়েছে।']);
+}
+
+/** কমেন্টের নিচে Edit / Delete বাটন (যার যেটা অনুমতি আছে) */
+function feed_comment_buttons(Obj $c, int $postOwnerId): string
+{
+    $me = current_user_id();
+    if ($me === null) return '';
+    $h = '';
+    if ((int)$c->UserId === $me) $h .= '<button type="button" data-cm-edit>Edit</button>';
+    if ((int)$c->UserId === $me || $postOwnerId === $me || current_role() === 'Admin') $h .= '<button type="button" data-cm-del class="fbc-del">Delete</button>';
+    return $h;
+}
+
