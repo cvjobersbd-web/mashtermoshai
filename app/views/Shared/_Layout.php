@@ -734,39 +734,17 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     }
             }
 
-            /* ===== ✅ Logo Container Box (Fixed) ===== */
-            .brand-logo-box {
-                width: <?= e($safeLogoSize) ?> px;
-                height: <?= e($safeLogoSize) ?> px;
-                min-width: <?= e($safeLogoSize) ?> px;
-                min-height: <?= e($safeLogoSize) ?> px;
-                max-width: <?= e($safeLogoSize) ?> px;
-                max-height: <?= e($safeLogoSize) ?> px;
-                border-radius: <?= e($logoRadius) ?>;
-                overflow: hidden;
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: #fff;
-                border: 1px solid rgba(0,0,0,0.05);
-                transition: transform 0.2s ease;
-                padding: 2px;
-                box-sizing: border-box;
+            /* ===== ✅ Logo: সাদা বক্স / গোল বর্ডার ছাড়া, লোগোর নিজের আকারে ===== */
+            .brand-logo-box, .footer-brand-logo-box {
+                display: inline-flex; align-items: center; flex-shrink: 0;
+                background: none; border: none; padding: 0;
             }
-
-                .brand-logo-box:hover {
-                    transform: scale(1.04);
-                }
-
-                .brand-logo-box img {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain;
-                }
+            .brand-logo-box img, .footer-brand-logo-box img {
+                display: block; height: <?= (int)max(40, $safeLogoSize + 4) ?>px; width: auto; max-width: 150px;
+                object-fit: contain; border-radius: 10px; transition: transform 0.2s ease;
+            }
+            .brand-logo-box:hover img { transform: scale(1.04); }
+            .footer-brand-logo-box img { height: <?= (int)max(44, $safeLogoSize + 8) ?>px; max-width: 170px; }
 
             .brand-site-name {
                 color: var(--nav-text);
@@ -777,35 +755,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 text-overflow: ellipsis;
                 max-width: 220px;
             }
-
-            /* ফুটারের জন্যও একই বক্স */
-            .footer-brand-logo-box {
-                width: <?= e($safeLogoSize) ?> px;
-                height: <?= e($safeLogoSize) ?> px;
-                min-width: <?= e($safeLogoSize) ?> px;
-                min-height: <?= e($safeLogoSize) ?> px;
-                max-width: <?= e($safeLogoSize) ?> px;
-                max-height: <?= e($safeLogoSize) ?> px;
-                border-radius: <?= e($logoRadius) ?>;
-                overflow: hidden;
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: #fff;
-                border: 1px solid rgba(0,0,0,0.05);
-                padding: 2px;
-                box-sizing: border-box;
-            }
-
-                .footer-brand-logo-box img {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain;
-                }
 
             @media (max-width: 768px) {
                 .brand-site-name {
@@ -861,8 +810,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 padding: 16px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.1);
             }
             .m-brand { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: #fff; }
-            .m-brand-logo { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: #fff; flex-shrink: 0; display: flex; }
-            .m-brand-logo img { width: 100%; height: 100%; object-fit: contain; }
+            .m-brand-logo { flex-shrink: 0; display: flex; align-items: center; }
+            .m-brand-logo img { height: 40px; width: auto; max-width: 110px; object-fit: contain; border-radius: 8px; }
             .m-brand-name { font-family: var(--font-heading); font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .m-close {
                 width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0;
@@ -980,12 +929,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <div class="flex-shrink-0">
                     <a href="/" class="flex items-center gap-2.5">
                         <!-- Logo Box -->
-                        <div class="brand-logo-box"
-                             style="width:<?= e($safeLogoSize) ?>px !important; height:<?= e($safeLogoSize) ?>px !important; min-width:<?= e($safeLogoSize) ?>px !important; max-width:<?= e($safeLogoSize) ?>px !important; min-height:<?= e($safeLogoSize) ?>px !important; max-height:<?= e($safeLogoSize) ?>px !important; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <img src="<?= e($navbarLogo) ?>"
-                                 alt="<?= e($safeSiteName) ?> logo"
-                                 style="width:100% !important; height:100% !important; max-width:100% !important; max-height:100% !important; object-fit:contain !important; display:block;" />
-                        </div>
+                        <span class="brand-logo-box"><img src="<?= e($navbarLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
 
                         <span class="brand-site-name hidden sm:inline font-serif" style="font-size:16px;">
                             <?= e($safeSiteName) ?>
@@ -1252,12 +1196,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                     <div class="flex items-start gap-2.5 text-center sm:text-left">
                         <!-- ✅ Footer Logo (Dynamic) -->
-                        <div class="footer-brand-logo-box"
-                             style="width:<?= e($safeLogoSize) ?>px !important; height:<?= e($safeLogoSize) ?>px !important; min-width:<?= e($safeLogoSize) ?>px !important; max-width:<?= e($safeLogoSize) ?>px !important; min-height:<?= e($safeLogoSize) ?>px !important; max-height:<?= e($safeLogoSize) ?>px !important; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <img src="<?= e($footerLogo) ?>"
-                                 alt="<?= e($safeSiteName) ?> logo"
-                                 style="width:100% !important; height:100% !important; max-width:100% !important; max-height:100% !important; object-fit:contain !important; display:block;" />
-                        </div>
+                        <span class="footer-brand-logo-box"><img src="<?= e($footerLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
 
                         <div>
                             <p class="font-serif text-base sm:text-lg font-bold tracking-wide" style="color:#FFFFFF;">
