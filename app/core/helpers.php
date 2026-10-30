@@ -603,6 +603,22 @@ function circular_banner(): array
     return $c;
 }
 
+/** Find Tutor পেজের উপরের ব্যানার ছবি (অ্যাডমিন সেটিংস থেকে বদলানো যায়) */
+function findtutor_banner_defaults(): array
+{
+    return [
+        'ft_banner'         => 'https://i.ibb.co.com/TDB39bQ8/Find-Your-Perfect-Tutor-Banner.png',
+        'ft_banner_enabled' => '1',
+    ];
+}
+
+function findtutor_banner(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(findtutor_banner_defaults());
+    return $c;
+}
+
 /** টিচার প্রোফাইলের বাম পাশের প্রোমো (ছবি খালি = ডিজাইন করা কার্ড "আরও বেশি শিক্ষার্থীর কাছে পৌঁছান") */
 function teacher_promo_defaults(): array
 {

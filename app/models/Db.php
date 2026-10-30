@@ -9,11 +9,13 @@
  */
 require_once __DIR__ . '/TeacherProfileData.php';
 require_once __DIR__ . '/CircularData.php';
+require_once __DIR__ . '/FindTutorData.php';
 
 class Db
 {
     use TeacherProfileData;
     use CircularData;
+    use FindTutorData;
 
     private PDO $pdo;
 
@@ -1493,7 +1495,8 @@ class Db
     public function GetAllTeachWantedPosts($currentUserId = null): array
     {
         try {
-            $rows = $this->all('SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`LikeCount`, p.`CreatedAt`,
+            $this->EnsureTutorDirectory();
+            $rows = $this->all('SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`VideoUrl`, p.`LikeCount`, p.`CreatedAt`,
                     u.`FullName`, u.`UserName`, u.`ProfileImageLink`
                 FROM `TeachWantedPosts` p LEFT JOIN `Users` u ON p.`UserId` = u.`Id`
                 ORDER BY p.`CreatedAt` DESC, p.`Id` DESC');
@@ -1530,8 +1533,9 @@ class Db
     {
         $errorMessage = null;
         try {
-            $post->Id = $this->insert('INSERT INTO `TeachWantedPosts` (`UserId`, `Content`, `ImageUrl`, `LikeCount`, `CreatedAt`) VALUES (:u, :c, :i, 0, :t)',
-                ['u' => (int)$post->UserId, 'c' => $post->Content ?? '', 'i' => $post->ImageUrl, 't' => now()]);
+            $this->EnsureTutorDirectory();
+            $post->Id = $this->insert('INSERT INTO `TeachWantedPosts` (`UserId`, `Content`, `ImageUrl`, `VideoUrl`, `LikeCount`, `CreatedAt`) VALUES (:u, :c, :i, :v, 0, :t)',
+                ['u' => (int)$post->UserId, 'c' => $post->Content ?? '', 'i' => $post->ImageUrl, 'v' => $post->VideoUrl ?? null, 't' => now()]);
             return $post->Id > 0;
         } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
     }
@@ -1552,13 +1556,17 @@ class Db
         } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
     }
 
+    public ?string $lastDeletedTeachVideo = null;
+
     public function DeleteTeachWantedPost(int $postId, int $requesterId, bool $isAdmin, ?string &$imageUrl = null, ?string &$errorMessage = null): bool
     {
         $imageUrl = $errorMessage = null;
         try {
-            $r = $this->one('SELECT `UserId`, `ImageUrl` FROM `TeachWantedPosts` WHERE `Id` = :id', ['id' => $postId]);
+            $this->EnsureTutorDirectory();
+            $r = $this->one('SELECT `UserId`, `ImageUrl`, `VideoUrl` FROM `TeachWantedPosts` WHERE `Id` = :id', ['id' => $postId]);
             if (!$r) { $errorMessage = 'Post not found.'; return false; }
             $imageUrl = $r->ImageUrl;
+            $this->lastDeletedTeachVideo = $r->VideoUrl;
             if ((int)$r->UserId !== $requesterId && !$isAdmin) { $errorMessage = 'You can only delete your own post.'; return false; }
             $this->pdo->beginTransaction();
             $p = ['id' => $postId];

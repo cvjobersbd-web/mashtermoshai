@@ -18,6 +18,9 @@ $tab = $Model->Tab;
 $friends = $Model->Friends;
 $intro = $Model->Intro;
 $tIntro = $Model->TIntro;
+$prefs = db()->GetTeachPrefs((int)$u->Id);
+$modeLabel = ['Online' => 'Online', 'Home' => 'Home Visit', 'Both' => 'Online, Home Visit'][$prefs->TeachMode] ?? '';
+$feeText = $prefs->FeeMin ? '৳' . number_format($prefs->FeeMin) . ($prefs->FeeMax ? '-' . number_format($prefs->FeeMax) : '+') . ' / month' : '';
 $saved = $Model->SavedItems;
 $cover = $Model->Extras->CoverImageUrl;
 $coverY = $Model->Extras->CoverPosY;
@@ -539,7 +542,8 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                         <?php $inst = !is_blank($ti->Institution ?? null) ? $ti->Institution : $u->InstitutionName; if (!is_blank($inst)): ?><li><i class="fas fa-building-columns"></i> <?= e($inst) ?></li><?php endif; ?>
                                         <?php if ($location !== ''): ?><li><i class="fas fa-location-dot"></i> <?= e($location) ?></li><?php endif; ?>
                                         <?php if ($Model->ExpText !== ''): ?><li><i class="fas fa-briefcase"></i> <?= e($Model->ExpText) ?> experience</li><?php endif; ?>
-                                        <?php if (!is_blank($ti->HourlyRate ?? null)): ?><li><i class="fas fa-money-bill-wave"></i> Salary: <?= e(preg_match('/^\d+$/', trim((string)$ti->HourlyRate)) ? '৳' . number_format((int)$ti->HourlyRate) : $ti->HourlyRate) ?></li><?php endif; ?>
+                                        <?php if ($modeLabel !== ''): ?><li><i class="fas fa-laptop-house"></i> <?= e($modeLabel) ?></li><?php endif; ?>
+                                        <?php if ($feeText !== ''): ?><li><i class="fas fa-bangladeshi-taka-sign"></i> <?= e($feeText) ?></li><?php elseif (!is_blank($ti->HourlyRate ?? null)): ?><li><i class="fas fa-money-bill-wave"></i> Salary: <?= e(preg_match('/^\d+$/', trim((string)$ti->HourlyRate)) ? '৳' . number_format((int)$ti->HourlyRate) : $ti->HourlyRate) ?></li><?php endif; ?>
                                         <li><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></li>
                                     </ul>
                                     <?php if ($intro->Quote !== ''): ?><div class="am-quote"><?= e($intro->Quote) ?></div><?php endif; ?>
@@ -906,8 +910,17 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
             <div class="pf-f"><label>যে বিষয়গুলো পড়ান <small>— Enter বা কমা দিয়ে আলাদা করুন</small></label>
                 <div class="sj-box" id="sjBox" data-max="12"><input type="text" id="sjIn" maxlength="30" placeholder="Mathematics, Physics..." list="pmSubjList" /></div></div>
             <div class="pf-f"><label>ক্লাস / লেভেল</label>
-                <div class="pf-quick" id="lvQuick" style="margin-bottom:8px;"><?php foreach (['Class 1-5', 'Class 6-8', 'Class 9-10', 'SSC', 'HSC', 'Admission', 'O Level', 'A Level', 'University'] as $q): ?><button type="button" data-lv="<?= e($q) ?>"><?= e($q) ?></button><?php endforeach; ?></div>
+                <div class="pf-quick" id="lvQuick" style="margin-bottom:8px;"><?php foreach (['Class 1-5', 'Class 6-8', 'Class 9-10', 'SSC', 'HSC', 'Admission', 'O Level', 'A Level', 'University', 'Bangla Medium', 'English Medium'] as $q): ?><button type="button" data-lv="<?= e($q) ?>"><?= e($q) ?></button><?php endforeach; ?></div>
                 <div class="sj-box" id="lvBox" data-max="10"><input type="text" id="lvIn" maxlength="30" placeholder="SSC, HSC, Class 9-10..." /></div></div>
+            <div class="pf-2">
+                <div class="pf-f"><label for="inMode">কীভাবে পড়ান</label>
+                    <select id="inMode"><option value="">— বাছাই করুন —</option>
+                        <?php foreach (['Online' => 'Online', 'Home' => 'Home Visit (বাসায় গিয়ে)', 'Both' => 'Online + Home Visit'] as $k => $l): ?><option value="<?= $k ?>"<?= $prefs->TeachMode === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?>
+                    </select></div>
+                <div class="pf-f"><label>মাসিক বেতন (৳) <small>— Find Tutor পেজে দেখাবে</small></label>
+                    <div style="display:flex;gap:8px;"><input type="number" id="inFeeMin" min="0" max="1000000" placeholder="Min" value="<?= $prefs->FeeMin ?? '' ?>" style="width:100%;border:1.5px solid var(--pf-line);border-radius:10px;padding:10px 12px;font-size:15px;" />
+                    <input type="number" id="inFeeMax" min="0" max="1000000" placeholder="Max" value="<?= $prefs->FeeMax ?? '' ?>" style="width:100%;border:1.5px solid var(--pf-line);border-radius:10px;padding:10px 12px;font-size:15px;" /></div></div>
+            </div>
             <div class="pf-f"><label for="inQuote">প্রিয় উক্তি <small>(ঐচ্ছিক)</small></label><input type="text" id="inQuote" maxlength="160" value="<?= e($intro->Quote) ?>" placeholder="Education is the most powerful weapon..." /></div>
         </div>
         <div class="pf-modal-f"><button type="button" class="pf-btn" data-close>Cancel</button><button type="submit" class="pf-btn primary" id="introSave">Save</button></div>
@@ -1166,7 +1179,8 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
         var btn = $('#introSave'); btn.disabled = true;
         try {
             var d = await postForm('/Tutor/SaveIntro', { headline: $('#inHeadline').value, bio: $('#inBio').value, city: $('#inCity').value,
-                subjects: subj.list().join(','), levels: lv.list().join(','), quote: $('#inQuote').value });
+                subjects: subj.list().join(','), levels: lv.list().join(','), quote: $('#inQuote').value,
+                teachMode: $('#inMode').value, feeMin: $('#inFeeMin').value, feeMax: $('#inFeeMax').value });
             say(d.message, !d.success);
             if (d.success) { closeOv($('#introOv')); setTimeout(function () { hardReload(); }, 400); }
         } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }

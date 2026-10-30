@@ -6,15 +6,17 @@ class FindTutorController extends Controller
     /** GET /FindTutor  (view: FindTutor) */
     public function Index(): void
     {
-        $tutors = $this->db->GetApprovedTutors();
-        $this->view('FindTutor', $tutors, ['TutorCount' => count($tutors)]);
+        $tutors = $this->db->GetTutorDirectory();
+        $me = current_user_id();
+        $saved = $me !== null && current_role() !== 'Admin' ? $this->db->SavedKeys($me, 'tutor') : [];
+        $this->view('FindTutor', $tutors, ['TutorCount' => count($tutors), 'SavedTutors' => $saved]);
     }
 
     /** GET /FindTutor/GetTutor?id= */
     public function GetTutor(): void
     {
         $id = input_int('id', 0);
-        foreach ($this->db->GetApprovedTutors() as $t) {
+        foreach ($this->db->GetTutorDirectory() as $t) {
             if ($t->Id === $id) json_camel(['success' => true, 'tutor' => $t]);
         }
         json_response(['success' => false, 'message' => 'Tutor not found']);
@@ -25,7 +27,7 @@ class FindTutorController extends Controller
     {
         $tutorId = input_str('tutorId');
         if (is_blank($tutorId)) json_response(['success' => false, 'message' => 'Tutor ID is required']);
-        foreach ($this->db->GetApprovedTutors() as $t) {
+        foreach ($this->db->GetTutorDirectory() as $t) {
             if (strcasecmp($t->TutorId, trim($tutorId)) === 0) {
                 json_response(['success' => true, 'tutorId' => $t->TutorId, 'fullName' => $t->FullName]);
             }
@@ -133,20 +135,37 @@ class FindTutorController extends Controller
         return save_upload($file, 'teach-posts', 'post_' . ticks(), $ext);
     }
 
+    /** ভিডিও (MP4/WEBM/MOV, ২৫ MB) যাচাই + সেভ */
+    private function saveTeachVideo(array $file): string
+    {
+        $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['.mp4', '.webm', '.mov', '.m4v'], true)) json_response(['success' => false, 'message' => 'শুধু MP4, WEBM বা MOV ভিডিও দেওয়া যাবে।']);
+        if ($file['size'] > 25 * 1024 * 1024) json_response(['success' => false, 'message' => 'ভিডিও ২৫ MB এর কম হতে হবে।']);
+        $head = (string)@file_get_contents($file['tmp_name'], false, null, 0, 16);
+        if (substr($head, 4, 4) !== 'ftyp' && substr($head, 0, 4) !== "\x1A\x45\xDF\xA3") json_response(['success' => false, 'message' => 'ভিডিও ফাইলটি সঠিক নয়।']);
+        return save_upload($file, 'teach-videos', 'vid_' . ticks() . '_' . bin2hex(random_bytes(3)), $ext);
+    }
+
     /** POST /FindTutor/CreateTeachPost */
     public function CreateTeachPost_POST(): void
     {
-        if (session_get('UserRole') !== 'Teacher') json_response(['success' => false, 'message' => 'Only teachers can post.']);
-        $content = input_str('content');
+        if (session_get('UserRole') !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু টিচাররা এখানে পোস্ট করতে পারবেন।']);
+        $content = trim((string)input_str('content', ''));
         $image = upload_file('imageFile');
-        if (is_blank($content) && !$image) json_response(['success' => false, 'message' => 'Content or image is required.']);
+        $video = upload_file('videoFile');
+        if ($content === '' && !$image && !$video) json_response(['success' => false, 'message' => 'কিছু লিখুন অথবা ছবি/ভিডিও দিন।']);
+        if (mb_strlen($content) > 3000) json_response(['success' => false, 'message' => 'পোস্ট সর্বোচ্চ ৩০০০ অক্ষর।']);
+        if ($image && $video) json_response(['success' => false, 'message' => 'একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।']);
         $userId = current_user_id();
         if ($userId === null) json_response(['success' => false, 'message' => 'Invalid user.']);
 
         $imageUrl = $image ? $this->saveTeachImage($image) : null;
-        $post = obj(['UserId' => $userId, 'Content' => trim((string)$content), 'ImageUrl' => $imageUrl]);
+        $videoUrl = $video ? $this->saveTeachVideo($video) : null;
+        $post = obj(['UserId' => $userId, 'Content' => $content, 'ImageUrl' => $imageUrl, 'VideoUrl' => $videoUrl]);
         $err = null;
-        if ($this->db->CreateTeachWantedPost($post, $err)) json_response(['success' => true]);
+        if ($this->db->CreateTeachWantedPost($post, $err)) json_response(['success' => true, 'id' => $post->Id]);
+        if ($imageUrl) $this->deleteTeachImage($imageUrl);
+        if ($videoUrl) delete_upload($videoUrl);
         json_response(['success' => false, 'message' => $err]);
     }
 
@@ -181,6 +200,7 @@ class FindTutorController extends Controller
         $img = $err = null;
         if ($this->db->DeleteTeachWantedPost(input_int('postId', 0), $userId, is_admin(), $img, $err)) {
             $this->deleteTeachImage($img);
+            delete_upload($this->db->lastDeletedTeachVideo);
             json_response(['success' => true]);
         }
         json_response(['success' => false, 'message' => $err ?? 'Failed to delete post.']);

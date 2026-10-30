@@ -1838,69 +1838,249 @@ $CommentIso = function ($dt): string {
     }
 </style>
 
-<section class="ft-page">
-    <div class="ft-layout">
+<style>
+    .ft2 { --ft-navy: #0F1B2D; --ft-blue: #1D7FE5; --ft-blue-d: #1468C2; --ft-line: #E6EDF5; --ft-muted: #64748B; --ft-soft: #94A3B8;
+        --ft-shadow: 0 1px 2px rgba(15,27,45,.04), 0 6px 20px rgba(15,27,45,.05); background: #F4F8FC; padding: 22px 0 70px; min-height: 80vh; color: var(--ft-navy); }
+    .ft2 *, .ft2 *::before, .ft2 *::after { box-sizing: border-box; }
+    .ft2 h1, .ft2 h2, .ft2 h3, .ft2 h4 { color: var(--ft-navy); font-family: inherit; }
+    .ft2-wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+    .ft2-card { background: #fff; border: 1px solid var(--ft-line); border-radius: 16px; box-shadow: var(--ft-shadow); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
-        <div class="ft-header">
-            <h1>Find Your Perfect Tutor</h1>
-            <p>
-                Browse verified tutors — name, qualification, experience, and skills at a glance.
-                All communication goes through our admin team to keep your privacy safe.
-            </p>
+    .ft2-banner { position: relative; margin-bottom: 24px; border-radius: 20px; overflow: hidden; background: linear-gradient(120deg, #EAF4FF, #F6FBFF 55%, #FFF6E5); box-shadow: var(--ft-shadow); }
+    .ft2-banner img { display: block; width: 100%; height: auto; }
+    .ft2-banner-text { padding: 36px 48px; }
+    .ft2-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 16px; background: #DCEBFF; color: #1E3A8A; font-weight: 700; font-size: 14px; }
+    .ft2-banner-text h1 { margin: 14px 0 0; font-size: 46px; font-weight: 800; letter-spacing: -.5px; }
+    .ft2-banner-text p { margin: 8px 0 0; font-size: 19px; color: #334155; max-width: 560px; }
+
+    .ft2-grid { display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 24px; align-items: start; }
+    .ft2-av { width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center;
+        background: #0F2D4A; color: #fff; font-weight: 700; font-size: 16px; }
+    .ft2-av.lg { width: 50px; height: 50px; font-size: 18px; }
+    .ft2-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ft2-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 10px; border: none; font-weight: 600;
+        font-size: 15px; cursor: pointer; text-decoration: none; transition: background .15s, transform .15s; font-family: inherit; }
+    .ft2-btn.blue { background: var(--ft-blue); color: #fff; }
+    .ft2-btn.blue:hover { background: var(--ft-blue-d); color: #fff; }
+    .ft2-btn.outline { background: #fff; color: var(--ft-blue); border: 1.5px solid var(--ft-blue); }
+    .ft2-btn.outline:hover { background: #EEF5FE; color: var(--ft-blue); }
+    .ft2-btn.yellow { background: #FFC21A; color: var(--ft-navy); font-weight: 700; }
+    .ft2-btn.yellow:hover { background: #F5B500; color: var(--ft-navy); }
+    .ft2-btn.block { width: 100%; }
+
+    /* composer */
+    .ft2-compose { padding: 20px 22px; margin-bottom: 18px; }
+    .ft2-compose-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .ft2-compose-h h2 { margin: 0; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .ft2-free { font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 8px; background: #DCEBFF; color: var(--ft-blue); }
+    .ft2-rules-btn { border: none; background: #F1F6FC; color: #334155; font-size: 13px; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+    .ft2-rules-btn i { color: var(--ft-blue); }
+    .ft2-compose-top { display: flex; align-items: center; gap: 14px; }
+    .ft2-compose-in { flex: 1; min-width: 0; text-align: left; min-height: 52px; border-radius: 14px; border: 1px solid #E8EEF6; background: #F4F8FC; padding: 12px 18px;
+        font-size: 15px; color: #64748B; cursor: pointer; font-family: inherit; }
+    .ft2-compose-in:hover { background: #EEF3F9; }
+    .ft2-compose-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-left: 64px; }
+    .ft2-mbtn { border: none; background: none; display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 10px; font-size: 15px; color: #334155; cursor: pointer; font-family: inherit; }
+    .ft2-mbtn:hover { background: #F4F8FC; }
+    .ft2-mbtn i { font-size: 19px; }
+    .ft2-compose-row .ft2-btn { margin-left: auto; min-width: 180px; height: 46px; }
+    .ft2-note { margin-top: 14px; padding: 11px 14px; border-radius: 10px; background: #FFF8E6; color: #8A5A00; font-size: 13.5px; }
+    .ft2-note a { color: var(--ft-blue); font-weight: 700; }
+
+    /* search */
+    .ft2-search { padding: 12px; display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+    .ft2-search-in { flex: 1; min-width: 0; position: relative; margin: 0; }
+    .ft2-search-in i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748B; font-size: 16px; }
+    .ft2-search-in input { width: 100%; height: 46px; border: 1px solid #DCE5EF; border-radius: 12px; background: #F7FAFD; padding: 0 16px 0 46px; font-size: 15px; outline: none; font-family: inherit; color: var(--ft-navy); }
+    .ft2-search-in input:focus { border-color: var(--ft-blue); background: #fff; box-shadow: 0 0 0 3px rgba(29,127,229,.12); }
+    .ft2-fjump { display: none; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 10px; border: 1px solid #DCE5EF; background: #fff; color: var(--ft-navy); font-weight: 600; cursor: pointer; font-family: inherit; }
+    .ft2-sort { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; color: #475569; white-space: nowrap; margin: 0; }
+    .ft2-sort select { height: 46px; border: 1px solid #DCE5EF; border-radius: 10px; padding: 0 36px 0 14px; font-size: 14.5px; background-color: #fff; color: var(--ft-navy); font-family: inherit; cursor: pointer; }
+
+    /* list */
+    .ft2-list-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 2px 14px; flex-wrap: wrap; }
+    .ft2-list-h h2 { margin: 0; font-size: 21px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+    .ft2-count { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 12px; background: #E8F1FB; color: #1E3A5F; }
+    .ft2-clear { border: none; background: #FEE2E2; color: #B91C1C; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+    .ft2-tutor { display: grid; grid-template-columns: 110px minmax(0, 1.25fr) minmax(0, 1fr) 160px; gap: 22px; align-items: start; padding: 20px 22px; margin-bottom: 16px; position: relative; }
+    .ft2-photo { position: relative; width: 104px; height: 104px; }
+    .ft2-photo .pic { width: 104px; height: 104px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #0B2447, #1D63E0); color: #fff; font-size: 32px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 6px 18px rgba(15,27,45,.12); }
+    .ft2-photo .pic img { width: 100%; height: 100%; object-fit: cover; }
+    .ft2-photo .vt { position: absolute; right: 2px; bottom: 6px; width: 26px; height: 26px; border-radius: 50%; background: #22C55E; color: #fff; border: 3px solid #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 11px; }
+    .ft2-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ft2-name a { font-size: 19px; font-weight: 800; color: var(--ft-navy); text-decoration: none; }
+    .ft2-name a:hover { color: var(--ft-blue); }
+    .ft2-top { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: #E8A317; color: #fff; font-size: 10.5px; font-weight: 800; text-transform: uppercase; }
+    .ft2-rate { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 15px; }
+    .ft2-rate .fa-star { color: #F5A623; }
+    .ft2-rate b { font-weight: 700; }
+    .ft2-rate span { color: var(--ft-muted); }
+    .ft2-rate .new { font-size: 12.5px; font-weight: 700; color: #0E7490; background: #E0F7FA; padding: 2px 8px; border-radius: 8px; }
+    .ft2-li { display: flex; align-items: flex-start; gap: 10px; margin-top: 7px; font-size: 14.5px; color: #334155; line-height: 1.4; }
+    .ft2-li i { width: 16px; text-align: center; color: #1E3A5F; margin-top: 2px; flex-shrink: 0; }
+    .ft2-li.loc i { color: var(--ft-blue); }
+    .ft2-li b { font-weight: 700; color: var(--ft-navy); }
+    .ft2-tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 8px; margin-top: -6px; }
+    .ft2-tag { padding: 5px 13px; border-radius: 14px; background: #F1F5F9; color: #334155; font-size: 13px; }
+    .ft2-acts { display: flex; flex-direction: column; gap: 10px; padding-top: 30px; }
+    .ft2-acts .ft2-btn { height: 40px; font-size: 14.5px; padding: 0 12px; }
+    .ft2-heart { position: absolute; top: 14px; right: 16px; width: 36px; height: 36px; border-radius: 50%; border: none; background: none; color: #64748B; font-size: 19px; cursor: pointer; }
+    .ft2-heart:hover { background: #F1F5F9; }
+    .ft2-heart.on { color: #E5383B; }
+    .ft2-empty { padding: 44px 20px; text-align: center; color: var(--ft-muted); }
+    .ft2-empty i.big { font-size: 42px; color: #CBD5E1; display: block; margin-bottom: 12px; }
+    .ft2-empty h4 { margin: 0 0 6px; font-weight: 700; }
+    .ft2-more { display: block; width: 100%; padding: 13px; border-radius: 12px; background: #fff; border: 1px solid var(--ft-line); color: var(--ft-blue); font-weight: 700; cursor: pointer; font-family: inherit; }
+
+    /* sidebar */
+    .ft2-side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 96px; }
+    .ft2-area { padding: 24px 22px; background: radial-gradient(120% 90% at 100% 0%, #1E4A7A 0%, rgba(30,74,122,0) 60%), linear-gradient(160deg, #0F2D4A 0%, #0B2238 100%); border: none; color: #fff; }
+    .ft2-pin { width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,.1); display: inline-flex; align-items: center; justify-content: center; color: #FFC21A; font-size: 20px; }
+    .ft2-area h3 { color: #fff !important; margin: 16px 0 10px; font-size: 20px; font-weight: 800; }
+    .ft2-area p { color: #D3DFEC; font-size: 14.5px; line-height: 1.6; margin: 0 0 18px; }
+    .ft2-qf { padding: 20px; }
+    .ft2-qf h3, .ft2-why h3 { margin: 0 0 16px; font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .ft2-qf h3 i { color: var(--ft-blue); }
+    .ft2-fg { margin-bottom: 12px; }
+    .ft2-fg label { display: block; font-size: 14px; color: #334155; margin-bottom: 6px; }
+    .ft2-fg select, .ft2-fg input { width: 100%; height: 42px; border: 1px solid #DCE5EF; border-radius: 8px; padding: 0 12px; font-size: 14px; background-color: #fff; color: var(--ft-navy); font-family: inherit; outline: none; }
+    .ft2-fg select:focus, .ft2-fg input:focus { border-color: var(--ft-blue); }
+    .ft2-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ft2-why { padding: 20px; }
+    .ft2-why h3 i { color: #7C3AED; }
+    .ft2-why ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .ft2-why li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: #1F2937; }
+    .ft2-why li i { color: #22A35A; font-size: 19px; }
+    .ft2-tid { padding: 16px 20px; }
+    .ft2-tid h4 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .ft2-tid-in { display: flex; gap: 8px; }
+    .ft2-tid-in input { flex: 1; min-width: 0; height: 40px; border: 1px solid #DCE5EF; border-radius: 8px; padding: 0 12px; font-family: monospace; }
+    .ft2-tid-in button { width: 44px; border: none; border-radius: 8px; background: var(--ft-navy); color: #fff; cursor: pointer; }
+    .ft2-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .ft2-rules li { display: flex; gap: 10px; font-size: 14.5px; line-height: 1.55; color: #334155; }
+    .ft2-rules li i { color: #22A35A; margin-top: 4px; }
+
+    /* টিচারদের পোস্ট — নতুন কার্ড স্টাইলে */
+    .ft2 .post-feed .fb-post { border: 1px solid var(--ft-line); border-radius: 16px; box-shadow: var(--ft-shadow); }
+    .ft2 .fb-post-media video { display: block; width: 100%; max-height: 460px; background: #000; }
+
+    @media (max-width: 1100px) {
+        .ft2-tutor { grid-template-columns: 96px minmax(0, 1fr) 150px; }
+        .ft2-tutor .ft2-mid { grid-column: 2; }
+        .ft2-tutor .ft2-acts { grid-row: 1 / span 2; grid-column: 3; }
+        .ft2-tags { grid-column: 2 / 3; margin-top: 0; }
+        .ft2-photo, .ft2-photo .pic { width: 92px; height: 92px; }
+    }
+    @media (max-width: 992px) {
+        .ft2-wrap { padding: 0 14px; }
+        .ft2-grid { grid-template-columns: minmax(0, 1fr); }
+        .ft2-side { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+        .ft2-fjump { display: inline-flex !important; }
+        .ft2-why, .ft2-tid { display: none; }
+        .ft2-banner-text h1 { font-size: 32px; }
+    }
+    @media (max-width: 640px) {
+        .ft2 { padding-top: 12px; }
+        .ft2-wrap { padding: 0 10px; }
+        .ft2-banner { border-radius: 14px; margin-bottom: 14px; }
+        .ft2-banner img { height: 150px; object-fit: cover; object-position: left center; }
+        .ft2-banner-text { padding: 24px 20px; }
+        .ft2-side { grid-template-columns: minmax(0, 1fr); }
+        .ft2-compose { padding: 16px; }
+        .ft2-compose-h h2 { font-size: 17px; }
+        .ft2-compose-row { padding-left: 0; flex-wrap: wrap; }
+        .ft2-compose-row .ft2-btn { width: 100%; margin-left: 0; }
+        .ft2-search { flex-direction: column; align-items: stretch; gap: 10px; }
+        .ft2-sort select { flex: 1; }
+        .ft2-list-h h2 { font-size: 18px; }
+        .ft2-tutor { grid-template-columns: 72px minmax(0, 1fr); gap: 12px 14px; padding: 16px; }
+        .ft2-photo, .ft2-photo .pic { width: 72px; height: 72px; font-size: 24px; }
+        .ft2-photo .vt { width: 22px; height: 22px; font-size: 9px; right: 0; bottom: 2px; }
+        .ft2-tutor .ft2-mid { grid-column: 1 / -1; }
+        .ft2-tags { grid-column: 1 / -1; }
+        .ft2-tutor .ft2-acts { grid-column: 1 / -1; grid-row: auto; flex-direction: row; padding-top: 0; }
+        .ft2-tutor .ft2-acts .ft2-btn { flex: 1; }
+        .ft2-name a { font-size: 17px; }
+    }
+</style>
+
+<?php
+$ftBanner = findtutor_banner();
+$savedTutors = $ViewBag->SavedTutors ?? [];
+$ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
+?>
+<section class="ft2">
+    <div class="ft2-wrap">
+        <!-- ======================= BANNER ======================= -->
+        <div class="ft2-banner">
+            <?php if ($ftBanner['ft_banner_enabled'] !== '0' && !is_blank($ftBanner['ft_banner'])): ?>
+                <h1 class="sr-only">Find Your Perfect Tutor</h1>
+                <img src="<?= e($ftBanner['ft_banner']) ?>" alt="Find Your Perfect Tutor — আপনার শেখার লক্ষ্যে পৌঁছাতে, সঠিক শিক্ষক খুঁজে নিন মাষ্টারমশাইয়ের সাথে।"
+                     onerror="var fb = this.parentNode.querySelector('.ft2-banner-text'); if (fb) fb.hidden = false; this.remove();" />
+            <?php endif; ?>
+            <div class="ft2-banner-text"<?= $ftBanner['ft_banner_enabled'] !== '0' && !is_blank($ftBanner['ft_banner']) ? ' hidden' : '' ?>>
+                <span class="ft2-pill"><i class="fas fa-shield-halved"></i> Find Tutor</span>
+                <h1>Find Your Perfect Tutor</h1>
+                <p>আপনার শেখার লক্ষ্যে পৌঁছাতে, সঠিক শিক্ষক খুঁজে নিন মাষ্টারমশাইয়ের সাথে।</p>
+            </div>
         </div>
 
-        <div class="ft-list-wrap">
-
-            <!-- ========================================== -->
-            <!-- CREATE POST BOX (Only for Teachers) -->
-            <!-- ========================================== -->
-            <?php if ($isLoggedIn && $isTeacher): ?>
-                <div class="post-create-card">
-                    <div class="post-create-top">
-                        <div class="pc-avatar">
-                            <?php if (!is_blank($userProfileImg)): ?>
-                                <img src="<?= e($userProfileImg) ?>" alt="me" />
-                            <?php else: ?>
-                                <?= e($firstUpper($userFullName, 'T')) ?>
-                            <?php endif; ?>
-                        </div>
-                        <div class="pc-input" onclick="openPostModal()">
-                            পোস্ট করুন, আপনি কি পড়াতে চান?
-                        </div>
+        <div class="ft2-grid">
+            <main class="ft2-main">
+                <!-- ===== পড়াতে চাই (Teach Wanted) ===== -->
+                <div class="ft2-card ft2-compose">
+                    <div class="ft2-compose-h">
+                        <h2><i class="fas fa-pen"></i> পড়াতে চাই (Teach Wanted) <span class="ft2-free">Free</span></h2>
+                        <button type="button" class="ft2-rules-btn" data-bs-toggle="modal" data-bs-target="#postRulesModal"><i class="far fa-clock"></i> পোস্ট করার নিয়ম</button>
                     </div>
-                    <div class="post-create-actions">
-                        <button class="pc-action-btn" onclick="openPostModal()">
-                            <i class="fas fa-images fa-lg"></i> Photo
-                        </button>
-                        <button class="pc-action-btn" onclick="openPostModal()">
-                            <i class="fas fa-video fa-lg"></i> Video
-                        </button>
+                    <div class="ft2-compose-top">
+                        <span class="ft2-av lg"><?= e($isLoggedIn ? $firstUpper($userFullName, 'T') : 'M') ?><?php if ($isLoggedIn && !is_blank($userProfileImg)): ?><img src="<?= e($userProfileImg) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                        <button type="button" class="ft2-compose-in" data-ft-compose="text"><?= $isTeacher || !$isLoggedIn ? 'আপনার টিউশনের প্রয়োজনের বিস্তারিত লিখুন...' : 'শুধু টিচাররা এখানে পোস্ট করতে পারবেন' ?></button>
                     </div>
+                    <div class="ft2-compose-row">
+                        <button type="button" class="ft2-mbtn" data-ft-compose="photo"><i class="fas fa-image" style="color:#22A35A;"></i> Photo</button>
+                        <button type="button" class="ft2-mbtn" data-ft-compose="video"><i class="fas fa-video" style="color:#E5383B;"></i> Video</button>
+                        <button type="button" class="ft2-btn blue" data-ft-compose="post"><i class="fas fa-paper-plane"></i> পোস্ট করুন</button>
+                    </div>
+                    <?php if ($isLoggedIn && !$isTeacher && $userRole !== 'Admin'): ?>
+                        <div class="ft2-note"><i class="fas fa-circle-info"></i> শুধু টিচাররা এখানে পোস্ট করতে পারবেন। টিচার হতে <a href="/Profile?section=become-tutor">এখানে আবেদন করুন</a>।</div>
+                    <?php elseif (!$isLoggedIn): ?>
+                        <div class="ft2-note"><i class="fas fa-circle-info"></i> পোস্ট করতে <a href="<?= e($ftLogin) ?>">লগইন করুন</a>।</div>
+                    <?php endif; ?>
                 </div>
-            <?php elseif ($isLoggedIn && !$isTeacher): ?>
-                <div class="post-create-card" style="text-align: center; padding: 15px; background: #FFF7E0; border-color: #FFB300;">
-                    <p style="margin: 0; font-size: 14px; color: #8a5a00;">
-                        <i class="fas fa-info-circle me-1"></i> শুধুমাত্র টিচার (Teacher) রা এখানে পোস্ট করতে পারবেন। আপনি টিচার হতে <a href="/Teacher/RequestForm" style="font-weight:bold; text-decoration:underline; color:#08224A;">এখানে ক্লিক করুন</a>।
-                    </p>
-                </div>
-            <?php else: ?>
-                <div class="post-create-card" style="text-align: center; padding: 15px; background: #FFF7E0; border-color: #FFB300;">
-                    <p style="margin: 0; font-size: 14px; color: #8a5a00;">
-                        <i class="fas fa-info-circle me-1"></i> পোস্ট করতে অনুগ্রহ করে <a href="/Account/Login" style="font-weight:bold; text-decoration:underline; color:#08224A;">লগইন করুন</a>।
-                    </p>
-                </div>
-            <?php endif; ?>
 
-            <!-- ========================================== -->
-            <!-- POST FEED (Teach Wanted) -->
-            <!-- ========================================== -->
-            <div class="list-header" style="margin-top: 30px;">
-                <h3>
-                    <i class="fas fa-chalkboard-teacher"></i> পড়াতে চাই (Teach Wanted)
-                    <span class="count-badge" id="postCountBadge"><?= count($posts) ?></span>
-                </h3>
-            </div>
+                <!-- ===== সার্চ + সর্ট ===== -->
+                <div class="ft2-card ft2-search">
+                    <label class="ft2-search-in"><i class="fas fa-magnifying-glass"></i>
+                        <input type="search" id="ftSearch" placeholder="বিষয়, ক্লাস, বা টিউটরের নাম দিয়ে খুঁজুন..." autocomplete="off" />
+                    </label>
+                    <button type="button" class="ft2-fjump" onclick="document.querySelector('.ft2-qf').scrollIntoView({ behavior: 'smooth', block: 'start' })"><i class="fas fa-filter"></i> Filters</button>
+                    <label class="ft2-sort">Sort by:
+                        <select id="sortSelect">
+                            <option value="rating">সেরা রেটিং</option>
+                            <option value="experience">বেশি অভিজ্ঞতা</option>
+                            <option value="fee-low">কম বেতন</option>
+                            <option value="fee-high">বেশি বেতন</option>
+                            <option value="new">নতুন টিউটর</option>
+                        </select>
+                    </label>
+                </div>
 
+                <!-- ===== টিউটর তালিকা ===== -->
+                <div class="ft2-list-h">
+                    <h2><i class="fas fa-user-group"></i> আমাদের টিউটর (Our Tutors) <span class="ft2-count" id="countBadge">0 জন</span></h2>
+                    <button type="button" class="ft2-clear" id="ftClear" hidden><i class="fas fa-xmark"></i> ফিল্টার মুছুন</button>
+                </div>
+                <div id="tutorList"></div>
+                <button type="button" class="ft2-more" id="ftMore" hidden><i class="fas fa-angles-down"></i> আরো টিউটর দেখুন</button>
+
+                <!-- ===== টিচারদের পোস্ট ===== -->
+                <div class="ft2-list-h" style="margin-top:30px;">
+                    <h2><i class="fas fa-chalkboard-user"></i> টিচারদের পোস্ট <span class="ft2-count" id="postCountBadge"><?= count($posts) ?>টি</span></h2>
+                </div>
             <div class="post-feed" id="postFeed">
                 <?php if (empty($posts)): ?>
                     <div class="empty-state">
@@ -1960,6 +2140,9 @@ $CommentIso = function ($dt): string {
                             <div class="fb-post-media" id="post-media-<?= e($post->Id) ?>">
                                 <?php if (!is_blank($post->ImageUrl)): ?>
                                     <img src="<?= e($post->ImageUrl) ?>" alt="Post Image" />
+                                <?php endif; ?>
+                                <?php if (!is_blank($post->VideoUrl ?? null)): ?>
+                                    <video src="<?= e($post->VideoUrl) ?>" controls preload="metadata" playsinline></video>
                                 <?php endif; ?>
                             </div>
 
@@ -2083,70 +2266,66 @@ $CommentIso = function ($dt): string {
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
+            </main>
 
-            <hr style="margin: 40px 0;" />
-
-            <!-- ========================================== -->
-            <!-- TUTOR LIST -->
-            <!-- ========================================== -->
-            <div class="list-header">
-                <h3>
-                    <i class="fas fa-user-graduate"></i> Our Tutors
-                    <span class="count-badge" id="countBadge">0</span>
-                </h3>
-                <div class="sort-wrap">
-                    <span>Sort:</span>
-                    <select id="sortSelect" onchange="applySearch()">
-                        <option value="rating">Top Rated</option>
-                        <option value="fee-low">Fee: Low to High</option>
-                        <option value="fee-high">Fee: High to Low</option>
-                        <option value="experience">Most Experienced</option>
-                    </select>
+            <!-- ======================= RIGHT ======================= -->
+            <aside class="ft2-side">
+                <div class="ft2-card ft2-area">
+                    <span class="ft2-pin"><i class="fas fa-location-dot"></i></span>
+                    <h3>Need a Tutor in Your Area?</h3>
+                    <p>Can't find the right tutor? Tell us your requirements and our admin will help you find a suitable tutor.</p>
+                    <button type="button" class="ft2-btn yellow block" onclick="openAreaTuitionModal()"><i class="fas fa-headset"></i> Contact Admin</button>
                 </div>
-            </div>
 
-            <div id="tutorList"></div>
+                <div class="ft2-card ft2-qf">
+                    <h3><i class="fas fa-filter"></i> Quick Filters</h3>
+                    <div class="ft2-fg"><label for="qfClass">Class / Level</label><select id="qfClass"><option value="">Select class</option></select></div>
+                    <div class="ft2-fg"><label for="qfSubject">Subject</label><select id="qfSubject"><option value="">Select subject</option></select></div>
+                    <div class="ft2-fg"><label for="qfLocation">Location</label><select id="qfLocation"><option value="">Select location</option></select></div>
+                    <div class="ft2-fg"><label for="qfMode">Teaching Mode</label>
+                        <select id="qfMode"><option value="">Select mode</option><option value="Online">Online</option><option value="Home">Home Visit</option></select></div>
+                    <div class="ft2-fg"><label>Budget (৳)</label>
+                        <div class="ft2-2"><input type="number" id="qfMin" min="0" placeholder="Min" inputmode="numeric" /><input type="number" id="qfMax" min="0" placeholder="Max" inputmode="numeric" /></div></div>
+                    <button type="button" class="ft2-btn blue block" id="qfApply"><i class="fas fa-magnifying-glass"></i> Apply Filters</button>
+                </div>
 
+                <div class="ft2-card ft2-why">
+                    <h3><i class="fas fa-shield-halved"></i> Why Choose Mashter Moshai?</h3>
+                    <ul>
+                        <li><i class="fas fa-circle-check"></i> Verified Tutors</li>
+                        <li><i class="fas fa-circle-check"></i> Safe &amp; Secure</li>
+                        <li><i class="fas fa-circle-check"></i> Wide Subject Coverage</li>
+                        <li><i class="fas fa-circle-check"></i> Dedicated Support</li>
+                    </ul>
+                </div>
+
+                <div class="ft2-card ft2-tid">
+                    <h4><i class="fas fa-id-badge"></i> Tutor ID আছে?</h4>
+                    <div class="ft2-tid-in"><input type="text" id="tidInput" placeholder="TCH-1024" /><button type="button" onclick="findByTutorId()" aria-label="Find"><i class="fas fa-search"></i></button></div>
+                </div>
+            </aside>
         </div>
-
-        <aside class="ft-sidebar">
-            <div class="area-tuition-card">
-                <div class="atc-icon"><i class="fas fa-map-marked-alt"></i></div>
-                <h3>Get Tuition in Your Area</h3>
-                <p>Want a tutor in your own area? Contact our admin and we'll help you find the right tutor near you — quickly and safely.</p>
-
-                <ul class="atc-features">
-                    <li><i class="fas fa-check-circle"></i> Verified tutors in your locality</li>
-                    <li><i class="fas fa-check-circle"></i> Match by class, subject &amp; budget</li>
-                    <li><i class="fas fa-check-circle"></i> Admin handles everything for you</li>
-                    <li><i class="fas fa-check-circle"></i> 100% privacy protected</li>
-                </ul>
-
-                <button class="btn-area-contact" onclick="openAreaTuitionModal()">
-                    <i class="fas fa-headset"></i> Contact Admin
-                </button>
-            </div>
-
-            <div class="sidebar-card helper-card">
-                <h4><i class="fas fa-hands-helping"></i> Need a Tutor?</h4>
-                <p>Can't find the right tutor? Send us your requirements and our admin will match you with the perfect tutor.</p>
-                <button class="btn-helper" onclick="openNeedTutorModal()">
-                    <i class="fas fa-paper-plane"></i> Send Request to Admin
-                </button>
-            </div>
-
-            <div class="tid-card">
-                <h5><i class="fas fa-id-badge"></i> Have a Tutor ID?</h5>
-                <p>Enter the Tutor ID you received to open the profile instantly.</p>
-                <div class="tid-input">
-                    <input type="text" id="tidInput" placeholder="TCH-1024" />
-                    <button onclick="findByTutorId()"><i class="fas fa-search"></i></button>
-                </div>
-            </div>
-        </aside>
-
     </div>
 </section>
+
+<!-- পোস্ট করার নিয়ম -->
+<div class="modal fade" id="postRulesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="far fa-clock me-1" style="color:#1D7FE5;"></i> পোস্ট করার নিয়ম</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <ul class="ft2-rules">
+                    <li><i class="fas fa-check"></i> শুধু যাচাইকৃত টিচাররা পোস্ট করতে পারবেন — পোস্ট করা সম্পূর্ণ ফ্রি।</li>
+                    <li><i class="fas fa-check"></i> কোন বিষয়, কোন ক্লাস, কোন এলাকায় ও কীভাবে (অনলাইন/বাসায়) পড়াতে চান তা পরিষ্কার লিখুন।</li>
+                    <li><i class="fas fa-check"></i> ছবি ৫ MB আর ভিডিও ২৫ MB পর্যন্ত দেওয়া যাবে।</li>
+                    <li><i class="fas fa-xmark" style="color:#E5383B;"></i> ফোন নম্বর, অশালীন কথা বা অন্য সাইটের বিজ্ঞাপন দেওয়া যাবে না — অ্যাডমিন সরিয়ে দেবেন।</li>
+                    <li><i class="fas fa-check"></i> স্টুডেন্টরা "Request Tutor" দিয়ে অ্যাডমিনের মাধ্যমে আপনার সাথে যোগাযোগ করবেন।</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- ========================================== -->
 <!-- CREATE POST MODAL -->
@@ -2179,6 +2358,10 @@ $CommentIso = function ($dt): string {
                     <button type="button" class="remove-preview" onclick="removePostImage()"><i class="fas fa-times"></i></button>
                     <img id="imagePreviewImg" src="" alt="Preview" />
                 </div>
+                <div class="modal-preview" id="videoPreviewBox">
+                    <button type="button" class="remove-preview" onclick="removePostVideo()" style="z-index:2;"><i class="fas fa-times"></i></button>
+                    <video id="videoPreviewEl" controls preload="metadata" style="width:100%;max-height:260px;border-radius:12px;background:#000;"></video>
+                </div>
 
                 <div class="modal-actions-bottom">
                     <span style="font-size:14px; font-weight:600; color:#08224A;">Add to your post</span>
@@ -2186,9 +2369,11 @@ $CommentIso = function ($dt): string {
                         <label for="postImageInput" class="icon-btn" style="cursor:pointer; margin:0;">
                             <i class="fas fa-images" style="color:#2ecc71;"></i>
                         </label>
-                        <input type="file" id="postImageInput" accept="image/*" style="display:none;" onchange="previewPostImage(this)" />
-
-                        <button class="icon-btn"><i class="fas fa-smile" style="color:#f39c12;"></i></button>
+                        <input type="file" id="postImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="previewPostImage(this)" />
+                        <label for="postVideoInput" class="icon-btn" style="cursor:pointer; margin:0;" title="Video (25 MB)">
+                            <i class="fas fa-video" style="color:#E5383B;"></i>
+                        </label>
+                        <input type="file" id="postVideoInput" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" style="display:none;" onchange="previewPostVideo(this)" />
                     </div>
                 </div>
 
@@ -2315,16 +2500,50 @@ $CommentIso = function ($dt): string {
 
         function openPostModal() {
             document.getElementById('postContentInput').value = '';
-            removePostImage();
+            removePostImage(); removePostVideo();
             checkPostBtn();
-            new bootstrap.Modal(document.getElementById('createPostModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('createPostModal')).show();
         }
 
         function checkPostBtn() {
             var content = document.getElementById('postContentInput').value.trim();
             var btn = document.getElementById('submitPostBtn');
-            btn.disabled = (content.length === 0 && !postImageUrl);
+            var hasMedia = document.getElementById('postImageInput').files.length > 0 || document.getElementById('postVideoInput').files.length > 0;
+            btn.disabled = (content.length === 0 && !hasMedia);
         }
+
+        var postVideoObj = null;
+        function previewPostVideo(input) {
+            var f = input.files && input.files[0]; if (!f) return;
+            if (!/\.(mp4|webm|mov|m4v)$/i.test(f.name)) { alert('শুধু MP4, WEBM বা MOV ভিডিও।'); input.value = ''; return; }
+            if (f.size > 25 * 1024 * 1024) { alert('ভিডিও ২৫ MB এর কম হতে হবে।'); input.value = ''; return; }
+            removePostImage();
+            if (postVideoObj) URL.revokeObjectURL(postVideoObj);
+            postVideoObj = URL.createObjectURL(f);
+            document.getElementById('videoPreviewEl').src = postVideoObj;
+            document.getElementById('videoPreviewBox').style.display = 'block';
+            checkPostBtn();
+        }
+        function removePostVideo() {
+            var v = document.getElementById('postVideoInput'); if (v) v.value = '';
+            var b = document.getElementById('videoPreviewBox'); if (b) b.style.display = 'none';
+            var el = document.getElementById('videoPreviewEl'); if (el) el.removeAttribute('src');
+            if (postVideoObj) { URL.revokeObjectURL(postVideoObj); postVideoObj = null; }
+            if (document.getElementById('submitPostBtn')) checkPostBtn();
+        }
+
+        // "পড়াতে চাই" বক্সের বাটন
+        document.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-ft-compose]'); if (!b) return;
+            var IS_LOGGED = <?= js($isLoggedIn) ?>, IS_TEACHER = <?= js($isTeacher) ?>;
+            if (!IS_LOGGED) { location.href = '/Account/Login?returnUrl=%2FFindTutor'; return; }
+            if (!IS_TEACHER) { if (confirm('শুধু টিচাররা এখানে পোস্ট করতে পারবেন। টিচার হিসেবে আবেদন করতে চান?')) location.href = '/Profile?section=become-tutor'; return; }
+            var what = b.getAttribute('data-ft-compose');
+            openPostModal();
+            if (what === 'photo') setTimeout(function () { document.getElementById('postImageInput').click(); }, 250);
+            else if (what === 'video') setTimeout(function () { document.getElementById('postVideoInput').click(); }, 250);
+            else setTimeout(function () { document.getElementById('postContentInput').focus(); }, 350);
+        });
 
         function previewPostImage(input) {
             if (input.files && input.files[0]) {
@@ -2332,6 +2551,7 @@ $CommentIso = function ($dt): string {
                 if (file.size > 5 * 1024 * 1024) { alert('Image must be less than 5MB'); return; }
 
                 var reader = new FileReader();
+                removePostVideo();
                 reader.onload = function (e) {
                     document.getElementById('imagePreviewImg').src = e.target.result;
                     document.getElementById('imagePreviewBox').style.display = 'block';
@@ -2363,13 +2583,15 @@ $CommentIso = function ($dt): string {
             if (fileInput.files.length > 0) {
                 formData.append('imageFile', fileInput.files[0]);
             }
+            var vInput = document.getElementById('postVideoInput');
+            if (vInput && vInput.files.length > 0) formData.append('videoFile', vInput.files[0]);
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
             formData.append('__RequestVerificationToken', token);
 
             try {
                 var res = await fetch('/FindTutor/CreateTeachPost', { method: 'POST', body: formData });
-                var data = await res.json();
+                var data = null; try { data = await res.json(); } catch (x) { data = { success: false, message: res.status === 413 ? 'ফাইল অনেক বড় — ছোট ফাইল দিন।' : 'সার্ভার থেকে উত্তর পাওয়া যায়নি।' }; }
 
                 if (data.success) {
                     location.reload(); // Reload to show the new post
@@ -2862,108 +3084,142 @@ $CommentIso = function ($dt): string {
                 }
             });
 
+            // ===== টিউটর কার্ড (নতুন ডিজাইন) =====
+            var SAVED = <?= js(array_map(fn($k) => (int)substr($k, 6), array_keys($savedTutors))) ?>;
+            var CAN_SAVE = <?= js($isLoggedIn && $userRole !== 'Admin') ?>;
+            var MY_ID = <?= js((int)($userId ?? 0)) ?>;
+            var MODE_LBL = { Online: 'Online', Home: 'Home Visit', Both: 'Online, Home Visit' };
+            function money(n) { return '৳' + Number(n).toLocaleString('en-US'); }
+            function feeText(t) {
+                if (!t.monthlyFee) return 'আলোচনা সাপেক্ষে';
+                return money(t.monthlyFee) + (t.feeMax ? '-' + Number(t.feeMax).toLocaleString('en-US') : '+') + ' / month';
+            }
             function createRow(t) {
-                var verifiedTick = t.isVerified
-                    ? '<div class="v-tick" title="Verified Tutor"><i class="fas fa-check"></i></div>'
-                    : '';
-                var topBadge = t.isTopRated
-                    ? '<span class="tr-top-badge"><i class="fas fa-crown me-1"></i>Top</span>'
-                    : '';
-
-                var classTags = (t.classes || []).slice(0, 3).map(function (c) {
-                    return '<span class="tr-tag">' + escapeHtml(c) + '</span>';
-                }).join('');
-
-                var moreClasses = (t.classes || []).length > 3
-                    ? '<span class="tr-tag" style="background:#DCECF5;">+' + (t.classes.length - 3) + '</span>'
-                    : '';
-
-                var modeIcon = t.teachingMode === 'Online' ? 'fa-laptop'
-                    : (t.teachingMode === 'Offline' ? 'fa-building' : 'fa-globe');
-
-                var avatarContent = (t.photoUrl && t.photoUrl.trim() !== '')
-                    ? '<img src="' + escapeHtml(t.photoUrl) + '" alt="' + escapeHtml(t.fullName) + '" />'
-                    : escapeHtml(t.initials);
-
+                var avatar = (t.photoUrl && t.photoUrl.trim() !== '')
+                    ? '<img src="' + escapeHtml(t.photoUrl) + '" alt="' + escapeHtml(t.fullName) + '" loading="lazy" onerror="this.remove()" />' : escapeHtml(t.initials);
+                var subj = (t.subjects || []).slice(0, 2).join(', ');
+                var lv = (t.levels || []).slice(0, 2).join(', ');
+                var rating = t.totalReviews
+                    ? '<i class="fas fa-star"></i> <b>' + Number(t.rating).toFixed(1) + '</b> <span>(' + t.totalReviews + ' review' + (t.totalReviews === 1 ? '' : 's') + ')</span>'
+                    : '<span class="new">নতুন টিউটর</span>';
+                var tags = (t.levels || []).concat(t.mediums || []).slice(0, 5).map(function (x) { return '<span class="ft2-tag">' + escapeHtml(x) + '</span>'; }).join('');
+                var saved = SAVED.indexOf(t.userId) > -1;
+                var heart = CAN_SAVE && t.userId !== MY_ID
+                    ? '<button type="button" class="ft2-heart' + (saved ? ' on' : '') + '" data-save-type="tutor" data-save-id="' + t.userId + '" title="Save tutor" aria-label="Save tutor"><i class="' + (saved ? 'fas' : 'far') + ' fa-heart"></i></button>'
+                    : (!isLoggedIn ? '<a class="ft2-heart" href="/Account/Login?returnUrl=%2FFindTutor" title="Save করতে লগইন করুন" aria-label="Save tutor"><i class="far fa-heart"></i></a>' : '');
                 return ''
-                    + '<div class="tutor-row">'
-                    + '  <div class="tr-avatar">'
-                    + '    <div class="avatar-circle">' + avatarContent + '</div>'
-                    + verifiedTick
+                    + '<div class="ft2-card ft2-tutor" data-uid="' + t.userId + '">'
+                    + heart
+                    + '  <div class="ft2-photo"><a class="pic" href="/Profile/Show/' + t.userId + '">' + avatar + '</a>' + (t.isVerified ? '<span class="vt" title="Verified Tutor"><i class="fas fa-check"></i></span>' : '') + '</div>'
+                    + '  <div class="ft2-info">'
+                    + '    <div class="ft2-name"><a href="/Profile/Show/' + t.userId + '">' + escapeHtml(t.fullName) + '</a>' + (t.isTopRated ? '<span class="ft2-top"><i class="fas fa-crown"></i> Top</span>' : '') + '</div>'
+                    + '    <div class="ft2-rate">' + rating + '</div>'
+                    + '    <div class="ft2-li"><i class="fas fa-graduation-cap"></i><span>' + escapeHtml(subj || 'General') + (lv ? ' (' + escapeHtml(lv) + ')' : '') + '</span></div>'
+                    + '    <div class="ft2-li"><i class="fas fa-briefcase"></i><span>' + (t.experienceYears ? t.experienceYears + '+ years experience' : 'নতুন শিক্ষক') + '</span></div>'
                     + '  </div>'
-                    + '  <div class="tr-info">'
-                    + '    <div class="tr-name-line">'
-                    + '      <h4 class="tr-name">' + escapeHtml(t.fullName) + '</h4>'
-                    + '      <span class="tr-id">' + escapeHtml(t.tutorId) + '</span>'
-                    + topBadge
-                    + '    </div>'
-                    + '    <div class="tr-rating-line">'
-                    + '      <span class="stars">' + stars(t.rating) + '</span>'
-                    + '      <span><strong>' + t.rating + '</strong></span>'
-                    + '      <span class="count">(' + t.totalReviews + ' reviews)</span>'
-                    + '    </div>'
-                    + '    <div class="tr-meta">'
-                    + '      <div class="m-item"><i class="fas fa-graduation-cap"></i><span>' + escapeHtml(t.qualification) + '</span></div>'
-                    + '      <div class="m-item"><i class="fas fa-university"></i><span>' + escapeHtml(t.institution) + '</span></div>'
-                    + '      <div class="m-item"><i class="fas fa-briefcase"></i><span>' + t.experienceYears + '+ years experience</span></div>'
-                    + '      <div class="m-item"><i class="fas fa-map-marker-alt"></i><span>' + escapeHtml(t.location) + '</span></div>'
-                    + '    </div>'
-                    + '    <div class="tr-tags">'
-                    + '      <span class="tr-tag mode"><i class="fas ' + modeIcon + ' me-1"></i>' + escapeHtml(t.teachingMode) + '</span>'
-                    + classTags
-                    + moreClasses
-                    + '    </div>'
+                    + '  <div class="ft2-mid">'
+                    + '    <div class="ft2-li loc"><i class="fas fa-location-dot"></i><span>' + escapeHtml(t.location) + '</span></div>'
+                    + '    <div class="ft2-li loc"><i class="fas fa-laptop-house"></i><span>' + escapeHtml(MODE_LBL[t.teachingMode] || 'Online, Home Visit') + '</span></div>'
+                    + '    <div class="ft2-li"><i class="fas fa-bangladeshi-taka-sign"></i><b>' + feeText(t) + '</b></div>'
                     + '  </div>'
-                    + '  <div class="tr-actions">'
-                    + '    <div class="tr-fee">'
-                    + '      <div class="fee-val">৳' + Number(t.monthlyFee).toLocaleString() + '</div>'
-                    + '      <div class="fee-lbl">Monthly Fee</div>'
-                    + '    </div>'
-                    + '    <button class="btn-view-tr" onclick="viewProfile(' + t.id + ')">'
-                    + '      <i class="fas fa-eye"></i> View Profile'
-                    + '    </button>'
-                    + '    <button class="btn-request-tr" onclick="openRequestTutorModal(' + t.id + ')">'
-                    + '      <i class="fas fa-paper-plane"></i> Request'
-                    + '    </button>'
+                    + '  <div class="ft2-acts">'
+                    + '    <a class="ft2-btn outline" href="/Profile/Show/' + t.userId + '">View Profile</a>'
+                    + '    <button type="button" class="ft2-btn blue" onclick="openRequestTutorModal(' + t.id + ')"><i class="fas fa-paper-plane"></i> Request Tutor</button>'
                     + '  </div>'
+                    + (tags ? '  <div class="ft2-tags">' + tags + '</div>' : '')
                     + '</div>';
             }
 
+            var PAGE = 10, shown = PAGE, lastList = [];
             function renderList(tutors) {
                 var wrap = document.getElementById('tutorList');
-                var badge = document.getElementById('countBadge');
-                badge.textContent = tutors.length;
-
+                document.getElementById('countBadge').textContent = tutors.length + ' জন';
+                lastList = tutors;
+                var more = document.getElementById('ftMore');
                 if (!tutors || tutors.length === 0) {
-                    wrap.innerHTML = ''
-                        + '<div class="empty-state">'
-                        + '  <div class="es-icon"><i class="fas fa-search"></i></div>'
-                        + '  <h4>No tutors found</h4>'
-                        + '  <p>Try a different search, or let our admin team find a tutor for you.</p>'
-                        + '  <button class="btn-helper" onclick="openNeedTutorModal()" style="max-width:280px; margin:0 auto;">'
-                        + '    <i class="fas fa-hands-helping"></i> Request a Tutor'
-                        + '  </button>'
-                        + '</div>';
+                    more.hidden = true;
+                    wrap.innerHTML = '<div class="ft2-card ft2-empty"><i class="fas fa-user-slash big"></i><h4>কোনো টিউটর পাওয়া যায়নি</h4>'
+                        + '<p>অন্যভাবে খুঁজে দেখুন, অথবা অ্যাডমিনকে বলুন — তিনি আপনার জন্য টিউটর খুঁজে দেবেন।</p>'
+                        + '<button type="button" class="ft2-btn blue" onclick="openNeedTutorModal()" style="margin-top:12px;"><i class="fas fa-hands-helping"></i> Request a Tutor</button></div>';
                     return;
                 }
-
-                wrap.innerHTML = tutors.map(createRow).join('');
+                wrap.innerHTML = tutors.slice(0, shown).map(createRow).join('');
+                more.hidden = tutors.length <= shown;
             }
 
-            function applySearch() {
-                var sort = document.getElementById('sortSelect').value;
+            // ===== ফিল্টার (সার্চ + Quick Filters) =====
+            function norm(s) { return String(s || '').toLowerCase(); }
+            function uniq(arr) { var seen = {}, out = []; arr.forEach(function (x) { var k = norm(x); if (x && !seen[k]) { seen[k] = 1; out.push(x); } }); return out.sort(function (a, b) { return a.localeCompare(b); }); }
+            function fillSelect(id, values) {
+                var sel = document.getElementById(id); if (!sel) return;
+                values.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+            }
+            fillSelect('qfClass', uniq([].concat.apply([], allTutors.map(function (t) { return (t.levels || []).concat(t.mediums || []); }))));
+            fillSelect('qfSubject', uniq([].concat.apply([], allTutors.map(function (t) { return t.subjects || []; }))).filter(function (x) { return x !== 'General'; }));
+            fillSelect('qfLocation', uniq(allTutors.map(function (t) { return t.city; })));
 
-                var list = allTutors.slice();
-
-                switch (sort) {
-                    case 'rating': list.sort(function (a, b) { return b.rating - a.rating; }); break;
-                    case 'fee-low': list.sort(function (a, b) { return a.monthlyFee - b.monthlyFee; }); break;
-                    case 'fee-high': list.sort(function (a, b) { return b.monthlyFee - a.monthlyFee; }); break;
-                    case 'experience': list.sort(function (a, b) { return b.experienceYears - a.experienceYears; }); break;
+            var QF = {};
+            function readQF() {
+                QF = {
+                    cls: document.getElementById('qfClass').value, subject: document.getElementById('qfSubject').value,
+                    location: document.getElementById('qfLocation').value, mode: document.getElementById('qfMode').value,
+                    min: parseInt(document.getElementById('qfMin').value, 10) || 0, max: parseInt(document.getElementById('qfMax').value, 10) || 0
+                };
+            }
+            function matches(t) {
+                var q = norm(document.getElementById('ftSearch').value).trim();
+                if (q) {
+                    var hay = norm([t.fullName, t.tutorId, t.headline, t.location, (t.subjects || []).join(' '), (t.levels || []).join(' '), (t.mediums || []).join(' '), t.institution].join(' '));
+                    if (q.split(/\s+/).some(function (w) { return hay.indexOf(w) === -1; })) return false;
                 }
-
+                if (QF.cls && (t.levels || []).concat(t.mediums || []).map(norm).indexOf(norm(QF.cls)) === -1) return false;
+                if (QF.subject && (t.subjects || []).map(norm).indexOf(norm(QF.subject)) === -1) return false;
+                if (QF.location && norm(t.city) !== norm(QF.location)) return false;
+                if (QF.mode && t.teachingMode !== QF.mode && t.teachingMode !== 'Both') return false;
+                var lo = t.monthlyFee || 0, hi = t.feeMax || t.monthlyFee || 0;
+                if ((QF.min || QF.max) && !lo) return false;
+                if (QF.max && lo > QF.max) return false;
+                if (QF.min && hi < QF.min) return false;
+                return true;
+            }
+            function applySearch(keepShown) {
+                var sort = document.getElementById('sortSelect').value;
+                var list = allTutors.filter(matches);
+                switch (sort) {
+                    case 'rating': list.sort(function (a, b) { return (b.rating - a.rating) || (b.totalReviews - a.totalReviews); }); break;
+                    case 'fee-low': list.sort(function (a, b) { return (a.monthlyFee || 1e9) - (b.monthlyFee || 1e9); }); break;
+                    case 'fee-high': list.sort(function (a, b) { return (b.monthlyFee || 0) - (a.monthlyFee || 0); }); break;
+                    case 'experience': list.sort(function (a, b) { return b.experienceYears - a.experienceYears; }); break;
+                    case 'new': list.sort(function (a, b) { return b.id - a.id; }); break;
+                }
+                if (keepShown !== true) shown = PAGE;
+                var active = !!(document.getElementById('ftSearch').value.trim() || QF.cls || QF.subject || QF.location || QF.mode || QF.min || QF.max);
+                document.getElementById('ftClear').hidden = !active;
                 renderList(list);
             }
+            document.getElementById('ftMore').addEventListener('click', function () { shown += PAGE; renderList(lastList); });
+            var stT = null;
+            document.getElementById('ftSearch').addEventListener('input', function () { clearTimeout(stT); stT = setTimeout(function () { applySearch(); }, 200); });
+            document.getElementById('sortSelect').addEventListener('change', function () { applySearch(); });
+            document.getElementById('qfApply').addEventListener('click', function () {
+                readQF(); applySearch();
+                document.getElementById('countBadge').closest('.ft2-list-h').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            document.getElementById('ftClear').addEventListener('click', function () {
+                document.getElementById('ftSearch').value = '';
+                ['qfClass', 'qfSubject', 'qfLocation', 'qfMode', 'qfMin', 'qfMax'].forEach(function (id) { document.getElementById(id).value = ''; });
+                readQF(); applySearch();
+            });
+            // ❤️ সেভ হলে আইকন বদলায় (সেভ করার কাজ লেআউটের কমন হ্যান্ডলার করে)
+            document.addEventListener('saved:changed', function (e) {
+                if (e.detail.type !== 'tutor') return;
+                var id = parseInt(e.detail.id, 10), i = SAVED.indexOf(id);
+                if (e.detail.saved && i === -1) SAVED.push(id); else if (!e.detail.saved && i > -1) SAVED.splice(i, 1);
+                document.querySelectorAll('.ft2-heart[data-save-id="' + id + '"]').forEach(function (b) {
+                    b.classList.toggle('on', e.detail.saved); var ic = b.querySelector('i'); if (ic) ic.className = (e.detail.saved ? 'fas' : 'far') + ' fa-heart';
+                });
+            });
+            readQF();
 
             function viewProfile(id) {
                 var t = allTutors.find(function (x) { return x.id === id; });
