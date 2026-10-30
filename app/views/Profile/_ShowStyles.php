@@ -236,6 +236,38 @@
     .ab-row .lock { color: var(--pf-soft); font-weight: 500; font-size: 13.5px; }
     .ab-row .empty { color: #B6C0CD; font-weight: 500; font-style: italic; font-size: 14px; }
     .ab-none { color: var(--pf-soft); font-size: 14px; margin: 0; }
+    /* My Profile — ইনলাইন এডিট */
+    button.ab-edit { border: none; cursor: pointer; font-family: inherit; }
+    .ab-form { display: none; }
+    .ab-card.editing .ab-form { display: block; animation: pfIn .2s ease; }
+    .ab-card.editing .ab-rows, .ab-card.editing .ab-none, .ab-card.editing .ab-edit { display: none; }
+    .ab-card.editing { border-color: #9EC2FA; box-shadow: 0 0 0 3px var(--pf-blue-soft), var(--pf-shadow); }
+    .ab-card.flash { animation: abFlash 1.2s ease; }
+    @keyframes abFlash { 0%, 100% { box-shadow: var(--pf-shadow); } 30% { box-shadow: 0 0 0 4px #BFD7FE, var(--pf-shadow); } }
+    .ab-fgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 18px; }
+    .ab-f label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .ab-f label b { color: #e74c3c; }
+    .ab-f input, .ab-f select { width: 100%; height: 44px; border: 1.5px solid var(--pf-line); border-radius: 10px; padding: 0 12px; font-size: 15px; outline: none; background: #fff; font-family: inherit; color: var(--pf-text); }
+    .ab-f input:focus, .ab-f select:focus { border-color: var(--pf-blue); box-shadow: 0 0 0 3px var(--pf-blue-soft); }
+    .ab-note { margin: 12px 0 0; font-size: 12.5px; color: var(--pf-muted); }
+    .ab-factions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .ab-factions .pf-btn { height: 40px; font-size: 14px; }
+    .ab-msg { margin-top: 10px; font-size: 13.5px; color: #DC2626; }
+    /* বাম মেনু: My Profile এর নিচের অংশ */
+    .pf-sub { display: none; margin: 2px 0 6px 20px; padding-left: 6px; border-left: 2px solid #E3ECFB; }
+    .pf-nav a.active[data-tab="profile"] + .pf-sub { display: block; }
+    .pf-nav .pf-sub a { padding: 8px 8px; font-size: 13.5px; gap: 9px; border-radius: 10px; color: #475569; }
+    .pf-nav .pf-sub a i { width: 16px; font-size: 13.5px; color: var(--pf-soft); }
+    .pf-nav .pf-sub a span { flex: 1; min-width: 0; }
+    .pf-nav .pf-sub a span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pf-nav .pf-sub a em { font-style: normal; width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+    .pf-nav .pf-sub a em i { font-size: 9px !important; width: auto !important; color: inherit !important; }
+    .pf-nav .pf-sub a em.ok { background: #E7F8EE; color: #15803D; }
+    .pf-nav .pf-sub a em.no { background: #FFF4E5; color: #B45309; }
+    .pf-nav .pf-sub a.on { background: #F4F7FB; color: var(--pf-text); font-weight: 600; }
+    .pf-nav .pf-sub a.on i { color: var(--pf-blue); }
+    .pf-nav .pf-sub a.pw { color: #B45309; }
+    .pf-nav .pf-sub a.pw i { color: #D97706; }
     .ab-tutor { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 12px; background: #F4F7FB; margin-bottom: 14px; }
     .ab-tutor i { font-size: 28px; }
     .ab-tutor strong { display: block; font-size: 15.5px; }
@@ -404,6 +436,10 @@
         .pf-nav::-webkit-scrollbar { display: none; }
         .pf-nav a { flex: 0 0 auto; padding: 9px 14px; font-size: 14px; gap: 8px; }
         .pf-nav a i { width: auto; font-size: 15px; }
+        .pf-nav a.active[data-tab="profile"] + .pf-sub { display: contents; }
+        .pf-nav .pf-sub a { flex: 0 0 auto; background: #F4F7FB; padding: 9px 12px; font-size: 13px; }
+        .pf-nav .pf-sub a em { display: none; }
+        .ab-card { scroll-margin-top: 150px; }
         .pf-promo, .pf-promo-img { display: none; }
         .pf-info { flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 0 16px 18px; }
         .ps-avatar-wrap { margin-top: -84px; }
@@ -443,6 +479,7 @@
         .pf-chips { padding-left: 0; gap: 8px; }
         .pf-chip { height: 36px; padding: 0 12px; font-size: 13px; }
         .ab-rows { grid-template-columns: 1fr; }
+        .ab-fgrid { grid-template-columns: minmax(0, 1fr); }
         .gl-grid { grid-template-columns: minmax(0, 1fr); }
         .pf-2 { grid-template-columns: 1fr; }
         .pf-ov { padding: 0; align-items: flex-end; }

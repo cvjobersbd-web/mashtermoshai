@@ -310,7 +310,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                     </div>
                     <div class="pf-actions">
                         <?php if ($isOwner): ?>
-                            <a href="/Profile?section=basic" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
+                            <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
                         <?php elseif (!$isAdminViewer): ?>
                             <div class="fr-actions" data-uid="<?= (int)$u->Id ?>" data-rel="<?= e($rel) ?>"><?= friend_actions_html((int)$u->Id, $rel) ?></div>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
@@ -333,6 +333,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <?php if ($k === 'reviews' && $rs['count']): ?><span class="pf-n"><?= (int)$rs['count'] ?></span><?php endif; ?>
                             <?php if ($k === 'friends' && $Model->FriendCount): ?><span class="pf-n"><?= (int)$Model->FriendCount ?></span><?php endif; ?>
                         </a>
+                        <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
                 </nav>
                 <?php $tp = teacher_promo(); if ($tp['tp_enabled'] !== '0'):
@@ -556,7 +557,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                 <!-- ======================= PROFILE (About) ======================= -->
                 <section class="pf-sec <?= $tab === 'profile' ? 'active' : '' ?>" id="sec-profile">
                     <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখে।' : 'ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখতে পারেন।' ?></p></div>
-                        <?php if ($isOwner): ?><a href="/Profile?section=basic" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
+                        <?php if ($isOwner): ?><a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
                     <?php partial('Profile/_ShowAbout', ['u' => $u, 'isOwner' => $isOwner, 'isTeacher' => true, 'ti' => $ti, 'canPrivate' => $canPrivate, 'Model' => $Model]); ?>
                 </section>
 
@@ -864,10 +865,10 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <h4><i class="fas fa-user-pen"></i> Profile</h4><p>অন্যরা আপনার প্রোফাইলে যা দেখে।</p>
                             <div class="set-links">
                                 <button type="button" data-intro="all"><i class="fas fa-quote-left"></i> Headline, Bio, শহর, বিষয় ও ক্লাস <i class="fas fa-chevron-right chev"></i></button>
-                                <a href="/Profile?section=basic"><i class="fas fa-id-card"></i> নাম, ইমেইল, মোবাইল <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=education"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=address"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=links"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1"><i class="fas fa-id-card"></i> নাম, ইমেইল, মোবাইল <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-education" data-ab-go="education" data-ab-open="1"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-address" data-ab-go="address" data-ab-open="1"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-links" data-ab-go="links" data-ab-open="1"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="/Teacher/TeacherDashboard"><i class="fas fa-gauge"></i> Teacher Dashboard <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="/Friends"><i class="fas fa-user-group"></i> Friends & Requests <i class="fas fa-chevron-right chev"></i></a>
                             </div>

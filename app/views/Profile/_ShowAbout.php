@@ -41,6 +41,44 @@ $about = [
     ]],
 ];
 $brands = ['fa-github', 'fa-linkedin'];
+
+// ===== মালিকের জন্য এখানেই এডিট ফর্ম (আলাদা পেজে যেতে হয় না) =====
+$opt = function (array $list, $cur, string $ph = 'Select') {
+    $o = '<option value="">' . e($ph) . '</option>';
+    foreach ($list as $v) $o .= '<option value="' . e($v) . '"' . ((string)$cur === $v ? ' selected' : '') . '>' . e($v) . '</option>';
+    return $o;
+};
+$fi = fn($name, $label, $value, $type = 'text', $extra = '') =>
+    '<div class="ab-f"><label>' . $label . '</label><input type="' . $type . '" name="' . $name . '" value="' . e((string)$value) . '" ' . $extra . ' /></div>';
+$fs = fn($name, $label, $html) => '<div class="ab-f"><label>' . $label . '</label><select name="' . $name . '">' . $html . '</select></div>';
+$forms = !$isOwner ? [] : [
+    'basic' => ['/Profile/UpdateBasic',
+        $fi('FullName', 'Full Name <b>*</b>', $u->FullName, 'text', 'required maxlength="100"')
+        . $fi('Email', 'Email <b>*</b>', $u->Email, 'email', 'required maxlength="200"')
+        . $fi('MobileNumber', 'Mobile Number', $u->MobileNumber, 'tel', 'maxlength="20" placeholder="+880 1XXX XXXXXX"')],
+    'additional' => ['/Profile/UpdateAdditional',
+        $fs('Gender', 'Gender', $opt(['Male', 'Female', 'Other'], $u->Gender, 'Select Gender'))
+        . $fs('AgeRange', 'Age Range', $opt(['Under 18', '18-24', '25-34', '35-44', '45-54', '55+'], $u->AgeRange, 'Select Age Range'))
+        . $fs('PrimaryDeviceType', 'Primary Device', $opt(['Mobile', 'Tablet', 'Laptop', 'Computer'], $u->PrimaryDeviceType, 'Select Device'))
+        . $fs('YearsOfExperience', 'Years of Experience', $opt(['0-1 year', '1-2 years', '3-5 years', '5-10 years', '10+ years'], $u->YearsOfExperience, 'Select Experience'))
+        . $fs('AreaType', 'Area Type', $opt(['Village', 'Town', 'City'], $u->AreaType, 'Select Area Type'))],
+    'address' => ['/Profile/UpdateAddress',
+        $fi('Country', 'Country', $u->Country, 'text', 'maxlength="60" placeholder="Bangladesh"')
+        . $fi('StreetAddress', 'Present Address', $u->StreetAddress, 'text', 'maxlength="200" placeholder="House, Road, Area"')
+        . $fi('PermanentAddress', 'Permanent Address', $u->PermanentAddress, 'text', 'maxlength="200" placeholder="Village, Upazila, District"')],
+    'education' => ['/Profile/UpdateEducation',
+        $fs('EducationLevel', 'Education Level', $opt(['JSC/JDC/8 pass', 'Secondary', 'Higher Secondary', 'Diploma', 'Bachelor/Honors', 'Masters', 'PhD'], $u->EducationLevel, 'Select Education Level'))
+        . $fs('CurrentStudyStatus', 'Currently Studying', str_replace('<option value="">No</option>', '', $opt(['No', 'Yes'], $u->CurrentStudyStatus ?: 'No', 'No')))
+        . $fi('ExamDegreeTitle', 'Degree / Exam', $u->ExamDegreeTitle, 'text', 'maxlength="120" placeholder="e.g. BSc in Mathematics"')
+        . $fi('InstitutionName', 'Institution', $u->InstitutionName, 'text', 'maxlength="150" placeholder="Institution name"')
+        . $fi('PassingYear', 'Passing Year', $u->PassingYear, 'text', 'maxlength="4" inputmode="numeric" placeholder="2020"')
+        . $fs('IsCSEStudent', 'CSE Student', '<option value="false"' . ($u->IsCSEStudent ? '' : ' selected') . '>No</option><option value="true"' . ($u->IsCSEStudent ? ' selected' : '') . '>Yes</option>')],
+    'links' => ['/Profile/UpdateLinks',
+        $fi('CvLink', 'CV Link', $u->CvLink, 'url', 'maxlength="300" placeholder="https://drive.google.com/..."')
+        . $fi('GithubProfile', 'GitHub', $u->GithubProfile, 'url', 'maxlength="300" placeholder="https://github.com/username"')
+        . $fi('PortfolioLink', 'Portfolio', $u->PortfolioLink, 'url', 'maxlength="300" placeholder="https://yourportfolio.com"')
+        . $fi('LinkedInProfile', 'LinkedIn', $u->LinkedInProfile, 'url', 'maxlength="300" placeholder="https://linkedin.com/in/username"')],
+];
 ?>
             <div class="ab-wrap">
     <nav class="ab-nav">
@@ -64,9 +102,16 @@ $brands = ['fa-github', 'fa-linkedin'];
                     <h3><i class="fas <?= $icon ?>"></i> <?= $title ?></h3>
                     <?php if ($isOwner): ?>
                         <span class="ab-st <?= $done ? 'ok' : 'no' ?>"><?= $done ? 'Complete' : 'Incomplete' ?></span>
-                        <a class="ab-edit" href="/Profile?section=<?= $k ?>"><i class="fas fa-pen"></i> <?= $done ? 'Edit' : 'Add' ?></a>
+                        <button type="button" class="ab-edit" data-ab-edit="<?= $k ?>"><i class="fas fa-pen"></i> <?= $done ? 'Edit' : 'Add' ?></button>
                     <?php endif; ?>
                 </div>
+                <?php if (isset($forms[$k])): ?>
+                    <form class="ab-form" data-ab-form="<?= e($forms[$k][0]) ?>" data-sec="<?= $k ?>" autocomplete="off" novalidate>
+                        <div class="ab-fgrid"><?= $forms[$k][1] ?></div>
+                        <?php if ($k === 'basic' || $k === 'address'): ?><p class="ab-note"><i class="fas fa-user-group"></i> <?= $k === 'basic' ? 'ইমেইল ও মোবাইল' : 'বর্তমান ও স্থায়ী ঠিকানা' ?> শুধু আপনার ফ্রেন্ডরা দেখতে পারেন।</p><?php endif; ?>
+                        <div class="ab-factions"><button type="button" class="pf-btn" data-ab-cancel>Cancel</button><button type="submit" class="pf-btn primary"><i class="fas fa-check"></i> Save</button></div>
+                    </form>
+                <?php endif; ?>
                 <?php if (!$visible): ?>
                     <p class="ab-none">কোনো তথ্য দেওয়া নেই।</p>
                 <?php else: ?>
