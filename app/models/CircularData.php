@@ -87,11 +87,13 @@ trait CircularData
                 WHERE $where ORDER BY $order LIMIT $limit", $p);
         } catch (Throwable $e) { error_log('[GetCircularFeed] ' . $e->getMessage()); return ['posts' => [], 'total' => 0]; }
         $posts = [];
+        $liked = $this->GetLikedPostIds('circular', $viewerId);
         foreach ($rows as $r) {
             $cm = (int)$r->Cm; unset($r->Cm);
             $post = $this->mapFeedPost($r, 'Student');
             $post->CommentCount = $cm;
             $post->ViewCount = (int)($r->ViewCount ?? 0);
+            $post->IsLikedByMe = isset($liked[$post->Id]);
             $post->Comments = $this->GetTuitionCircularComments($post->Id, $viewerId);
             $posts[] = $post;
         }

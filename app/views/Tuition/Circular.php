@@ -186,6 +186,14 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tc-stats button { cursor: pointer; }
     .tc-stats button:hover { color: var(--tc-teal); }
     .tc-stats i { font-size: 16px; }
+    .tc-like { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; padding: 4px 8px; margin: -4px -2px; border-radius: 8px;
+        color: #475569; font: inherit; cursor: pointer; text-decoration: none; }
+    .tc-like:hover { background: #EEF5FE; color: #0A66C2; }
+    .tc-like .ico { font-size: 18px; display: inline-flex; transform-origin: 40% 70%; }
+    .tc-like .lk-svg { width: 1em; height: 1em; display: block; }
+    .tc-like.on { color: #0A66C2; font-weight: 700; }
+    .tc-like.pop .ico { animation: tcLkPop .45s cubic-bezier(.3,1.6,.5,1); }
+    @keyframes tcLkPop { 0% { transform: scale(1) rotate(0); } 35% { transform: scale(1.35) rotate(-14deg); } 70% { transform: scale(.92) rotate(4deg); } 100% { transform: scale(1); } }
     .tc-apply { height: 36px; padding: 0 16px; border-radius: 9px; border: none; background: var(--tc-teal); color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer;
         display: inline-flex; align-items: center; gap: 7px; font-family: inherit; }
     .tc-apply:hover { background: var(--tc-teal-d); }
@@ -830,6 +838,12 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                             <?php if (!is_blank($post->Budget)): ?><span class="tc-tag bd"><i class="fas fa-money-bill-wave"></i> ৳<?= e($post->Budget) ?></span><?php endif; ?>
                                         </div>
                                         <div class="tc-stats">
+                                            <?php if ($isLoggedIn): ?>
+                                                <button type="button" class="tc-like<?= $post->IsLikedByMe ? ' on' : '' ?>" data-tc-like="<?= $pid ?>" aria-pressed="<?= $post->IsLikedByMe ? 'true' : 'false' ?>" title="Like">
+                                                    <span class="ico"><?= like_icon_html((bool)$post->IsLikedByMe) ?></span> <span class="n"><?= (int)$post->LikeCount ?></span></button>
+                                            <?php else: ?>
+                                                <a class="tc-like" href="<?= e($loginUrl) ?>" title="Like করতে লগইন করুন"><span class="ico"><?= like_icon_html(false) ?></span> <span class="n"><?= (int)$post->LikeCount ?></span></a>
+                                            <?php endif; ?>
                                             <span title="কতবার দেখা হয়েছে"><i class="far fa-eye"></i> <?= (int)$post->ViewCount ?></span>
                                             <button type="button" onclick="toggleCircularComments(<?= $pid ?>)" title="Comments"><i class="far fa-comment"></i> <span id="comment-count-<?= $pid ?>"><?= (int)$post->CommentCount ?></span></button>
                                             <?php if ($isLoggedIn && $isTeacher && !$isOwn): ?>
@@ -1312,6 +1326,25 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                         if (r.success) { var card = document.getElementById('circular-post-' + d.getAttribute('data-tc-del')); if (card) card.remove(); }
                     } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); }
                 }
+            });
+
+            // ----- Like -----
+            var LIKE_ON = <?= js(like_icon_html(true)) ?>, LIKE_OFF = <?= js(like_icon_html(false)) ?>;
+            document.addEventListener('click', async function (e) {
+                var b = e.target.closest('button[data-tc-like]'); if (!b || b.disabled) return;
+                var on = !b.classList.contains('on'), n = $('.n', b), prev = parseInt(n.textContent, 10) || 0;
+                function paint(state, count) {
+                    b.classList.toggle('on', state); b.setAttribute('aria-pressed', state ? 'true' : 'false');
+                    $('.ico', b).innerHTML = state ? LIKE_ON : LIKE_OFF; n.textContent = count;
+                    b.classList.remove('pop'); if (state) { void b.offsetWidth; b.classList.add('pop'); }
+                }
+                paint(on, Math.max(0, prev + (on ? 1 : -1))); b.disabled = true;
+                var fd = new FormData(); fd.append('postId', b.getAttribute('data-tc-like')); fd.append('__RequestVerificationToken', token());
+                try {
+                    var d = await (await fetch('/Tuition/ToggleCircularLike', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                    if (d.success) paint(!!d.isLiked, d.count); else { paint(!on, prev); say(d.message || 'Failed'); }
+                } catch (err) { paint(!on, prev); }
+                finally { b.disabled = false; }
             });
 
             // ----- ছবি বড় করে দেখা -----

@@ -174,7 +174,16 @@ class TuitionController extends Controller
     {
         $userId = current_user_id();
         if ($userId === null) json_response(['success' => false, 'message' => 'Please login to like.']);
-        [$liked, $count] = $this->db->ToggleTuitionCircularLike(input_int('postId', 0), $userId);
+        $postId = input_int('postId', 0) ?? 0;
+        $post = $this->db->GetTuitionCircularPostById($postId);
+        if (!$post) json_response(['success' => false, 'message' => 'পোস্টটি পাওয়া যায়নি।']);
+        [$liked, $count] = $this->db->ToggleTuitionCircularLike($postId, $userId);
+        // প্রথম লাইক (একই মানুষ বারবার লাইক-আনলাইক করলে বারবার নয়)
+        if ($liked && $post->UserId !== $userId && empty($_SESSION['_tc_liked'][$postId])) {
+            $_SESSION['_tc_liked'][$postId] = 1;
+            $who = session_get('UserFullName') ?? session_get('UserName') ?? 'একজন';
+            $this->db->CreateNotification($post->UserId, 'New Like', "$who আপনার Tuition Circular পোস্টে লাইক দিয়েছেন।", 'info', '/Tuition/Circular#circular-post-' . $postId, 'fa-thumbs-up');
+        }
         json_response(['success' => true, 'isLiked' => $liked, 'count' => $count]);
     }
 
