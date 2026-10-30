@@ -743,7 +743,27 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 display: block; height: <?= (int)max(40, $safeLogoSize + 4) ?>px; width: auto; max-width: 150px;
                 object-fit: contain; border-radius: 10px; transition: transform 0.2s ease;
             }
-            .brand-logo-box:hover img { transform: scale(1.04); }
+            /* লোগো ফাইলের চারপাশের গোল কোণা/বর্ডার কেটে বাদ দিয়ে শুধু লোগোটা বড় করে দেখানো */
+            .brand-logo-box img, .footer-brand-logo-box img { border-radius: 0; clip-path: inset(9%); transform: scale(1.2); }
+            .brand-logo-box img { mix-blend-mode: lighten; } /* লোগোর গাঢ় পটভূমি নেভবারের রঙে মিশে যায় */
+            .brand-logo-box img { height: 70px; max-width: 230px; }
+            .brand-logo-box:hover img { transform: scale(1.25); }
+            @media (max-width: 768px) { .brand-logo-box img { height: 60px; max-width: 180px; } }
+
+            /* ===== ✅ নেভবার মেনু: কোন পেজে আছেন বোঝা যায় ===== */
+            .nav-desktop-link {
+                position: relative; display: inline-flex; align-items: center; gap: 7px;
+                padding: 9px 14px; border-radius: 10px; font-size: 14px; font-weight: 500;
+                color: var(--nav-text) !important; text-decoration: none; opacity: .85;
+                transition: background .2s ease, opacity .2s ease, box-shadow .2s ease;
+            }
+            .nav-desktop-link i { font-size: 12px; }
+            .nav-desktop-link:hover { opacity: 1; }
+            .nav-desktop-link.active { opacity: 1; font-weight: 700; background: none; }
+            .nav-desktop-link.active::after {
+                content: ''; position: absolute; left: 14px; right: 14px; bottom: -14px; height: 3px; border-radius: 3px 3px 0 0;
+                background: var(--primary-color, #02B8F5);
+            }
             .footer-brand-logo-box img { height: <?= (int)max(44, $safeLogoSize + 8) ?>px; max-width: 170px; }
 
             .brand-site-name {
@@ -927,32 +947,37 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                 <!-- ✅ Logo + Site Name (Dynamic) -->
                 <div class="flex-shrink-0">
-                    <a href="/" class="flex items-center gap-2.5">
+                    <a href="/" class="flex items-center" aria-label="<?= e($safeSiteName) ?> — Home" title="<?= e($safeSiteName) ?>">
                         <!-- Logo Box -->
                         <span class="brand-logo-box"><img src="<?= e($navbarLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
 
-                        <span class="brand-site-name hidden sm:inline font-serif" style="font-size:16px;">
-                            <?= e($safeSiteName) ?>
-                        </span>
                     </a>
                 </div>
 
-                <!-- Desktop Menu -->
-                <div class="hidden xl:flex items-center gap-5 2xl:gap-8">
-                    <a href="/" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-house me-1" style="font-size:12px;"></i>Home
+                <!-- Desktop Menu (যে পেজে আছে সেটা হাইলাইট) -->
+                <?php
+                $navPath = strtolower(rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/')) ?: '/';
+                $navOn = function (string $h) use ($navPath): bool {
+                    $h = strtolower($h);
+                    if ($h === '/') return in_array($navPath, ['/', '/home', '/home/index'], true);
+                    return $navPath === $h || str_starts_with($navPath, $h . '/');
+                };
+                ?>
+                <div class="hidden xl:flex items-center gap-1 2xl:gap-3">
+                    <a href="/" class="nav-desktop-link<?= $navOn('/') ? ' active' : '' ?>"<?= $navOn('/') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-house"></i>Home
                     </a>
-                    <a href="/FindTutor" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-chalkboard-user me-1" style="font-size:12px;"></i>Find Tutor
+                    <a href="/FindTutor" class="nav-desktop-link<?= $navOn('/FindTutor') ? ' active' : '' ?>"<?= $navOn('/FindTutor') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-chalkboard-user"></i>Find Tutor
                     </a>
-                    <a href="/Tuition/Circular" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-clipboard-list me-1" style="font-size:12px;"></i>Tuition Circular
+                    <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-clipboard-list"></i>Tuition Circular
                     </a>
-                    <a href="/Notice" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-bullhorn me-1" style="font-size:12px;"></i>Notice
+                    <a href="/Notice" class="nav-desktop-link<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-bullhorn"></i>Notice
                     </a>
-                    <a href="/Helpdesk" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-headset me-1" style="font-size:12px;"></i>Helpdesk
+                    <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-headset"></i>Helpdesk
                     </a>
                 </div>
 
