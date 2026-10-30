@@ -153,7 +153,7 @@ class PostController extends Controller
         $meta = reaction_meta();
         json_response(['success' => true, 'people' => array_map(fn($p) => [
             'id' => $p->Id, 'name' => $p->Name, 'image' => $p->Image, 'initials' => $p->Initials,
-            'role' => $p->Role === 'Teacher' ? 'Teacher' : 'Student', 'reaction' => $p->Reaction, 'emoji' => $meta[$p->Reaction][0] ?? '👍',
+            'role' => $p->Role === 'Teacher' ? 'Teacher' : 'Student', 'reaction' => 'like', 'emoji' => like_badge_html(),
         ], $this->db->GetReactors($type, $id))]);
     }
 
@@ -314,11 +314,10 @@ class PostController extends Controller
         $me = $this->me();
         $post = $this->viewablePost(input_int('postId', 0) ?? 0, $me);
         $reaction = (string)input_str('reaction', '');
-        $reaction = in_array($reaction, Db::REACTIONS, true) ? $reaction : null;
+        $reaction = $reaction !== '' ? 'like' : null;   // শুধু Like
         $res = $this->db->SetPostReaction($post->Id, $me, $reaction);
         if ($res['prev'] === null && $reaction !== null && $post->UserId !== $me) {
-            $emoji = reaction_meta()[$reaction][0];
-            $this->db->CreateNotification($post->UserId, "New Reaction $emoji", $this->name() . " আপনার পোস্টে $emoji রিয়েক্ট দিয়েছেন।", 'info', $this->postLink($post->Id), 'fa-heart');
+            $this->db->CreateNotification($post->UserId, 'New Like', $this->name() . ' আপনার পোস্টে লাইক দিয়েছেন।', 'info', $this->postLink($post->Id), 'fa-thumbs-up');
         }
         json_response(['success' => true, 'mine' => $reaction, 'counts' => $res['counts'], 'total' => $res['total']]);
     }
@@ -482,11 +481,10 @@ class PostController extends Controller
         if (!$c) $this->fail('কমেন্টটি পাওয়া যায়নি।');
         $this->viewablePost($c->PostId, $me);
         $reaction = (string)input_str('reaction', '');
-        $reaction = in_array($reaction, Db::REACTIONS, true) ? $reaction : null;
+        $reaction = $reaction !== '' ? 'like' : null;   // শুধু Like
         $res = $this->db->SetCommentReaction($c->Id, $me, $reaction);
         if ($res['prev'] === null && $reaction !== null && $c->UserId !== $me) {
-            $emoji = reaction_meta()[$reaction][0];
-            $this->db->CreateNotification($c->UserId, "New Reaction $emoji", $this->name() . " আপনার কমেন্টে $emoji রিয়েক্ট দিয়েছেন।", 'info', $this->postLink($c->PostId), 'fa-heart');
+            $this->db->CreateNotification($c->UserId, 'New Like', $this->name() . ' আপনার কমেন্টে লাইক দিয়েছেন।', 'info', $this->postLink($c->PostId), 'fa-thumbs-up');
         }
         json_response(['success' => true, 'mine' => $reaction, 'counts' => $res['counts'], 'total' => $res['total']]);
     }

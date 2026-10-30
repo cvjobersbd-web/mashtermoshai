@@ -3,45 +3,119 @@ class TuitionController extends Controller
 {
     private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    /** GET /Tuition/Circular?search=&area= */
+    private const VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.m4v'];
+    private const MAX_VIDEO = 25 * 1024 * 1024;
+    public const PAGE_SIZE = 15;
+
+    /**
+     * GET /Tuition/Circular?location=&class=&subject=&medium[]=&type[]=&sort=recent|views|comments&page=
+     * ছবির মতো নতুন ডিজাইন: বামে ফিল্টার, মাঝে পোস্ট, ডানে Need a Teacher / How It Works।
+     */
     public function Circular(): void
     {
-        $search = input_str('search');
-        $area = input_str('area');
-        try {
-            $posts = $this->db->GetOpenTuitionPosts($search, $area);
-        } catch (Throwable $e) {
-            tempdata_set('Error', 'Unable to load tuition posts. Please try again.');
-            $posts = [];
-        }
-        $this->view(null, $posts, ['SearchQuery' => $search, 'SelectedArea' => $area ?? 'all']);
+        $arr = fn($k) => array_values(array_filter(array_map('strval', (array)($_GET[$k] ?? [])), 'strlen'));
+        $f = [
+            'location' => mb_substr(trim((string)input_str('location', '')), 0, 60),
+            'class' => mb_substr(trim((string)input_str('class', '')), 0, 60),
+            'subject' => mb_substr(trim((string)input_str('subject', '')), 0, 60),
+            'medium' => array_values(array_intersect($arr('medium'), Db::CIRCULAR_MEDIUMS)),
+            'type' => array_values(array_intersect($arr('type'), Db::CIRCULAR_TYPES)),
+            'q' => mb_substr(trim((string)input_str('q', '')), 0, 80),
+        ];
+        $sort = in_array(input_str('sort', 'recent'), ['recent', 'views', 'comments'], true) ? input_str('sort', 'recent') : 'recent';
+        $page = max(1, min(20, input_int('page', 1) ?? 1));
+        $feed = $this->db->GetCircularFeed($f, $sort, current_user_id(), self::PAGE_SIZE * $page);
+        try { $adminPosts = $this->db->GetOpenTuitionPosts(null, null); } catch (Throwable $e) { $adminPosts = []; }
+        $this->view(null, $adminPosts, [
+            'Feed' => $feed['posts'], 'FeedTotal' => $feed['total'], 'Filters' => $f, 'Sort' => $sort, 'Page' => $page,
+            'FilterValues' => $this->db->CircularFilterValues(),
+            'IsFiltered' => $f['location'] !== '' || $f['class'] !== '' || $f['subject'] !== '' || $f['medium'] || $f['type'] || $f['q'] !== '',
+        ]);
     }
 
-    /** POST /Tuition/CreateCircularPost */
+    private function fail(string $m): void { json_response(['success' => false, 'message' => $m]); }
+
+    /** POST /Tuition/CreateCircularPost (title, content, preferredArea, classLevel, subjects, budget, medium, tuitionType, imageFile | videoFile) */
     public function CreateCircularPost_POST(): void
     {
         $userId = current_user_id();
-        if ($userId === null) json_response(['success' => false, 'message' => 'Please login to post.']);
-        $content = input_str('content');
-        $image = upload_file('imageFile');
-        if (is_blank($content) && !$image) json_response(['success' => false, 'message' => 'Content or image is required.']);
+        if ($userId === null) $this->fail('পোস্ট করতে লগইন করুন।');
+        $clean = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
+        $title = $clean('title', 150);
+        $content = trim(preg_replace("/\n{4,}/", "\n\n\n", str_replace("\r", '', (string)input_str('content', ''))));
+        if ($title === '') $this->fail('পোস্টের শিরোনাম লিখুন (যেমন: HSC এর জন্য Mathematics টিউটর প্রয়োজন)।');
+        if ($content === '') $this->fail('টিউশনের বিস্তারিত লিখুন।');
+        if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
+        if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
+        $medium = (string)input_str('medium', '');
+        $type = (string)input_str('tuitionType', '');
+        $budget = preg_replace('/[^0-9]/', '', (string)input_str('budget', ''));
+        if (strlen($budget) > 7) $this->fail('বাজেট সঠিক নয়।');
 
-        $imageUrl = null;
+        $imageUrl = null; $videoUrl = null;
+        $image = upload_file('imageFile');
+        $video = upload_file('videoFile');
+        if ($image && $video) $this->fail('একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।');
         if ($image) {
             $ext = strtolower('.' . pathinfo($image['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, self::IMAGE_EXTS, true) || $image['size'] > 5 * 1024 * 1024) {
-                json_response(['success' => false, 'message' => 'Invalid image or size over 5MB.']);
-            }
+            if (!in_array($ext, self::IMAGE_EXTS, true) || $image['size'] > 5 * 1024 * 1024) $this->fail('শুধু JPG, PNG, GIF, WEBP ছবি (৫ MB এর কম)।');
+            if (@getimagesize($image['tmp_name']) === false) $this->fail('ছবিটি সঠিক নয়।');
             $imageUrl = save_upload($image, 'tuition-posts', 'post_' . ticks(), $ext);
         }
-        $t = fn($n) => input_str($n) === null ? null : trim(input_str($n));
+        if ($video) {
+            $ext = strtolower('.' . pathinfo($video['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, self::VIDEO_EXTS, true)) $this->fail('শুধু MP4, WEBM বা MOV ভিডিও দেওয়া যাবে।');
+            if ($video['size'] > self::MAX_VIDEO) $this->fail('ভিডিও ২৫ MB এর কম হতে হবে।');
+            $head = (string)@file_get_contents($video['tmp_name'], false, null, 0, 16);
+            $isMp4 = substr($head, 4, 4) === 'ftyp';
+            $isWebm = substr($head, 0, 4) === "\x1A\x45\xDF\xA3";
+            if (!$isMp4 && !$isWebm) $this->fail('ভিডিও ফাইলটি সঠিক নয়।');
+            $videoUrl = save_upload($video, 'tuition-videos', 'vid_' . ticks() . '_' . bin2hex(random_bytes(3)), $ext === '.mov' ? '.mov' : $ext);
+        }
         $post = obj([
-            'UserId' => $userId, 'Content' => trim((string)$content), 'ImageUrl' => $imageUrl,
-            'PreferredArea' => $t('preferredArea'), 'ClassLevel' => $t('classLevel'), 'Subjects' => $t('subjects'), 'Budget' => $t('budget'),
+            'UserId' => $userId, 'Content' => $content, 'ImageUrl' => $imageUrl, 'VideoUrl' => $videoUrl, 'Title' => $title,
+            'PreferredArea' => $clean('preferredArea', 100) ?: null, 'ClassLevel' => $clean('classLevel', 60) ?: null,
+            'Subjects' => $clean('subjects', 120) ?: null, 'Budget' => $budget !== '' ? $budget : null,
+            'Medium' => in_array($medium, Db::CIRCULAR_MEDIUMS, true) ? $medium : null,
+            'TuitionType' => in_array($type, Db::CIRCULAR_TYPES, true) ? $type : null,
         ]);
         $err = null;
-        if ($this->db->CreateTuitionCircularPost($post, $err)) json_response(['success' => true]);
-        json_response(['success' => false, 'message' => $err]);
+        if ($this->db->CreateTuitionCircularPost($post, $err)) json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।']);
+        delete_upload($imageUrl); delete_upload($videoUrl);
+        $this->fail('পোস্ট করা যায়নি। আবার চেষ্টা করুন।');
+    }
+
+    /** POST /Tuition/ViewCircular (ids = কমা দিয়ে) — একই সেশনে একবারই গোনা হয় */
+    public function ViewCircular_POST(): void
+    {
+        $seen = $_SESSION['_tc_seen'] ?? [];
+        $new = [];
+        foreach (array_slice(explode(',', (string)input_str('ids', '')), 0, 50) as $id) {
+            $id = (int)$id;
+            if ($id > 0 && !isset($seen[$id])) { $seen[$id] = 1; $new[] = $id; }
+        }
+        if (count($seen) > 2000) $seen = array_slice($seen, -1000, null, true);
+        $_SESSION['_tc_seen'] = $seen;
+        $this->db->AddCircularViews($new);
+        json_response(['success' => true, 'counted' => count($new)]);
+    }
+
+    /** POST /Tuition/DeleteCircularPost (postId) — নিজের পোস্ট অথবা অ্যাডমিন */
+    public function DeleteCircularPost_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null) $this->fail('আগে লগইন করুন।');
+        $post = $this->db->GetTuitionCircularPostById(input_int('postId', 0) ?? 0);
+        if (!$post) $this->fail('পোস্টটি পাওয়া যায়নি।');
+        $isAdmin = current_role() === 'Admin';
+        if ($post->UserId !== $me && !$isAdmin) $this->fail('এই পোস্ট মোছার অনুমতি নেই।');
+        if (!$this->db->DeleteCircularPost($post->Id)) $this->fail('মোছা যায়নি। আবার চেষ্টা করুন।');
+        delete_upload($post->ImageUrl ?? null);
+        delete_upload($post->VideoUrl ?? null);
+        if ($isAdmin && $post->UserId !== $me) {
+            $this->db->CreateNotification($post->UserId, 'Post Removed', 'আপনার একটি Tuition Circular পোস্ট অ্যাডমিন সরিয়ে দিয়েছেন।', 'warning', '/Tuition/Circular', 'fa-trash');
+        }
+        json_response(['success' => true, 'message' => 'পোস্ট মুছে ফেলা হয়েছে।']);
     }
 
     /** POST /Tuition/AddCircularComment */

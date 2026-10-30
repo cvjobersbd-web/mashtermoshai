@@ -635,6 +635,25 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => $isT ? 'টিচার প্রোফাইলের প্রোমো সেভ হয়েছে।' : 'প্রোফাইল প্রোমো ছবি সেভ হয়েছে।'] + $vals);
     }
 
+    /** POST /Admin/SaveCircularBanner (tc_banner, tc_banner_enabled, reset) — Tuition Circular পেজের উপরের ছবি */
+    public function SaveCircularBanner_POST(): void
+    {
+        $this->requireAdminJson();
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent(circular_banner_defaults());
+            json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ব্যানারে ফেরত নেওয়া হয়েছে।'] + circular_banner_defaults());
+        }
+        $img = trim((string)input_str('tc_banner', ''));
+        if ($img === '' || !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img))) {
+            json_response(['success' => false, 'message' => 'ছবির লিংক ঠিক নেই — https:// দিয়ে শুরু হওয়া লিংক দিন অথবা ছবি আপলোড করুন।']);
+        }
+        if (mb_strlen($img) > 500) json_response(['success' => false, 'message' => 'লিংক খুব বড়।']);
+        $vals = ['tc_banner' => $img, 'tc_banner_enabled' => input_bool('tc_banner_enabled') ? '1' : '0'];
+        $err = null;
+        if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
+        json_response(['success' => true, 'message' => 'Tuition Circular ব্যানার সেভ হয়েছে।'] + $vals);
+    }
+
     public function UploadLogo_POST(): void
     {
         $prefix = input_str('target', 'navbar') === 'footer' ? 'footer' : 'navbar';

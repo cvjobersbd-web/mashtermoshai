@@ -102,10 +102,13 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
     .mn-item small { font-size: 12px; color: var(--pc-muted); }
     .mn-empty { padding: 10px; font-size: 13px; color: var(--pc-muted); text-align: center; }
     .pc-rx-icons { display: inline-flex; }
-    .pc-rx-icons span, .cm-rx-icons span {
-        width: 20px; height: 20px; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center;
-        font-size: 13px; line-height: 1; box-shadow: 0 0 0 2px #fff; margin-left: -4px;
-    }
+    .pc-rx-icons span, .cm-rx-icons span { display: inline-flex; margin-left: -4px; }
+    /* ===== Like (LinkedIn এর মতো, নিজস্ব আইকন) ===== */
+    .lk-svg { width: 1em; height: 1em; display: block; }
+    .lk-badge { width: 19px; height: 19px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-style: normal;
+        background: linear-gradient(135deg, #2BB6F5 0%, #0A66C2 100%); color: #fff; font-size: 10.5px; box-shadow: 0 0 0 2px #fff; }
+    .cm-rx-icons .lk-badge { width: 16px; height: 16px; font-size: 9px; }
+    .rl-emo .lk-badge { width: 20px; height: 20px; font-size: 11px; box-shadow: none; }
     .pc-rx-icons span:first-child, .cm-rx-icons span:first-child { margin-left: 0; }
 
     .pc-actions { display: flex; gap: 4px; margin: 0 12px; padding: 4px 0; border-top: 1px solid var(--pc-line); }
@@ -116,11 +119,11 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
     }
     .pc-act:hover { background: var(--pc-bubble); }
     .pc-act i { font-size: 17px; }
-    .pc-like-ico { font-size: 18px; line-height: 1; display: inline-flex; }
+    .pc-like-ico { font-size: 20px; line-height: 1; display: inline-flex; transform-origin: 40% 70%; }
+    .pc-like.on, .cm-like.on { color: #0A66C2 !important; }
     .pc-like.on .pc-like-lbl { font-weight: 700; }
-    <?php foreach ($rxMeta as $k => [$emo, $lbl, $col]): ?>
-    .pc-like.rx-<?= $k ?>, .cm-like.rx-<?= $k ?> { color: <?= $col ?>; }
-    <?php endforeach; ?>
+    .pc-like.pop .pc-like-ico { animation: lkPop .45s cubic-bezier(.3,1.6,.5,1); }
+    @keyframes lkPop { 0% { transform: scale(1) rotate(0); } 35% { transform: scale(1.35) rotate(-14deg); } 70% { transform: scale(.92) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
 
     /* ===== Comments ===== */
     .pc-comments { padding: 4px 14px 12px; border-top: 1px solid var(--pc-line); margin: 0 0; display: none; }
@@ -457,7 +460,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
 <div class="pm-overlay" id="rlOverlay" aria-hidden="true">
     <div class="pm" role="dialog" aria-modal="true" aria-labelledby="rlTitle">
         <div class="pm-head">
-            <h3 id="rlTitle">Reactions</h3>
+            <h3 id="rlTitle">Likes</h3>
             <button type="button" class="pm-x" data-rl="close" aria-label="Close"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="rl-tabs" id="rlTabs"></div>
@@ -476,6 +479,8 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
     var PV = <?= js(array_map(fn($m) => ['icon' => $m[0], 'label' => $m[1], 'hint' => $m[2]], $pvMeta)) ?>;
     var ME = <?= js(['id' => (int)$me->Id, 'name' => (string)$me->Name, 'img' => (string)($me->Image ?? ''), 'initials' => $meInitials]) ?>;
     var RX_KEYS = Object.keys(RX);
+    var MULTI_RX = RX_KEYS.length > 1;   // এখন শুধু Like — রিয়েকশন পিকার বন্ধ
+    var LIKE_ON = <?= js(like_icon_html(true)) ?>, LIKE_OFF = <?= js(like_icon_html(false)) ?>;
 
     function $(s, r) { return (r || document).querySelector(s); }
     function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -536,17 +541,19 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
         btn.setAttribute('data-mine', mine || '');
         btn.className = btn.className.replace(/\s?rx-\w+/g, '').replace(/\s?\bon\b/g, '') + (mine ? ' on rx-' + mine : '');
         if (isPost) {
-            $('.pc-like-ico', btn).innerHTML = mine ? RX[mine].emoji : '<i class="far fa-thumbs-up"></i>';
-            $('.pc-like-lbl', btn).textContent = mine ? RX[mine].label : 'Like';
+            $('.pc-like-ico', btn).innerHTML = mine ? LIKE_ON : LIKE_OFF;
+            $('.pc-like-lbl', btn).textContent = mine ? 'Liked' : 'Like';
+            btn.setAttribute('aria-pressed', mine ? 'true' : 'false');
+            btn.classList.remove('pop'); if (mine) { void btn.offsetWidth; btn.classList.add('pop'); }
         } else {
-            btn.textContent = mine ? RX[mine].label : 'Like';
+            btn.textContent = mine ? 'Liked' : 'Like';
         }
     }
     function paintSummary(box, counts, total, isPost) {
         if (!box) return;
         var keys = Object.keys(counts || {}).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 3);
         box.hidden = !total;
-        $(isPost ? '.pc-rx-icons' : '.cm-rx-icons', box).innerHTML = keys.map(function (k) { return '<span>' + RX[k].emoji + '</span>'; }).join('');
+        $(isPost ? '.pc-rx-icons' : '.cm-rx-icons', box).innerHTML = total ? '<span>' + RX.like.emoji + '</span>' : '';
         $(isPost ? '.pc-rx-n' : '.cm-rx-n', box).textContent = isPost ? total : (total > 1 ? total : '');
         if (!isPost) box.closest('.cm-bubble').classList.toggle('has-rx', !!total);
     }
@@ -567,6 +574,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
 
     // মাউস: হোভার করলে পিকার
     document.addEventListener('mouseover', function (e) {
+        if (!MULTI_RX) return;
         var btn = e.target.closest('[data-rx-target]');
         if (btn && matchMedia('(hover: hover)').matches) {
             clearTimeout(hideT);
@@ -586,6 +594,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
 
     // টাচ: চেপে ধরলে পিকার, আঙুল সরিয়ে ইমোজি বাছাই
     document.addEventListener('touchstart', function (e) {
+        if (!MULTI_RX) return;
         var btn = e.target.closest('[data-rx-target]');
         if (!btn) { if (pickerFor && !e.target.closest('.rx-picker')) closePicker(); return; }
         clearTimeout(pressT);
@@ -602,7 +611,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
         var hot = $('button.hot', picker);
         if (hot && pickerFor) { var b = pickerFor; closePicker(); react(b, hot.getAttribute('data-rx')); }
     });
-    document.addEventListener('contextmenu', function (e) { if (e.target.closest('[data-rx-target], .rx-picker')) e.preventDefault(); });
+    document.addEventListener('contextmenu', function (e) { if (MULTI_RX && e.target.closest('[data-rx-target], .rx-picker')) e.preventDefault(); });
 
     picker.addEventListener('click', function (e) {
         var b = e.target.closest('button[data-rx]');
@@ -845,7 +854,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
     function closeRl() { rl.classList.remove('open'); document.documentElement.style.overflow = ''; }
     rl.addEventListener('click', function (e) { if (e.target === rl || e.target.closest('[data-rl="close"]')) closeRl(); });
     async function openReactors(type, id) {
-        $('#rlTitle').textContent = 'Reactions';
+        $('#rlTitle').textContent = 'Likes';
         $('#rlTabs').innerHTML = ''; $('#rlList').innerHTML = '<p style="text-align:center;color:#65676B;padding:20px;"><i class="fas fa-spinner fa-spin"></i></p>';
         rl.classList.add('open'); document.documentElement.style.overflow = 'hidden';
         try {
@@ -854,7 +863,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
             if (!d.success) { $('#rlList').innerHTML = '<p style="padding:20px;text-align:center;">' + esc(d.message) + '</p>'; return; }
             var counts = {};
             d.people.forEach(function (p) { counts[p.reaction] = (counts[p.reaction] || 0) + 1; });
-            var tabs = [['all', 'All ' + d.people.length]].concat(Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).map(function (k) { return [k, RX[k].emoji + ' ' + counts[k]]; }));
+            var tabs = [['all', 'All ' + d.people.length]];
             $('#rlTabs').innerHTML = tabs.map(function (t, i) { return '<button type="button" data-k="' + t[0] + '"' + (i ? '' : ' class="active"') + '>' + t[1] + '</button>'; }).join('');
             function render(k) {
                 var list = d.people.filter(function (p) { return k === 'all' || p.reaction === k; });
@@ -862,7 +871,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
                     return '<a class="rl-item" href="/Profile/Show/' + p.id + '"><span class="rl-av"><span class="pc-avatar">' + esc(p.initials)
                         + (p.image ? '<img src="' + esc(p.image) + '" alt="" onerror="this.remove()" />' : '') + '</span><span class="rl-emo">' + p.emoji + '</span></span>'
                         + '<span><strong>' + esc(p.name) + '</strong><small>' + esc(p.role) + '</small></span></a>';
-                }).join('') || '<p style="padding:20px;text-align:center;color:#65676B;">এখনো কেউ রিয়েক্ট দেয়নি।</p>';
+                }).join('') || '<p style="padding:20px;text-align:center;color:#65676B;">এখনো কেউ লাইক দেয়নি।</p>';
             }
             render('all');
             $('#rlTabs').onclick = function (e) {

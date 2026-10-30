@@ -170,15 +170,23 @@ function is_blank($v): bool { return $v === null || trim((string)$v) === ''; }
 /** পোস্ট/কমেন্টের রিয়েকশন: key => [ইমোজি, লেবেল, রঙ] */
 function reaction_meta(): array
 {
-    return [
-        'like'  => ['👍', 'Like', '#1877F2'],
-        'love'  => ['❤️', 'Love', '#E41E3F'],
-        'care'  => ['🥰', 'Care', '#F7B125'],
-        'haha'  => ['😆', 'Haha', '#F7B125'],
-        'wow'   => ['😮', 'Wow', '#F7B125'],
-        'sad'   => ['😢', 'Sad', '#F7B125'],
-        'angry' => ['😡', 'Angry', '#E9710F'],
-    ];
+    // শুধু Like (অন্য কোনো রিয়েকশন নেই)
+    return ['like' => [like_badge_html(), 'Like', '#0A66C2']];
+}
+
+/** Like বাটনের আইকন (নিজস্ব SVG — ইমোজি নয়) */
+function like_icon_html(bool $on): string
+{
+    $path = $on
+        ? 'M2 21h3.2c.44 0 .8-.36.8-.8V9.8c0-.44-.36-.8-.8-.8H2v12zm20.7-9.8c0-1.1-.9-2-2-2h-5.6l.86-4.15c.07-.33-.01-.68-.22-.95L14.6 2.6 8.5 8.7c-.32.32-.5.75-.5 1.2V19c0 1.1.9 2 2 2h8.2c.8 0 1.52-.48 1.84-1.21l2.48-5.8c.12-.27.18-.56.18-.86V11.2z'
+        : 'M13.11 5.72l-.57 2.89c-.12.59.04 1.2.42 1.66.38.46.94.73 1.54.73H20v1.08L17.43 18H9.34c-.18 0-.34-.16-.34-.34V9.82l4.11-4.1M14 2L7.59 8.41C7.21 8.79 7 9.3 7 9.83v7.83C7 18.95 8.05 20 9.34 20h8.1c.71 0 1.36-.37 1.72-.97l2.67-6.15c.11-.25.17-.52.17-.8V11c0-1.1-.9-2-2-2h-5.5l.92-4.65c.05-.22.02-.46-.08-.66-.23-.45-.52-.86-.88-1.22L14 2zM4 9H2v11h2c.55 0 1-.45 1-1v-9c0-.55-.45-1-1-1z';
+    return '<svg class="lk-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' . $path . '"/></svg>';
+}
+
+/** লাইক সংখ্যার পাশে ছোট গোল ব্যাজ */
+function like_badge_html(): string
+{
+    return '<i class="lk-badge" aria-hidden="true">' . like_icon_html(true) . '</i>';
 }
 
 /** পোস্টের প্রাইভেসি: key => [আইকন, লেবেল, বাংলা ব্যাখ্যা] */
@@ -576,6 +584,22 @@ function profile_promo(): array
 {
     static $c = null;
     if ($c === null) $c = db()->GetSiteContent(profile_promo_defaults());
+    return $c;
+}
+
+/** Tuition Circular পেজের উপরের ব্যানার ছবি (অ্যাডমিন সেটিংস থেকে বদলানো যায়) */
+function circular_banner_defaults(): array
+{
+    return [
+        'tc_banner'         => 'https://i.ibb.co.com/JRf4zfwV/Tuition-Circular-Find-Your-Perfect-Tutor.png',
+        'tc_banner_enabled' => '1',
+    ];
+}
+
+function circular_banner(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(circular_banner_defaults());
     return $c;
 }
 

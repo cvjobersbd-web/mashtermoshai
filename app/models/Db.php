@@ -8,10 +8,12 @@
  * =============================================================
  */
 require_once __DIR__ . '/TeacherProfileData.php';
+require_once __DIR__ . '/CircularData.php';
 
 class Db
 {
     use TeacherProfileData;
+    use CircularData;
 
     private PDO $pdo;
 
@@ -1620,10 +1622,13 @@ class Db
     {
         $errorMessage = null;
         try {
-            $post->Id = $this->insert('INSERT INTO `TuitionCircularPosts` (`UserId`, `Content`, `ImageUrl`, `PreferredArea`, `ClassLevel`, `Subjects`, `Budget`, `LikeCount`, `CreatedAt`)
-                VALUES (:u, :c, :i, :a, :cl, :s, :b, 0, :t)', [
+            $this->EnsureCircularExtras();
+            $post->Id = $this->insert('INSERT INTO `TuitionCircularPosts` (`UserId`, `Content`, `ImageUrl`, `PreferredArea`, `ClassLevel`, `Subjects`, `Budget`, `LikeCount`, `CreatedAt`,
+                    `Title`, `Medium`, `TuitionType`, `VideoUrl`, `ViewCount`)
+                VALUES (:u, :c, :i, :a, :cl, :s, :b, 0, :t, :ti, :me, :ty, :v, 0)', [
                 'u' => (int)$post->UserId, 'c' => $post->Content ?? '', 'i' => $post->ImageUrl, 'a' => $post->PreferredArea,
                 'cl' => $post->ClassLevel, 's' => $post->Subjects, 'b' => $post->Budget, 't' => now(),
+                'ti' => $post->Title ?? null, 'me' => $post->Medium ?? null, 'ty' => $post->TuitionType ?? null, 'v' => $post->VideoUrl ?? null,
             ]);
             return $post->Id > 0;
         } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
@@ -2249,7 +2254,7 @@ class Db
     // কমেন্টে এক লেভেলের রিপ্লাই (রিপ্লাইয়ের রিপ্লাই হলে @নাম দিয়ে একই থ্রেডে যায়)
     // ============================================================
     public const POST_PRIVACY = ['Public', 'Friends', 'OnlyMe'];
-    public const REACTIONS = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
+    public const REACTIONS = ['like'];
     public const POST_TYPES = ['post', 'study', 'question', 'achievement', 'poll', 'material', 'update', 'notice'];
     /** শুধু টিচাররা যে ধরনের পোস্ট দিতে পারে */
     public const TEACHER_POST_TYPES = ['material', 'update', 'notice'];
@@ -2307,6 +2312,11 @@ class Db
         if (!$this->columnExists('ProfilePosts', 'Meta')) {
             try { $this->pdo->exec('ALTER TABLE `ProfilePosts` ADD COLUMN `Meta` TEXT NULL'); } catch (Throwable $e) { error_log('[Meta] ' . $e->getMessage()); }
         }
+        // আগের Love/Haha ইত্যাদি রিয়েকশন এখন সব Like (একবারই চলে, পরে কিছু পায় না)
+        try {
+            $this->pdo->exec("UPDATE `ProfilePostReactions` SET `Reaction` = 'like' WHERE `Reaction` <> 'like'");
+            $this->pdo->exec("UPDATE `ProfileCommentReactions` SET `Reaction` = 'like' WHERE `Reaction` <> 'like'");
+        } catch (Throwable $e) { }
         $this->profilePostsReady = true;
     }
 

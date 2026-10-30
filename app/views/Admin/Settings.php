@@ -530,6 +530,7 @@ $heroImages = $Model->GetHeroImageList();
         .bt-prev-tag .l2 { padding-left: 0; }
         .bt-prev-perks { justify-content: center; }
     }
+    .tcb-prev-wrap { max-width: 760px; }
     .pp-grid { display: grid; grid-template-columns: 240px 1fr; gap: 22px; align-items: start; }
     .pp-prev-label { font-size: 12px; font-weight: 700; color: #08224A; margin-bottom: 8px; }
     .pp-prev { display: block; border-radius: 16px; overflow: hidden; border: 1px solid #E8EEF5; background: #F4F7FB; box-shadow: 0 4px 16px rgba(15,27,45,.06); }
@@ -909,6 +910,35 @@ $heroImages = $Model->GetHeroImageList();
                     <button type="button" class="btn-save" id="ppSaveBtn" onclick="savePromo(false)"><i class="fas fa-save"></i> Save</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== ✅ Tuition Circular — Banner Image ===== -->
+    <?php $tcb = circular_banner(); ?>
+    <div class="settings-card" id="tcbSettings">
+        <h5><i class="fas fa-bullhorn"></i> Tuition Circular — উপরের ব্যানার ছবি</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            Tuition Circular পেজের একদম উপরের বড় ছবি ("Tuition Circular — আপনার টিউশনের প্রয়োজন পোস্ট করুন...")। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে পেজে বদলে যাবে।
+        </p>
+        <div class="tcb-prev-wrap">
+            <div class="pp-prev-label"><i class="fas fa-eye"></i> Preview</div>
+            <a class="pp-prev" id="tcbPrevBox"><img id="tcbPreview" src="<?= e($tcb['tc_banner']) ?>" alt="Banner preview" onerror="this.style.opacity=.25" /></a>
+            <div class="pp-prev-off" id="tcbPrevOff" <?= $tcb['tc_banner_enabled'] !== '0' ? 'hidden' : '' ?>><i class="fas fa-eye-slash"></i> ব্যানার এখন লুকানো — পেজে শুধু লেখা দেখাবে</div>
+        </div>
+        <div class="form-check form-switch my-3">
+            <input class="form-check-input" type="checkbox" id="tc_banner_enabled" <?= $tcb['tc_banner_enabled'] !== '0' ? 'checked' : '' ?> onchange="document.getElementById('tcbPrevOff').hidden = this.checked" />
+            <label class="form-check-label fw-semibold" for="tc_banner_enabled">Tuition Circular পেজে ব্যানার দেখাও</label>
+        </div>
+        <label class="form-label fw-semibold">ছবি</label>
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+            <label for="tcbFile" class="upload-btn" id="tcbUploadLbl"><i class="fas fa-upload"></i> Upload New Image</label>
+            <input type="file" id="tcbFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
+        </div>
+        <input type="text" class="form-control mb-1" id="tc_banner" value="<?= e($tcb['tc_banner']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." oninput="var p = document.getElementById('tcbPreview'); p.src = this.value; p.style.opacity = 1;" />
+        <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. চওড়া ছবি ভালো দেখায় (যেমন <strong>1500×220 px</strong> বা <strong>1600×300 px</strong>)।</span>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <button type="button" class="upload-btn" onclick="saveCircularBanner(true)"><i class="fas fa-rotate-left"></i> Default ছবি</button>
+            <button type="button" class="btn-save" id="tcbSaveBtn" onclick="saveCircularBanner(false)"><i class="fas fa-save"></i> Save</button>
         </div>
     </div>
 
@@ -1758,6 +1788,48 @@ $heroImages = $Model->GetHeroImageList();
                         document.getElementById('pp_enabled').checked = d.pp_enabled !== '0';
                         document.getElementById('ppPrevOff').hidden = d.pp_enabled !== '0';
                         var pv = document.getElementById('ppPreview'); pv.src = d.pp_image; pv.style.opacity = 1;
+                    }
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                })
+                .catch(function (e) { btn.innerHTML = html; btn.disabled = false; alert('Error: ' + e.message); });
+        }
+
+        // ===== Tuition Circular banner =====
+        document.getElementById('tcbFile').addEventListener('change', function () {
+            var f = this.files[0]; if (!f) return;
+            if (f.size > 5 * 1024 * 1024) { alert('Image must be less than 5MB'); this.value = ''; return; }
+            var fd = new FormData(); fd.append('promoImage', f); fd.append('__RequestVerificationToken', getToken());
+            var lbl = document.getElementById('tcbUploadLbl'), html = lbl.innerHTML, inp = this;
+            lbl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            fetch('/Admin/UploadProfilePromo', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    lbl.innerHTML = html; inp.value = '';
+                    if (!d.success) { alert('❌ ' + (d.message || 'Upload failed')); return; }
+                    document.getElementById('tc_banner').value = d.imageUrl;
+                    var pv = document.getElementById('tcbPreview'); pv.src = d.imageUrl; pv.style.opacity = 1;
+                    alert('✅ ছবি আপলোড হয়েছে — এখন Save চাপুন।');
+                })
+                .catch(function (e) { lbl.innerHTML = html; alert('Error: ' + e.message); });
+        });
+        function saveCircularBanner(reset) {
+            if (reset && !confirm('আগের (ডিফল্ট) ব্যানারে ফেরত যাবেন?')) return;
+            var fd = new FormData();
+            fd.append('tc_banner', document.getElementById('tc_banner').value);
+            fd.append('tc_banner_enabled', document.getElementById('tc_banner_enabled').checked ? 'true' : 'false');
+            if (reset) fd.append('reset', 'true');
+            fd.append('__RequestVerificationToken', getToken());
+            var btn = document.getElementById('tcbSaveBtn'), html = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; btn.disabled = true;
+            fetch('/Admin/SaveCircularBanner', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    btn.innerHTML = html; btn.disabled = false;
+                    if (d.success && d.tc_banner) {
+                        document.getElementById('tc_banner').value = d.tc_banner;
+                        document.getElementById('tc_banner_enabled').checked = d.tc_banner_enabled !== '0';
+                        document.getElementById('tcbPrevOff').hidden = d.tc_banner_enabled !== '0';
+                        var pv = document.getElementById('tcbPreview'); pv.src = d.tc_banner; pv.style.opacity = 1;
                     }
                     alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
                 })
