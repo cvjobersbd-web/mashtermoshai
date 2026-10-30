@@ -761,7 +761,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .nav-desktop-link:hover { opacity: 1; }
             .nav-desktop-link.active { opacity: 1; font-weight: 700; background: none; }
             .nav-desktop-link.active::after {
-                content: ''; position: absolute; left: 14px; right: 14px; bottom: -14px; height: 3px; border-radius: 3px 3px 0 0;
+                content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 3px; border-radius: 3px;
                 background: var(--primary-color, #02B8F5);
             }
             .footer-brand-logo-box img { height: <?= (int)max(44, $safeLogoSize + 8) ?>px; max-width: 170px; }
