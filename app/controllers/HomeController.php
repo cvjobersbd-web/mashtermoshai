@@ -5,12 +5,23 @@ class HomeController extends Controller
     {
         try {
             $settings = $this->db->GetSiteSettings();
-            $homeTuitions = $this->db->GetHomePageTuitionPosts(3);
         } catch (Throwable $e) {
             $settings = new SiteSettings();
-            $homeTuitions = [];
         }
-        $this->view(null, null, ['SiteSettings' => $settings, 'HomeTuitions' => $homeTuitions]);
+        // সাবজেক্ট / ক্লাস / লোকেশন অনুযায়ী কতজন টিউটর আছে (হোম পেজের কার্ডে দেখায়)
+        $counts = ['subject' => [], 'class' => [], 'location' => []];
+        try {
+            $tutors = $this->db->GetTutorDirectory();
+            $groups = ['subject' => tutor_subject_groups(), 'class' => tutor_class_groups(), 'location' => tutor_location_groups()];
+            foreach ($groups as $field => $list) {
+                foreach ($list as $slug => $g) {
+                    $vals = $field === 'location' ? $g[1] : $g[2];
+                    $counts[$field][$slug] = count(array_filter($tutors, fn($t) => tutor_matches_group($t, $field, $vals)));
+                }
+            }
+            $counts['total'] = count($tutors);
+        } catch (Throwable $e) { error_log('[Home counts] ' . $e->getMessage()); }
+        $this->view(null, null, ['SiteSettings' => $settings, 'TutorCounts' => $counts]);
     }
 
     public function Privacy(): void { $this->view(); }

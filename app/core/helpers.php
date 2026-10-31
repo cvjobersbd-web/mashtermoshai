@@ -1062,3 +1062,132 @@ function package_benefits(): array
     } catch (Throwable $e) { }
     return $out;
 }
+
+
+// ============================================================
+// হোম পেজের "Find Tutors by Subject / Class / Location" কার্ড
+// প্রতিটা কার্ডের একটা slug আছে — /FindTutor?subject=mathematics এভাবে লিংক হয়।
+// পরে আলাদা সাবজেক্ট পেজ বানালে এই slug দিয়েই বানানো যাবে।
+// ============================================================
+/** @return array<string, array{0:string,1:string,2:string[]}> slug => [লেবেল, আইকন, মিলবে এমন মান] */
+function tutor_subject_groups(): array
+{
+    return [
+        'mathematics' => ['Mathematics Tutor', 'fa-square-root-variable', ['Mathematics', 'Math', 'Maths', 'General Math', 'Higher Math']],
+        'english'     => ['English Tutor', 'fa-spell-check', ['English', 'Spoken English']],
+        'physics'     => ['Physics Tutor', 'fa-atom', ['Physics']],
+        'chemistry'   => ['Chemistry Tutor', 'fa-flask', ['Chemistry']],
+        'biology'     => ['Biology Tutor', 'fa-dna', ['Biology']],
+        'ict'         => ['ICT Tutor', 'fa-laptop-code', ['ICT', 'Computer Science', 'Programming']],
+        'bangla'      => ['Bangla Tutor', 'fa-book-open', ['Bangla', 'Bengali']],
+        'accounting'  => ['Accounting Tutor', 'fa-calculator', ['Accounting']],
+    ];
+}
+
+function tutor_class_groups(): array
+{
+    return [
+        'primary'      => ['Primary School Tutor', 'fa-shapes', ['Play / Nursery', 'Nursery', 'KG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Primary']],
+        'class-6-8'    => ['Class 6–8 Tutor', 'fa-book', ['Class 6', 'Class 7', 'Class 8']],
+        'ssc'          => ['SSC Tutor', 'fa-school', ['SSC', 'Class 9', 'Class 10']],
+        'hsc'          => ['HSC Tutor', 'fa-building-columns', ['HSC', 'Class 11', 'Class 12']],
+        'university'   => ['University Tutor', 'fa-graduation-cap', ['University (Honours)', 'University', 'Honours', 'Masters']],
+        'admission'    => ['Admission Tutor', 'fa-door-open', ['University Admission', 'Medical Admission', 'Engineering Admission', 'Admission']],
+        'professional' => ['Professional Course Tutor', 'fa-briefcase', ['IELTS', 'Job Preparation', 'Diploma', 'Professional Course']],
+    ];
+}
+
+/** লোকেশন কার্ড: slug => [নাম, ওই জেলা + তার এলাকাগুলো] */
+function tutor_location_groups(): array
+{
+    $locs = tuition_options()['locations'];
+    $out = [];
+    foreach (['Dhaka', 'Chattogram', 'Sylhet', 'Rajshahi', 'Khulna', 'Cumilla', 'Mymensingh', 'Rangpur', 'Barishal'] as $d) {
+        $areas = [];
+        foreach ($locs as $k => $list) if (strcasecmp($k, $d) === 0) $areas = (array)$list;
+        $alias = ['Chattogram' => ['Chittagong'], 'Cumilla' => ['Comilla'], 'Barishal' => ['Barisal']][$d] ?? [];
+        $out[strtolower($d)] = [$d, array_values(array_unique(array_merge([$d], $alias, $areas)))];
+    }
+    return $out;
+}
+
+/** টিউটর (GetTutorDirectory এর একটা) এই মানগুলোর কোনোটার সাথে মেলে কিনা — FindTutor পেজের JS এর মতো একই নিয়ম */
+function tutor_matches_group(Obj $t, string $field, array $values): bool
+{
+    $vals = array_map(fn($v) => mb_strtolower(trim((string)$v)), $values);
+    if ($field === 'location') {
+        $loc = mb_strtolower((string)$t->Location);
+        foreach ($vals as $v) if ($v !== '' && str_contains($loc, $v)) return true;
+        return false;
+    }
+    $list = $field === 'subject' ? (array)$t->Subjects : array_merge((array)$t->Levels, (array)$t->Mediums);
+    foreach ($list as $x) if (in_array(mb_strtolower(trim((string)$x)), $vals, true)) return true;
+    return false;
+}
+
+/** Find Tutor পেজে ?subject= / ?class= / ?location= দিয়ে এলে আগে থেকে বাছাই করা ফিল্টার: field => [value, label] */
+function find_tutor_preset(): array
+{
+    $out = [];
+    $s = strtolower(trim((string)input_str('subject', '')));
+    if ($s !== '') {
+        $g = tutor_subject_groups()[$s] ?? null;
+        $out['subject'] = $g ? [implode('|', $g[2]), preg_replace('/ Tutor$/', '', $g[0]) . ' (all)'] : [mb_substr(trim((string)input_str('subject')), 0, 40), mb_substr(trim((string)input_str('subject')), 0, 40)];
+    }
+    $c = strtolower(trim((string)input_str('class', '')));
+    if ($c !== '') {
+        $g = tutor_class_groups()[$c] ?? null;
+        $out['class'] = $g ? [implode('|', $g[2]), preg_replace('/ Tutor$/', '', $g[0]) . ' (all)'] : [mb_substr(trim((string)input_str('class')), 0, 40), mb_substr(trim((string)input_str('class')), 0, 40)];
+    }
+    $l = trim((string)input_str('location', ''));
+    if ($l !== '') {
+        $g = tutor_location_groups()[strtolower($l)] ?? null;
+        $out['location'] = $g ? [$g[0], $g[0]] : [mb_substr($l, 0, 40), mb_substr($l, 0, 40)];
+    }
+    return $out;
+}
+
+/** হোম পেজের FAQ (FAQ সেকশন আর Google এর FAQ schema দুই জায়গাতেই ব্যবহার হয়) */
+/** হোম পেজের FAQ — ডিফল্ট প্রশ্ন-উত্তর (অ্যাডমিন কিছু সেভ না করলে এগুলো দেখায়) */
+function home_faq_defaults(): array
+{
+    return [
+        ['How can I find a tutor in Bangladesh?', 'You can search for tutors based on subject, class, curriculum and location through মাষ্টার মশাই.'],
+        ['How can I find a home tutor near me?', 'You can explore tutors based on your preferred location and subject requirements.'],
+        ['Can I find a Mathematics tutor through মাষ্টার মশাই?', 'Yes. You can search for tutors based on subjects such as Mathematics, English, Physics, Chemistry and more.'],
+        ['Can I post a tuition requirement?', 'Students and parents can post their tuition requirements through the Tuition Circular and receive suitable tutor applications.'],
+        ['How can a tutor join মাষ্টার মশাই?', 'Tutors can create a profile and use the available tutor services to find suitable tuition opportunities.'],
+    ];
+}
+
+/** FAQ সেটিং: ['enabled' => bool, 'items' => [[প্রশ্ন, উত্তর], ...]] — Admin → Settings থেকে বদলানো যায় */
+function home_faq_settings(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $items = home_faq_defaults();
+    $enabled = true;
+    try {
+        $v = db()->GetSiteContent(['home_faqs' => '', 'home_faq_enabled' => '1']);
+        $enabled = ($v['home_faq_enabled'] ?? '1') !== '0';
+        if (($v['home_faqs'] ?? '') !== '') {
+            $list = json_decode((string)$v['home_faqs'], true);
+            if (is_array($list)) {
+                $items = [];
+                foreach ($list as $f) {
+                    if (!is_array($f)) continue;
+                    $q = trim((string)($f['q'] ?? '')); $a = trim((string)($f['a'] ?? ''));
+                    if ($q !== '' && $a !== '') $items[] = [$q, $a];
+                }
+            }
+        }
+    } catch (Throwable $e) { }
+    return $c = ['enabled' => $enabled, 'items' => $items];
+}
+
+/** হোম পেজে যে FAQ গুলো দেখাবে (বন্ধ থাকলে খালি) */
+function home_faqs(): array
+{
+    $s = home_faq_settings();
+    return $s['enabled'] ? $s['items'] : [];
+}

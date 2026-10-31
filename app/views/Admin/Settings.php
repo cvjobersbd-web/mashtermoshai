@@ -898,6 +898,145 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+    <!-- ===== ✅ Home Page — FAQ (প্রশ্ন ও উত্তর) ===== -->
+    <?php $fqSet = home_faq_settings(); ?>
+    <style>
+        .fq-list { display: flex; flex-direction: column; gap: 12px; }
+        .fq-row { display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid #DCECF5; border-radius: 14px; padding: 12px; background: #F8FCFF; }
+        .fq-row.has-err { border-color: #e74c3c; background: #FFF5F4; }
+        .fq-num { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: #E3F6FD; color: #028EA5; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+        .fq-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+        .fq-mid input, .fq-mid textarea { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 14px; outline: none; background: #fff; font-family: inherit; color: #08224A; }
+        .fq-mid input { font-weight: 700; }
+        .fq-mid textarea { min-height: 70px; resize: vertical; line-height: 1.6; }
+        .fq-mid input:focus, .fq-mid textarea:focus { border-color: #02B8F5; }
+        .fq-acts { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .fq-acts button { width: 32px; height: 32px; border: none; border-radius: 8px; background: #EAF5FB; color: #08224A; cursor: pointer; }
+        .fq-acts button:hover { background: #DCECF5; }
+        .fq-acts button.del { background: #FDECEA; color: #c0392b; }
+        .fq-acts button:disabled { opacity: .35; cursor: default; }
+        .fq-empty { text-align: center; color: #7A8CA0; font-size: 13.5px; border: 1.5px dashed #DCECF5; border-radius: 14px; padding: 18px; }
+        .fq-add { margin-top: 12px; border: 1.5px dashed #02B8F5; background: #F5FBFF; color: #028EA5; font-weight: 700; font-size: 14px; border-radius: 12px; padding: 10px 16px; cursor: pointer; width: 100%; }
+        .fq-add:hover { background: #E3F6FD; }
+        .fq-foot { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+        .fq-reset { border: 1.5px solid #DCECF5; background: #fff; color: #64748B; font-weight: 600; font-size: 14px; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+        .fq-reset:hover { border-color: #02B8F5; color: #08224A; }
+        /* প্রিভিউ — হোম পেজের মতো */
+        .fq-prev-wrap { margin-top: 18px; background: #F5FBFF; border-radius: 16px; padding: 18px; }
+        .fq-prev-label { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: #7A8CA0; margin-bottom: 12px; }
+        .fq-prev { display: flex; flex-direction: column; gap: 10px; }
+        .fq-prev details { background: #fff; border: 1px solid #DCECF5; border-radius: 16px; }
+        .fq-prev details[open] { border-color: #9FDDF5; box-shadow: 0 10px 26px rgba(2,184,245,.1); }
+        .fq-prev summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 15px 18px; font-weight: 700; font-size: 15px; color: #08224A; }
+        .fq-prev summary::-webkit-details-marker { display: none; }
+        .fq-prev summary .q { width: 30px; height: 30px; border-radius: 10px; background: #E3F6FD; color: #028EA5; display: flex; align-items: center; justify-content: center; font-size: 12.5px; flex-shrink: 0; }
+        .fq-prev summary b { flex: 1; font-weight: 700; }
+        .fq-prev summary .pl { color: #028EA5; transition: transform .25s; }
+        .fq-prev details[open] summary .pl { transform: rotate(45deg); }
+        .fq-prev p { padding: 0 18px 16px 62px; margin: 0; font-size: 14.5px; line-height: 1.7; color: #475569; white-space: pre-line; }
+        .fq-off { text-align: center; color: #7A8CA0; font-size: 13.5px; padding: 10px; }
+        @media (max-width: 576px) { .fq-row { flex-wrap: wrap; } .fq-acts { flex-direction: row; width: 100%; justify-content: flex-end; } .fq-prev p { padding-left: 18px; } }
+    </style>
+    <div class="settings-card" id="fqSettings">
+        <h5><i class="fas fa-circle-question"></i> Home — FAQ (প্রশ্ন ও উত্তর)</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের "Frequently Asked Questions" সেকশনের প্রশ্ন আর উত্তর এখান থেকে যোগ, এডিট, মুছে ফেলা বা ▲▼ দিয়ে সাজাতে পারবেন।
+            এগুলো Google-এর জন্য FAQ Schema হিসেবেও যায়। (সর্বোচ্চ ২০টা)
+        </p>
+
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="fqEnabled" <?= $fqSet['enabled'] ? 'checked' : '' ?> onchange="fqPreview()" />
+            <label class="form-check-label fw-semibold" for="fqEnabled">হোম পেজে FAQ সেকশনটা দেখাও</label>
+        </div>
+
+        <div class="fq-list" id="fqList"></div>
+        <button type="button" class="fq-add" onclick="fqAdd()"><i class="fas fa-plus"></i> নতুন প্রশ্ন যোগ করুন</button>
+
+        <div class="fq-prev-wrap">
+            <div class="fq-prev-label"><i class="fas fa-eye"></i> Live Preview — হোম পেজে এভাবে দেখাবে</div>
+            <div class="fq-prev" id="fqPrev"></div>
+        </div>
+
+        <div class="fq-foot">
+            <button type="button" class="fq-reset" onclick="fqReset()"><i class="fas fa-rotate-left"></i> Default প্রশ্নগুলো</button>
+            <button type="button" class="btn-save" id="fqSaveBtn" onclick="fqSave()"><i class="fas fa-save"></i> Save FAQ</button>
+        </div>
+    </div>
+    <script>
+        var fqItems = <?= json_encode(array_map(fn($f) => ['q' => $f[0], 'a' => $f[1]], $fqSet['items']), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+        var fqErrIdx = -1;
+        function fqEsc(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+        function fqRender() {
+            var list = document.getElementById('fqList');
+            list.innerHTML = fqItems.length ? fqItems.map(function (f, i) {
+                return '<div class="fq-row' + (i === fqErrIdx ? ' has-err' : '') + '">' +
+                    '<span class="fq-num">Q' + (i + 1) + '</span>' +
+                    '<div class="fq-mid">' +
+                    '<input type="text" maxlength="200" data-i="' + i + '" data-k="q" placeholder="প্রশ্ন — যেমন: How can I find a tutor in Bangladesh?" value="' + fqEsc(f.q) + '" />' +
+                    '<textarea maxlength="1500" data-i="' + i + '" data-k="a" placeholder="উত্তর লিখুন...">' + fqEsc(f.a) + '</textarea></div>' +
+                    '<div class="fq-acts">' +
+                    '<button type="button" title="উপরে" onclick="fqMove(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '><i class="fas fa-arrow-up"></i></button>' +
+                    '<button type="button" title="নিচে" onclick="fqMove(' + i + ',1)"' + (i === fqItems.length - 1 ? ' disabled' : '') + '><i class="fas fa-arrow-down"></i></button>' +
+                    '<button type="button" class="del" title="মুছুন" onclick="fqDel(' + i + ')"><i class="fas fa-trash"></i></button>' +
+                    '</div></div>';
+            }).join('') : '<div class="fq-empty"><i class="fas fa-circle-question"></i> কোনো প্রশ্ন নেই — নিচের বাটনে চেপে যোগ করুন</div>';
+            fqPreview();
+        }
+        document.getElementById('fqList').addEventListener('input', function (e) {
+            var t = e.target, i = t.getAttribute('data-i'); if (i === null) return;
+            fqItems[+i][t.getAttribute('data-k')] = t.value; fqPreview();
+        });
+        function fqPreview() {
+            var pv = document.getElementById('fqPrev');
+            var shown = fqItems.filter(function (f) { return (f.q || '').trim() && (f.a || '').trim(); });
+            if (!document.getElementById('fqEnabled').checked) { pv.innerHTML = '<div class="fq-off"><i class="fas fa-eye-slash"></i> FAQ সেকশনটা এখন হোম পেজে লুকানো থাকবে</div>'; return; }
+            if (!shown.length) { pv.innerHTML = '<div class="fq-off"><i class="fas fa-eye-slash"></i> কোনো প্রশ্ন না থাকলে সেকশনটা দেখাবে না</div>'; return; }
+            var open = pv.querySelector('details[open]'), openIdx = open ? +open.getAttribute('data-i') : 0;
+            pv.innerHTML = shown.map(function (f, i) {
+                return '<details data-i="' + i + '"' + (i === openIdx ? ' open' : '') + '><summary><span class="q">Q' + (i + 1) + '</span><b>' + fqEsc(f.q.trim()) + '</b><i class="fas fa-plus pl"></i></summary><p>' + fqEsc(f.a.trim()) + '</p></details>';
+            }).join('');
+        }
+        function fqAdd() {
+            if (fqItems.length >= 20) { alert('সর্বোচ্চ ২০টা প্রশ্ন দেওয়া যাবে।'); return; }
+            fqItems.push({ q: '', a: '' }); fqErrIdx = -1; fqRender();
+            var inp = document.querySelector('#fqList input[data-i="' + (fqItems.length - 1) + '"]');
+            if (inp) { inp.focus(); inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+        }
+        function fqMove(i, d) { var j = i + d; if (j < 0 || j >= fqItems.length) return; var t = fqItems[i]; fqItems[i] = fqItems[j]; fqItems[j] = t; fqErrIdx = -1; fqRender(); }
+        function fqDel(i) {
+            var f = fqItems[i];
+            if (((f.q || '').trim() || (f.a || '').trim()) && !confirm('এই প্রশ্নটা মুছে ফেলবেন?')) return;
+            fqItems.splice(i, 1); fqErrIdx = -1; fqRender();
+        }
+        function fqSend(data, btn) {
+            var fd = new FormData();
+            Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });
+            var tok = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (tok) fd.append('__RequestVerificationToken', tok.value);
+            var html = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+            fetch('/Admin/SaveHomeFaqs', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (btn) { btn.disabled = false; btn.innerHTML = html; }
+                    if (d.success) {
+                        fqErrIdx = -1; fqItems = d.items || []; document.getElementById('fqEnabled').checked = !!d.enabled; fqRender();
+                    } else if (typeof d.index === 'number') {
+                        fqErrIdx = d.index; fqRender();
+                        var el = document.querySelector('#fqList [data-i="' + d.index + '"]'); if (el) el.focus();
+                    }
+                    alert(d.message || (d.success ? 'Saved' : 'Failed'));
+                })
+                .catch(function (e) { if (btn) { btn.disabled = false; btn.innerHTML = html; } alert('Error: ' + e.message); });
+        }
+        function fqSave() {
+            fqSend({ enabled: document.getElementById('fqEnabled').checked ? 'true' : 'false',
+                items: JSON.stringify(fqItems.map(function (f) { return { q: (f.q || '').trim(), a: (f.a || '').trim() }; })) }, document.getElementById('fqSaveBtn'));
+        }
+        function fqReset() { if (confirm('সব প্রশ্ন মুছে Default ৫টা প্রশ্ন-উত্তরে ফেরত যাবেন?')) fqSend({ reset: 'true' }, null); }
+        fqRender();
+    </script>
+
     <!-- ===== ✅ Profile Page — Promo Image ===== -->
     <?php $ppc = profile_promo(); ?>
     <div class="settings-card" id="ppSettings">

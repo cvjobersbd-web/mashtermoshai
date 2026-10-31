@@ -99,9 +99,9 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
         <p>বন্ধ থাকলে সবাই আগের মতো ফ্রিতে ব্যবহার করতে পারবে। পেমেন্ট নেওয়া শুরু করতে চাইলে চালু করুন।</p>
         <label class="pm-rule"><input type="checkbox" class="pm-sw" data-rule="teacher"<?= $rules['teacher'] ? ' checked' : '' ?> />
             <div><b>শিক্ষকদের Subscription বাধ্যতামূলক</b><span>চালু থাকলে যেসব শিক্ষকের Subscription নেই, তারা Find Tutor তালিকায় দেখাবে না এবং “Teacher Wanted” পোস্ট করতে পারবে না।</span></div></label>
-        <label class="pm-rule"><input type="checkbox" class="pm-sw" data-rule="student"<?= $rules['studentEnforced'] ? ' checked' : '' ?> />
+        <label class="pm-rule"><input type="checkbox" class="pm-sw" data-rule="student"<?= ($rules['studentEnforced'] ?? $rules['student'] ?? false) ? ' checked' : '' ?> />
             <div><b>শিক্ষার্থীদের Tuition Post-এ পেমেন্ট বাধ্যতামূলক</b><span>চালু থাকলে Tuition Circular-এ “Teacher Needed” পোস্ট করতে প্যাকেজ (পোস্ট ক্রেডিট) লাগবে। প্রতিটা পোস্টে ১টি ক্রেডিট খরচ হবে।</span>
-                <?php if ($rules['studentFree']): ?><span style="display:block;margin-top:6px;color:#15803D;font-weight:700;"><i class="fas fa-gift"></i> এখন শিক্ষার্থীদের পোস্ট ফ্রি করা আছে (Admin → Packages) — তাই এই নিয়ম এখন কাজ করছে না।</span><?php endif; ?></div></label>
+                <?php if (($rules['studentFree'] ?? false)): ?><span style="display:block;margin-top:6px;color:#15803D;font-weight:700;"><i class="fas fa-gift"></i> এখন শিক্ষার্থীদের পোস্ট ফ্রি করা আছে (Admin → Packages) — তাই এই নিয়ম এখন কাজ করছে না।</span><?php endif; ?></div></label>
     </div>
 
     <div id="pmList">

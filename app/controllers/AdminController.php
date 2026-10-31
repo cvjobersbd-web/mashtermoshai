@@ -518,6 +518,40 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 
+    /** POST /Admin/SaveHomeFaqs — হোম পেজের FAQ: enabled, items=[{q,a}] JSON, reset=true হলে ডিফল্ট */
+    public function SaveHomeFaqs_POST(): void
+    {
+        $this->requireAdminJson();
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent(['home_faqs' => '', 'home_faq_enabled' => '1']);
+            $items = home_faq_defaults();
+            json_response(['success' => true, 'message' => 'Default প্রশ্ন-উত্তরে ফেরানো হয়েছে।', 'enabled' => true,
+                'items' => array_map(fn($f) => ['q' => $f[0], 'a' => $f[1]], $items)]);
+        }
+        $raw = json_decode((string)input_str('items', '[]'), true);
+        if (!is_array($raw)) json_response(['success' => false, 'message' => 'ভুল ডাটা।']);
+        $clean = fn($v) => trim(preg_replace('/[ \t]+/u', ' ', str_replace(["\r\n", "\r"], "\n", strip_tags((string)$v))));
+        $list = [];
+        foreach ($raw as $i => $f) {
+            if (!is_array($f)) continue;
+            $q = $clean($f['q'] ?? ''); $a = $clean($f['a'] ?? '');
+            if ($q === '' && $a === '') continue;
+            $n = count($list) + 1;
+            if ($q === '') json_response(['success' => false, 'message' => "প্রশ্ন $n — প্রশ্ন লিখুন।", 'index' => $i]);
+            if ($a === '') json_response(['success' => false, 'message' => "প্রশ্ন $n — উত্তর লিখুন।", 'index' => $i]);
+            if (mb_strlen($q) > 200) json_response(['success' => false, 'message' => "প্রশ্ন $n — প্রশ্ন সর্বোচ্চ ২০০ অক্ষর।", 'index' => $i]);
+            if (mb_strlen($a) > 1500) json_response(['success' => false, 'message' => "প্রশ্ন $n — উত্তর সর্বোচ্চ ১৫০০ অক্ষর।", 'index' => $i]);
+            $list[] = ['q' => $q, 'a' => $a];
+        }
+        if (count($list) > 20) json_response(['success' => false, 'message' => 'সর্বোচ্চ ২০টা প্রশ্ন দেওয়া যাবে।']);
+        $enabled = input_bool('enabled');
+        $err = null;
+        if ($this->db->SaveSiteContent(['home_faqs' => json_encode($list, JSON_UNESCAPED_UNICODE), 'home_faq_enabled' => $enabled ? '1' : '0'], $err)) {
+            json_response(['success' => true, 'message' => 'FAQ সেভ হয়েছে — হোম পেজে বদলে গেছে!', 'enabled' => $enabled, 'items' => $list]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
     /** POST /Admin/SaveSocialLinks — ফুটারের সোশ্যাল মিডিয়া আইকন + লিংক */
     public function SaveSocialLinks_POST(): void
     {
@@ -714,7 +748,7 @@ class AdminController extends Controller
     public function Packages(): void
     {
         $this->requireAdminPage();
-        $this->view(null, $this->db->GetPackages(), ['Benefits' => package_benefits(), 'StudentFree' => $this->db->PaymentRules()['studentFree']]);
+        $this->view(null, $this->db->GetPackages(), ['Benefits' => package_benefits(), 'StudentFree' => $this->db->PaymentRules()['studentFree'] ?? false]);
     }
 
     /** POST /Admin/SavePackage — নতুন বা এডিট */
@@ -780,7 +814,7 @@ class AdminController extends Controller
     {
         $this->requireAdminJson();
         $this->db->SaveSiteContent(['pkg_student_free' => input_bool('on') ? '1' : '']);
-        json_response(['success' => true, 'free' => $this->db->PaymentRules()['studentFree']]);
+        json_response(['success' => true, 'free' => $this->db->PaymentRules()['studentFree'] ?? false]);
     }
 
     public function DeletePackage_POST(): void

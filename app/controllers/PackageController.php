@@ -18,7 +18,7 @@ class PackageController extends Controller
         }
         $this->view(null, null, [
             'Me' => $me,
-            'StudentFree' => $this->db->PaymentRules()['studentFree'],
+            'StudentFree' => $this->db->PaymentRules()['studentFree'] ?? false,
             'TeacherPackages' => $this->db->GetPackages('Teacher', true),
             'StudentPackages' => $this->db->GetPackages('Student', true),
             'Tab' => $for,
