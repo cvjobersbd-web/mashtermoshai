@@ -5,6 +5,7 @@
  */
 $ViewData['Title'] = 'Packages';
 $packages = is_array($Model) ? $Model : [];
+$benefits = $ViewBag->Benefits ?? package_benefits();
 ?>
 <style>
     .admin-main-content { margin-left: 250px; padding: 20px; min-height: calc(100vh - 80px); }
@@ -66,6 +67,24 @@ $packages = is_array($Model) ? $Model : [];
     .pa-foot button { border: 1.5px solid #DCECF5; background: #fff; border-radius: 10px; padding: 10px 18px; font-weight: 700; font-size: 14px; color: #475569; cursor: pointer; }
     .pa-foot button.sv { background: linear-gradient(135deg, #1D7FE5, #02B8F5); color: #fff; border-color: transparent; }
     .pa-foot button:disabled { opacity: .6; }
+    .bn-tabs { display: inline-flex; gap: 4px; padding: 4px; background: #F1F5F9; border-radius: 12px; margin-bottom: 12px; }
+    .bn-tabs button { border: none; background: none; padding: 8px 16px; border-radius: 9px; font-weight: 700; font-size: 13.5px; color: #475569; cursor: pointer; }
+    .bn-tabs button.on { background: #fff; color: #1D7FE5; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    .bn-list { display: flex; flex-direction: column; gap: 10px; }
+    .bn-row { display: grid; grid-template-columns: 30px 120px minmax(0, 1fr) minmax(0, 1.6fr) 36px; gap: 10px; align-items: center; padding: 10px; border: 1.5px solid #DCECF5; border-radius: 12px; }
+    .bn-row .mv { display: flex; flex-direction: column; gap: 2px; }
+    .bn-row .mv button { border: 1px solid #DCECF5; background: #fff; border-radius: 6px; width: 28px; height: 20px; font-size: 10px; color: #475569; cursor: pointer; padding: 0; }
+    .bn-row .mv button:disabled { opacity: .35; }
+    .bn-row select, .bn-row input { width: 100%; border: 1.5px solid #DCECF5; border-radius: 9px; padding: 8px 10px; font-size: 13.5px; background: #F8FBFE; outline: none; font-family: inherit; }
+    .bn-row select:focus, .bn-row input:focus { border-color: #1D7FE5; background: #fff; }
+    .bn-ic { display: flex; gap: 6px; align-items: center; }
+    .bn-ic i { width: 30px; height: 30px; border-radius: 9px; background: #E3F2FF; color: #1D7FE5; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .bn-row .rm { border: 1px solid #FCA5A5; background: #fff; color: #DC2626; border-radius: 9px; height: 34px; cursor: pointer; }
+    .bn-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+    .bn-add, .bn-reset { border: 1.5px solid #DCECF5; background: #fff; color: #1D7FE5; font-weight: 700; font-size: 13.5px; padding: 9px 14px; border-radius: 10px; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; }
+    .bn-reset { margin-left: auto; color: #64748B; }
+    .bn-msg { font-size: 13px; font-weight: 700; color: #15803D; }
+    @media (max-width: 720px) { .bn-row { grid-template-columns: 30px minmax(0, 1fr) 36px; } .bn-row .bn-t, .bn-row .bn-d { grid-column: 2 / 3; } .bn-row .bn-ic { grid-column: 2 / 3; } .bn-row .rm { grid-column: 3; grid-row: 1; } }
     [data-only-student][hidden], [data-only-teacher][hidden] { display: none; }
 
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 20px 15px; } }
@@ -107,7 +126,25 @@ $packages = is_array($Model) ? $Model : [];
         </div>
         <div class="pa-list" id="list-Student"></div>
     </div>
+    <div class="pa-sec" id="sec-Benefits">
+        <div class="pa-sec-h">
+            <h5><i class="fas fa-list-check" style="color:#7C3AED;"></i> প্যাকেজের বিস্তারিত — কিনলে যা যা পাবে</h5>
+            <small>Package পেজে প্যাকেজের নিচে এই ফিচারগুলো আইকন, শিরোনাম আর বর্ণনাসহ দেখায়। ইচ্ছামতো যোগ, এডিট, সাজানো বা মুছে ফেলুন। (প্রতিটা প্যাকেজের নিজের সুবিধার তালিকা ওই প্যাকেজের Edit থেকে বদলানো যায়।)</small>
+        </div>
+        <div class="bn-tabs">
+            <button type="button" class="on" data-bn-tab="Teacher"><i class="fas fa-chalkboard-teacher"></i> শিক্ষক</button>
+            <button type="button" data-bn-tab="Student"><i class="fas fa-user-graduate"></i> শিক্ষার্থী</button>
+        </div>
+        <div class="bn-list" id="bnList"></div>
+        <div class="bn-foot">
+            <button type="button" class="bn-add" id="bnAdd"><i class="fas fa-plus"></i> নতুন ফিচার</button>
+            <span class="bn-msg" id="bnMsg"></span>
+            <button type="button" class="bn-reset" id="bnReset"><i class="fas fa-rotate-left"></i> Default</button>
+            <button type="button" class="pa-add" id="bnSave" style="margin-left:0;"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
 </div>
+
 
 <div class="pa-modal" id="paModal" hidden role="dialog" aria-modal="true" aria-labelledby="paTitle">
     <form class="pa-box" id="paForm" novalidate>
@@ -267,6 +304,44 @@ $packages = is_array($Model) ? $Model : [];
         if (d.success) { replace(d.package); render(); } else { t.checked = !t.checked; t.disabled = false; alert(d.message || 'Failed'); }
     });
     render();
+
+    // ===== প্যাকেজের বিস্তারিত (ফিচার) এডিটর =====
+    var BN = <?= js($benefits) ?>, ICONS = <?= js(package_benefit_icons()) ?>, bnAud = 'Teacher';
+    var ICON_LBL = { 'fa-certificate': 'নীল টিক', 'fa-arrow-trend-up': 'উপরে', 'fa-bullhorn': 'পোস্ট', 'fa-clipboard-list': 'Apply', 'fa-users': 'স্টুডেন্ট', 'fa-headset': 'সাপোর্ট', 'fa-star': 'স্টার',
+        'fa-bolt': 'দ্রুত', 'fa-shield-halved': 'নিরাপদ', 'fa-chalkboard-user': 'শিক্ষক', 'fa-user-graduate': 'শিক্ষার্থী', 'fa-pen-to-square': 'লেখা', 'fa-location-dot': 'লোকেশন',
+        'fa-coins': 'টাকা', 'fa-comments': 'যোগাযোগ', 'fa-bell': 'নোটিফিকেশন', 'fa-eye': 'দেখা', 'fa-gift': 'ফ্রি', 'fa-crown': 'প্রিমিয়াম', 'fa-handshake': 'চুক্তি' };
+    var bnList = document.getElementById('bnList'), bnMsg = document.getElementById('bnMsg');
+    function bnRender() {
+        var list = BN[bnAud] || [];
+        bnList.innerHTML = list.length ? list.map(function (b, i) {
+            return '<div class="bn-row" data-i="' + i + '">'
+                + '<div class="mv"><button type="button" data-bmv="-1"' + (i === 0 ? ' disabled' : '') + '><i class="fas fa-chevron-up"></i></button><button type="button" data-bmv="1"' + (i === list.length - 1 ? ' disabled' : '') + '><i class="fas fa-chevron-down"></i></button></div>'
+                + '<div class="bn-ic"><i class="fas ' + esc(b.i) + '"></i><select data-k="i" aria-label="Icon">' + ICONS.map(function (ic) { return '<option value="' + ic + '"' + (ic === b.i ? ' selected' : '') + '>' + (ICON_LBL[ic] || ic) + '</option>'; }).join('') + '</select></div>'
+                + '<input class="bn-t" data-k="t" maxlength="60" placeholder="শিরোনাম (যেমন: প্রোফাইলে নীল টিক)" value="' + esc(b.t) + '" />'
+                + '<input class="bn-d" data-k="d" maxlength="250" placeholder="ছোট বর্ণনা" value="' + esc(b.d || '') + '" />'
+                + '<button type="button" class="rm" data-brm title="মুছুন"><i class="fas fa-trash"></i></button></div>';
+        }).join('') : '<div class="pa-empty">কোনো ফিচার নেই — “নতুন ফিচার” চাপুন।</div>';
+    }
+    document.querySelectorAll('[data-bn-tab]').forEach(function (b) { b.addEventListener('click', function () {
+        bnAud = b.getAttribute('data-bn-tab'); document.querySelectorAll('[data-bn-tab]').forEach(function (x) { x.classList.toggle('on', x === b); }); bnMsg.textContent = ''; bnRender();
+    }); });
+    bnList.addEventListener('input', function (e) { var r = e.target.closest('.bn-row'), k = e.target.getAttribute('data-k'); if (!r || !k) return;
+        BN[bnAud][+r.getAttribute('data-i')][k] = e.target.value; if (k === 'i') r.querySelector('.bn-ic i').className = 'fas ' + e.target.value; bnMsg.textContent = ''; });
+    bnList.addEventListener('change', function (e) { if (e.target.getAttribute('data-k') === 'i') e.target.dispatchEvent(new Event('input', { bubbles: true })); });
+    bnList.addEventListener('click', function (e) {
+        var r = e.target.closest('.bn-row'); if (!r) return; var i = +r.getAttribute('data-i'), list = BN[bnAud];
+        if (e.target.closest('[data-brm]')) { list.splice(i, 1); bnRender(); bnMsg.textContent = ''; return; }
+        var mv = e.target.closest('[data-bmv]'); if (mv && !mv.disabled) { var j = i + +mv.getAttribute('data-bmv'); var t = list[i]; list[i] = list[j]; list[j] = t; bnRender(); bnMsg.textContent = ''; }
+    });
+    document.getElementById('bnAdd').addEventListener('click', function () { (BN[bnAud] = BN[bnAud] || []).push({ i: 'fa-star', t: '', d: '' }); bnRender(); var ins = bnList.querySelectorAll('.bn-t'); ins[ins.length - 1].focus(); });
+    async function bnSend(reset) {
+        var d = await post('/Admin/SavePackageBenefits', reset ? { audience: bnAud, reset: 'true' } : { audience: bnAud, data: JSON.stringify(BN[bnAud]) });
+        if (!d.success) { alert(d.message || 'Failed'); return; }
+        BN[bnAud] = d.list; bnRender(); bnMsg.textContent = reset ? '✓ Default এ ফেরানো হয়েছে' : '✓ সেভ হয়েছে';
+    }
+    document.getElementById('bnSave').addEventListener('click', function () { bnSend(false); });
+    document.getElementById('bnReset').addEventListener('click', function () { if (confirm('এই তালিকা Default এ ফেরাবেন?')) bnSend(true); });
+    bnRender();
 })();
 </script>
 <?php section_end(); ?>

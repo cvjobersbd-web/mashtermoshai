@@ -758,6 +758,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 transition: background .2s ease, opacity .2s ease, box-shadow .2s ease;
             }
             .nav-desktop-link i { font-size: 12px; }
+            /* ছোট ডেস্কটপে (১২৮০–১৪৪০px) ৬টা মেনু এক লাইনে ধরাতে একটু চাপা */
+            @media (max-width: 1440px) {
+                .nav-desktop-link { padding: 9px 10px; gap: 6px; font-size: 13.5px; }
+                .nav-desktop-link.active::after { left: 10px; right: 10px; }
+            }
             .nav-desktop-link:hover { opacity: 1; }
             .nav-desktop-link.active { opacity: 1; font-weight: 700; background: none; }
             .nav-desktop-link.active::after {
@@ -931,6 +936,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         .footer-social-link:hover { background: #fff; color: var(--brand); transform: translateY(-2px); }
         @media (max-width: 640px) { .footer-social { justify-content: center; width: 100%; } }
 </style>
+    <?= blue_tick_css() ?>
 </head>
 <body>
     <?php if (session_get('UserName') === null): ?><?= csrf_field() ?><?php endif; ?>
@@ -978,6 +984,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     </a>
                     <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-headset"></i>Helpdesk
+                    </a>
+                    <a href="/Package" class="nav-desktop-link<?= $navOn('/Package') || $navOn('/Payment') ? ' active' : '' ?>"<?= $navOn('/Package') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-tags"></i>Package
                     </a>
                 </div>
 
@@ -1172,6 +1181,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
                 <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                 <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span>Helpdesk</span></a>
+                <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
             </nav>
 
             <?php if ($mLoggedIn): ?>

@@ -2060,6 +2060,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <button type="button" class="ft2-fjump" onclick="document.querySelector('.ft2-qf').scrollIntoView({ behavior: 'smooth', block: 'start' })"><i class="fas fa-filter"></i> Filters</button>
                     <label class="ft2-sort">Sort by:
                         <select id="sortSelect">
+                            <option value="recommended">প্রস্তাবিত</option>
                             <option value="rating">সেরা রেটিং</option>
                             <option value="experience">বেশি অভিজ্ঞতা</option>
                             <option value="fee-low">কম বেতন</option>
@@ -3093,6 +3094,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
             var SAVED = <?= js(array_map(fn($k) => (int)substr($k, 6), array_keys($savedTutors))) ?>;
             var CAN_SAVE = <?= js($isLoggedIn && $userRole !== 'Admin') ?>;
             var MY_ID = <?= js((int)($userId ?? 0)) ?>;
+            var BLUE_TICK = <?= js(blue_tick_html()) ?>;
             var MODE_LBL = { Online: 'Online', Home: 'Home Visit', Both: 'Online, Home Visit' };
             function money(n) { return '৳' + Number(n).toLocaleString('en-US'); }
             function feeText(t) {
@@ -3117,7 +3119,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + heart
                     + '  <div class="ft2-photo"><a class="pic" href="/Profile/Show/' + t.userId + '">' + avatar + '</a>' + (t.isVerified ? '<span class="vt" title="Verified Tutor"><i class="fas fa-check"></i></span>' : '') + '</div>'
                     + '  <div class="ft2-info">'
-                    + '    <div class="ft2-name"><a href="/Profile/Show/' + t.userId + '">' + escapeHtml(t.fullName) + '</a>' + (t.isTopRated ? '<span class="ft2-top"><i class="fas fa-crown"></i> Top</span>' : '') + '</div>'
+                    + '    <div class="ft2-name"><a href="/Profile/Show/' + t.userId + '">' + escapeHtml(t.fullName) + (t.isPremium ? BLUE_TICK : '') + '</a>' + (t.isTopRated ? '<span class="ft2-top"><i class="fas fa-crown"></i> Top</span>' : '') + '</div>'
                     + '    <div class="ft2-rate">' + rating + '</div>'
                     + '    <div class="ft2-li"><i class="fas fa-graduation-cap"></i><span>' + escapeHtml(subj || 'General') + (lv ? ' (' + escapeHtml(lv) + ')' : '') + '</span></div>'
                     + '    <div class="ft2-li"><i class="fas fa-briefcase"></i><span>' + (t.experienceYears ? t.experienceYears + '+ years experience' : 'নতুন শিক্ষক') + '</span></div>'
@@ -3193,6 +3195,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 var sort = document.getElementById('sortSelect').value;
                 var list = allTutors.filter(matches);
                 switch (sort) {
+                    case 'recommended': list.sort(function (a, b) { return ((b.isPremium ? 1 : 0) - (a.isPremium ? 1 : 0)) || (b.rating - a.rating) || (b.totalReviews - a.totalReviews) || (b.id - a.id); }); break;
                     case 'rating': list.sort(function (a, b) { return (b.rating - a.rating) || (b.totalReviews - a.totalReviews); }); break;
                     case 'fee-low': list.sort(function (a, b) { return (a.monthlyFee || 1e9) - (b.monthlyFee || 1e9); }); break;
                     case 'fee-high': list.sort(function (a, b) { return (b.monthlyFee || 0) - (a.monthlyFee || 0); }); break;
@@ -3232,8 +3235,8 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 var t = allTutors.find(function (x) { return x.id === id; });
                 if (!t) return;
 
-                var verifiedIcon = t.isVerified
-                    ? '<i class="fas fa-check-circle" style="color:#2ecc71;"></i>' : '';
+                var verifiedIcon = t.isPremium ? BLUE_TICK : (t.isVerified
+                    ? '<i class="fas fa-check-circle" style="color:#2ecc71;"></i>' : '');
                 var topBadge = t.isTopRated
                     ? '<span style="background:linear-gradient(135deg,#E09A00,#B8760F);color:#fff;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;"><i class="fas fa-crown me-1"></i>Top Rated</span>'
                     : '';

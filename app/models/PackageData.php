@@ -11,6 +11,8 @@ trait PackageData
     private bool $packagesReady = false;
 
     public const PACKAGE_AUDIENCES = ['Teacher', 'Student'];
+    private const TEACHER_FEATURES_V1 = "প্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
+    private const TEACHER_FEATURES_V2 = "প্রোফাইলে নীল ভেরিফায়েড টিক\nFind Tutor তালিকায় উপরের দিকে দেখাবে\nপ্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
 
     public function EnsurePackageTable(): void
     {
@@ -35,13 +37,18 @@ trait PackageData
             if ($seeded === '' && (int)$this->scalar('SELECT COUNT(*) FROM `Packages`') === 0) {
                 foreach (self::defaultPackages() as $i => $p) $this->insertPackage($p + ['SortOrder' => $i + 1]);
             }
-            if ($seeded === '') $this->SaveSiteContent(['pkg_seeded' => '1']);
+            if ($seeded === '') $this->SaveSiteContent(['pkg_seeded' => '1', 'pkg_feat_v2' => '1']);
+            elseif (($this->GetSiteContent(['pkg_feat_v2' => ''])['pkg_feat_v2'] ?? '') === '') {
+                // আগের ডিফল্ট সুবিধার তালিকায় নীল টিক যোগ (অ্যাডমিন নিজে বদলে থাকলে হাত দেয় না)
+                $this->exec("UPDATE `Packages` SET `Features` = :n WHERE `Audience` = 'Teacher' AND `Features` = :o", ['n' => self::TEACHER_FEATURES_V2, 'o' => self::TEACHER_FEATURES_V1]);
+                $this->SaveSiteContent(['pkg_feat_v2' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
     }
 
     private static function defaultPackages(): array
     {
-        $t = "প্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
+        $t = self::TEACHER_FEATURES_V2;
         $s = "কোন বিষয় পড়াতে হবে\nকোন ক্লাসের শিক্ষার্থী\nকোথায় পড়াতে হবে\nকতদিন / কত ঘণ্টা পড়াতে হবে\nপারিশ্রমিক বা বাজেট\nঅন্যান্য প্রয়োজনীয় তথ্য";
         return [
             ['Audience' => 'Teacher', 'Name' => '১ মাস', 'DurationMonths' => 1, 'PostLimit' => 0, 'Price' => 100, 'RegularPrice' => 1000, 'Badge' => '90% ছাড়', 'Description' => 'শুরু করার জন্য সবচেয়ে সহজ', 'Features' => $t, 'IsFeatured' => 0],

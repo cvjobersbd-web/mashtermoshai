@@ -85,6 +85,7 @@ trait FindTutorData
         // পেমেন্টের নিয়ম চালু থাকলে শুধু Subscription চালু থাকা শিক্ষকরা দেখাবে
         $subOnly = null;
         try { if ($this->PaymentRules()['teacher']) $subOnly = $this->GetActiveTeacherSubscriptionMap(); } catch (Throwable $e) { }
+        try { $premium = $this->GetActiveTeacherSubscriptionMap(); } catch (Throwable $e) { $premium = []; }
         foreach ($rows as $r) {
             $uid = (int)$r->UserId;
             if (isset($seen[$uid]) || !(int)$r->IsActive) continue;
@@ -126,7 +127,7 @@ trait FindTutorData
                 'Rating' => $avg, 'TotalReviews' => $cnt, 'Students' => $students[$uid] ?? 0,
                 'AvailableTime' => !is_blank($r->PreferredTime) ? $r->PreferredTime : ((string)$r->AvailableDays ?: 'Contact for schedule'),
                 'About' => !is_blank($r->Bio) ? $r->Bio : (!is_blank($r->WhyTeach) ? $r->WhyTeach : (!is_blank($r->TeachingStyle) ? $r->TeachingStyle : 'Experienced tutor ready to help students excel.')),
-                'IsVerified' => true, 'IsTopRated' => false,
+                'IsVerified' => true, 'IsTopRated' => false, 'IsPremium' => isset($premium[$uid]),
                 'JoinedAt' => $r->RequestDate ?? $r->UCreated,
             ]);
         }

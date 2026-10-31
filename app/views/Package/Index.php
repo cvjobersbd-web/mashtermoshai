@@ -9,6 +9,17 @@ $studentPk = $ViewBag->StudentPackages ?? [];
 $tab = $ViewBag->Tab === 'student' ? 'student' : 'teacher';
 $isLoggedIn = session_get('UserName') != null;
 $me = $ViewBag->Me;
+$benefits = package_benefits();
+$myName = (string)(session_get('UserFullName') ?? '');
+$benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
+    <div class="pk-ben-h"><h3><?= e($title) ?></h3></div>
+    <div class="pk-ben">
+        <?php foreach ($list as $b): ?>
+            <div class="pk-ben-i"><span class="ic"><?php if (($b['i'] ?? '') === 'fa-certificate'): ?><?= blue_tick_html('নীল টিক') ?><?php else: ?><i class="fas <?= e(in_array($b['i'] ?? '', package_benefit_icons(), true) ? $b['i'] : 'fa-check') ?>"></i><?php endif; ?></span>
+                <div><b><?= e($b['t']) ?></b><?php if (($b['d'] ?? '') !== ''): ?><p><?= e($b['d']) ?></p><?php endif; ?></div></div>
+        <?php endforeach; ?>
+    </div>
+<?php };
 
 $card = function (Obj $p, string $cta) { ?>
     <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
@@ -53,6 +64,22 @@ $card = function (Obj $p, string $cta) { ?>
     .pk-me-p { display: inline-flex; gap: 5px; align-items: center; margin-left: 8px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 12px; background: #FEF3C7; color: #92400E; }
     .pk-me a { font-weight: 700; color: #1D7FE5; text-decoration: none; font-size: 13.5px; }
     .pk-sec { margin-top: 34px; }
+    .pk-ben-h { text-align: center; margin: 38px 0 16px; }
+    .pk-ben-h h3 { font-size: 20px; font-weight: 800; color: #08224A; margin: 0; }
+    .pk-ben { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+    .pk-ben-i { display: flex; gap: 14px; align-items: flex-start; background: #fff; border: 1px solid #DCECF5; border-radius: 16px; padding: 16px; }
+    .pk-ben-i .ic { width: 44px; height: 44px; border-radius: 13px; background: #E3F2FF; color: #1D7FE5; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .pk-ben-i .ic .blue-tick { width: 26px; height: 26px; margin: 0; }
+    .pk-ben-i b { display: block; color: #08224A; font-size: 15px; font-weight: 800; }
+    .pk-ben-i p { margin: 4px 0 0; color: #475569; font-size: 13.5px; line-height: 1.6; }
+    .pk-tick-demo { margin: 26px auto 0; max-width: 760px; display: flex; gap: 18px; align-items: center; padding: 16px 18px; border-radius: 18px; background: linear-gradient(135deg, #EFF8FF, #fff); border: 1px solid #CFE6FB; }
+    .pk-tick-card { display: flex; gap: 12px; align-items: center; background: #fff; border-radius: 14px; padding: 10px 16px 10px 10px; box-shadow: 0 6px 18px rgba(8,34,74,.08); flex-shrink: 0; }
+    .pk-tick-card .av { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #08224A, #134856); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .pk-tick-card b { display: flex; align-items: center; font-size: 16px; color: #08224A; }
+    .pk-tick-card small { display: block; color: #64748B; font-size: 12px; }
+    .pk-tick-demo p { margin: 0; font-size: 14px; color: #334155; line-height: 1.65; }
+    .pk-tick-demo p b { color: #08224A; }
+    @media (max-width: 640px) { .pk-tick-demo { flex-direction: column; align-items: stretch; text-align: center; } .pk-tick-card { justify-content: center; } }
     .pk-sec[hidden] { display: none; }
     .pk-sec-h { text-align: center; margin-bottom: 22px; }
     .pk-sec-h h2 { font-size: 22px; font-weight: 800; color: #08224A; margin: 0 0 6px; }
@@ -145,6 +172,14 @@ $card = function (Obj $p, string $cta) { ?>
         <?php else: ?>
             <div class="pk-empty"><i class="fas fa-box-open fa-2x"></i><p style="margin:10px 0 0;">এখনো কোনো প্যাকেজ যোগ করা হয়নি।</p></div>
         <?php endif; ?>
+        <div class="pk-tick-demo">
+            <div class="pk-tick-card">
+                <span class="av"><?= e(initials($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'Your Name')) ?></span>
+                <div><b><?= e($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'আপনার নাম') ?><?= blue_tick_html() ?></b><small>Verified Teacher · Subscription চালু</small></div>
+            </div>
+            <p><b>Subscription নিলেই প্রোফাইলে নীল টিক!</b> আপনার প্রোফাইল আর Find Tutor কার্ডে নামের পাশে নীল টিক দেখাবে। Subscription শেষ হলে টিক চলে যাবে, আবার নিলে ফিরে আসবে।</p>
+        </div>
+        <?php $benefitGrid($benefits['Teacher'], 'Subscription নিলে যা যা পাবেন'); ?>
     </section>
 
     <!-- ===== শিক্ষার্থী ===== -->
@@ -176,6 +211,7 @@ $card = function (Obj $p, string $cta) { ?>
         </div>
         <div class="pk-note"><i class="fas fa-info-circle" style="margin-top:3px;"></i>
             <span>পেমেন্টের পর আপনার প্রয়োজন অনুযায়ী Tuition Post করতে পারবেন — বিষয়, ক্লাস, কোথায় পড়াতে হবে, কতদিন/কত ঘণ্টা, পারিশ্রমিক বা বাজেট ইত্যাদি। শিক্ষকরা পোস্ট দেখে আপনার সাথে যোগাযোগ করবেন।</span></div>
+        <?php $benefitGrid($benefits['Student'], 'পোস্ট প্যাকেজ নিলে যা যা পাবেন'); ?>
     </section>
 
     <section class="pk-goal">

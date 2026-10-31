@@ -705,7 +705,7 @@ class AdminController extends Controller
     public function Packages(): void
     {
         $this->requireAdminPage();
-        $this->view(null, $this->db->GetPackages());
+        $this->view(null, $this->db->GetPackages(), ['Benefits' => package_benefits()]);
     }
 
     /** POST /Admin/SavePackage — নতুন বা এডিট */
@@ -738,6 +738,32 @@ class AdminController extends Controller
         if ($id > 0 && !$this->db->GetPackage($id)) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
         $id = $this->db->SavePackage($id, $data);
         json_response(['success' => true, 'message' => 'প্যাকেজ সেভ হয়েছে।', 'package' => $this->db->GetPackage($id)]);
+    }
+
+    /** POST /Admin/SavePackageBenefits — audience=Teacher|Student, data=[{i,t,d}] JSON, reset=true হলে ডিফল্ট */
+    public function SavePackageBenefits_POST(): void
+    {
+        $this->requireAdminJson();
+        $aud = input_str('audience', '');
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'Invalid']);
+        $key = $aud === 'Teacher' ? 'pkg_benefits_teacher' : 'pkg_benefits_student';
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent([$key => '']);
+            json_response(['success' => true, 'list' => package_benefits()[$aud]]);
+        }
+        $raw = json_decode((string)input_str('data', '[]'), true);
+        if (!is_array($raw)) json_response(['success' => false, 'message' => 'Invalid data']);
+        $icons = package_benefit_icons();
+        $clean = fn($v, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$v))), 0, $max);
+        $list = [];
+        foreach (array_slice($raw, 0, 20) as $b) {
+            if (!is_array($b)) continue;
+            $t = $clean($b['t'] ?? '', 60);
+            if ($t === '') continue;
+            $list[] = ['i' => in_array($b['i'] ?? '', $icons, true) ? $b['i'] : 'fa-check', 't' => $t, 'd' => $clean($b['d'] ?? '', 250)];
+        }
+        $this->db->SaveSiteContent([$key => json_encode($list, JSON_UNESCAPED_UNICODE)]);
+        json_response(['success' => true, 'list' => $list]);
     }
 
     public function DeletePackage_POST(): void

@@ -970,3 +970,75 @@ function payment_logo_css(): string
     return '<style>.pm-logo{display:inline-flex;align-items:center;gap:.45em;padding:0 .8em;border-radius:10px;background:var(--pm);color:#fff;font-weight:800;letter-spacing:.2px;white-space:nowrap;line-height:1;}'
         . '.pm-logo i{font-size:.95em;opacity:.95;}.pm-logo.img{padding:0;background:none;}.pm-logo.img img{height:100%;width:auto;max-width:140px;object-fit:contain;display:block;}</style>';
 }
+
+// ============================================================
+// ===== নীল টিক (Subscription চালু থাকা শিক্ষক) =====
+// ============================================================
+/** কোন কোন শিক্ষকের Subscription চালু — এক রিকোয়েস্টে একবারই ডাটাবেস থেকে আনে */
+function premium_teacher_map(): array
+{
+    static $map = null;
+    if ($map === null) { try { $map = db()->GetActiveTeacherSubscriptionMap(); } catch (Throwable $e) { $map = []; } }
+    return $map;
+}
+
+function is_premium_teacher($userId): bool { return $userId !== null && isset(premium_teacher_map()[(int)$userId]); }
+
+/** নীল ভেরিফায়েড টিক (ঢেউ খেলানো ব্যাজের ভিতরে সাদা টিক) */
+function blue_tick_html(string $title = 'Verified Teacher — Subscription চালু', string $cls = ''): string
+{
+    return '<span class="blue-tick' . ($cls !== '' ? ' ' . e($cls) : '') . '" title="' . e($title) . '" aria-label="' . e($title) . '" role="img">'
+        . '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1D9BF0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81C14.67 2.63 13.43 1.75 12 1.75s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91C2.63 9.33 1.75 10.57 1.75 12s.88 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/>'
+        . '<path fill="#fff" d="M10.54 16.2 6.8 12.46l1.41-1.41 2.26 2.26 4.8-5.23 1.47 1.36z"/></svg></span>';
+}
+
+/** নীল টিকের CSS — লেআউটে একবার বসানো আছে */
+function blue_tick_css(): string
+{
+    return '<style>.blue-tick{display:inline-flex;width:1.05em;height:1.05em;vertical-align:-0.14em;flex-shrink:0;margin-left:.2em}.blue-tick svg{width:100%;height:100%;display:block}</style>';
+}
+
+// ============================================================
+// ===== প্যাকেজের বিস্তারিত (সব প্যাকেজে যা পাবেন) — অ্যাডমিন এডিট করে =====
+// ============================================================
+function package_benefit_icons(): array
+{
+    return ['fa-certificate', 'fa-arrow-trend-up', 'fa-bullhorn', 'fa-clipboard-list', 'fa-users', 'fa-headset', 'fa-star', 'fa-bolt', 'fa-shield-halved',
+        'fa-chalkboard-user', 'fa-user-graduate', 'fa-pen-to-square', 'fa-location-dot', 'fa-coins', 'fa-comments', 'fa-bell', 'fa-eye', 'fa-gift', 'fa-crown', 'fa-handshake'];
+}
+
+function package_benefits_defaults(): array
+{
+    return [
+        'Teacher' => [
+            ['i' => 'fa-certificate', 't' => 'প্রোফাইলে নীল টিক', 'd' => 'আপনার প্রোফাইল আর Find Tutor কার্ডে নীল ভেরিফায়েড টিক দেখাবে — শিক্ষার্থী ও অভিভাবকরা বেশি ভরসা পাবেন।'],
+            ['i' => 'fa-arrow-trend-up', 't' => 'Find Tutor-এ আগে দেখাবে', 'd' => 'Subscription থাকা শিক্ষকরা টিউটর তালিকার উপরের দিকে দেখান, তাই বেশি শিক্ষার্থী আপনাকে খুঁজে পাবে।'],
+            ['i' => 'fa-bullhorn', 't' => 'Teacher Wanted পোস্ট', 'd' => 'নিজের বিষয়, এলাকা আর বেতন জানিয়ে “পড়াতে চাই” পোস্ট করতে পারবেন।'],
+            ['i' => 'fa-clipboard-list', 't' => 'Tuition Circular-এ Apply', 'd' => 'শিক্ষার্থীদের Tuition পোস্ট দেখে সরাসরি Apply ও যোগাযোগ করতে পারবেন।'],
+            ['i' => 'fa-users', 't' => 'স্টুডেন্ট ও ক্লাস ম্যানেজমেন্ট', 'd' => 'নিজের স্টুডেন্ট, ক্লাসের সময় আর মাসিক পেমেন্টের হিসাব এক জায়গায় রাখুন।'],
+            ['i' => 'fa-headset', 't' => 'অগ্রাধিকার সাপোর্ট', 'd' => 'কোনো সমস্যা হলে Helpdesk-এ আপনার প্রশ্ন আগে দেখা হবে।'],
+        ],
+        'Student' => [
+            ['i' => 'fa-pen-to-square', 't' => 'Teacher Needed পোস্ট', 'd' => 'কোন বিষয়, কোন ক্লাস, কোথায়, কতদিন আর বাজেট — সব জানিয়ে Tuition পোস্ট করুন।'],
+            ['i' => 'fa-certificate', 't' => 'যাচাইকৃত শিক্ষক', 'd' => 'অ্যাডমিন যাচাই করা শিক্ষকরাই আপনার পোস্টে Apply করতে পারবেন।'],
+            ['i' => 'fa-comments', 't' => 'সরাসরি যোগাযোগ', 'd' => 'আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন — আপনি প্রোফাইল ও রিভিউ দেখে বেছে নিন।'],
+            ['i' => 'fa-gift', 't' => 'Account সবসময় ফ্রি', 'd' => 'টিউটর খোঁজা, সেভ করা, রিভিউ দেখা — সব ফ্রি। শুধু পোস্ট করতে প্যাকেজ লাগে।'],
+        ],
+    ];
+}
+
+/** @return array{Teacher: array, Student: array} */
+function package_benefits(): array
+{
+    $def = package_benefits_defaults();
+    $out = $def;
+    try {
+        $v = db()->GetSiteContent(['pkg_benefits_teacher' => '', 'pkg_benefits_student' => '']);
+        foreach (['Teacher' => 'pkg_benefits_teacher', 'Student' => 'pkg_benefits_student'] as $aud => $k) {
+            if (($v[$k] ?? '') === '') continue;
+            $list = json_decode((string)$v[$k], true);
+            if (is_array($list)) $out[$aud] = array_values(array_filter($list, fn($b) => is_array($b) && ($b['t'] ?? '') !== ''));
+        }
+    } catch (Throwable $e) { }
+    return $out;
+}
