@@ -6,6 +6,7 @@
 $ViewData['Title'] = 'Packages';
 $packages = is_array($Model) ? $Model : [];
 $benefits = $ViewBag->Benefits ?? package_benefits();
+$pkb = package_banner();
 ?>
 <style>
     .admin-main-content { margin-left: 250px; padding: 20px; min-height: calc(100vh - 80px); }
@@ -85,6 +86,15 @@ $benefits = $ViewBag->Benefits ?? package_benefits();
     .bn-reset { margin-left: auto; color: #64748B; }
     .bn-msg { font-size: 13px; font-weight: 700; color: #15803D; }
     @media (max-width: 720px) { .bn-row { grid-template-columns: 30px minmax(0, 1fr) 36px; } .bn-row .bn-t, .bn-row .bn-d { grid-column: 2 / 3; } .bn-row .bn-ic { grid-column: 2 / 3; } .bn-row .rm { grid-column: 3; grid-row: 1; } }
+    .bnr-prev { position: relative; height: 170px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; padding: 0 22px; color: #fff;
+        background: linear-gradient(90deg, #0E4A5E 0%, #0E4A5E 34%, rgba(14,74,94,.82) 46%, rgba(14,74,94,0) 64%), var(--img) right center / cover no-repeat, linear-gradient(120deg, #0E4A5E, #1B6A80); }
+    .bnr-prev.off { background: radial-gradient(circle at 85% 30%, rgba(2,184,245,.35), transparent 45%), linear-gradient(120deg, #0E4A5E, #1B6A80); }
+    .bnr-prev small { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.16); }
+    .bnr-prev b { display: block; font-size: 24px; font-weight: 800; margin: 8px 0 4px; }
+    .bnr-prev span { font-size: 12.5px; opacity: .85; }
+    .bnr-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .bnr-row input[type=text] { flex: 1; min-width: 220px; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; background: #F8FBFE; outline: none; }
+    .bnr-row input[type=text]:focus { border-color: #1D7FE5; background: #fff; }
     [data-only-student][hidden], [data-only-teacher][hidden] { display: none; }
 
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 20px 15px; } }
@@ -108,6 +118,27 @@ $benefits = $ViewBag->Benefits ?? package_benefits();
         <a class="pa-view" href="/Package" target="_blank"><i class="fas fa-external-link-alt"></i> প্যাকেজ পেজ দেখুন</a>
     </div>
     <?= csrf_field() ?>
+
+    <div class="pa-sec" id="sec-Banner">
+        <div class="pa-sec-h">
+            <h5><i class="fas fa-image" style="color:#0EA5E9;"></i> Package পেজের ব্যানার ছবি</h5>
+            <small>Package পেজের একদম উপরের ছবি। ছবির ডান দিকে ইলাস্ট্রেশন রাখুন — বাম দিকে “মাষ্টার মশাই প্যাকেজ” লেখা আর ট্যাব বসে। (চওড়া ছবি ভালো, যেমন 1600×420 px, সর্বোচ্চ 5 MB)</small>
+        </div>
+        <div class="bnr-prev<?= $pkb['pk_banner_enabled'] === '0' ? ' off' : '' ?>" id="pkbBox" style="--img:url('<?= e($pkb['pk_banner']) ?>')">
+            <div><small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small><b>মাষ্টার মশাই প্যাকেজ</b><span>এভাবে পেজে দেখাবে</span></div>
+        </div>
+        <div class="bnr-row">
+            <label class="bn-add" for="pkbFile2" id="pkbUp"><i class="fas fa-upload"></i> নতুন ছবি আপলোড</label>
+            <input type="file" id="pkbFile2" accept="image/jpeg,image/png,image/gif,image/webp" hidden />
+            <input type="text" id="pkbUrl" value="<?= e($pkb['pk_banner']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." />
+        </div>
+        <div class="bn-foot">
+            <label style="display:inline-flex;gap:8px;align-items:center;font-weight:600;font-size:13.5px;margin:0;cursor:pointer;"><input type="checkbox" class="pa-sw" id="pkbOn"<?= $pkb['pk_banner_enabled'] !== '0' ? ' checked' : '' ?> /> ব্যানার ছবি দেখাও</label>
+            <span class="bn-msg" id="pkbMsg"></span>
+            <button type="button" class="bn-reset" id="pkbReset"><i class="fas fa-rotate-left"></i> Default ছবি</button>
+            <button type="button" class="pa-add" id="pkbSave" style="margin-left:0;"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
 
     <div class="pa-sec" id="sec-Teacher">
         <div class="pa-sec-h">
@@ -342,6 +373,34 @@ $benefits = $ViewBag->Benefits ?? package_benefits();
     document.getElementById('bnSave').addEventListener('click', function () { bnSend(false); });
     document.getElementById('bnReset').addEventListener('click', function () { if (confirm('এই তালিকা Default এ ফেরাবেন?')) bnSend(true); });
     bnRender();
+
+    // ===== Package পেজের ব্যানার ছবি =====
+    var pkBox = document.getElementById('pkbBox'), pkUrl = document.getElementById('pkbUrl'), pkOn = document.getElementById('pkbOn'), pkMsg = document.getElementById('pkbMsg');
+    function pkPaint() { pkBox.style.setProperty('--img', "url('" + pkUrl.value.replace(/['"()\\]/g, '') + "')"); pkBox.classList.toggle('off', !pkOn.checked); }
+    pkUrl.addEventListener('input', function () { pkPaint(); pkMsg.textContent = ''; });
+    pkOn.addEventListener('change', function () { pkPaint(); pkMsg.textContent = ''; });
+    async function pkSave(reset) {
+        var data = { which: 'package', pk_banner: pkUrl.value.trim(), pk_banner_enabled: pkOn.checked ? 'true' : 'false' };
+        if (reset) data.reset = 'true';
+        var d = await post('/Admin/SaveCircularBanner', data);
+        if (!d.success) { pkMsg.textContent = ''; alert(d.message || 'Failed'); return; }
+        if (d.pk_banner) { pkUrl.value = d.pk_banner; pkOn.checked = d.pk_banner_enabled !== '0'; pkPaint(); }
+        pkMsg.textContent = reset ? '✓ Default ছবিতে ফেরানো হয়েছে' : '✓ সেভ হয়েছে — Package পেজে বদলে গেছে';
+    }
+    document.getElementById('pkbFile2').addEventListener('change', async function () {
+        var f = this.files[0]; if (!f) return;
+        if (f.size > 5 * 1024 * 1024) { alert('ছবি ৫ MB এর কম হতে হবে।'); this.value = ''; return; }
+        var lbl = document.getElementById('pkbUp'), html = lbl.innerHTML; lbl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> আপলোড হচ্ছে...';
+        var fd = new FormData(); fd.append('promoImage', f);
+        try {
+            var d = await post('/Admin/UploadProfilePromo', fd);
+            if (!d.success) { alert(d.message || 'Upload failed'); return; }
+            pkUrl.value = d.imageUrl; pkOn.checked = true; pkPaint();
+            await pkSave(false);
+        } finally { lbl.innerHTML = html; this.value = ''; }
+    });
+    document.getElementById('pkbSave').addEventListener('click', function () { pkSave(false); });
+    document.getElementById('pkbReset').addEventListener('click', function () { if (confirm('আগের (Default) ছবিতে ফেরত যাবেন?')) pkSave(true); });
 })();
 </script>
 <?php section_end(); ?>
