@@ -604,6 +604,19 @@ function circular_banner(): array
 }
 
 /** Find Tutor পেজের উপরের ব্যানার ছবি (অ্যাডমিন সেটিংস থেকে বদলানো যায়) */
+function package_banner_defaults(): array
+{
+    return [
+        'pk_banner'         => 'https://i.ibb.co.com/hxR1BshZ/image.png',
+        'pk_banner_enabled' => '1',
+    ];
+}
+function package_banner(): array
+{
+    static $c = null;
+    if ($c === null) { try { $c = db()->GetSiteContent(package_banner_defaults()); } catch (Throwable $e) { $c = package_banner_defaults(); } }
+    return $c;
+}
 function findtutor_banner_defaults(): array
 {
     return [

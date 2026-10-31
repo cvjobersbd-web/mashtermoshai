@@ -639,10 +639,12 @@ class AdminController extends Controller
     public function SaveCircularBanner_POST(): void
     {
         $this->requireAdminJson();
-        $isFt = input_str('which', 'circular') === 'findtutor';
-        $k = $isFt ? 'ft_' : 'tc_';
-        $defaults = $isFt ? findtutor_banner_defaults() : circular_banner_defaults();
-        $page = $isFt ? 'Find Tutor' : 'Tuition Circular';
+        $which = input_str('which', 'circular');
+        [$k, $defaults, $page] = match ($which) {
+            'findtutor' => ['ft_', findtutor_banner_defaults(), 'Find Tutor'],
+            'package' => ['pk_', package_banner_defaults(), 'Package'],
+            default => ['tc_', circular_banner_defaults(), 'Tuition Circular'],
+        };
         if (input_bool('reset')) {
             $this->db->SaveSiteContent($defaults);
             json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ব্যানারে ফেরত নেওয়া হয়েছে।'] + $defaults);
