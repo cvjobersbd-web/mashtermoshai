@@ -820,7 +820,7 @@ $why = [
 <!-- ========================================= -->
 <!-- ✅ FAQ (প্রশ্ন-উত্তর Admin → Settings থেকে বদলানো যায়) -->
 <!-- ========================================= -->
-<?php $faqs = home_faqs(); ?>
+<?php $faqs = function_exists('home_faqs') ? home_faqs() : []; ?>
 <?php if ($faqs): ?>
 <section id="faq" class="hm-sec" style="background-color:<?= e($settings->SecondaryColor) ?>;">
     <div class="hm-wrap">
@@ -828,7 +828,7 @@ $why = [
         <p class="hm-sub">Quick answers for students, parents and tutors.</p>
         <div class="hm-faq">
             <?php foreach ($faqs as $i => [$q, $a]): ?>
-                <details<?= $i === 0 ? ' open' : '' ?>>
+                <details>
                     <summary><span class="q">Q<?= $i + 1 ?></span><h3><?= e($q) ?></h3><i class="fas fa-plus pl"></i></summary>
                     <p class="ans"><?= e($a) ?></p>
                 </details>

@@ -899,7 +899,7 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== ✅ Home Page — FAQ (প্রশ্ন ও উত্তর) ===== -->
-    <?php $fqSet = home_faq_settings(); ?>
+    <?php $fqSet = function_exists('home_faq_settings') ? home_faq_settings() : ['enabled' => true, 'items' => []]; ?>
     <style>
         .fq-list { display: flex; flex-direction: column; gap: 12px; }
         .fq-row { display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid #DCECF5; border-radius: 14px; padding: 12px; background: #F8FCFF; }
@@ -991,7 +991,7 @@ $heroImages = $Model->GetHeroImageList();
             var shown = fqItems.filter(function (f) { return (f.q || '').trim() && (f.a || '').trim(); });
             if (!document.getElementById('fqEnabled').checked) { pv.innerHTML = '<div class="fq-off"><i class="fas fa-eye-slash"></i> FAQ সেকশনটা এখন হোম পেজে লুকানো থাকবে</div>'; return; }
             if (!shown.length) { pv.innerHTML = '<div class="fq-off"><i class="fas fa-eye-slash"></i> কোনো প্রশ্ন না থাকলে সেকশনটা দেখাবে না</div>'; return; }
-            var open = pv.querySelector('details[open]'), openIdx = open ? +open.getAttribute('data-i') : 0;
+            var open = pv.querySelector('details[open]'), openIdx = open ? +open.getAttribute('data-i') : -1;
             pv.innerHTML = shown.map(function (f, i) {
                 return '<details data-i="' + i + '"' + (i === openIdx ? ' open' : '') + '><summary><span class="q">Q' + (i + 1) + '</span><b>' + fqEsc(f.q.trim()) + '</b><i class="fas fa-plus pl"></i></summary><p>' + fqEsc(f.a.trim()) + '</p></details>';
             }).join('');

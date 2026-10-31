@@ -1282,7 +1282,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         'Find a Tutor' => [['Find Tutors', '/FindTutor'], ['Mathematics Tutors', '/FindTutor?subject=mathematics'], ['English Tutors', '/FindTutor?subject=english'],
                                            ['SSC Tutors', '/FindTutor?class=ssc'], ['HSC Tutors', '/FindTutor?class=hsc']],
                         'Tuition' => [['Tuition Circular', '/Tuition/Circular'], ['Post Tuition Requirement', $__postReq], ['Become a Tutor', '/Teacher/RequestForm'], ['Packages', '/Package']],
-                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], home_faqs() ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
+                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], (function_exists('home_faqs') && home_faqs()) ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
                     ];
                 ?>
                 <nav class="footer-nav" aria-label="Footer">
