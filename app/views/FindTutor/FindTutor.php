@@ -2595,6 +2595,10 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 if (data.success) {
                     location.reload(); // Reload to show the new post
+                } else if (data.needPackage) {
+                    if (confirm(data.message + '\n\nএখনই প্যাকেজ পেজে যাবেন?')) { location.href = data.needPackage; return; }
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 } else {
                     alert(data.message || 'Failed to post.');
                     btn.innerHTML = originalText;

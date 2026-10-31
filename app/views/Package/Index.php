@@ -8,6 +8,7 @@ $teacherPk = $ViewBag->TeacherPackages ?? [];
 $studentPk = $ViewBag->StudentPackages ?? [];
 $tab = $ViewBag->Tab === 'student' ? 'student' : 'teacher';
 $isLoggedIn = session_get('UserName') != null;
+$me = $ViewBag->Me;
 
 $card = function (Obj $p, string $cta) { ?>
     <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
@@ -28,7 +29,7 @@ $card = function (Obj $p, string $cta) { ?>
                 <?php foreach ($p->FeatureList as $f): ?><li><i class="fas fa-check"></i><span><?= e($f) ?></span></li><?php endforeach; ?>
             </ul>
         <?php endif; ?>
-        <button type="button" class="pk-btn" data-pk-choose="<?= e($p->Name) ?>" data-pk-price="<?= e(taka($p->Price)) ?>"><?= e($cta) ?></button>
+        <a class="pk-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>" style="text-align:center;text-decoration:none;"><?= e($cta) ?></a>
     </div>
 <?php };
 ?>
@@ -45,6 +46,12 @@ $card = function (Obj $p, string $cta) { ?>
     .pk-tab { border: none; background: none; padding: 11px 22px; border-radius: 30px; font-weight: 700; font-size: 14.5px; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background .2s, color .2s; }
     .pk-tab.on { background: linear-gradient(135deg, #1D7FE5, #02B8F5); color: #fff; }
 
+    .pk-me { max-width: 760px; margin: 22px auto 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; background: #fff; border: 1px solid #DCECF5; font-size: 14px; color: #334155; }
+    .pk-me > i { color: #1D7FE5; font-size: 18px; }
+    .pk-me > div { flex: 1; min-width: 200px; }
+    .pk-me b { color: #08224A; }
+    .pk-me-p { display: inline-flex; gap: 5px; align-items: center; margin-left: 8px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 12px; background: #FEF3C7; color: #92400E; }
+    .pk-me a { font-weight: 700; color: #1D7FE5; text-decoration: none; font-size: 13.5px; }
     .pk-sec { margin-top: 34px; }
     .pk-sec[hidden] { display: none; }
     .pk-sec-h { text-align: center; margin-bottom: 22px; }
@@ -87,15 +94,6 @@ $card = function (Obj $p, string $cta) { ?>
     .pk-goal p { margin: 0; font-size: 13.5px; color: #475569; line-height: 1.65; }
     .pk-empty { text-align: center; padding: 40px 16px; border: 2px dashed #DCECF5; border-radius: 18px; color: #64748B; background: #fff; }
 
-    .pk-modal { position: fixed; inset: 0; z-index: 3000; background: rgba(8,34,74,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .pk-modal[hidden] { display: none; }
-    .pk-modal-box { background: #fff; border-radius: 20px; max-width: 400px; width: 100%; padding: 26px 22px 20px; text-align: center; box-shadow: 0 24px 60px rgba(8,34,74,.3); }
-    .pk-modal-box .ic { width: 58px; height: 58px; border-radius: 50%; margin: 0 auto 12px; background: #FFF4D6; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-    .pk-modal-box h3 { margin: 0 0 8px; font-size: 18px; font-weight: 800; color: #08224A; }
-    .pk-modal-box p { margin: 0 0 16px; font-size: 14px; color: #475569; line-height: 1.7; }
-    .pk-modal-box .row-b { display: flex; gap: 10px; }
-    .pk-modal-box .row-b > * { flex: 1; padding: 10px; border-radius: 11px; font-weight: 700; font-size: 14px; text-decoration: none; border: 1.5px solid #DCECF5; background: #fff; color: #475569; cursor: pointer; }
-    .pk-modal-box .row-b a { background: #1D7FE5; border-color: #1D7FE5; color: #fff; }
 
     @media (max-width: 640px) {
         .pk-wrap { padding-top: 16px; }
@@ -118,6 +116,21 @@ $card = function (Obj $p, string $cta) { ?>
             <button type="button" class="pk-tab<?= $tab === 'student' ? ' on' : '' ?>" data-pk-tab="student" role="tab" aria-selected="<?= $tab === 'student' ? 'true' : 'false' ?>"><i class="fas fa-user-graduate"></i> শিক্ষার্থীদের জন্য</button>
         </div>
     </div>
+
+    <?php if ($me): ?>
+        <div class="pk-me">
+            <i class="fas fa-user-check"></i>
+            <div>
+                <?php if ($me['role'] === 'Teacher'): ?>
+                    <b>আপনার Subscription:</b> <?= $me['sub'] ? 'চালু — ' . e(date('d M Y', strtotime($me['sub']->EndsAt))) . ' পর্যন্ত' : 'চালু নেই' ?>
+                <?php else: ?>
+                    <b>আপনার পোস্ট ক্রেডিট:</b> <?= $me['credits'] === -1 ? 'আনলিমিটেড' : e(bn_num($me['credits'])) . 'টি' ?>
+                <?php endif; ?>
+                <?php if ($me['pending'] > 0): ?><span class="pk-me-p"><i class="fas fa-hourglass-half"></i> <?= e(bn_num($me['pending'])) ?>টি পেমেন্ট যাচাই হচ্ছে</span><?php endif; ?>
+            </div>
+            <a href="/Payment/My">আমার পেমেন্ট <i class="fas fa-arrow-right"></i></a>
+        </div>
+    <?php endif; ?>
 
     <!-- ===== শিক্ষক ===== -->
     <section class="pk-sec" id="pk-teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>>
@@ -171,18 +184,6 @@ $card = function (Obj $p, string $cta) { ?>
     </section>
 </div>
 
-<div class="pk-modal" id="pkModal" hidden role="dialog" aria-modal="true" aria-labelledby="pkModalT">
-    <div class="pk-modal-box">
-        <div class="ic"><i class="fas fa-hourglass-half"></i></div>
-        <h3 id="pkModalT">অনলাইন পেমেন্ট শীঘ্রই আসছে</h3>
-        <p id="pkModalP"></p>
-        <div class="row-b">
-            <button type="button" data-pk-close>ঠিক আছে</button>
-            <a href="/Helpdesk">Helpdesk</a>
-        </div>
-    </div>
-</div>
-
 <?php section_start('Scripts'); ?>
 <script>
 (function () {
@@ -195,16 +196,6 @@ $card = function (Obj $p, string $cta) { ?>
             try { history.replaceState(null, '', '/Package?for=' + k); } catch (e) { }
         });
     });
-    var m = document.getElementById('pkModal');
-    document.addEventListener('click', function (e) {
-        var c = e.target.closest('[data-pk-choose]');
-        if (c) {
-            document.getElementById('pkModalP').textContent = '“' + c.getAttribute('data-pk-choose') + '” (' + c.getAttribute('data-pk-price') + ') প্যাকেজটি নিতে অনলাইন পেমেন্ট খুব শীঘ্রই চালু হবে। এখনই নিতে চাইলে Helpdesk-এ আমাদের জানান।';
-            m.hidden = false; return;
-        }
-        if (e.target === m || e.target.closest('[data-pk-close]')) m.hidden = true;
-    });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') m.hidden = true; });
 })();
 </script>
 <?php section_end(); ?>

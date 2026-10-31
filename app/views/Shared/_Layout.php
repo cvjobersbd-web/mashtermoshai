@@ -1052,6 +1052,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 </li>
                                 <?php if (!$isAdmin): ?>
                                     <li>
+                                        <a class="dropdown-item" href="/Payment/My">
+                                            <i class="fas fa-receipt"></i> আমার পেমেন্ট
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a class="dropdown-item" href="/Friends">
                                             <i class="fas fa-user-group"></i> Friends
                                             <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> new</span><?php endif; ?>

@@ -944,3 +944,29 @@ function package_duration_label($p): string
     }
     return $m > 0 ? bn_num($m) . ' মাস' : 'আজীবন';
 }
+
+// ============================================================
+// ===== পেমেন্ট মেথডের লোগো =====
+// ============================================================
+/**
+ * মেথডের লোগো: অ্যাডমিন লোগো আপলোড করলে সেই ছবি, না হলে মেথডের রঙে নামসহ ব্যাজ।
+ * $size = px (উচ্চতা)
+ */
+function payment_logo_html($m, int $size = 40): string
+{
+    $name = (string)($m->Name ?? '');
+    if (!is_blank($m->LogoUrl ?? null)) {
+        return '<span class="pm-logo img" style="height:' . $size . 'px;"><img src="' . e($m->LogoUrl) . '" alt="' . e($name) . '" loading="lazy" /></span>';
+    }
+    $icon = ['bank' => 'fa-building-columns', 'mobile' => 'fa-mobile-screen-button'][$m->Kind ?? ''] ?? 'fa-wallet';
+    $color = preg_match('/^#[0-9A-Fa-f]{6}$/', (string)($m->Color ?? '')) ? $m->Color : '#475569';
+    return '<span class="pm-logo" style="--pm:' . e($color) . ';height:' . $size . 'px;font-size:' . max(11, (int)round($size * 0.36)) . 'px;">'
+        . '<i class="fas ' . $icon . '"></i><b>' . e($name) . '</b></span>';
+}
+
+/** লোগো ব্যাজের CSS (একবার পেজে বসাতে হয়) */
+function payment_logo_css(): string
+{
+    return '<style>.pm-logo{display:inline-flex;align-items:center;gap:.45em;padding:0 .8em;border-radius:10px;background:var(--pm);color:#fff;font-weight:800;letter-spacing:.2px;white-space:nowrap;line-height:1;}'
+        . '.pm-logo i{font-size:.95em;opacity:.95;}.pm-logo.img{padding:0;background:none;}.pm-logo.img img{height:100%;width:auto;max-width:140px;object-fit:contain;display:block;}</style>';
+}

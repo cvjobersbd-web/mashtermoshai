@@ -17,6 +17,8 @@ try {
 
 $pendingReviews = 0;
 try { $pendingReviews = db()->CountReviews('Pending'); } catch (Throwable $e) { }
+$pendingPayments = 0;
+try { $pendingPayments = db()->CountPendingPayments(); } catch (Throwable $e) { }
 
 try {
     if ($ViewBag->PendingTuitionApps !== null)
@@ -278,10 +280,10 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
-    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews;
+    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments;
 ?>
 <div class="admin-mbar">
     <button class="admin-mbar-btn" id="adminSidebarToggle" type="button" aria-label="Open admin menu" aria-controls="adminSidebar" aria-expanded="false">
@@ -367,6 +369,19 @@ try {
                 <?php if ($pendingReviews > 0): ?>
                     <span class="badge-sidebar warning"><?= e($pendingReviews) ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/Payments" class="<?= $currentAction === 'Payments' ? 'active' : '' ?>">
+                <i class="fas fa-money-bill-wave"></i> Payments
+                <?php if ($pendingPayments > 0): ?>
+                    <span class="badge-sidebar warning"><?= e($pendingPayments) ?></span>
+                <?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/PaymentMethods" class="<?= $currentAction === 'PaymentMethods' ? 'active' : '' ?>">
+                <i class="fas fa-wallet"></i> Payment Methods
             </a>
         </li>
         <li>

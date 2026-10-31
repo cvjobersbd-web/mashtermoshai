@@ -47,6 +47,10 @@ class TuitionController extends Controller
         if ($content === '') $this->fail('টিউশনের বিস্তারিত লিখুন।');
         if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
         if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
+        // পেমেন্টের নিয়ম চালু থাকলে পোস্ট করতে ক্রেডিট লাগবে (অ্যাডমিন বাদে)
+        $needCredit = session_get('UserRole') !== 'Admin' && $this->db->PaymentRules()['student'];
+        if ($needCredit && $this->db->GetStudentPostCredits($userId) === 0) json_response(['success' => false, 'needPackage' => '/Package?for=student',
+            'message' => 'Tuition Post করতে পোস্ট প্যাকেজ লাগবে। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
         $medium = (string)input_str('medium', '');
         $type = (string)input_str('tuitionType', '');
         $budget = preg_replace('/[^0-9]/', '', (string)input_str('budget', ''));
@@ -80,7 +84,10 @@ class TuitionController extends Controller
             'TuitionType' => in_array($type, Db::CIRCULAR_TYPES, true) ? $type : null,
         ]);
         $err = null;
-        if ($this->db->CreateTuitionCircularPost($post, $err)) json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।']);
+        if ($this->db->CreateTuitionCircularPost($post, $err)) {
+            if ($needCredit) { try { $this->db->ConsumeStudentPostCredit($userId); } catch (Throwable $e) { error_log('[post credit] ' . $e->getMessage()); } }
+            json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।']);
+        }
         delete_upload($imageUrl); delete_upload($videoUrl);
         $this->fail('পোস্ট করা যায়নি। আবার চেষ্টা করুন।');
     }

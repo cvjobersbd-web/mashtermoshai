@@ -768,6 +768,169 @@ class AdminController extends Controller
         json_response(['success' => true]);
     }
 
+    // ============================================================
+    // ===== PAYMENTS (ম্যানুয়াল পেমেন্ট যাচাই) =====
+    // ============================================================
+    /** GET /Admin/Payments?status=Pending|Approved|Rejected|all */
+    public function Payments(): void
+    {
+        $this->requireAdminPage();
+        $st = input_str('status', 'Pending');
+        if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
+        $this->view(null, $this->db->GetPaymentRequests($st === 'all' ? null : $st), ['Status' => $st, 'Stats' => $this->db->PaymentStats()]);
+    }
+
+    /** POST /Admin/ApprovePayment (id, note?) */
+    public function ApprovePayment_POST(): void
+    {
+        $this->requireAdminJson();
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        try { $p = $this->db->ApprovePayment((int)input_int('id', 0), (int)current_user_id(), $note); }
+        catch (Throwable $e) { error_log('[approve payment] ' . $e->getMessage()); $p = null; }
+        if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
+        if ($p->Audience === 'Teacher') {
+            $sub = $this->db->GetActiveTeacherSubscription($p->UserId);
+            $msg = "আপনার “{$p->PackageName}” Subscription (" . taka($p->Amount) . ") চালু হয়েছে" . ($sub ? ' — ' . date('d M Y', strtotime($sub->EndsAt)) . ' পর্যন্ত।' : '।');
+        } else {
+            $msg = "আপনার “{$p->PackageName}” প্যাকেজ (" . taka($p->Amount) . ") চালু হয়েছে — এখন Tuition Circular-এ পোস্ট করতে পারবেন।";
+        }
+        $this->db->CreateNotification($p->UserId, 'Payment Accepted', $msg, 'success', '/Payment/My', 'fa-circle-check');
+        json_response(['success' => true, 'payment' => $p]);
+    }
+
+    /** POST /Admin/RejectPayment (id, note) */
+    public function RejectPayment_POST(): void
+    {
+        $this->requireAdminJson();
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        if ($note === '') json_response(['success' => false, 'message' => 'Reject করার কারণ লিখুন — ইউজার এটা দেখতে পাবে।']);
+        $p = $this->db->RejectPayment((int)input_int('id', 0), (int)current_user_id(), $note);
+        if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
+        $this->db->CreateNotification($p->UserId, 'Payment Rejected', "“{$p->PackageName}” প্যাকেজের পেমেন্ট গ্রহণ করা হয়নি: $note", 'warning', '/Payment/My', 'fa-circle-xmark');
+        json_response(['success' => true, 'payment' => $p]);
+    }
+
+    /** POST /Admin/DeletePayment (id) — শুধু Rejected পেমেন্ট মুছে ফেলা যায় */
+    public function DeletePayment_POST(): void
+    {
+        $this->requireAdminJson();
+        $p = $this->db->GetPaymentRequest((int)input_int('id', 0));
+        if (!$p || $p->Status !== 'Rejected') json_response(['success' => false, 'message' => 'শুধু Rejected পেমেন্ট মুছে ফেলা যায়।']);
+        delete_upload($this->db->DeletePaymentRequest($p->Id));
+        json_response(['success' => true]);
+    }
+
+    /** GET /Admin/PaymentMethods */
+    public function PaymentMethods(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetPaymentMethods(), ['Rules' => $this->db->PaymentRules()]);
+    }
+
+    private function paymentImage(string $field, string $prefix): ?string
+    {
+        $f = upload_file($field);
+        if (!$f) return null;
+        $ext = strtolower('.' . pathinfo($f['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['.jpg', '.jpeg', '.png', '.webp', '.gif'], true)) json_response(['success' => false, 'message' => 'শুধু JPG, PNG, WEBP বা GIF ছবি দেওয়া যাবে।']);
+        if ($f['size'] > 3 * 1024 * 1024) json_response(['success' => false, 'message' => 'ছবি ৩ MB এর কম হতে হবে।']);
+        if (@getimagesize($f['tmp_name']) === false) json_response(['success' => false, 'message' => 'ছবিটি সঠিক নয়।']);
+        return save_upload($f, 'payments/assets', $prefix . '_' . ticks(), $ext === '.jpeg' ? '.jpg' : $ext);
+    }
+
+    private static function safeImageUrl(string $u): ?string
+    {
+        $u = trim($u);
+        if ($u === '') return null;
+        if (str_starts_with($u, '/uploads/') || preg_match('~^https://[^\s"<>]+$~i', $u)) return mb_substr($u, 0, 500);
+        json_response(['success' => false, 'message' => 'ছবির লিংক https:// দিয়ে শুরু হতে হবে।']);
+        return null;
+    }
+
+    /** POST /Admin/SavePaymentMethod — id, name, kind, color, txnRequired, instructions, isActive, logo(file) / logoUrl / removeLogo */
+    public function SavePaymentMethod_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $old = $id ? $this->db->GetPaymentMethod($id) : null;
+        if ($id && !$old) json_response(['success' => false, 'message' => 'মেথড পাওয়া যায়নি।']);
+        $name = mb_substr(trim(strip_tags((string)input_str('name', ''))), 0, 40);
+        if ($name === '') json_response(['success' => false, 'message' => 'মেথডের নাম দিন (যেমন: bKash)।']);
+        $kind = input_str('kind', 'other');
+        $color = (string)input_str('color', '#475569');
+        $d = [
+            'Name' => $name, 'Kind' => in_array($kind, Db::PAYMENT_KINDS, true) ? $kind : 'other',
+            'Color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $color) ? $color : '#475569',
+            'TxnRequired' => input_bool('txnRequired') ? 1 : 0, 'IsActive' => input_bool('isActive', true) ? 1 : 0,
+            'Instructions' => mb_substr(trim(strip_tags((string)input_str('instructions', ''))), 0, 1000),
+        ];
+        $up = $this->paymentImage('logo', 'logo');
+        if ($up !== null) $d['LogoUrl'] = $up;
+        elseif (input_bool('removeLogo')) $d['LogoUrl'] = null;
+        elseif (($lu = (string)input_str('logoUrl', '')) !== '' && $lu !== ($old->LogoUrl ?? '')) $d['LogoUrl'] = self::safeImageUrl($lu);
+        elseif (!$id) $d['LogoUrl'] = null;
+        if ($old && array_key_exists('LogoUrl', $d) && $old->LogoUrl !== $d['LogoUrl']) delete_upload($old->LogoUrl);
+        $id = $this->db->SavePaymentMethod($id, $d);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
+    }
+
+    public function DeletePaymentMethod_POST(): void
+    {
+        $this->requireAdminJson();
+        foreach ($this->db->DeletePaymentMethod((int)input_int('id', 0)) as $f) delete_upload($f);
+        json_response(['success' => true]);
+    }
+
+    public function MovePaymentMethod_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->MovePaymentMethod((int)input_int('id', 0), (int)input_int('dir', 1));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/SavePaymentAccount — id, methodId, title, accountName, accountNumber, bankName, branch, routingNumber, accountType, isActive, qr(file) / qrUrl / removeQr */
+    public function SavePaymentAccount_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $old = $id ? $this->db->GetPaymentAccount($id) : null;
+        if ($id && !$old) json_response(['success' => false, 'message' => 'অ্যাকাউন্ট পাওয়া যায়নি।']);
+        $mid = $old ? $old->MethodId : (int)input_int('methodId', 0);
+        if (!$this->db->GetPaymentMethod($mid)) json_response(['success' => false, 'message' => 'মেথড পাওয়া যায়নি।']);
+        $c = fn($k, $max) => mb_substr(trim(strip_tags((string)input_str($k, ''))), 0, $max);
+        $d = [
+            'MethodId' => $mid, 'Title' => $c('title', 80), 'AccountName' => $c('accountName', 100), 'AccountNumber' => $c('accountNumber', 40),
+            'BankName' => $c('bankName', 100), 'Branch' => $c('branch', 100), 'RoutingNumber' => $c('routingNumber', 20), 'AccountType' => $c('accountType', 40),
+            'IsActive' => input_bool('isActive', true) ? 1 : 0,
+        ];
+        if ($d['Title'] === '') json_response(['success' => false, 'message' => 'অ্যাকাউন্টের নাম/শিরোনাম দিন (যেমন: Pubali Bank — Mirpur Branch)।']);
+        $up = $this->paymentImage('qr', 'qr');
+        if ($up !== null) $d['QrImageUrl'] = $up;
+        elseif (input_bool('removeQr')) $d['QrImageUrl'] = null;
+        elseif (($qu = (string)input_str('qrUrl', '')) !== '' && $qu !== ($old->QrImageUrl ?? '')) $d['QrImageUrl'] = self::safeImageUrl($qu);
+        elseif (!$id) $d['QrImageUrl'] = null;
+        if ($d['AccountNumber'] === '' && empty($d['QrImageUrl']) && !($old && !array_key_exists('QrImageUrl', $d) && $old->QrImageUrl))
+            json_response(['success' => false, 'message' => 'অ্যাকাউন্ট নম্বর অথবা QR ছবি — অন্তত একটা দিন।']);
+        if ($old && array_key_exists('QrImageUrl', $d) && $old->QrImageUrl !== $d['QrImageUrl']) delete_upload($old->QrImageUrl);
+        $this->db->SavePaymentAccount($id, $d);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
+    }
+
+    public function DeletePaymentAccount_POST(): void
+    {
+        $this->requireAdminJson();
+        delete_upload($this->db->DeletePaymentAccount((int)input_int('id', 0)));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/SavePaymentRules — teacher, student (পেমেন্ট বাধ্যতামূলক কিনা) */
+    public function SavePaymentRules_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->SaveSiteContent(['pay_enforce_teacher' => input_bool('teacher') ? '1' : '', 'pay_enforce_student' => input_bool('student') ? '1' : '']);
+        json_response(['success' => true, 'rules' => $this->db->PaymentRules()]);
+    }
+
     public function UploadLogo_POST(): void
     {
         $prefix = input_str('target', 'navbar') === 'footer' ? 'footer' : 'navbar';

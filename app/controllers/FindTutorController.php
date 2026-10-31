@@ -158,6 +158,8 @@ class FindTutorController extends Controller
         if ($image && $video) json_response(['success' => false, 'message' => 'একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।']);
         $userId = current_user_id();
         if ($userId === null) json_response(['success' => false, 'message' => 'Invalid user.']);
+        if (!$this->db->TeacherCanWork($userId)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher',
+            'message' => 'পোস্ট করতে আপনার Subscription চালু থাকতে হবে। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
 
         $imageUrl = $image ? $this->saveTeachImage($image) : null;
         $videoUrl = $video ? $this->saveTeachVideo($video) : null;

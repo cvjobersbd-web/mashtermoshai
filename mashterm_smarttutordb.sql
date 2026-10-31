@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 31, 2026 at 07:32 AM
+-- Generation Time: Oct 31, 2026 at 07:45 AM
 -- Server version: 10.11.16-MariaDB
 -- PHP Version: 8.3.36
 
@@ -148,6 +148,30 @@ INSERT INTO `notifications` (`Id`, `UserId`, `Title`, `Message`, `Type`, `Icon`,
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `packages`
+--
+
+CREATE TABLE `packages` (
+  `Id` int(11) NOT NULL,
+  `Audience` varchar(10) NOT NULL,
+  `Name` varchar(80) NOT NULL,
+  `DurationMonths` int(11) NOT NULL DEFAULT 0,
+  `PostLimit` int(11) NOT NULL DEFAULT 0,
+  `Price` int(11) NOT NULL DEFAULT 0,
+  `RegularPrice` int(11) DEFAULT NULL,
+  `Badge` varchar(40) DEFAULT NULL,
+  `Description` varchar(300) DEFAULT NULL,
+  `Features` text DEFAULT NULL,
+  `IsActive` tinyint(1) NOT NULL DEFAULT 1,
+  `IsFeatured` tinyint(1) NOT NULL DEFAULT 0,
+  `SortOrder` int(11) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `UpdatedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `passwordresets`
 --
 
@@ -170,6 +194,77 @@ INSERT INTO `passwordresets` (`Id`, `UserId`, `TokenHash`, `ExpiresAt`, `UsedAt`
 (2, 3, 'e6b71d0a309ceed5bc7eae9a26c3af8ad40116ee8132e7c1ee702f5a0e6186ba', '2026-10-29 10:47:36', '2026-10-29 10:20:40', '::1', '2026-10-29 10:17:36'),
 (3, 3, '6972be9d227d44dd0df1fbae7702e57610a35b81933a89144c482ce8659980e0', '2026-10-29 10:50:40', NULL, '::1', '2026-10-29 10:20:40'),
 (4, 5, 'da4fd5d077a4a90108d3e64c97a4198791d19d3ced906ad237dc7ec8f292d976', '2026-10-29 10:59:41', NULL, '::1', '2026-10-29 10:29:41');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `paymentaccounts`
+--
+
+CREATE TABLE `paymentaccounts` (
+  `Id` int(11) NOT NULL,
+  `MethodId` int(11) NOT NULL,
+  `Title` varchar(80) NOT NULL,
+  `AccountName` varchar(100) DEFAULT NULL,
+  `AccountNumber` varchar(40) DEFAULT NULL,
+  `BankName` varchar(100) DEFAULT NULL,
+  `Branch` varchar(100) DEFAULT NULL,
+  `RoutingNumber` varchar(20) DEFAULT NULL,
+  `AccountType` varchar(40) DEFAULT NULL,
+  `QrImageUrl` varchar(500) DEFAULT NULL,
+  `IsActive` tinyint(1) NOT NULL DEFAULT 1,
+  `SortOrder` int(11) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `paymentmethods`
+--
+
+CREATE TABLE `paymentmethods` (
+  `Id` int(11) NOT NULL,
+  `Name` varchar(40) NOT NULL,
+  `Kind` varchar(10) NOT NULL DEFAULT 'other',
+  `LogoUrl` varchar(500) DEFAULT NULL,
+  `Color` varchar(9) DEFAULT NULL,
+  `TxnRequired` tinyint(1) NOT NULL DEFAULT 1,
+  `Instructions` varchar(1000) DEFAULT NULL,
+  `IsActive` tinyint(1) NOT NULL DEFAULT 1,
+  `SortOrder` int(11) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `paymentrequests`
+--
+
+CREATE TABLE `paymentrequests` (
+  `Id` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `PackageId` int(11) DEFAULT NULL,
+  `PackageName` varchar(80) NOT NULL,
+  `Audience` varchar(10) NOT NULL,
+  `Amount` int(11) NOT NULL,
+  `DurationMonths` int(11) NOT NULL DEFAULT 0,
+  `PostLimit` int(11) NOT NULL DEFAULT 0,
+  `MethodId` int(11) DEFAULT NULL,
+  `MethodName` varchar(40) NOT NULL,
+  `AccountId` int(11) DEFAULT NULL,
+  `AccountInfo` varchar(200) DEFAULT NULL,
+  `TxnId` varchar(40) DEFAULT NULL,
+  `PayDate` date NOT NULL,
+  `ReceiptUrl` varchar(300) NOT NULL,
+  `Note` varchar(500) DEFAULT NULL,
+  `Status` varchar(10) NOT NULL DEFAULT 'Pending',
+  `AdminNote` varchar(300) DEFAULT NULL,
+  `ReviewedBy` int(11) DEFAULT NULL,
+  `ReviewedAt` datetime DEFAULT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -784,6 +879,25 @@ INSERT INTO `users` (`Id`, `UserName`, `Password`, `FullName`, `Email`, `Created
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `usersubscriptions`
+--
+
+CREATE TABLE `usersubscriptions` (
+  `Id` int(11) NOT NULL,
+  `UserId` int(11) NOT NULL,
+  `PaymentId` int(11) DEFAULT NULL,
+  `PackageName` varchar(80) NOT NULL,
+  `Audience` varchar(10) NOT NULL,
+  `StartsAt` datetime NOT NULL,
+  `EndsAt` datetime DEFAULT NULL,
+  `PostsTotal` int(11) NOT NULL DEFAULT 0,
+  `PostsUsed` int(11) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `usersuspensions`
 --
 
@@ -855,6 +969,13 @@ ALTER TABLE `notifications`
   ADD KEY `IX_Notifications_User` (`UserId`,`IsRead`,`CreatedAt`);
 
 --
+-- Indexes for table `packages`
+--
+ALTER TABLE `packages`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_Pkg_Aud` (`Audience`,`SortOrder`);
+
+--
 -- Indexes for table `passwordresets`
 --
 ALTER TABLE `passwordresets`
@@ -862,6 +983,28 @@ ALTER TABLE `passwordresets`
   ADD UNIQUE KEY `UX_PasswordResets_Token` (`TokenHash`),
   ADD KEY `IX_PasswordResets_User` (`UserId`,`CreatedAt`),
   ADD KEY `IX_PasswordResets_Ip` (`RequestIp`,`CreatedAt`);
+
+--
+-- Indexes for table `paymentaccounts`
+--
+ALTER TABLE `paymentaccounts`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_PA_Method` (`MethodId`);
+
+--
+-- Indexes for table `paymentmethods`
+--
+ALTER TABLE `paymentmethods`
+  ADD PRIMARY KEY (`Id`);
+
+--
+-- Indexes for table `paymentrequests`
+--
+ALTER TABLE `paymentrequests`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_PR_User` (`UserId`),
+  ADD KEY `IX_PR_Status` (`Status`),
+  ADD KEY `IX_PR_Txn` (`TxnId`);
 
 --
 -- Indexes for table `polloptions`
@@ -1093,6 +1236,13 @@ ALTER TABLE `users`
   ADD KEY `IX_Users_Role` (`Role`);
 
 --
+-- Indexes for table `usersubscriptions`
+--
+ALTER TABLE `usersubscriptions`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_US_User` (`UserId`,`Audience`);
+
+--
 -- Indexes for table `usersuspensions`
 --
 ALTER TABLE `usersuspensions`
@@ -1140,10 +1290,34 @@ ALTER TABLE `notifications`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT for table `packages`
+--
+ALTER TABLE `packages`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `passwordresets`
 --
 ALTER TABLE `passwordresets`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `paymentaccounts`
+--
+ALTER TABLE `paymentaccounts`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `paymentmethods`
+--
+ALTER TABLE `paymentmethods`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `paymentrequests`
+--
+ALTER TABLE `paymentrequests`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `polloptions`
@@ -1318,6 +1492,12 @@ ALTER TABLE `usergoals`
 --
 ALTER TABLE `users`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `usersubscriptions`
+--
+ALTER TABLE `usersubscriptions`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `usersuspensions`

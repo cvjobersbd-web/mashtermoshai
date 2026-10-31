@@ -82,11 +82,15 @@ trait FindTutorData
         $seen = [];
         $out = [];
         try { $susp = $this->GetActiveSuspensionsMap(); } catch (Throwable $e) { $susp = []; }
+        // পেমেন্টের নিয়ম চালু থাকলে শুধু Subscription চালু থাকা শিক্ষকরা দেখাবে
+        $subOnly = null;
+        try { if ($this->PaymentRules()['teacher']) $subOnly = $this->GetActiveTeacherSubscriptionMap(); } catch (Throwable $e) { }
         foreach ($rows as $r) {
             $uid = (int)$r->UserId;
             if (isset($seen[$uid]) || !(int)$r->IsActive) continue;
             $seen[$uid] = true;
             if (isset($susp[$uid])) continue;
+            if ($subOnly !== null && !isset($subOnly[$uid])) continue;
             $name = !is_blank($r->UName) ? (string)$r->UName : ((string)$r->FullName ?: 'Tutor');
             $subjects = $split($r->XSubjects) ?: $split($r->SubjectExpertise);
             $levels = $split($r->Levels);

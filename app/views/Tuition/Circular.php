@@ -20,6 +20,7 @@ $page = (int)($ViewBag->Page ?? 1);
 $fv = $ViewBag->FilterValues ?? ['location' => [], 'class' => [], 'subject' => []];
 $isFiltered = (bool)($ViewBag->IsFiltered ?? false);
 $banner = circular_banner();
+$payRule = db()->PaymentRules()['student'];
 
 $savedKeys = ($isLoggedIn && $userId && !$isAdmin) ? db()->SavedKeys((int)$userId) : [];
 $canSave = $isLoggedIn && !$isAdmin;
@@ -216,6 +217,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tc-need h3 { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 800; }
     .tc-need h3 i { font-size: 24px; }
     .tc-need p { position: relative; z-index: 1; margin: 10px 56px 18px 40px; font-size: 14.5px; color: #334155; line-height: 1.6; }
+    .tc-need-pkg { display: inline-flex; gap: 6px; align-items: center; margin-left: 4px; padding: 3px 10px; border-radius: 8px; background: #1D7FE5; color: #fff !important; font-weight: 700; text-decoration: none; }
     .tc-pk-link { position: relative; z-index: 1; display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; font-weight: 700; color: #1D7FE5; text-decoration: none; }
     .tc-pk-link:hover { text-decoration: underline; color: #1D7FE5; }
     .tc-need .plane { position: absolute; right: 18px; top: 58px; color: #F5B500; font-size: 26px; transform: rotate(-12deg); }
@@ -960,7 +962,12 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <span class="trail" aria-hidden="true"></span><i class="fas fa-paper-plane plane" aria-hidden="true"></i>
                     <p>আপনার প্রয়োজন অনুযায়ী সেরা শিক্ষক খুঁজে পেতে এখনই পোস্ট করুন।</p>
                     <button type="button" class="tc-btn yellow block" data-tc-open="post"><i class="fas fa-paper-plane"></i> Post Tuition Request</button>
-                    <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> পোস্ট প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
+                    <?php if ($payRule && $isLoggedIn && !$isAdmin && !$isTeacher): $cr = db()->GetStudentPostCredits((int)$userId); ?>
+                        <a href="<?= $cr === 0 ? '/Package?for=student' : '/Payment/My' ?>" class="tc-pk-link"><i class="fas fa-ticket"></i>
+                            <?= $cr === -1 ? 'আনলিমিটেড পোস্ট ক্রেডিট' : ($cr === 0 ? 'পোস্ট করতে প্যাকেজ নিন' : 'পোস্ট ক্রেডিট: ' . e(bn_num($cr)) . 'টি বাকি') ?> <i class="fas fa-arrow-right"></i></a>
+                    <?php else: ?>
+                        <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> পোস্ট প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
+                    <?php endif; ?>
                 </div>
                 <div class="tc-card tc-how">
                     <h3><i class="fas fa-lightbulb"></i> How It Works?</h3>
@@ -1453,7 +1460,11 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     var res = await fetch('/Tuition/CreateCircularPost', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                     var d = null; try { d = await res.json(); } catch (x) { }
                     if (!d) { err.textContent = res.status === 413 ? 'ফাইল অনেক বড় — ছোট ফাইল দিন।' : 'সার্ভার থেকে উত্তর পাওয়া যায়নি। ফাইল বড় হলে ছোট ফাইল দিয়ে চেষ্টা করুন।'; err.classList.add('show'); return; }
-                    if (!d.success) { err.textContent = d.message || 'পোস্ট করা যায়নি।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }
+                    if (!d.success) {
+                        err.textContent = d.message || 'পোস্ট করা যায়নি।';
+                        if (d.needPackage) { var pl = document.createElement('a'); pl.href = d.needPackage; pl.className = 'tc-need-pkg'; pl.innerHTML = '<i class="fas fa-tags"></i> প্যাকেজ নিন'; err.appendChild(document.createTextNode(' ')); err.appendChild(pl); }
+                        err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return;
+                    }
                     form.reset(); clearMedia(); if (quick) quick.value = '';
                     closeComposer();
                     location.href = '/Tuition/Circular?_r=' + Date.now().toString(36) + '#circular-post-' + d.id;

@@ -10,7 +10,14 @@ class PackageController extends Controller
             $role = (string)session_get('UserRole');
             $for = $role === 'User' ? 'student' : 'teacher';
         }
+        $me = null;
+        $uid = current_user_id();
+        if ($uid !== null && session_get('UserRole') !== 'Admin') {
+            $me = ['role' => (string)session_get('UserRole'), 'sub' => $this->db->GetActiveTeacherSubscription($uid),
+                'credits' => $this->db->GetStudentPostCredits($uid), 'pending' => $this->db->CountUserPendingPayments($uid)];
+        }
         $this->view(null, null, [
+            'Me' => $me,
             'TeacherPackages' => $this->db->GetPackages('Teacher', true),
             'StudentPackages' => $this->db->GetPackages('Student', true),
             'Tab' => $for,
