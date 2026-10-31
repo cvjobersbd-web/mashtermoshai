@@ -15,7 +15,7 @@ class PaymentController extends Controller
     {
         $role = (string)session_get('UserRole');
         if ($role === 'Admin') return 'অ্যাডমিন অ্যাকাউন্ট দিয়ে প্যাকেজ কেনা যায় না।';
-        if ($pkg->Audience === 'Student' && ($this->db->PaymentRules()['studentFree'] ?? false)) return 'এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি — কোনো প্যাকেজ বা পেমেন্ট লাগবে না। সরাসরি Tuition Circular-এ গিয়ে পোস্ট করুন।';
+        if ($pkg->Audience === 'Student' && $this->db->PaymentRules()['studentFree']) return 'এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি — কোনো প্যাকেজ বা পেমেন্ট লাগবে না। সরাসরি Tuition Circular-এ গিয়ে পোস্ট করুন।';
         if ($pkg->Audience === 'Teacher' && $role !== 'Teacher') return 'এই Subscription শুধু অনুমোদিত শিক্ষকদের জন্য। আগে “Become a Tutor” থেকে টিচার হওয়ার আবেদন করুন।';
         return null;
     }

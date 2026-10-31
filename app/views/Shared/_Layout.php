@@ -29,19 +29,16 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     $__host = preg_replace('/[^A-Za-z0-9.\-:]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'mashtermoshai.com'));
     $__origin = $__scheme . '://' . $__host;
     $__abs = fn(string $u) => preg_match('#^https?://#i', $u) ? $u : $__origin . '/' . ltrim($u, '/');
-    $__pageTitle = !empty($ViewData['FullTitle']) ? (string)$ViewData['FullTitle'] : ($__isHome
+    $__pageTitle = $__isHome
         ? $safeSiteName . ' – Find Home Tutors & Tuitions in Bangladesh'
-        : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName);
-    $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : $__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
-    $__ogImage = !empty($ViewData['OgImage']) ? (string)$ViewData['OgImage'] : '';
+        : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName;
     $__desc = (string)($ViewData['Description'] ?? ($safeSiteName . ' — বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া। অভিজ্ঞ হোম টিউটর খুঁজুন অথবা টিউটর হিসেবে টিউশনে Apply করুন — সহজ, নিরাপদ ও দ্রুত।'));
     $__favicon = $__abs($layoutSettings->GetFaviconUrl());
     $__altNames = array_values(array_filter(['মাষ্টারমশাই', 'Mashter Moshai', 'MashterMoshai', $__host], fn($n) => strcasecmp($n, $safeSiteName) !== 0));
     ?>
     <title><?= e($__pageTitle) ?></title>
     <meta name="description" content="<?= e($__desc) ?>" />
-    <link rel="canonical" href="<?= e($__canonical) ?>" />
-    <?php if (!empty($ViewData['Robots'])): ?><meta name="robots" content="<?= e($ViewData['Robots']) ?>" /><?php endif; ?>
+    <link rel="canonical" href="<?= e($__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>" />
 
     <!-- ✅ ট্যাব আইকন + Google সার্চ রেজাল্টের আইকন (অ্যাডমিন সেটিংয়ের Navbar Logo) -->
     <link rel="icon" href="<?= e($__favicon) ?>" />
@@ -53,8 +50,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <meta property="og:title" content="<?= e($__pageTitle) ?>" />
     <meta property="og:description" content="<?= e($__desc) ?>" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="<?= e($__canonical) ?>" />
-    <meta property="og:image" content="<?= e($__ogImage !== '' ? $__abs($__ogImage) : $__favicon) ?>" />
+    <meta property="og:url" content="<?= e($__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>" />
+    <meta property="og:image" content="<?= e($__favicon) ?>" />
     <meta name="application-name" content="<?= e($safeSiteName) ?>" />
     <meta name="apple-mobile-web-app-title" content="<?= e($safeSiteName) ?>" />
     <?php if ($__isHome): ?>
@@ -938,14 +935,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             transition: background .2s, color .2s, transform .2s; }
         .footer-social-link:hover { background: #fff; color: var(--brand); transform: translateY(-2px); }
         @media (max-width: 640px) { .footer-social { justify-content: center; width: 100%; } }
-        /* ফুটারের লিংক কলাম */
-        .footer-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 40px; margin-top: 30px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.15); }
-        .footer-nav .footer-h { font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 12px; letter-spacing: .2px; }
-        .footer-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-        .footer-nav a { color: var(--footer-muted); text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: color .2s, transform .2s; }
-        .footer-nav a i { font-size: 11px; opacity: .6; }
-        .footer-nav a:hover { color: #fff; transform: translateX(2px); }
-        @media (max-width: 640px) { .footer-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; } .footer-nav > div:first-child { grid-column: 1 / -1; } }
 </style>
     <?= blue_tick_css() ?>
 </head>
@@ -1273,32 +1262,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         </div>
                     </div>
                     <?php endif; ?>
+                    </div>
                 </div>
 
-                <?php
-                    // ✅ ফুটারের দরকারি লিংক (শুধু যে পেজগুলো আসলেই আছে)
-                    $__postReq = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
-                    $__footNav = [
-                        'Find a Tutor' => [['Find Tutors', '/FindTutor'], ['Mathematics Tutors', '/FindTutor?subject=mathematics'], ['English Tutors', '/FindTutor?subject=english'],
-                                           ['SSC Tutors', '/FindTutor?class=ssc'], ['HSC Tutors', '/FindTutor?class=hsc']],
-                        'Tuition' => [['Tuition Circular', '/Tuition/Circular'], ['Post Tuition Requirement', $__postReq], ['Become a Tutor', '/Teacher/RequestForm'], ['Packages', '/Package']],
-                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], home_faqs() ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
-                    ];
-                ?>
-                <nav class="footer-nav" aria-label="Footer">
-                    <?php foreach ($__footNav as $__h => $__links): ?>
-                        <div>
-                            <p class="footer-h"><?= e($__h) ?></p>
-                            <ul>
-                                <?php foreach ($__links as [$__t, $__u]): ?>
-                                    <li><a href="<?= e($__u) ?>"><i class="fas fa-chevron-right"></i><?= e($__t) ?></a></li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endforeach; ?>
-                </nav>
-
                 <div class="border-t border-white/15 mt-8 pt-6 text-center">
+                    <p class="text-xs sm:text-sm" style="margin-bottom:8px;">
+                        <a href="/Package" style="color:#fff;font-weight:600;text-decoration:none;"><i class="fas fa-tags"></i> প্যাকেজ ও মূল্য</a>
+                    </p>
                     <p class="text-xs sm:text-sm" style="color:var(--footer-muted);">
                         &copy; <?= date('Y') ?> <?= e($safeSiteName) ?>. All Rights Reserved.
                     </p>

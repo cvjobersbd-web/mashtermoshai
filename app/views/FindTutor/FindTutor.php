@@ -7,8 +7,6 @@ $isTeacher = $userRole === 'Teacher';
 $userId = session_get('UserId');
 $userFullName = session_get('UserFullName') ?? session_get('UserName') ?? 'User';
 $userProfileImg = session_get('ProfileImageLink');
-// হোম পেজের Subject / Class / Location কার্ড থেকে এলে (?subject=mathematics ইত্যাদি) ফিল্টার আগে থেকে বাছাই থাকে
-$ftPreset = find_tutor_preset();
 
 $posts = [];
 try {
@@ -2280,11 +2278,11 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <button type="button" class="ft2-btn yellow block" onclick="openAreaTuitionModal()"><i class="fas fa-headset"></i> Contact Admin</button>
                 </div>
 
-                <div class="ft2-card ft2-qf" id="ftFilters" style="scroll-margin-top:100px;">
+                <div class="ft2-card ft2-qf">
                     <h3><i class="fas fa-filter"></i> Quick Filters</h3>
-                    <div class="ft2-fg"><label for="qfClass">Class / Level</label><select id="qfClass"><option value="">Select class</option><?php if (isset($ftPreset['class'])): ?><option value="<?= e($ftPreset['class'][0]) ?>" selected><?= e($ftPreset['class'][1]) ?></option><?php endif; ?><?php foreach (array_merge(tuition_options()['classes'], ['Bangla Medium', 'English Medium']) as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
-                    <div class="ft2-fg"><label for="qfSubject">Subject</label><select id="qfSubject"><option value="">Select subject</option><?php if (isset($ftPreset['subject'])): ?><option value="<?= e($ftPreset['subject'][0]) ?>" selected><?= e($ftPreset['subject'][1]) ?></option><?php endif; ?><?php foreach (tuition_options()['subjects'] as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
-                    <div class="ft2-fg"><label for="qfLocation">Location</label><select id="qfLocation"><option value="">Select location</option><?= location_select_options($ftPreset['location'][0] ?? '') ?></select></div>
+                    <div class="ft2-fg"><label for="qfClass">Class / Level</label><select id="qfClass"><option value="">Select class</option><?php foreach (array_merge(tuition_options()['classes'], ['Bangla Medium', 'English Medium']) as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
+                    <div class="ft2-fg"><label for="qfSubject">Subject</label><select id="qfSubject"><option value="">Select subject</option><?php foreach (tuition_options()['subjects'] as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
+                    <div class="ft2-fg"><label for="qfLocation">Location</label><select id="qfLocation"><option value="">Select location</option><?= location_select_options() ?></select></div>
                     <div class="ft2-fg"><label for="qfMode">Teaching Mode</label>
                         <select id="qfMode"><option value="">Select mode</option><option value="Online">Online</option><option value="Home">Home Visit</option></select></div>
                     <div class="ft2-fg"><label>Budget (৳)</label>
@@ -3170,9 +3168,6 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
 
             var QF = {};
-            var LOC_AREAS = <?= js((object)tuition_options()['locations']) ?>;
-            // একটা ফিল্টারে কয়েকটা মান থাকতে পারে ("SSC|Class 9|Class 10") — যেকোনোটা মিললেই হবে
-            function anyIn(list, val) { var vs = String(val).split('|').map(norm); return list.some(function (x) { return vs.indexOf(norm(x)) !== -1; }); }
             function readQF() {
                 QF = {
                     cls: document.getElementById('qfClass').value, subject: document.getElementById('qfSubject').value,
@@ -3186,13 +3181,9 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     var hay = norm([t.fullName, t.tutorId, t.headline, t.location, (t.subjects || []).join(' '), (t.levels || []).join(' '), (t.mediums || []).join(' '), t.institution].join(' '));
                     if (q.split(/\s+/).some(function (w) { return hay.indexOf(w) === -1; })) return false;
                 }
-                if (QF.cls && !anyIn((t.levels || []).concat(t.mediums || []), QF.cls)) return false;
-                if (QF.subject && !anyIn(t.subjects || [], QF.subject)) return false;
-                if (QF.location) {
-                    // জেলা বাছাই করলে ওই জেলার সব এলাকাও মিলবে
-                    var lv = [QF.location].concat(LOC_AREAS[QF.location] || []).map(norm), tl = norm(t.location);
-                    if (!lv.some(function (x) { return x && tl.indexOf(x) !== -1; })) return false;
-                }
+                if (QF.cls && (t.levels || []).concat(t.mediums || []).map(norm).indexOf(norm(QF.cls)) === -1) return false;
+                if (QF.subject && (t.subjects || []).map(norm).indexOf(norm(QF.subject)) === -1) return false;
+                if (QF.location && norm(t.location).indexOf(norm(QF.location)) === -1) return false;
                 if (QF.mode && t.teachingMode !== QF.mode && t.teachingMode !== 'Both') return false;
                 var lo = t.monthlyFee || 0, hi = t.feeMax || t.monthlyFee || 0;
                 if ((QF.min || QF.max) && !lo) return false;

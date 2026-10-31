@@ -574,69 +574,6 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 </section>
 
 <!-- ========================================= -->
-<!-- ✅ WHY CHOOSE + FAQ — স্টাইল -->
-<!-- ========================================= -->
-<style>
-    .hm-sec { padding: 64px 16px; }
-    .hm-wrap { max-width: 1180px; margin: 0 auto; }
-    .hm-h2 { font-family: var(--font-heading); font-weight: 700; color: #08224A; text-align: center; font-size: clamp(26px, 3.4vw, 38px); line-height: 1.25; margin: 0 0 10px; }
-    .hm-h2 .hl { color: #02B8F5; }
-    .hm-sub { text-align: center; color: #64748B; font-size: 16px; line-height: 1.6; margin: 0 auto 36px; max-width: 640px; }
-
-    .hm-why { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-    .hm-why a { display: block; background: #fff; border: 1px solid #DCECF5; border-radius: 20px; padding: 26px 22px; text-decoration: none; color: inherit;
-        box-shadow: 0 4px 18px rgba(8,34,74,.04); transition: transform .25s, box-shadow .25s; }
-    .hm-why a:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(8,34,74,.09); }
-    .hm-why .ic { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 23px; margin-bottom: 16px; }
-    .hm-why h3 { font-size: 17.5px; font-weight: 700; color: #08224A; margin: 0 0 8px; }
-    .hm-why p { margin: 0; font-size: 14.5px; line-height: 1.65; color: #64748B; }
-    @media (max-width: 1024px) { .hm-why { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) { .hm-why { grid-template-columns: 1fr; } }
-
-    .hm-faq { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-    .hm-faq details { background: #fff; border: 1px solid #DCECF5; border-radius: 16px; box-shadow: 0 2px 10px rgba(8,34,74,.03); transition: border-color .2s, box-shadow .2s; }
-    .hm-faq details[open] { border-color: #9FDDF5; box-shadow: 0 10px 26px rgba(2,184,245,.1); }
-    .hm-faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 18px 20px; font-weight: 700; font-size: 16px; color: #08224A; }
-    .hm-faq summary::-webkit-details-marker { display: none; }
-    .hm-faq summary h3 { all: unset; flex: 1; }
-    .hm-faq summary .q { width: 32px; height: 32px; border-radius: 10px; background: #E3F6FD; color: #028EA5; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-    .hm-faq summary .pl { color: #028EA5; transition: transform .25s; flex-shrink: 0; }
-    .hm-faq details[open] summary .pl { transform: rotate(45deg); }
-    .hm-faq .ans { padding: 0 20px 18px 66px; font-size: 15px; line-height: 1.75; color: #475569; margin: 0; white-space: pre-line; }
-    @media (max-width: 560px) {
-        .hm-sec { padding: 46px 14px; }
-        .hm-faq summary { font-size: 15px; padding: 15px 16px; } .hm-faq .ans { padding: 0 16px 16px; }
-    }
-</style>
-
-<!-- ========================================= -->
-<!-- ✅ WHY CHOOSE মাষ্টার মশাই -->
-<!-- ========================================= -->
-<?php
-$why = [
-    ['fa-user-shield', '#E3F6FD', '#028EA5', 'Verified Tutor Profiles', 'Explore tutor profiles with relevant education, experience and subject information.', '/FindTutor'],
-    ['fa-clipboard-list', '#FFF4D6', '#B7791F', 'Tuition Opportunities', 'Browse tuition requirements and discover opportunities that match your subject and location.', '/Tuition/Circular'],
-    ['fa-magnifying-glass-location', '#E7F8EF', '#157347', 'Easy Tutor Search', 'Find suitable tutors based on subject, class, curriculum and location.', '/FindTutor#ftFilters'],
-    ['fa-headset', '#F1EAFE', '#6D28D9', 'Student & Parent Support', 'Get help when you need assistance finding a suitable teacher.', '/Helpdesk'],
-];
-?>
-<section id="why-choose-us" class="hm-sec" style="background:#fff;">
-    <div class="hm-wrap">
-        <h2 class="hm-h2">Why Choose <span class="hl">মাষ্টার মশাই</span> for Tuition?</h2>
-        <p class="hm-sub">Everything you need to find the right tutor or the right tuition — in one place.</p>
-        <div class="hm-why">
-            <?php foreach ($why as [$icon, $bg, $fg, $title, $desc, $href]): ?>
-                <a href="<?= e($href) ?>">
-                    <span class="ic" style="background:<?= $bg ?>;color:<?= $fg ?>;"><i class="fas <?= e($icon) ?>"></i></span>
-                    <h3><?= e($title) ?></h3>
-                    <p><?= e($desc) ?></p>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-
-<!-- ========================================= -->
 <!-- ✅ REVIEWS / TESTIMONIALS (অ্যাডমিন Approve করা রিভিউ) -->
 <!-- ========================================= -->
 <?php $tsReviews = db()->GetApprovedReviews(12); ?>
@@ -810,29 +747,3 @@ $why = [
 
     </div>
 </section>
-
-<!-- ========================================= -->
-<!-- ✅ FAQ (প্রশ্ন-উত্তর Admin → Settings থেকে বদলানো যায়) -->
-<!-- ========================================= -->
-<?php $faqs = home_faqs(); ?>
-<?php if ($faqs): ?>
-<section id="faq" class="hm-sec" style="background-color:<?= e($settings->SecondaryColor) ?>;">
-    <div class="hm-wrap">
-        <h2 class="hm-h2">Frequently Asked Questions About Tutors &amp; Tuition</h2>
-        <p class="hm-sub">Quick answers for students, parents and tutors.</p>
-        <div class="hm-faq">
-            <?php foreach ($faqs as $i => [$q, $a]): ?>
-                <details<?= $i === 0 ? ' open' : '' ?>>
-                    <summary><span class="q">Q<?= $i + 1 ?></span><h3><?= e($q) ?></h3><i class="fas fa-plus pl"></i></summary>
-                    <p class="ans"><?= e($a) ?></p>
-                </details>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-<script type="application/ld+json"><?= json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'FAQPage',
-    'mainEntity' => array_map(fn($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $faqs),
-], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
-<?php endif; ?>
