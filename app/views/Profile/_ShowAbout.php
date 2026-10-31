@@ -152,6 +152,7 @@ $forms = !$isOwner ? [] : [
                 </div>
                 <?php if ($isTeacher): ?>
                     <div class="ab-tutor"><i class="fas fa-circle-check" style="color:#2ecc71;"></i><div><strong>Verified Teacher</strong><p>অ্যাডমিন যাচাই করে টিচার হিসেবে অনুমোদন দিয়েছেন।</p></div></div>
+                    <a href="/Package?for=teacher" class="ps-btn" style="margin-top:10px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-tags"></i> Subscription প্যাকেজ</a>
                     <?php if ($ti): ?>
                         <div class="ab-rows">
                             <?php foreach ([['fa-book', 'Subjects', $ti->SubjectExpertise], ['fa-briefcase', 'Experience', $ti->Experience],
@@ -172,6 +173,7 @@ $forms = !$isOwner ? [] : [
                     <?php else: ?>
                         <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>আবেদন করুন — অ্যাডমিন Approve করলে টিউশনে Apply করতে পারবেন।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> Become a Tutor</a>
+                        <a href="/Package?for=teacher" class="ps-btn" style="margin:6px 0 0 6px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-tags"></i> Subscription প্যাকেজ দেখুন</a>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>

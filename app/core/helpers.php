@@ -923,3 +923,24 @@ function location_datalist_options(): string
     }
     return $html;
 }
+
+
+// ============================================================
+// ===== প্যাকেজ / Subscription =====
+// ============================================================
+/** ইংরেজি সংখ্যা → বাংলা সংখ্যা */
+function bn_num($n): string { return strtr((string)$n, ['0' => '০', '1' => '১', '2' => '২', '3' => '৩', '4' => '৪', '5' => '৫', '6' => '৬', '7' => '৭', '8' => '৮', '9' => '৯']); }
+
+/** ৳1,000 আকারে টাকা */
+function taka($n): string { return '৳' . number_format((int)$n); }
+
+/** প্যাকেজের মেয়াদ/পরিমাণ লেখা: "১ মাস", "১২ মাস", "১টি পোস্ট", "৩টি পোস্ট · ১ মাস মেয়াদ" */
+function package_duration_label($p): string
+{
+    $m = (int)($p->DurationMonths ?? 0); $l = (int)($p->PostLimit ?? 0);
+    if (($p->Audience ?? '') === 'Student') {
+        $t = $l > 0 ? bn_num($l) . 'টি পোস্ট' : 'আনলিমিটেড পোস্ট';
+        return $m > 0 ? $t . ' · ' . bn_num($m) . ' মাস মেয়াদ' : $t;
+    }
+    return $m > 0 ? bn_num($m) . ' মাস' : 'আজীবন';
+}

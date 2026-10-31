@@ -1251,6 +1251,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 </div>
 
                 <div class="border-t border-white/15 mt-8 pt-6 text-center">
+                    <p class="text-xs sm:text-sm" style="margin-bottom:8px;">
+                        <a href="/Package" style="color:#fff;font-weight:600;text-decoration:none;"><i class="fas fa-tags"></i> প্যাকেজ ও মূল্য</a>
+                    </p>
                     <p class="text-xs sm:text-sm" style="color:var(--footer-muted);">
                         &copy; <?= date('Y') ?> <?= e($safeSiteName) ?>. All Rights Reserved.
                     </p>

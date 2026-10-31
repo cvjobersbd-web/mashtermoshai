@@ -698,6 +698,76 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => 'সেভ হয়েছে।', 'data' => $out]);
     }
 
+    // ============================================================
+    // ===== PACKAGES (Teacher Subscription / Student Tuition Post) =====
+    // ============================================================
+    /** GET /Admin/Packages */
+    public function Packages(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetPackages());
+    }
+
+    /** POST /Admin/SavePackage — নতুন বা এডিট */
+    public function SavePackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $clean = fn($v, $max) => mb_substr(trim(preg_replace('/[ \t]+/u', ' ', strip_tags((string)$v))), 0, $max);
+        $aud = input_str('audience', '');
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'ভুল প্যাকেজের ধরন।']);
+        $name = $clean(input_str('name', ''), 80);
+        if ($name === '') json_response(['success' => false, 'message' => 'প্যাকেজের নাম দিন।']);
+        $price = input_str('price', '');
+        if (!preg_match('/^\d{1,7}$/', trim((string)$price))) json_response(['success' => false, 'message' => 'সঠিক দাম দিন (শুধু সংখ্যা)।']);
+        $price = (int)$price;
+        $reg = trim((string)input_str('regularPrice', ''));
+        if ($reg !== '' && !preg_match('/^\d{1,7}$/', $reg)) json_response(['success' => false, 'message' => 'নিয়মিত মূল্য শুধু সংখ্যা হবে।']);
+        $reg = $reg === '' ? null : (int)$reg;
+        if ($reg !== null && $reg <= $price) json_response(['success' => false, 'message' => 'নিয়মিত মূল্য অবশ্যই বর্তমান দামের চেয়ে বেশি হতে হবে (না হলে খালি রাখুন)।']);
+        $months = max(0, min(120, (int)input_int('durationMonths', 0)));
+        $limit = max(0, min(1000, (int)input_int('postLimit', 0)));
+        if ($aud === 'Teacher' && $months < 1) json_response(['success' => false, 'message' => 'টিচার প্যাকেজের মেয়াদ (মাস) দিন।']);
+        $features = implode("\n", array_slice(array_values(array_filter(array_map(fn($l) => $clean($l, 120), preg_split('/\r?\n/', (string)input_str('features', ''))))), 0, 15));
+        $data = [
+            'Audience' => $aud, 'Name' => $name, 'DurationMonths' => $months, 'PostLimit' => $aud === 'Student' ? $limit : 0,
+            'Price' => $price, 'RegularPrice' => $reg, 'Badge' => $clean(input_str('badge', ''), 40),
+            'Description' => $clean(input_str('description', ''), 300), 'Features' => $features,
+            'IsActive' => input_bool('isActive', true) ? 1 : 0, 'IsFeatured' => input_bool('isFeatured') ? 1 : 0,
+        ];
+        $id = (int)input_int('id', 0);
+        if ($id > 0 && !$this->db->GetPackage($id)) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
+        $id = $this->db->SavePackage($id, $data);
+        json_response(['success' => true, 'message' => 'প্যাকেজ সেভ হয়েছে।', 'package' => $this->db->GetPackage($id)]);
+    }
+
+    public function DeletePackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->DeletePackage((int)input_int('id', 0));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/TogglePackage — flag = active|featured */
+    public function TogglePackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetPackage($id)) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
+        $this->db->SetPackageFlag($id, input_str('flag') === 'featured' ? 'IsFeatured' : 'IsActive', input_bool('on'));
+        json_response(['success' => true, 'package' => $this->db->GetPackage($id)]);
+    }
+
+    /** POST /Admin/ReorderPackages — audience + ids (কমা দিয়ে) */
+    public function ReorderPackages_POST(): void
+    {
+        $this->requireAdminJson();
+        $aud = input_str('audience', '');
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'Invalid']);
+        $ids = array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))));
+        $this->db->ReorderPackages($aud, $ids);
+        json_response(['success' => true]);
+    }
+
     public function UploadLogo_POST(): void
     {
         $prefix = input_str('target', 'navbar') === 'footer' ? 'footer' : 'navbar';

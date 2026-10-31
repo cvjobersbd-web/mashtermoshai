@@ -216,6 +216,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tc-need h3 { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 800; }
     .tc-need h3 i { font-size: 24px; }
     .tc-need p { position: relative; z-index: 1; margin: 10px 56px 18px 40px; font-size: 14.5px; color: #334155; line-height: 1.6; }
+    .tc-pk-link { position: relative; z-index: 1; display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; font-weight: 700; color: #1D7FE5; text-decoration: none; }
+    .tc-pk-link:hover { text-decoration: underline; color: #1D7FE5; }
     .tc-need .plane { position: absolute; right: 18px; top: 58px; color: #F5B500; font-size: 26px; transform: rotate(-12deg); }
     .tc-need .trail { position: absolute; right: 30px; top: 88px; width: 34px; height: 44px; border-left: 2px dashed #F5C04A; border-radius: 0 0 0 40px; opacity: .7; }
     .tc-how { padding: 20px; }
@@ -958,6 +960,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <span class="trail" aria-hidden="true"></span><i class="fas fa-paper-plane plane" aria-hidden="true"></i>
                     <p>আপনার প্রয়োজন অনুযায়ী সেরা শিক্ষক খুঁজে পেতে এখনই পোস্ট করুন।</p>
                     <button type="button" class="tc-btn yellow block" data-tc-open="post"><i class="fas fa-paper-plane"></i> Post Tuition Request</button>
+                    <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> পোস্ট প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
                 </div>
                 <div class="tc-card tc-how">
                     <h3><i class="fas fa-lightbulb"></i> How It Works?</h3>

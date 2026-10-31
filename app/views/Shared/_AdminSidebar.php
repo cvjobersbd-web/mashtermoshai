@@ -278,7 +278,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
     $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews;
@@ -367,6 +367,11 @@ try {
                 <?php if ($pendingReviews > 0): ?>
                     <span class="badge-sidebar warning"><?= e($pendingReviews) ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/Packages" class="<?= $currentAction === 'Packages' ? 'active' : '' ?>">
+                <i class="fas fa-box-open"></i> Packages
             </a>
         </li>
         <li>
