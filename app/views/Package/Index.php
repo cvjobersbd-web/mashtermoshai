@@ -9,11 +9,18 @@ $studentPk = $ViewBag->StudentPackages ?? [];
 $tab = $ViewBag->Tab === 'student' ? 'student' : 'teacher';
 $isLoggedIn = session_get('UserName') != null;
 $me = $ViewBag->Me;
+$studentFree = (bool)$ViewBag->StudentFree;
 $benefits = package_benefits();
 $myName = (string)(session_get('UserFullName') ?? '');
 $pb = package_banner();
 $bannerImg = $pb['pk_banner_enabled'] !== '0' ? trim((string)$pb['pk_banner']) : '';
 if ($bannerImg !== '' && !preg_match('#^(https?://|/uploads/)[^\s"\'<>()]+$#i', $bannerImg)) $bannerImg = '';
+// ছবির ভিতরেই লেখা থাকলে (ডিফল্ট) ছবিটা পুরোটা দেখাই, উপরে লেখা বসাই না; অ্যাডমিন চাইলে লেখা বসানো চালু করতে পারে
+$imgOnly = $bannerImg !== '' && ($pb['pk_banner_text'] ?? '0') !== '1';
+$tabsHtml = '<div class="pk-tabs-in" role="tablist">'
+    . '<button type="button" class="pk-tab' . ($tab === 'teacher' ? ' on' : '') . '" data-pk-tab="teacher" role="tab" aria-selected="' . ($tab === 'teacher' ? 'true' : 'false') . '"><i class="fas fa-graduation-cap"></i> শিক্ষকদের জন্য</button>'
+    . '<button type="button" class="pk-tab' . ($tab === 'student' ? ' on' : '') . '" data-pk-tab="student" role="tab" aria-selected="' . ($tab === 'student' ? 'true' : 'false') . '"><i class="fas fa-user-group"></i> শিক্ষার্থীদের জন্য</button>'
+    . '</div>';
 $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
     <div class="pk-ben-h"><h3><?= e($title) ?></h3></div>
     <div class="pk-ben">
@@ -24,7 +31,7 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
     </div>
 <?php };
 
-$card = function (Obj $p, string $cta) { ?>
+$card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student'; ?>
     <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
             <div class="pk-name"><?= e($p->Name) ?></div>
@@ -32,10 +39,12 @@ $card = function (Obj $p, string $cta) { ?>
         </div>
         <?php if (trim($p->Name) !== $p->DurationLabel): ?><div class="pk-dur"><?= e($p->DurationLabel) ?></div><?php endif; ?>
         <div class="pk-price">
-            <b><?= e(taka($p->Price)) ?></b>
-            <?php if ($p->RegularPrice): ?><s><?= e(taka($p->RegularPrice)) ?></s><?php endif; ?>
+            <?php if ($free): ?><b style="color:#15803D;">ফ্রি</b><s><?= e(taka($p->Price)) ?></s>
+            <?php else: ?><b><?= e(taka($p->Price)) ?></b>
+            <?php if ($p->RegularPrice): ?><s><?= e(taka($p->RegularPrice)) ?></s><?php endif; ?><?php endif; ?>
         </div>
-        <?php if ($p->PerMonth): ?><span class="pk-pill">প্রতি মাসে মাত্র <?= e(taka($p->PerMonth)) ?></span>
+        <?php if ($free): ?><span class="pk-pill green"><i class="fas fa-gift" style="margin-right:6px;"></i> এখন সম্পূর্ণ ফ্রি</span>
+        <?php elseif ($p->PerMonth): ?><span class="pk-pill">প্রতি মাসে মাত্র <?= e(taka($p->PerMonth)) ?></span>
         <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green">মাত্র <?= e(taka($p->Price)) ?></span>
         <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill">প্রতি পোস্ট মাত্র <?= e(taka((int)round($p->Price / $p->PostLimit))) ?></span>
         <?php else: ?><span class="pk-pill green"><?= e($p->DurationLabel) ?></span><?php endif; ?>
@@ -44,7 +53,8 @@ $card = function (Obj $p, string $cta) { ?>
                 <?php foreach ($p->FeatureList as $f): ?><li><i class="fas fa-check"></i><span><?= e($f) ?></span></li><?php endforeach; ?>
             </ul>
         <?php endif; ?>
-        <a class="pk-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>"><?= e($cta) ?> <i class="fas fa-arrow-right"></i></a>
+        <?php if ($free): ?><a class="pk-btn" href="/Tuition/Circular">ফ্রিতে পোস্ট করুন <i class="fas fa-arrow-right"></i></a>
+        <?php else: ?><a class="pk-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>"><?= e($cta) ?> <i class="fas fa-arrow-right"></i></a><?php endif; ?>
     </div>
 <?php };
 ?>
@@ -54,12 +64,32 @@ $card = function (Obj $p, string $cta) { ?>
     .pk-hero { position: relative; overflow: hidden; color: #fff; min-height: 300px; display: flex; align-items: center;
         background: linear-gradient(90deg, #0E4A5E 0%, #0E4A5E 34%, rgba(14,74,94,.82) 46%, rgba(14,74,94,0) 64%), var(--pk-img, none) right center / cover no-repeat, linear-gradient(120deg, #0E4A5E, #1B6A80); }
     .pk-hero.noimg { background: radial-gradient(circle at 85% 30%, rgba(2,184,245,.35), transparent 45%), linear-gradient(120deg, #0E4A5E, #1B6A80); }
-    .pk-hero-in { position: relative; z-index: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 38px 16px; }
+    .pk-hero-in { position: relative; z-index: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 42px 16px; display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+    .pk-hero-art { position: relative; flex-shrink: 0; width: 380px; display: flex; flex-direction: column; align-items: flex-end; gap: 16px; }
+    .pk-bubble { position: relative; background: #fff; color: #1D4ED8; font-weight: 800; font-size: 19px; line-height: 1.45; padding: 14px 22px; border-radius: 20px; box-shadow: 0 12px 30px rgba(0,0,0,.18); }
+    .pk-bubble::after { content: ''; position: absolute; left: 30px; bottom: -10px; width: 20px; height: 20px; background: #fff; transform: rotate(45deg); border-radius: 3px; }
+    .pk-checks { list-style: none; margin: 0; padding: 16px 20px; background: #fff; border-radius: 18px; box-shadow: 0 12px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 10px; }
+    .pk-checks li { display: flex; align-items: center; gap: 10px; color: #0F2A55; font-weight: 700; font-size: 16px; }
+    .pk-checks i { width: 24px; height: 24px; border-radius: 50%; background: #22C55E; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pk-art-cap, .pk-art-bulb, .pk-art-book { position: absolute; color: rgba(255,255,255,.18); }
+    .pk-art-cap { font-size: 64px; left: -40px; top: -6px; transform: rotate(-14deg); }
+    .pk-art-bulb { font-size: 44px; left: 0; bottom: 0; color: rgba(255,216,77,.55); }
+    .pk-art-book { font-size: 40px; right: -14px; top: -30px; transform: rotate(12deg); }
+    .pk-hero-art [hidden] { display: none; }
+    @media (max-width: 900px) { .pk-hero-art { display: none; } }
+    .pk-free-note { max-width: 760px; margin: 0 auto 20px; display: flex; gap: 12px; align-items: center; padding: 14px 18px; border-radius: 16px; background: linear-gradient(135deg, #DCFCE7, #F0FDF4); border: 1px solid #86EFAC; color: #14532D; font-size: 14.5px; }
+    .pk-free-note i { font-size: 22px; color: #16A34A; }
+    .pk-free-note a { margin-left: auto; white-space: nowrap; font-weight: 800; color: #fff; background: #16A34A; padding: 8px 14px; border-radius: 10px; text-decoration: none; }
     .pk-hero-txt { max-width: 520px; }
     .pk-hero small { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,.16); color: #fff; }
     .pk-hero h1 { margin: 14px 0 10px; font-size: clamp(28px, 4.2vw, 44px); font-weight: 800; color: #fff; line-height: 1.2; }
     .pk-hero p { margin: 0; font-size: 16px; line-height: 1.7; color: rgba(255,255,255,.92); }
 
+    .pk-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .pk-banner { max-width: 1180px; margin: 22px auto 0; padding: 0 16px; }
+    .pk-banner img { display: block; width: 100%; height: auto; border-radius: 22px; box-shadow: 0 10px 30px rgba(8,34,74,.12); background: #DCEBF5; }
+    .pk-tabbar { position: relative; z-index: 2; display: flex; justify-content: center; margin-top: -30px; padding: 0 16px; }
+    .pk-tabbar .pk-tabs-in { margin-top: 0; box-shadow: 0 12px 30px rgba(8,34,74,.18); }
     .pk-tabs-in { display: inline-flex; gap: 6px; padding: 6px; margin-top: 22px; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
     .pk-tab { border: none; background: none; padding: 12px 22px; border-radius: 12px; font-weight: 700; font-size: 14.5px; color: #1E293B; cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: background .2s, color .2s; }
     .pk-tab.on { background: linear-gradient(135deg, #1D7FE5, #2B8CF0); color: #fff; box-shadow: 0 6px 16px rgba(29,127,229,.35); }
@@ -136,25 +166,48 @@ $card = function (Obj $p, string $cta) { ?>
         .pk-hero-in { padding: 28px 16px 26px; }
         .pk-hero p { font-size: 14.5px; }
         .pk-tabs-in { display: flex; width: 100%; }
+        .pk-banner { margin-top: 14px; padding: 0 12px; }
+        .pk-banner img { border-radius: 14px; }
+        .pk-tabbar { margin-top: 12px; }
         .pk-tab { flex: 1; justify-content: center; padding: 11px 8px; font-size: 13.5px; }
         .pk-goal { grid-template-columns: 1fr; }
     }
 </style>
 
 <div class="pk-page">
+    <?php if ($imgOnly): ?>
+    <h1 class="pk-sr">মাষ্টার মশাই প্যাকেজ</h1>
+    <section class="pk-banner"><img src="<?= e($bannerImg) ?>" alt="মাষ্টার মশাই প্যাকেজ — শিক্ষক ও শিক্ষার্থীদের জন্য আলাদা সুবিধা" /></section>
+    <div class="pk-tabbar"><?= $tabsHtml ?></div>
+    <?php else: ?>
     <section class="pk-hero<?= $bannerImg === '' ? ' noimg' : '' ?>"<?= $bannerImg !== '' ? ' style="--pk-img:url(\'' . e($bannerImg) . '\')"' : '' ?>>
         <div class="pk-hero-in">
             <div class="pk-hero-txt">
                 <small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small>
                 <h1>মাষ্টার মশাই প্যাকেজ</h1>
                 <p>শিক্ষক ও শিক্ষার্থীদের জন্য আলাদা সুবিধা — নিরাপদ ও সহজভাবে টিউশন শিখে-শিখাতে যুক্ত হোন মাষ্টার মশাইয়ের সাথে।</p>
-                <div class="pk-tabs-in" role="tablist">
-                    <button type="button" class="pk-tab<?= $tab === 'teacher' ? ' on' : '' ?>" data-pk-tab="teacher" role="tab" aria-selected="<?= $tab === 'teacher' ? 'true' : 'false' ?>"><i class="fas fa-graduation-cap"></i> শিক্ষকদের জন্য</button>
-                    <button type="button" class="pk-tab<?= $tab === 'student' ? ' on' : '' ?>" data-pk-tab="student" role="tab" aria-selected="<?= $tab === 'student' ? 'true' : 'false' ?>"><i class="fas fa-user-group"></i> শিক্ষার্থীদের জন্য</button>
-                </div>
+                <?= $tabsHtml ?>
             </div>
+            <?php if ($bannerImg === ''): ?>
+            <div class="pk-hero-art" aria-hidden="true">
+                <div class="pk-bubble" data-art="teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>>আপনার জ্ঞান পৌঁছে যাক<br>আরও শিক্ষার্থীদের কাছে</div>
+                <ul class="pk-checks" data-art="teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>>
+                    <li><i class="fas fa-check"></i> বেশি শিক্ষার্থী পান</li>
+                    <li><i class="fas fa-check"></i> আপনার প্রোফাইল জনপ্রিয় করুন</li>
+                    <li><i class="fas fa-check"></i> টিউশন সুযোগ বাড়ান</li>
+                </ul>
+                <div class="pk-bubble" data-art="student"<?= $tab === 'student' ? '' : ' hidden' ?>>সঠিক শিক্ষক খুঁজে নিন<br>সহজে ও নিরাপদে</div>
+                <ul class="pk-checks" data-art="student"<?= $tab === 'student' ? '' : ' hidden' ?>>
+                    <li><i class="fas fa-check"></i> যাচাইকৃত শিক্ষক</li>
+                    <li><i class="fas fa-check"></i> সরাসরি যোগাযোগ</li>
+                    <li><i class="fas fa-check"></i> পছন্দমতো বাজেট</li>
+                </ul>
+                <i class="fas fa-graduation-cap pk-art-cap"></i><i class="fas fa-lightbulb pk-art-bulb"></i><i class="fas fa-book-open pk-art-book"></i>
+            </div>
+            <?php endif; ?>
         </div>
     </section>
+    <?php endif; ?>
 
 <div class="pk-wrap">
     <?php if ($me): ?>
@@ -164,7 +217,7 @@ $card = function (Obj $p, string $cta) { ?>
                 <?php if ($me['role'] === 'Teacher'): ?>
                     <b>আপনার Subscription:</b> <?= $me['sub'] ? 'চালু — ' . e(date('d M Y', strtotime($me['sub']->EndsAt))) . ' পর্যন্ত' : 'চালু নেই' ?>
                 <?php else: ?>
-                    <b>আপনার পোস্ট ক্রেডিট:</b> <?= $me['credits'] === -1 ? 'আনলিমিটেড' : e(bn_num($me['credits'])) . 'টি' ?>
+                    <?php if ($studentFree): ?><b>Tuition পোস্ট:</b> এখন সম্পূর্ণ ফ্রি 🎉<?php else: ?><b>আপনার পোস্ট ক্রেডিট:</b> <?= $me['credits'] === -1 ? 'আনলিমিটেড' : e(bn_num($me['credits'])) . 'টি' ?><?php endif; ?>
                 <?php endif; ?>
                 <?php if ($me['pending'] > 0): ?><span class="pk-me-p"><i class="fas fa-hourglass-half"></i> <?= e(bn_num($me['pending'])) ?>টি পেমেন্ট যাচাই হচ্ছে</span><?php endif; ?>
             </div>
@@ -201,6 +254,9 @@ $card = function (Obj $p, string $cta) { ?>
             <h2>শিক্ষার্থীদের জন্য</h2>
             <p>Account খোলা ও প্ল্যাটফর্ম ব্যবহার সম্পূর্ণ ফ্রি। শুধু “Teacher Needed / Tutor Required” ধরনের Tuition Post করতে চাইলে পোস্ট প্যাকেজ নিতে হবে।</p>
         </div>
+        <?php if ($studentFree): ?>
+            <div class="pk-free-note"><i class="fas fa-gift"></i><div><b>সুখবর! এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি।</b><br>কোনো প্যাকেজ বা পেমেন্ট লাগবে না — সরাসরি পোস্ট করুন।</div><a href="/Tuition/Circular">পোস্ট করুন</a></div>
+        <?php endif; ?>
         <div class="pk-grid<?= count($studentPk) + 1 < 3 ? ' few' : '' ?>">
             <div class="pk-card pk-free">
                 <div class="pk-top"><div class="pk-name">Free Account</div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;">সবসময় ফ্রি</span></div>
@@ -241,6 +297,7 @@ $card = function (Obj $p, string $cta) { ?>
             document.querySelectorAll('[data-pk-tab]').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
             document.getElementById('pk-teacher').hidden = k !== 'teacher';
             document.getElementById('pk-student').hidden = k !== 'student';
+            document.querySelectorAll('[data-art]').forEach(function (x) { x.hidden = x.getAttribute('data-art') !== k; });
             try { history.replaceState(null, '', '/Package?for=' + k); } catch (e) { }
         });
     });

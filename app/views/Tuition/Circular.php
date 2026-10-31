@@ -20,7 +20,7 @@ $page = (int)($ViewBag->Page ?? 1);
 $fv = $ViewBag->FilterValues ?? ['location' => [], 'class' => [], 'subject' => []];
 $isFiltered = (bool)($ViewBag->IsFiltered ?? false);
 $banner = circular_banner();
-$payRule = db()->PaymentRules()['student'];
+$payRules = db()->PaymentRules(); $payRule = $payRules['student'];
 
 $savedKeys = ($isLoggedIn && $userId && !$isAdmin) ? db()->SavedKeys((int)$userId) : [];
 $canSave = $isLoggedIn && !$isAdmin;
@@ -968,6 +968,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <?php if ($payRule && $isLoggedIn && !$isAdmin && !$isTeacher): $cr = db()->GetStudentPostCredits((int)$userId); ?>
                         <a href="<?= $cr === 0 ? '/Package?for=student' : '/Payment/My' ?>" class="tc-pk-link"><i class="fas fa-ticket"></i>
                             <?= $cr === -1 ? 'আনলিমিটেড পোস্ট ক্রেডিট' : ($cr === 0 ? 'পোস্ট করতে প্যাকেজ নিন' : 'পোস্ট ক্রেডিট: ' . e(bn_num($cr)) . 'টি বাকি') ?> <i class="fas fa-arrow-right"></i></a>
+                    <?php elseif ($payRules['studentFree']): ?>
+                        <span class="tc-pk-link" style="color:#15803D;"><i class="fas fa-gift"></i> এখন পোস্ট করা সম্পূর্ণ ফ্রি!</span>
                     <?php else: ?>
                         <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> পোস্ট প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
                     <?php endif; ?>

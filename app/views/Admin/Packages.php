@@ -88,6 +88,10 @@ $pkb = package_banner();
     @media (max-width: 720px) { .bn-row { grid-template-columns: 30px minmax(0, 1fr) 36px; } .bn-row .bn-t, .bn-row .bn-d { grid-column: 2 / 3; } .bn-row .bn-ic { grid-column: 2 / 3; } .bn-row .rm { grid-column: 3; grid-row: 1; } }
     .bnr-prev { position: relative; height: 170px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; padding: 0 22px; color: #fff;
         background: linear-gradient(90deg, #0E4A5E 0%, #0E4A5E 34%, rgba(14,74,94,.82) 46%, rgba(14,74,94,0) 64%), var(--img) right center / cover no-repeat, linear-gradient(120deg, #0E4A5E, #1B6A80); }
+    .bnr-prev .bnr-img { display: none; }
+    .bnr-prev.imgonly:not(.off) { height: auto; padding: 0; background: #DCEBF5; }
+    .bnr-prev.imgonly:not(.off) .bnr-txt { display: none; }
+    .bnr-prev.imgonly:not(.off) .bnr-img { display: block; width: 100%; height: auto; }
     .bnr-prev.off { background: radial-gradient(circle at 85% 30%, rgba(2,184,245,.35), transparent 45%), linear-gradient(120deg, #0E4A5E, #1B6A80); }
     .bnr-prev small { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.16); }
     .bnr-prev b { display: block; font-size: 24px; font-weight: 800; margin: 8px 0 4px; }
@@ -95,6 +99,12 @@ $pkb = package_banner();
     .bnr-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
     .bnr-row input[type=text] { flex: 1; min-width: 220px; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; background: #F8FBFE; outline: none; }
     .bnr-row input[type=text]:focus { border-color: #1D7FE5; background: #fff; }
+    .pa-free { flex-basis: 100%; order: 3; display: flex; gap: 12px; align-items: center; margin: 4px 0 2px; padding: 12px 14px; border-radius: 12px; border: 1.5px dashed #CBD5E1; background: #F8FAFC; cursor: pointer; }
+    .pa-free.on { border-color: #22C55E; background: #F0FDF4; }
+    .pa-free b { display: block; color: #08224A; font-size: 14.5px; }
+    .pa-free em { font-style: normal; font-size: 12.5px; color: #64748B; }
+    .pa-free.on em { color: #15803D; font-weight: 700; }
+    .pa-sec-h small { order: 2; }
     [data-only-student][hidden], [data-only-teacher][hidden] { display: none; }
 
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 20px 15px; } }
@@ -122,10 +132,10 @@ $pkb = package_banner();
     <div class="pa-sec" id="sec-Banner">
         <div class="pa-sec-h">
             <h5><i class="fas fa-image" style="color:#0EA5E9;"></i> Package পেজের ব্যানার ছবি</h5>
-            <small>Package পেজের একদম উপরের ছবি। ছবির ডান দিকে ইলাস্ট্রেশন রাখুন — বাম দিকে “মাষ্টার মশাই প্যাকেজ” লেখা আর ট্যাব বসে। (চওড়া ছবি ভালো, যেমন 1600×420 px, সর্বোচ্চ 5 MB)</small>
+            <small>Package পেজের একদম উপরের ছবি। ছবিটা পুরোটা দেখায়, নিচে “শিক্ষকদের জন্য / শিক্ষার্থীদের জন্য” ট্যাব বসে। ছবির ভিতরে লেখা না থাকলে “ছবির উপর লেখা বসাও” চালু করুন — তখন বাম দিকে লেখা বসবে। (চওড়া ছবি ভালো, সর্বোচ্চ 5 MB)</small>
         </div>
-        <div class="bnr-prev<?= $pkb['pk_banner_enabled'] === '0' ? ' off' : '' ?>" id="pkbBox" style="--img:url('<?= e($pkb['pk_banner']) ?>')">
-            <div><small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small><b>মাষ্টার মশাই প্যাকেজ</b><span>এভাবে পেজে দেখাবে</span></div>
+        <div class="bnr-prev<?= $pkb['pk_banner_enabled'] === '0' ? ' off' : '' ?><?= ($pkb['pk_banner_text'] ?? '0') !== '1' ? ' imgonly' : '' ?>" id="pkbBox" style="--img:url('<?= e($pkb['pk_banner']) ?>')">
+            <div class="bnr-txt"><small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small><b>মাষ্টার মশাই প্যাকেজ</b><span>এভাবে পেজে দেখাবে</span></div><img class="bnr-img" src="<?= e($pkb['pk_banner']) ?>" alt="" />
         </div>
         <div class="bnr-row">
             <label class="bn-add" for="pkbFile2" id="pkbUp"><i class="fas fa-upload"></i> নতুন ছবি আপলোড</label>
@@ -134,6 +144,7 @@ $pkb = package_banner();
         </div>
         <div class="bn-foot">
             <label style="display:inline-flex;gap:8px;align-items:center;font-weight:600;font-size:13.5px;margin:0;cursor:pointer;"><input type="checkbox" class="pa-sw" id="pkbOn"<?= $pkb['pk_banner_enabled'] !== '0' ? ' checked' : '' ?> /> ব্যানার ছবি দেখাও</label>
+            <label style="display:inline-flex;gap:8px;align-items:center;font-weight:600;font-size:13.5px;margin:0;cursor:pointer;" title="ছবির ভিতরে লেখা না থাকলে চালু করুন"><input type="checkbox" class="pa-sw" id="pkbText"<?= ($pkb['pk_banner_text'] ?? '0') === '1' ? ' checked' : '' ?> /> ছবির উপর লেখা বসাও</label>
             <span class="bn-msg" id="pkbMsg"></span>
             <button type="button" class="bn-reset" id="pkbReset"><i class="fas fa-rotate-left"></i> Default ছবি</button>
             <button type="button" class="pa-add" id="pkbSave" style="margin-left:0;"><i class="fas fa-save"></i> Save</button>
@@ -153,6 +164,8 @@ $pkb = package_banner();
         <div class="pa-sec-h">
             <h5><i class="fas fa-user-graduate" style="color:#157347;"></i> শিক্ষার্থীদের Tuition Post প্যাকেজ</h5>
             <button type="button" class="pa-add" data-pa-add="Student"><i class="fas fa-plus"></i> নতুন প্যাকেজ</button>
+            <label class="pa-free<?= $ViewBag->StudentFree ? ' on' : '' ?>" id="paFreeLbl"><input type="checkbox" class="pa-sw" id="paFree"<?= $ViewBag->StudentFree ? ' checked' : '' ?> />
+                <span><b>শিক্ষার্থীদের পোস্ট এখন ফ্রি</b><em id="paFreeTxt"><?= $ViewBag->StudentFree ? 'চালু — কেউ টাকা ছাড়াই পোস্ট করতে পারবে' : 'বন্ধ — প্যাকেজের দাম লাগবে' ?></em></span></label>
             <small>“Teacher Needed / Tutor Required” পোস্ট করার প্যাকেজ — যেমন ১টি পোস্ট ৳100। Account খোলা সবসময় ফ্রি।</small>
         </div>
         <div class="pa-list" id="list-Student"></div>
@@ -374,17 +387,31 @@ $pkb = package_banner();
     document.getElementById('bnReset').addEventListener('click', function () { if (confirm('এই তালিকা Default এ ফেরাবেন?')) bnSend(true); });
     bnRender();
 
+    // ===== শিক্ষার্থীদের পোস্ট ফ্রি =====
+    document.getElementById('paFree').addEventListener('change', async function () {
+        var c = this, on = c.checked;
+        if (!confirm(on ? 'শিক্ষার্থীদের Tuition পোস্ট ফ্রি করবেন? তখন কেউ টাকা ছাড়াই পোস্ট করতে পারবে।' : 'ফ্রি বন্ধ করবেন? তখন আবার প্যাকেজের দাম লাগবে (যদি Payment Methods-এ “বাধ্যতামূলক” চালু থাকে)।')) { c.checked = !on; return; }
+        c.disabled = true;
+        try {
+            var d = await post('/Admin/SetStudentPostFree', { on: on ? 'true' : 'false' });
+            if (!d.success) { c.checked = !on; alert(d.message || 'Failed'); return; }
+            document.getElementById('paFreeLbl').classList.toggle('on', d.free);
+            document.getElementById('paFreeTxt').textContent = d.free ? 'চালু — কেউ টাকা ছাড়াই পোস্ট করতে পারবে' : 'বন্ধ — প্যাকেজের দাম লাগবে';
+        } finally { c.disabled = false; }
+    });
+
     // ===== Package পেজের ব্যানার ছবি =====
     var pkBox = document.getElementById('pkbBox'), pkUrl = document.getElementById('pkbUrl'), pkOn = document.getElementById('pkbOn'), pkMsg = document.getElementById('pkbMsg');
-    function pkPaint() { pkBox.style.setProperty('--img', "url('" + pkUrl.value.replace(/['"()\\]/g, '') + "')"); pkBox.classList.toggle('off', !pkOn.checked); }
+    function pkPaint() { pkBox.style.setProperty('--img', "url('" + pkUrl.value.replace(/['"()\\]/g, '') + "')"); pkBox.querySelector('.bnr-img').src = pkUrl.value; pkBox.classList.toggle('off', !pkOn.checked); pkBox.classList.toggle('imgonly', !document.getElementById('pkbText').checked); }
+    document.getElementById('pkbText').addEventListener('change', function () { pkPaint(); pkMsg.textContent = ''; });
     pkUrl.addEventListener('input', function () { pkPaint(); pkMsg.textContent = ''; });
     pkOn.addEventListener('change', function () { pkPaint(); pkMsg.textContent = ''; });
     async function pkSave(reset) {
-        var data = { which: 'package', pk_banner: pkUrl.value.trim(), pk_banner_enabled: pkOn.checked ? 'true' : 'false' };
+        var data = { which: 'package', pk_banner: pkUrl.value.trim(), pk_banner_enabled: pkOn.checked ? 'true' : 'false', pk_banner_text: document.getElementById('pkbText').checked ? 'true' : 'false' };
         if (reset) data.reset = 'true';
         var d = await post('/Admin/SaveCircularBanner', data);
         if (!d.success) { pkMsg.textContent = ''; alert(d.message || 'Failed'); return; }
-        if (d.pk_banner) { pkUrl.value = d.pk_banner; pkOn.checked = d.pk_banner_enabled !== '0'; pkPaint(); }
+        if (d.pk_banner) { pkUrl.value = d.pk_banner; pkOn.checked = d.pk_banner_enabled !== '0'; if (d.pk_banner_text !== undefined) document.getElementById('pkbText').checked = d.pk_banner_text === '1'; pkPaint(); }
         pkMsg.textContent = reset ? '✓ Default ছবিতে ফেরানো হয়েছে' : '✓ সেভ হয়েছে — Package পেজে বদলে গেছে';
     }
     document.getElementById('pkbFile2').addEventListener('change', async function () {

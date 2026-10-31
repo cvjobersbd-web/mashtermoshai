@@ -410,8 +410,15 @@ trait PaymentData
     // ============================================================
     public function PaymentRules(): array
     {
-        $v = $this->GetSiteContent(['pay_enforce_teacher' => '', 'pay_enforce_student' => '']);
-        return ['teacher' => ($v['pay_enforce_teacher'] ?? '') === '1', 'student' => ($v['pay_enforce_student'] ?? '') === '1'];
+        $v = $this->GetSiteContent(['pay_enforce_teacher' => '', 'pay_enforce_student' => '', 'pkg_student_free' => '']);
+        $enf = ($v['pay_enforce_student'] ?? '') === '1';
+        $free = ($v['pkg_student_free'] ?? '') === '1';
+        return [
+            'teacher' => ($v['pay_enforce_teacher'] ?? '') === '1',
+            'student' => $enf && !$free,     // এখন আসলে পোস্টে ক্রেডিট লাগবে কিনা
+            'studentEnforced' => $enf,       // অ্যাডমিনের "বাধ্যতামূলক" সুইচ
+            'studentFree' => $free,          // অ্যাডমিন শিক্ষার্থীদের পোস্ট ফ্রি করে রেখেছে
+        ];
     }
 
     /** শিক্ষক এখন কাজ করতে পারবে কিনা (নিয়ম বন্ধ থাকলে সবসময় হ্যাঁ) */

@@ -127,7 +127,7 @@ $jsMethods = array_map(function ($m) {
 
     <?php if ($block): ?>
         <div class="co-alert warn"><i class="fas fa-exclamation-triangle" style="margin-top:3px;"></i><span><?= e($block) ?>
-            <?php if ($pkg->Audience === 'Teacher'): ?> <a href="/Profile/Show?tab=profile#ab-tutor">Become a Tutor</a><?php endif; ?></span></div>
+            <?php if ($pkg->Audience === 'Teacher'): ?> <a href="/Profile/Show?tab=profile#ab-tutor">Become a Tutor</a><?php else: ?> <a href="/Tuition/Circular">Tuition Circular-এ যান</a><?php endif; ?></span></div>
     <?php endif; ?>
     <?php if ($pending > 0): ?>
         <div class="co-alert info"><i class="fas fa-hourglass-half" style="margin-top:3px;"></i><span>আপনার <?= e(bn_num($pending)) ?>টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। <a href="/Payment/My">আমার পেমেন্ট দেখুন</a></span></div>

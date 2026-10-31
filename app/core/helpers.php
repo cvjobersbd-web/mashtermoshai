@@ -607,14 +607,21 @@ function circular_banner(): array
 function package_banner_defaults(): array
 {
     return [
-        'pk_banner'         => 'https://i.ibb.co.com/hxR1BshZ/image.png',
-        'pk_banner_enabled' => '1',
+        'pk_banner'         => '',
+        'pk_banner_enabled' => '0',
+        'pk_banner_text'    => '0',
     ];
 }
 function package_banner(): array
 {
     static $c = null;
-    if ($c === null) { try { $c = db()->GetSiteContent(package_banner_defaults()); } catch (Throwable $e) { $c = package_banner_defaults(); } }
+    if ($c === null) {
+        try {
+            $c = db()->GetSiteContent(package_banner_defaults() + ['pk_noimg_v1' => '']);
+            // অ্যাডমিনের কথামতো: প্যাকেজ পেজে ছবি নয়, শুধু লেখা (একবারই বন্ধ করা হয়; পরে অ্যাডমিন চাইলে আবার চালু করতে পারে)
+            if ($c['pk_noimg_v1'] === '') { db()->SaveSiteContent(['pk_banner_enabled' => '0', 'pk_noimg_v1' => '1']); $c['pk_banner_enabled'] = '0'; }
+        } catch (Throwable $e) { $c = package_banner_defaults(); }
+    }
     return $c;
 }
 function findtutor_banner_defaults(): array

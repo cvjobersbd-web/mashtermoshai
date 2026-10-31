@@ -650,11 +650,18 @@ class AdminController extends Controller
             json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ব্যানারে ফেরত নেওয়া হয়েছে।'] + $defaults);
         }
         $img = trim((string)input_str($k . 'banner', ''));
+        if ($k === 'pk_' && $img === '' && !input_bool('pk_banner_enabled')) {
+            $vals = ['pk_banner' => '', 'pk_banner_enabled' => '0'];
+            if (input($k . 'banner_text', null) !== null) $vals['pk_banner_text'] = input_bool('pk_banner_text') ? '1' : '0';
+            $this->db->SaveSiteContent($vals);
+            json_response(['success' => true, 'message' => 'Package ব্যানার সেভ হয়েছে (ছবি ছাড়া)।'] + $vals);
+        }
         if ($img === '' || !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img))) {
             json_response(['success' => false, 'message' => 'ছবির লিংক ঠিক নেই — https:// দিয়ে শুরু হওয়া লিংক দিন অথবা ছবি আপলোড করুন।']);
         }
         if (mb_strlen($img) > 500) json_response(['success' => false, 'message' => 'লিংক খুব বড়।']);
         $vals = [$k . 'banner' => $img, $k . 'banner_enabled' => input_bool($k . 'banner_enabled') ? '1' : '0'];
+        if ($k === 'pk_' && input($k . 'banner_text', null) !== null) $vals['pk_banner_text'] = input_bool('pk_banner_text') ? '1' : '0';
         $err = null;
         if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
         json_response(['success' => true, 'message' => "$page ব্যানার সেভ হয়েছে।"] + $vals);
@@ -707,7 +714,7 @@ class AdminController extends Controller
     public function Packages(): void
     {
         $this->requireAdminPage();
-        $this->view(null, $this->db->GetPackages(), ['Benefits' => package_benefits()]);
+        $this->view(null, $this->db->GetPackages(), ['Benefits' => package_benefits(), 'StudentFree' => $this->db->PaymentRules()['studentFree']]);
     }
 
     /** POST /Admin/SavePackage — নতুন বা এডিট */
@@ -766,6 +773,14 @@ class AdminController extends Controller
         }
         $this->db->SaveSiteContent([$key => json_encode($list, JSON_UNESCAPED_UNICODE)]);
         json_response(['success' => true, 'list' => $list]);
+    }
+
+    /** POST /Admin/SetStudentPostFree (on) — শিক্ষার্থীদের Tuition পোস্ট ফ্রি / পেইড */
+    public function SetStudentPostFree_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->SaveSiteContent(['pkg_student_free' => input_bool('on') ? '1' : '']);
+        json_response(['success' => true, 'free' => $this->db->PaymentRules()['studentFree']]);
     }
 
     public function DeletePackage_POST(): void
