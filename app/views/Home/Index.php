@@ -608,6 +608,11 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     .hm-faq summary .q { width: 32px; height: 32px; border-radius: 10px; background: #E3F6FD; color: #028EA5; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
     .hm-faq summary .pl { color: #028EA5; transition: transform .25s; flex-shrink: 0; }
     .hm-faq details[open] summary .pl { transform: rotate(45deg); }
+    .hm-faq details { overflow: hidden; }
+    .hm-faq summary .pl { transition: transform .35s cubic-bezier(.22,1,.36,1); }
+    .hm-faq .ans { transition: opacity .3s ease, transform .35s cubic-bezier(.22,1,.36,1); }
+    .hm-faq details.closing .ans, .hm-faq details.opening-start .ans { opacity: 0; transform: translateY(-6px); }
+    .hm-faq details.closing summary .pl { transform: rotate(0deg); }
     .hm-faq .ans { padding: 0 20px 18px 66px; font-size: 15px; line-height: 1.75; color: #475569; margin: 0; white-space: pre-line; }
     @media (max-width: 560px) {
         .hm-sec { padding: 46px 14px; }
@@ -841,4 +846,35 @@ $why = [
     '@type' => 'FAQPage',
     'mainEntity' => array_map(fn($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $faqs),
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+<script>
+    // FAQ — প্রশ্নে ক্লিক করলে উত্তর স্মুথলি খোলে/বন্ধ হয়
+    (function () {
+        var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.querySelectorAll('.hm-faq details').forEach(function (d) {
+            var sum = d.querySelector('summary'), anim = null;
+            if (!sum || !d.animate || reduce) return;
+            function run(from, to, done) {
+                if (anim) anim.cancel();
+                anim = d.animate({ height: [from + 'px', to + 'px'] }, { duration: 380, easing: 'cubic-bezier(.22,1,.36,1)' });
+                anim.onfinish = function () { anim = null; d.style.height = ''; done && done(); };
+                anim.oncancel = function () { anim = null; };
+            }
+            sum.addEventListener('click', function (e) {
+                e.preventDefault();
+                var start = d.offsetHeight, bw = d.offsetHeight - d.clientHeight;
+                if (d.open && !d.classList.contains('closing')) {
+                    d.classList.add('closing');
+                    run(start, sum.offsetHeight + bw, function () { d.open = false; d.classList.remove('closing'); });
+                } else {
+                    d.classList.remove('closing');
+                    d.classList.add('opening-start');
+                    d.open = true;
+                    var end = d.scrollHeight + bw;
+                    requestAnimationFrame(function () { d.classList.remove('opening-start'); });
+                    run(start, end);
+                }
+            });
+        });
+    })();
+</script>
 <?php endif; ?>
