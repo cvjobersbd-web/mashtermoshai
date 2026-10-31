@@ -266,8 +266,8 @@ $jsMethods = array_map(function ($m) {
         var bankish = cur.kind === 'bank';
         document.getElementById('coRows').innerHTML = [
             '<div class="co-row"><span>অ্যাকাউন্ট</span><b>' + esc(curAcc.title) + '</b></div>',
-            row(bankish ? 'ব্যাংক' : 'প্রতিষ্ঠান', curAcc.bankName), row(bankish ? 'Account name' : 'নাম', curAcc.accountName),
-            row(bankish ? 'Account no.' : 'নম্বর', curAcc.accountNumber), row('ধরন', curAcc.accountType), row('Branch', curAcc.branch), row('Routing no.', curAcc.routing)
+            row(bankish ? 'Bank' : 'প্রতিষ্ঠান', curAcc.bankName), row(bankish ? 'Account Name' : 'নাম', curAcc.accountName),
+            row(bankish ? 'Account No' : 'নম্বর', curAcc.accountNumber), row('Branch', curAcc.branch), row('Routing', curAcc.routing), row('ধরন', curAcc.accountType)
         ].join('');
     }
     document.querySelectorAll('.co-m').forEach(function (b) { b.addEventListener('click', function () { pickMethod(+b.getAttribute('data-method')); }); });

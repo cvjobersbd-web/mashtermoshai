@@ -14,6 +14,8 @@ trait PaymentData
     public const PAYMENT_KINDS = ['bank', 'mobile', 'other'];
     public const PAYMENT_STATUSES = ['Pending', 'Approved', 'Rejected'];
     public const DEFAULT_QR = 'https://i.ibb.co.com/nsPT0f9y/Pubali-Qr-code.png';
+    public const DEFAULT_BANK = ['Title' => 'Pubali Bank — Khatunganj Branch', 'BankName' => 'PUBALI BANK PLC.', 'AccountName' => 'BENGOL BAY',
+        'AccountNumber' => '0642901094586', 'Branch' => 'Khatunganj', 'RoutingNumber' => '175154278'];
 
     public function EnsurePaymentTables(): void
     {
@@ -59,7 +61,15 @@ trait PaymentData
             $seeded = $this->GetSiteContent(['pay_seeded' => ''])['pay_seeded'] ?? '';
             if ($seeded === '') {
                 if ((int)$this->scalar('SELECT COUNT(*) FROM `PaymentMethods`') === 0) $this->seedPaymentMethods();
-                $this->SaveSiteContent(['pay_seeded' => '1']);
+                $this->SaveSiteContent(['pay_seeded' => '1', 'pay_bank_v2' => '1']);
+            } elseif (($this->GetSiteContent(['pay_bank_v2' => ''])['pay_bank_v2'] ?? '') === '') {
+                // আগের ভার্সনে বসানো খালি ব্যাংক অ্যাকাউন্টে আসল তথ্য বসায় (একবারই)
+                $b = self::DEFAULT_BANK;
+                $this->exec("UPDATE `PaymentAccounts` SET `Title` = :t, `BankName` = :b, `AccountName` = :a, `AccountNumber` = :n, `Branch` = :br, `RoutingNumber` = :r
+                    WHERE (`AccountNumber` IS NULL OR `AccountNumber` = '') AND `Title` = :old
+                      AND `MethodId` IN (SELECT `Id` FROM `PaymentMethods` WHERE `Kind` = 'bank')",
+                    ['t' => $b['Title'], 'b' => $b['BankName'], 'a' => $b['AccountName'], 'n' => $b['AccountNumber'], 'br' => $b['Branch'], 'r' => $b['RoutingNumber'], 'old' => 'Bangla QR — স্ক্যান করে পেমেন্ট']);
+                $this->SaveSiteContent(['pay_bank_v2' => '1']);
             }
         } catch (Throwable $e) { error_log('[payment seed] ' . $e->getMessage()); }
     }
@@ -77,8 +87,15 @@ trait PaymentData
         foreach ($methods as $i => [$name, $kind, $color, $txn, $ins]) {
             $mid = $this->insert('INSERT INTO `PaymentMethods` (`Name`, `Kind`, `Color`, `TxnRequired`, `Instructions`, `IsActive`, `SortOrder`, `CreatedAt`) VALUES (:n, :k, :c, :t, :i, 1, :s, :d)',
                 ['n' => $name, 'k' => $kind, 'c' => $color, 't' => $txn, 'i' => $ins, 's' => $i + 1, 'd' => now()]);
-            $this->insert('INSERT INTO `PaymentAccounts` (`MethodId`, `Title`, `BankName`, `AccountName`, `QrImageUrl`, `IsActive`, `SortOrder`, `CreatedAt`) VALUES (:m, :t, :b, :a, :q, 1, 1, :d)',
-                ['m' => $mid, 't' => 'Bangla QR — স্ক্যান করে পেমেন্ট', 'b' => $kind === 'bank' ? 'Pubali Bank PLC' : null, 'a' => 'BENGOL - BAY', 'q' => self::DEFAULT_QR, 'd' => now()]);
+            if ($kind === 'bank') {
+                $b = self::DEFAULT_BANK;
+                $this->insert('INSERT INTO `PaymentAccounts` (`MethodId`, `Title`, `BankName`, `AccountName`, `AccountNumber`, `Branch`, `RoutingNumber`, `QrImageUrl`, `IsActive`, `SortOrder`, `CreatedAt`)
+                    VALUES (:m, :t, :b, :a, :n, :br, :r, :q, 1, 1, :d)',
+                    ['m' => $mid, 't' => $b['Title'], 'b' => $b['BankName'], 'a' => $b['AccountName'], 'n' => $b['AccountNumber'], 'br' => $b['Branch'], 'r' => $b['RoutingNumber'], 'q' => self::DEFAULT_QR, 'd' => now()]);
+                continue;
+            }
+            $this->insert('INSERT INTO `PaymentAccounts` (`MethodId`, `Title`, `AccountName`, `QrImageUrl`, `IsActive`, `SortOrder`, `CreatedAt`) VALUES (:m, :t, :a, :q, 1, 1, :d)',
+                ['m' => $mid, 't' => 'Bangla QR — স্ক্যান করে পেমেন্ট', 'a' => 'BENGOL BAY', 'q' => self::DEFAULT_QR, 'd' => now()]);
         }
     }
 
