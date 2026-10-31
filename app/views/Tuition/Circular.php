@@ -242,12 +242,15 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tc-safe li i { color: #16A34A; font-size: 16px; }
 
     /* ===== Post modal ===== */
+    /* পোস্টের পপআপটা .tc2 এর বাইরে, তাই রঙের ভেরিয়েবল এখানেও দিতে হয় */
+    .tcm-ov { --tc-navy: #0F1B2D; --tc-teal: #0F4C5C; --tc-teal-d: #0B3B48; --tc-line: #E6EDF5; --tc-muted: #64748B; --tc-soft: #94A3B8; --tc-yellow: #FFC21A; color: var(--tc-navy); }
+    .tcm-ov *, .tcm-ov *::before, .tcm-ov *::after { box-sizing: border-box; }
     .tcm-ov { position: fixed; inset: 0; z-index: 2600; background: rgba(15,27,45,.5); display: none; align-items: center; justify-content: center; padding: 16px; }
     .tcm-ov.open { display: flex; }
     .tcm { width: 100%; max-width: 620px; max-height: calc(100vh - 32px); overflow-y: auto; background: #fff; border-radius: 18px; box-shadow: 0 24px 60px rgba(15,27,45,.3); animation: tcmIn .2s ease; }
     @keyframes tcmIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
     .tcm-h { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--tc-line); position: sticky; top: 0; background: #fff; z-index: 2; }
-    .tcm-h h3 { margin: 0; font-size: 19px; font-weight: 800; }
+    .tcm-h h3 { margin: 0; font-size: 19px; font-weight: 800; color: var(--tc-navy); }
     .tcm-x { width: 36px; height: 36px; border-radius: 50%; border: none; background: #F1F5F9; cursor: pointer; font-size: 16px; color: #334155; }
     .tcm-b { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
     .tcm-f label { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 6px; color: #1E293B; }
@@ -265,7 +268,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tcm-seg input:checked + span { background: var(--tc-teal); border-color: var(--tc-teal); color: #fff; }
     .tcm-seg input:focus-visible + span { outline: 2px solid #9EC2FA; outline-offset: 2px; }
     .tcm-media { display: flex; gap: 10px; flex-wrap: wrap; }
-    .tcm-media label { margin: 0; }
+    .tcm-media label.tc-chip { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; min-width: 112px; margin: 0; padding: 0 18px; font-size: 14.5px; font-weight: 600; color: #334155; line-height: 1; }
     .tcm-prev { position: relative; border-radius: 12px; overflow: hidden; background: #F4F7FB; display: none; }
     .tcm-prev.show { display: block; }
     .tcm-prev img, .tcm-prev video { display: block; width: 100%; max-height: 260px; object-fit: contain; }
@@ -273,7 +276,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tcm-prev button { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: none; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; }
     .tcm-err { display: none; padding: 10px 12px; border-radius: 10px; background: #FEF2F2; color: #B91C1C; font-size: 14px; }
     .tcm-err.show { display: block; }
-    .tcm-f-foot { padding: 0 20px 20px; display: flex; gap: 10px; justify-content: flex-end; }
+    .tcm-f-foot { position: sticky; bottom: 0; z-index: 2; background: #fff; border-top: 1px solid var(--tc-line); padding: 14px 20px; display: flex; gap: 10px; justify-content: flex-end; }
 
     /* ===== Responsive ===== */
     @media (max-width: 1280px) {
