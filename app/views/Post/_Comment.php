@@ -21,13 +21,13 @@ $replies = $c->Replies ?? [];
                 <a href="/Profile/Show/<?= $c->UserId ?>" class="cm-name"><?= e($c->AuthorName) ?></a>
                 <div class="cm-text"><?= comment_text_html($c->Content) ?></div>
                 <button type="button" class="cm-rx" data-pc="comment-reactors" <?= $c->ReactionTotal ? '' : 'hidden' ?>>
-                    <span class="cm-rx-icons"><?php foreach (array_slice(array_keys($c->Reactions), 0, 3) as $k): ?><span><?= $rx[$k][0] ?></span><?php endforeach; ?></span>
+                    <span class="cm-rx-icons"><span><?= like_badge_html() ?></span></span>
                     <span class="cm-rx-n"><?= $c->ReactionTotal > 1 ? (int)$c->ReactionTotal : '' ?></span>
                 </button>
             </div>
         </div>
         <div class="cm-meta">
-            <button type="button" class="cm-like<?= $mine ? ' on rx-' . e($mine) : '' ?>" data-rx-target="comment" data-id="<?= $c->Id ?>" data-mine="<?= e((string)$mine) ?>"><?= $mine ? $rx[$mine][1] : 'Like' ?></button>
+            <button type="button" class="cm-like<?= $mine ? ' on rx-like' : '' ?>" data-rx-target="comment" data-id="<?= $c->Id ?>" data-mine="<?= $mine ? 'like' : '' ?>"><?= $mine ? 'Liked' : 'Like' ?></button>
             <button type="button" data-pc="reply">Reply</button>
             <?php if ($isMine): ?><button type="button" data-pc="edit-comment">Edit</button><?php endif; ?>
             <?php if ($canDelete): ?><button type="button" data-pc="delete-comment">Delete</button><?php endif; ?>

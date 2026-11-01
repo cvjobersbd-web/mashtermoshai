@@ -518,6 +518,40 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 
+    /** POST /Admin/SaveHomeFaqs — হোম পেজের FAQ: enabled, items=[{q,a}] JSON, reset=true হলে ডিফল্ট */
+    public function SaveHomeFaqs_POST(): void
+    {
+        $this->requireAdminJson();
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent(['home_faqs' => '', 'home_faq_enabled' => '1']);
+            $items = home_faq_defaults();
+            json_response(['success' => true, 'message' => 'Default প্রশ্ন-উত্তরে ফেরানো হয়েছে।', 'enabled' => true,
+                'items' => array_map(fn($f) => ['q' => $f[0], 'a' => $f[1]], $items)]);
+        }
+        $raw = json_decode((string)input_str('items', '[]'), true);
+        if (!is_array($raw)) json_response(['success' => false, 'message' => 'ভুল ডাটা।']);
+        $clean = fn($v) => trim(preg_replace('/[ \t]+/u', ' ', str_replace(["\r\n", "\r"], "\n", strip_tags((string)$v))));
+        $list = [];
+        foreach ($raw as $i => $f) {
+            if (!is_array($f)) continue;
+            $q = $clean($f['q'] ?? ''); $a = $clean($f['a'] ?? '');
+            if ($q === '' && $a === '') continue;
+            $n = count($list) + 1;
+            if ($q === '') json_response(['success' => false, 'message' => "প্রশ্ন $n — প্রশ্ন লিখুন।", 'index' => $i]);
+            if ($a === '') json_response(['success' => false, 'message' => "প্রশ্ন $n — উত্তর লিখুন।", 'index' => $i]);
+            if (mb_strlen($q) > 200) json_response(['success' => false, 'message' => "প্রশ্ন $n — প্রশ্ন সর্বোচ্চ ২০০ অক্ষর।", 'index' => $i]);
+            if (mb_strlen($a) > 1500) json_response(['success' => false, 'message' => "প্রশ্ন $n — উত্তর সর্বোচ্চ ১৫০০ অক্ষর।", 'index' => $i]);
+            $list[] = ['q' => $q, 'a' => $a];
+        }
+        if (count($list) > 20) json_response(['success' => false, 'message' => 'সর্বোচ্চ ২০টা প্রশ্ন দেওয়া যাবে।']);
+        $enabled = input_bool('enabled');
+        $err = null;
+        if ($this->db->SaveSiteContent(['home_faqs' => json_encode($list, JSON_UNESCAPED_UNICODE), 'home_faq_enabled' => $enabled ? '1' : '0'], $err)) {
+            json_response(['success' => true, 'message' => 'FAQ সেভ হয়েছে — হোম পেজে বদলে গেছে!', 'enabled' => $enabled, 'items' => $list]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
     /** POST /Admin/SaveSocialLinks — ফুটারের সোশ্যাল মিডিয়া আইকন + লিংক */
     public function SaveSocialLinks_POST(): void
     {
@@ -633,6 +667,498 @@ class AdminController extends Controller
         $err = null;
         if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
         json_response(['success' => true, 'message' => $isT ? 'টিচার প্রোফাইলের প্রোমো সেভ হয়েছে।' : 'প্রোফাইল প্রোমো ছবি সেভ হয়েছে।'] + $vals);
+    }
+
+    /** POST /Admin/SaveCircularBanner (which = circular|findtutor, banner, enabled, reset) — পেজের উপরের ব্যানার ছবি */
+    public function SaveCircularBanner_POST(): void
+    {
+        $this->requireAdminJson();
+        $which = input_str('which', 'circular');
+        [$k, $defaults, $page] = match ($which) {
+            'findtutor' => ['ft_', findtutor_banner_defaults(), 'Find Tutor'],
+            'package' => ['pk_', package_banner_defaults(), 'Package'],
+            default => ['tc_', circular_banner_defaults(), 'Tuition Circular'],
+        };
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent($defaults);
+            json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ব্যানারে ফেরত নেওয়া হয়েছে।'] + $defaults);
+        }
+        $img = trim((string)input_str($k . 'banner', ''));
+        if ($k === 'pk_' && $img === '' && !input_bool('pk_banner_enabled')) {
+            $vals = ['pk_banner' => '', 'pk_banner_enabled' => '0'];
+            if (input($k . 'banner_text', null) !== null) $vals['pk_banner_text'] = input_bool('pk_banner_text') ? '1' : '0';
+            $this->db->SaveSiteContent($vals);
+            json_response(['success' => true, 'message' => 'Package ব্যানার সেভ হয়েছে (ছবি ছাড়া)।'] + $vals);
+        }
+        if ($img === '' || !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img))) {
+            json_response(['success' => false, 'message' => 'ছবির লিংক ঠিক নেই — https:// দিয়ে শুরু হওয়া লিংক দিন অথবা ছবি আপলোড করুন।']);
+        }
+        if (mb_strlen($img) > 500) json_response(['success' => false, 'message' => 'লিংক খুব বড়।']);
+        $vals = [$k . 'banner' => $img, $k . 'banner_enabled' => input_bool($k . 'banner_enabled') ? '1' : '0'];
+        if ($k === 'pk_' && input($k . 'banner_text', null) !== null) $vals['pk_banner_text'] = input_bool('pk_banner_text') ? '1' : '0';
+        $err = null;
+        if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
+        json_response(['success' => true, 'message' => "$page ব্যানার সেভ হয়েছে।"] + $vals);
+    }
+
+    /** POST /Admin/SaveTuitionOptions (which = locations|classes|subjects, data = JSON, reset) — টিউশনের লোকেশন / ক্লাস / বিষয়ের তালিকা */
+    public function SaveTuitionOptions_POST(): void
+    {
+        $this->requireAdminJson();
+        $which = (string)input_str('which', '');
+        if (!in_array($which, ['locations', 'classes', 'subjects'], true)) json_response(['success' => false, 'message' => 'ভুল অনুরোধ।']);
+        $key = 'opt_' . $which;
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent([$key => '']);
+            $def = ['locations' => default_bd_locations(), 'classes' => default_tuition_classes(), 'subjects' => default_tuition_subjects()][$which];
+            json_response(['success' => true, 'message' => 'ডিফল্ট তালিকায় ফেরত নেওয়া হয়েছে।', 'data' => $def]);
+        }
+        $data = json_decode((string)input_str('data', ''), true);
+        if (!is_array($data)) json_response(['success' => false, 'message' => 'তালিকা ঠিক নেই।']);
+        $clean = function ($v) { return mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$v))), 0, 60); };
+        $uniq = function (array $list) use ($clean) {
+            $out = []; $seen = [];
+            foreach ($list as $v) { $v = $clean($v); $k = mb_strtolower($v); if ($v !== '' && !isset($seen[$k])) { $seen[$k] = 1; $out[] = $v; } }
+            return $out;
+        };
+        if ($which === 'locations') {
+            $out = [];
+            foreach ($data as $district => $areas) {
+                $d = $clean($district);
+                if ($d === '' || isset($out[$d])) continue;
+                $out[$d] = $uniq(is_array($areas) ? $areas : []);
+                if (count($out[$d]) > 200) $out[$d] = array_slice($out[$d], 0, 200);
+            }
+            if (!$out) json_response(['success' => false, 'message' => 'অন্তত একটা জেলা রাখুন।']);
+            if (count($out) > 200) json_response(['success' => false, 'message' => 'অনেক বেশি জেলা।']);
+        } else {
+            $out = $uniq($data);
+            if (!$out) json_response(['success' => false, 'message' => 'অন্তত একটা রাখুন।']);
+            if (count($out) > 300) json_response(['success' => false, 'message' => 'অনেক বেশি আইটেম।']);
+        }
+        $err = null;
+        if (!$this->db->SaveSiteContent([$key => json_encode($out, JSON_UNESCAPED_UNICODE)], $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।', 'data' => $out]);
+    }
+
+    // ============================================================
+    // ===== PACKAGES (Teacher Subscription / Student Tuition Post) =====
+    // ============================================================
+    /** GET /Admin/Packages */
+    public function Packages(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetPackages(), ['Benefits' => package_benefits(), 'StudentFree' => $this->db->PaymentRules()['studentFree'] ?? false]);
+    }
+
+    /** POST /Admin/SavePackage — নতুন বা এডিট */
+    public function SavePackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $clean = fn($v, $max) => mb_substr(trim(preg_replace('/[ \t]+/u', ' ', strip_tags((string)$v))), 0, $max);
+        $aud = input_str('audience', '');
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'ভুল প্যাকেজের ধরন।']);
+        $name = $clean(input_str('name', ''), 80);
+        if ($name === '') json_response(['success' => false, 'message' => 'প্যাকেজের নাম দিন।']);
+        $price = input_str('price', '');
+        if (!preg_match('/^\d{1,7}$/', trim((string)$price))) json_response(['success' => false, 'message' => 'সঠিক দাম দিন (শুধু সংখ্যা)।']);
+        $price = (int)$price;
+        $reg = trim((string)input_str('regularPrice', ''));
+        if ($reg !== '' && !preg_match('/^\d{1,7}$/', $reg)) json_response(['success' => false, 'message' => 'নিয়মিত মূল্য শুধু সংখ্যা হবে।']);
+        $reg = $reg === '' ? null : (int)$reg;
+        if ($reg !== null && $reg <= $price) json_response(['success' => false, 'message' => 'নিয়মিত মূল্য অবশ্যই বর্তমান দামের চেয়ে বেশি হতে হবে (না হলে খালি রাখুন)।']);
+        $months = max(0, min(120, (int)input_int('durationMonths', 0)));
+        $limit = max(0, min(1000, (int)input_int('postLimit', 0)));
+        if ($aud === 'Teacher' && $months < 1) json_response(['success' => false, 'message' => 'টিচার প্যাকেজের মেয়াদ (মাস) দিন।']);
+        $features = implode("\n", array_slice(array_values(array_filter(array_map(fn($l) => $clean($l, 120), preg_split('/\r?\n/', (string)input_str('features', ''))))), 0, 15));
+        $data = [
+            'Audience' => $aud, 'Name' => $name, 'DurationMonths' => $months, 'PostLimit' => $aud === 'Student' ? $limit : 0,
+            'Price' => $price, 'RegularPrice' => $reg, 'Badge' => $clean(input_str('badge', ''), 40),
+            'Description' => $clean(input_str('description', ''), 300), 'Features' => $features,
+            'IsActive' => input_bool('isActive', true) ? 1 : 0, 'IsFeatured' => input_bool('isFeatured') ? 1 : 0,
+        ];
+        $id = (int)input_int('id', 0);
+        if ($id > 0 && !$this->db->GetPackage($id)) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
+        $id = $this->db->SavePackage($id, $data);
+        json_response(['success' => true, 'message' => 'প্যাকেজ সেভ হয়েছে।', 'package' => $this->db->GetPackage($id)]);
+    }
+
+    /** POST /Admin/SavePackageBenefits — audience=Teacher|Student, data=[{i,t,d}] JSON, reset=true হলে ডিফল্ট */
+    public function SavePackageBenefits_POST(): void
+    {
+        $this->requireAdminJson();
+        $aud = input_str('audience', '');
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'Invalid']);
+        $key = $aud === 'Teacher' ? 'pkg_benefits_teacher' : 'pkg_benefits_student';
+        if (input_bool('reset')) {
+            $this->db->SaveSiteContent([$key => '']);
+            json_response(['success' => true, 'list' => package_benefits()[$aud]]);
+        }
+        $raw = json_decode((string)input_str('data', '[]'), true);
+        if (!is_array($raw)) json_response(['success' => false, 'message' => 'Invalid data']);
+        $icons = package_benefit_icons();
+        $clean = fn($v, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$v))), 0, $max);
+        $list = [];
+        foreach (array_slice($raw, 0, 20) as $b) {
+            if (!is_array($b)) continue;
+            $t = $clean($b['t'] ?? '', 60);
+            if ($t === '') continue;
+            $list[] = ['i' => in_array($b['i'] ?? '', $icons, true) ? $b['i'] : 'fa-check', 't' => $t, 'd' => $clean($b['d'] ?? '', 250)];
+        }
+        $this->db->SaveSiteContent([$key => json_encode($list, JSON_UNESCAPED_UNICODE)]);
+        json_response(['success' => true, 'list' => $list]);
+    }
+
+    /** POST /Admin/SetStudentPostFree (on) — শিক্ষার্থীদের Tuition পোস্ট ফ্রি / পেইড */
+    public function SetStudentPostFree_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->SaveSiteContent(['pkg_student_free' => input_bool('on') ? '1' : '']);
+        json_response(['success' => true, 'free' => $this->db->PaymentRules()['studentFree'] ?? false]);
+    }
+
+    public function DeletePackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->DeletePackage((int)input_int('id', 0));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/TogglePackage — flag = active|featured */
+    public function TogglePackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetPackage($id)) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
+        $this->db->SetPackageFlag($id, input_str('flag') === 'featured' ? 'IsFeatured' : 'IsActive', input_bool('on'));
+        json_response(['success' => true, 'package' => $this->db->GetPackage($id)]);
+    }
+
+    /** POST /Admin/ReorderPackages — audience + ids (কমা দিয়ে) */
+    public function ReorderPackages_POST(): void
+    {
+        $this->requireAdminJson();
+        $aud = input_str('audience', '');
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'Invalid']);
+        $ids = array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))));
+        $this->db->ReorderPackages($aud, $ids);
+        json_response(['success' => true]);
+    }
+
+    // ============================================================
+    // ===== CATEGORIES (Categories পেজের ক্যাটাগরি + গ্রুপ) =====
+    // ============================================================
+    /** GET /Admin/Categories */
+    public function Categories(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetCategoryGroups(false));
+    }
+
+    /** GET /Admin/EditCategory/{id} — id না দিলে নতুন (?group=গ্রুপের id) */
+    public function EditCategory(): void
+    {
+        $this->requireAdminPage();
+        $groups = $this->db->GetCategoryGroups(false);
+        if (!$groups) redirect('/Admin/Categories');
+        $id = (int)input_str('id', '0');
+        if ($id > 0) {
+            $c = $this->db->GetCategory($id);
+            if (!$c) not_found();
+        } else {
+            $gid = (int)input_int('group', 0);
+            $g = null;
+            foreach ($groups as $x) if ($x->Id === $gid) $g = $x;
+            $g = $g ?? $groups[0];
+            $c = obj(['Id' => 0, 'GroupId' => $g->Id, 'GroupName' => $g->Name, 'Name' => '', 'Slug' => '', 'Icon' => 'fa-book-open', 'ImageUrl' => '',
+                'BannerUrl' => '', 'Highlights' => '', 'About' => '', 'WhyChoose' => '', 'MatchType' => 'subject', 'Keywords' => '', 'IsActive' => true, 'Url' => '']);
+        }
+        $this->view(null, $c, ['Groups' => $groups]);
+    }
+
+    /** POST /Admin/SaveCategory — নতুন বা এডিট */
+    public function SaveCategory_POST(): void
+    {
+        $this->requireAdminJson();
+        $line = fn($v, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$v))), 0, $max);
+        $text = fn($v, $max) => mb_substr(trim(preg_replace('/[ \t]+/u', ' ', str_replace(["\r\n", "\r"], "\n", strip_tags((string)$v)))), 0, $max);
+        $id = (int)input_int('id', 0);
+        if ($id > 0 && !$this->db->GetCategory($id)) json_response(['success' => false, 'message' => 'ক্যাটাগরি পাওয়া যায়নি।']);
+        $gid = (int)input_int('groupId', 0);
+        $group = null;
+        foreach ($this->db->GetCategoryGroups(false) as $g) if ($g->Id === $gid) $group = $g;
+        if (!$group) json_response(['success' => false, 'message' => 'গ্রুপ বেছে নিন।', 'field' => 'groupId']);
+        $name = $line(input_str('name', ''), 60);
+        if ($name === '') json_response(['success' => false, 'message' => 'ক্যাটাগরির নাম লিখুন।', 'field' => 'name']);
+        $icon = strtolower(trim((string)input_str('icon', '')));
+        if ($icon !== '' && !preg_match('/^fa-[a-z0-9-]{1,40}$/', $icon)) json_response(['success' => false, 'message' => 'আইকন "fa-" দিয়ে শুরু হতে হবে (যেমন fa-book-open)।', 'field' => 'icon']);
+        $img = self::safeImageUrl((string)input_str('imageUrl', '')) ?? '';
+        $banner = self::safeImageUrl((string)input_str('bannerUrl', '')) ?? '';
+        $hl = array_slice(array_values(array_filter(array_map(fn($x) => $line($x, 120), explode("\n", str_replace("\r", '', (string)input_str('highlights', '')))), fn($x) => $x !== '')), 0, 8);
+        $kw = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => $line($x, 40), explode(',', (string)input_str('keywords', ''))), fn($x) => $x !== ''))), 0, 20);
+        $about = $text(input_str('about', ''), 6000);
+        $why = $text(input_str('whyChoose', ''), 4000);
+        $match = input_str('matchType', '') === 'class' ? 'class' : 'subject';
+        // ডিফল্ট লেখার সাথে হুবহু মিললে খালি রাখি — তাহলে নাম বদলালে ডিফল্ট লেখাও নিজে থেকে বদলাবে
+        $def = category_default_texts($name, $group->Name);
+        if ($about === trim($def['About'])) $about = '';
+        if ($why === trim($def['WhyChoose'])) $why = '';
+        if (implode("\n", $hl) === trim($def['Highlights'])) $hl = [];
+        try {
+            $newId = $this->db->SaveCategory($id, [
+                'GroupId' => $gid, 'Name' => $name, 'Slug' => $line(input_str('slug', ''), 120), 'Icon' => $icon, 'ImageUrl' => $img, 'BannerUrl' => $banner,
+                'Highlights' => implode("\n", $hl), 'About' => $about, 'WhyChoose' => $why, 'MatchType' => $match, 'Keywords' => implode(', ', $kw),
+                'IsActive' => input_bool('isActive'),
+            ]);
+        } catch (Throwable $e) {
+            error_log('[SaveCategory] ' . $e->getMessage());
+            json_response(['success' => false, 'message' => 'সেভ করা যায়নি। আবার চেষ্টা করুন।']);
+        }
+        $c = $this->db->GetCategory($newId);
+        json_response(['success' => true, 'message' => $id > 0 ? 'ক্যাটাগরি আপডেট হয়েছে!' : 'নতুন ক্যাটাগরি যোগ হয়েছে!', 'id' => $newId, 'slug' => $c->Slug, 'url' => $c->Url]);
+    }
+
+    /** POST /Admin/DeleteCategory — id */
+    public function DeleteCategory_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetCategory($id)) json_response(['success' => false, 'message' => 'ক্যাটাগরি পাওয়া যায়নি।']);
+        $this->db->DeleteCategory($id);
+        json_response(['success' => true, 'message' => 'ক্যাটাগরি মুছে ফেলা হয়েছে।']);
+    }
+
+    /** POST /Admin/ToggleCategory — id, on */
+    public function ToggleCategory_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetCategory($id)) json_response(['success' => false, 'message' => 'ক্যাটাগরি পাওয়া যায়নি।']);
+        $this->db->SetCategoryActive($id, input_bool('on'));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/ReorderCategories — groupId + ids (কমা দিয়ে) */
+    public function ReorderCategories_POST(): void
+    {
+        $this->requireAdminJson();
+        $ids = array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))));
+        $this->db->ReorderCategories((int)input_int('groupId', 0), $ids);
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/SaveCategoryGroup — id (0 = নতুন), name, isActive */
+    public function SaveCategoryGroup_POST(): void
+    {
+        $this->requireAdminJson();
+        $name = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('name', '')))), 0, 60);
+        if ($name === '') json_response(['success' => false, 'message' => 'গ্রুপের নাম লিখুন।']);
+        $id = (int)input_int('id', 0);
+        $exists = false;
+        foreach ($this->db->GetCategoryGroups(false) as $g) {
+            if ($g->Id === $id) $exists = true;
+            if ($g->Id !== $id && mb_strtolower($g->Name) === mb_strtolower($name)) json_response(['success' => false, 'message' => 'এই নামে একটা গ্রুপ আগেই আছে।']);
+        }
+        if ($id > 0 && !$exists) json_response(['success' => false, 'message' => 'গ্রুপ পাওয়া যায়নি।']);
+        $newId = $this->db->SaveCategoryGroup($id, $name, input_bool('isActive'));
+        json_response(['success' => true, 'message' => $id > 0 ? 'গ্রুপ আপডেট হয়েছে।' : 'নতুন গ্রুপ যোগ হয়েছে।', 'id' => $newId]);
+    }
+
+    /** POST /Admin/DeleteCategoryGroup — id (ভেতরের সব ক্যাটাগরিও মুছে যায়) */
+    public function DeleteCategoryGroup_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->DeleteCategoryGroup((int)input_int('id', 0));
+        json_response(['success' => true, 'message' => 'গ্রুপ মুছে ফেলা হয়েছে।']);
+    }
+
+    /** POST /Admin/ReorderCategoryGroups — ids (কমা দিয়ে) */
+    public function ReorderCategoryGroups_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->ReorderCategoryGroups(array_filter(array_map('intval', explode(',', (string)input_str('ids', '')))));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/CategoryDefaultText — name, groupId → ডিফল্ট লেখা (Edit পেজের "ডিফল্ট লেখা বসান") */
+    public function CategoryDefaultText_POST(): void
+    {
+        $this->requireAdminJson();
+        $gname = '';
+        foreach ($this->db->GetCategoryGroups(false) as $g) if ($g->Id === (int)input_int('groupId', 0)) $gname = $g->Name;
+        $name = mb_substr(trim(strip_tags((string)input_str('name', ''))), 0, 60) ?: 'This Category';
+        $d = category_default_texts($name, $gname);
+        json_response(['success' => true, 'highlights' => $d['Highlights'], 'about' => $d['About'], 'whyChoose' => $d['WhyChoose']]);
+    }
+
+    /** POST /Admin/UploadCategoryImage — categoryImage (ফাইল) */
+    public function UploadCategoryImage_POST(): void
+    {
+        $this->uploadImage('categoryImage', 'categories', 'cat_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'ছবি ৫MB এর কম হতে হবে।', 'শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।', 'ছবি আপলোড হয়েছে!');
+    }
+
+    // ============================================================
+    // ===== PAYMENTS (ম্যানুয়াল পেমেন্ট যাচাই) =====
+    // ============================================================
+    /** GET /Admin/Payments?status=Pending|Approved|Rejected|all */
+    public function Payments(): void
+    {
+        $this->requireAdminPage();
+        $st = input_str('status', 'Pending');
+        if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
+        $this->view(null, $this->db->GetPaymentRequests($st === 'all' ? null : $st), ['Status' => $st, 'Stats' => $this->db->PaymentStats()]);
+    }
+
+    /** POST /Admin/ApprovePayment (id, note?) */
+    public function ApprovePayment_POST(): void
+    {
+        $this->requireAdminJson();
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        try { $p = $this->db->ApprovePayment((int)input_int('id', 0), (int)current_user_id(), $note); }
+        catch (Throwable $e) { error_log('[approve payment] ' . $e->getMessage()); $p = null; }
+        if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
+        if ($p->Audience === 'Teacher') {
+            $sub = $this->db->GetActiveTeacherSubscription($p->UserId);
+            $msg = "আপনার “{$p->PackageName}” Subscription (" . taka($p->Amount) . ") চালু হয়েছে" . ($sub ? ' — ' . date('d M Y', strtotime($sub->EndsAt)) . ' পর্যন্ত।' : '।');
+        } else {
+            $msg = "আপনার “{$p->PackageName}” প্যাকেজ (" . taka($p->Amount) . ") চালু হয়েছে — এখন Tuition Circular-এ পোস্ট করতে পারবেন।";
+        }
+        $this->db->CreateNotification($p->UserId, 'Payment Accepted', $msg, 'success', '/Payment/My', 'fa-circle-check');
+        json_response(['success' => true, 'payment' => $p]);
+    }
+
+    /** POST /Admin/RejectPayment (id, note) */
+    public function RejectPayment_POST(): void
+    {
+        $this->requireAdminJson();
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        if ($note === '') json_response(['success' => false, 'message' => 'Reject করার কারণ লিখুন — ইউজার এটা দেখতে পাবে।']);
+        $p = $this->db->RejectPayment((int)input_int('id', 0), (int)current_user_id(), $note);
+        if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
+        $this->db->CreateNotification($p->UserId, 'Payment Rejected', "“{$p->PackageName}” প্যাকেজের পেমেন্ট গ্রহণ করা হয়নি: $note", 'warning', '/Payment/My', 'fa-circle-xmark');
+        json_response(['success' => true, 'payment' => $p]);
+    }
+
+    /** POST /Admin/DeletePayment (id) — শুধু Rejected পেমেন্ট মুছে ফেলা যায় */
+    public function DeletePayment_POST(): void
+    {
+        $this->requireAdminJson();
+        $p = $this->db->GetPaymentRequest((int)input_int('id', 0));
+        if (!$p || $p->Status !== 'Rejected') json_response(['success' => false, 'message' => 'শুধু Rejected পেমেন্ট মুছে ফেলা যায়।']);
+        delete_upload($this->db->DeletePaymentRequest($p->Id));
+        json_response(['success' => true]);
+    }
+
+    /** GET /Admin/PaymentMethods */
+    public function PaymentMethods(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetPaymentMethods(), ['Rules' => $this->db->PaymentRules()]);
+    }
+
+    private function paymentImage(string $field, string $prefix): ?string
+    {
+        $f = upload_file($field);
+        if (!$f) return null;
+        $ext = strtolower('.' . pathinfo($f['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['.jpg', '.jpeg', '.png', '.webp', '.gif'], true)) json_response(['success' => false, 'message' => 'শুধু JPG, PNG, WEBP বা GIF ছবি দেওয়া যাবে।']);
+        if ($f['size'] > 3 * 1024 * 1024) json_response(['success' => false, 'message' => 'ছবি ৩ MB এর কম হতে হবে।']);
+        if (@getimagesize($f['tmp_name']) === false) json_response(['success' => false, 'message' => 'ছবিটি সঠিক নয়।']);
+        return save_upload($f, 'payments/assets', $prefix . '_' . ticks(), $ext === '.jpeg' ? '.jpg' : $ext);
+    }
+
+    private static function safeImageUrl(string $u): ?string
+    {
+        $u = trim($u);
+        if ($u === '') return null;
+        if (str_starts_with($u, '/uploads/') || preg_match('~^https://[^\s"<>]+$~i', $u)) return mb_substr($u, 0, 500);
+        json_response(['success' => false, 'message' => 'ছবির লিংক https:// দিয়ে শুরু হতে হবে।']);
+        return null;
+    }
+
+    /** POST /Admin/SavePaymentMethod — id, name, kind, color, txnRequired, instructions, isActive, logo(file) / logoUrl / removeLogo */
+    public function SavePaymentMethod_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $old = $id ? $this->db->GetPaymentMethod($id) : null;
+        if ($id && !$old) json_response(['success' => false, 'message' => 'মেথড পাওয়া যায়নি।']);
+        $name = mb_substr(trim(strip_tags((string)input_str('name', ''))), 0, 40);
+        if ($name === '') json_response(['success' => false, 'message' => 'মেথডের নাম দিন (যেমন: bKash)।']);
+        $kind = input_str('kind', 'other');
+        $color = (string)input_str('color', '#475569');
+        $d = [
+            'Name' => $name, 'Kind' => in_array($kind, Db::PAYMENT_KINDS, true) ? $kind : 'other',
+            'Color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $color) ? $color : '#475569',
+            'TxnRequired' => input_bool('txnRequired') ? 1 : 0, 'IsActive' => input_bool('isActive', true) ? 1 : 0,
+            'Instructions' => mb_substr(trim(strip_tags((string)input_str('instructions', ''))), 0, 1000),
+        ];
+        $up = $this->paymentImage('logo', 'logo');
+        if ($up !== null) $d['LogoUrl'] = $up;
+        elseif (input_bool('removeLogo')) $d['LogoUrl'] = null;
+        elseif (($lu = (string)input_str('logoUrl', '')) !== '' && $lu !== ($old->LogoUrl ?? '')) $d['LogoUrl'] = self::safeImageUrl($lu);
+        elseif (!$id) $d['LogoUrl'] = null;
+        if ($old && array_key_exists('LogoUrl', $d) && $old->LogoUrl !== $d['LogoUrl']) delete_upload($old->LogoUrl);
+        $id = $this->db->SavePaymentMethod($id, $d);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
+    }
+
+    public function DeletePaymentMethod_POST(): void
+    {
+        $this->requireAdminJson();
+        foreach ($this->db->DeletePaymentMethod((int)input_int('id', 0)) as $f) delete_upload($f);
+        json_response(['success' => true]);
+    }
+
+    public function MovePaymentMethod_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->MovePaymentMethod((int)input_int('id', 0), (int)input_int('dir', 1));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/SavePaymentAccount — id, methodId, title, accountName, accountNumber, bankName, branch, routingNumber, accountType, isActive, qr(file) / qrUrl / removeQr */
+    public function SavePaymentAccount_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $old = $id ? $this->db->GetPaymentAccount($id) : null;
+        if ($id && !$old) json_response(['success' => false, 'message' => 'অ্যাকাউন্ট পাওয়া যায়নি।']);
+        $mid = $old ? $old->MethodId : (int)input_int('methodId', 0);
+        if (!$this->db->GetPaymentMethod($mid)) json_response(['success' => false, 'message' => 'মেথড পাওয়া যায়নি।']);
+        $c = fn($k, $max) => mb_substr(trim(strip_tags((string)input_str($k, ''))), 0, $max);
+        $d = [
+            'MethodId' => $mid, 'Title' => $c('title', 80), 'AccountName' => $c('accountName', 100), 'AccountNumber' => $c('accountNumber', 40),
+            'BankName' => $c('bankName', 100), 'Branch' => $c('branch', 100), 'RoutingNumber' => $c('routingNumber', 20), 'AccountType' => $c('accountType', 40),
+            'IsActive' => input_bool('isActive', true) ? 1 : 0,
+        ];
+        if ($d['Title'] === '') json_response(['success' => false, 'message' => 'অ্যাকাউন্টের নাম/শিরোনাম দিন (যেমন: Pubali Bank — Mirpur Branch)।']);
+        $up = $this->paymentImage('qr', 'qr');
+        if ($up !== null) $d['QrImageUrl'] = $up;
+        elseif (input_bool('removeQr')) $d['QrImageUrl'] = null;
+        elseif (($qu = (string)input_str('qrUrl', '')) !== '' && $qu !== ($old->QrImageUrl ?? '')) $d['QrImageUrl'] = self::safeImageUrl($qu);
+        elseif (!$id) $d['QrImageUrl'] = null;
+        if ($d['AccountNumber'] === '' && empty($d['QrImageUrl']) && !($old && !array_key_exists('QrImageUrl', $d) && $old->QrImageUrl))
+            json_response(['success' => false, 'message' => 'অ্যাকাউন্ট নম্বর অথবা QR ছবি — অন্তত একটা দিন।']);
+        if ($old && array_key_exists('QrImageUrl', $d) && $old->QrImageUrl !== $d['QrImageUrl']) delete_upload($old->QrImageUrl);
+        $this->db->SavePaymentAccount($id, $d);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
+    }
+
+    public function DeletePaymentAccount_POST(): void
+    {
+        $this->requireAdminJson();
+        delete_upload($this->db->DeletePaymentAccount((int)input_int('id', 0)));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/SavePaymentRules — teacher, student (পেমেন্ট বাধ্যতামূলক কিনা) */
+    public function SavePaymentRules_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->SaveSiteContent(['pay_enforce_teacher' => input_bool('teacher') ? '1' : '', 'pay_enforce_student' => input_bool('student') ? '1' : '']);
+        json_response(['success' => true, 'rules' => $this->db->PaymentRules()]);
     }
 
     public function UploadLogo_POST(): void

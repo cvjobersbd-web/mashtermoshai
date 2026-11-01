@@ -8,10 +8,20 @@
  * =============================================================
  */
 require_once __DIR__ . '/TeacherProfileData.php';
+require_once __DIR__ . '/CircularData.php';
+require_once __DIR__ . '/FindTutorData.php';
+require_once __DIR__ . '/PackageData.php';
+require_once __DIR__ . '/PaymentData.php';
+require_once __DIR__ . '/CategoryData.php';
 
 class Db
 {
     use TeacherProfileData;
+    use CircularData;
+    use FindTutorData;
+    use PackageData;
+    use PaymentData;
+    use CategoryData;
 
     private PDO $pdo;
 
@@ -1491,7 +1501,8 @@ class Db
     public function GetAllTeachWantedPosts($currentUserId = null): array
     {
         try {
-            $rows = $this->all('SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`LikeCount`, p.`CreatedAt`,
+            $this->EnsureTutorDirectory();
+            $rows = $this->all('SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`VideoUrl`, p.`LikeCount`, p.`CreatedAt`,
                     u.`FullName`, u.`UserName`, u.`ProfileImageLink`
                 FROM `TeachWantedPosts` p LEFT JOIN `Users` u ON p.`UserId` = u.`Id`
                 ORDER BY p.`CreatedAt` DESC, p.`Id` DESC');
@@ -1528,8 +1539,9 @@ class Db
     {
         $errorMessage = null;
         try {
-            $post->Id = $this->insert('INSERT INTO `TeachWantedPosts` (`UserId`, `Content`, `ImageUrl`, `LikeCount`, `CreatedAt`) VALUES (:u, :c, :i, 0, :t)',
-                ['u' => (int)$post->UserId, 'c' => $post->Content ?? '', 'i' => $post->ImageUrl, 't' => now()]);
+            $this->EnsureTutorDirectory();
+            $post->Id = $this->insert('INSERT INTO `TeachWantedPosts` (`UserId`, `Content`, `ImageUrl`, `VideoUrl`, `LikeCount`, `CreatedAt`) VALUES (:u, :c, :i, :v, 0, :t)',
+                ['u' => (int)$post->UserId, 'c' => $post->Content ?? '', 'i' => $post->ImageUrl, 'v' => $post->VideoUrl ?? null, 't' => now()]);
             return $post->Id > 0;
         } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
     }
@@ -1550,13 +1562,17 @@ class Db
         } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
     }
 
+    public ?string $lastDeletedTeachVideo = null;
+
     public function DeleteTeachWantedPost(int $postId, int $requesterId, bool $isAdmin, ?string &$imageUrl = null, ?string &$errorMessage = null): bool
     {
         $imageUrl = $errorMessage = null;
         try {
-            $r = $this->one('SELECT `UserId`, `ImageUrl` FROM `TeachWantedPosts` WHERE `Id` = :id', ['id' => $postId]);
+            $this->EnsureTutorDirectory();
+            $r = $this->one('SELECT `UserId`, `ImageUrl`, `VideoUrl` FROM `TeachWantedPosts` WHERE `Id` = :id', ['id' => $postId]);
             if (!$r) { $errorMessage = 'Post not found.'; return false; }
             $imageUrl = $r->ImageUrl;
+            $this->lastDeletedTeachVideo = $r->VideoUrl;
             if ((int)$r->UserId !== $requesterId && !$isAdmin) { $errorMessage = 'You can only delete your own post.'; return false; }
             $this->pdo->beginTransaction();
             $p = ['id' => $postId];
@@ -1620,10 +1636,13 @@ class Db
     {
         $errorMessage = null;
         try {
-            $post->Id = $this->insert('INSERT INTO `TuitionCircularPosts` (`UserId`, `Content`, `ImageUrl`, `PreferredArea`, `ClassLevel`, `Subjects`, `Budget`, `LikeCount`, `CreatedAt`)
-                VALUES (:u, :c, :i, :a, :cl, :s, :b, 0, :t)', [
+            $this->EnsureCircularExtras();
+            $post->Id = $this->insert('INSERT INTO `TuitionCircularPosts` (`UserId`, `Content`, `ImageUrl`, `PreferredArea`, `ClassLevel`, `Subjects`, `Budget`, `LikeCount`, `CreatedAt`,
+                    `Title`, `Medium`, `TuitionType`, `VideoUrl`, `ViewCount`)
+                VALUES (:u, :c, :i, :a, :cl, :s, :b, 0, :t, :ti, :me, :ty, :v, 0)', [
                 'u' => (int)$post->UserId, 'c' => $post->Content ?? '', 'i' => $post->ImageUrl, 'a' => $post->PreferredArea,
                 'cl' => $post->ClassLevel, 's' => $post->Subjects, 'b' => $post->Budget, 't' => now(),
+                'ti' => $post->Title ?? null, 'me' => $post->Medium ?? null, 'ty' => $post->TuitionType ?? null, 'v' => $post->VideoUrl ?? null,
             ]);
             return $post->Id > 0;
         } catch (Throwable $e) { $errorMessage = $e->getMessage(); return false; }
@@ -2249,7 +2268,7 @@ class Db
     // কমেন্টে এক লেভেলের রিপ্লাই (রিপ্লাইয়ের রিপ্লাই হলে @নাম দিয়ে একই থ্রেডে যায়)
     // ============================================================
     public const POST_PRIVACY = ['Public', 'Friends', 'OnlyMe'];
-    public const REACTIONS = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
+    public const REACTIONS = ['like'];
     public const POST_TYPES = ['post', 'study', 'question', 'achievement', 'poll', 'material', 'update', 'notice'];
     /** শুধু টিচাররা যে ধরনের পোস্ট দিতে পারে */
     public const TEACHER_POST_TYPES = ['material', 'update', 'notice'];
@@ -2307,6 +2326,11 @@ class Db
         if (!$this->columnExists('ProfilePosts', 'Meta')) {
             try { $this->pdo->exec('ALTER TABLE `ProfilePosts` ADD COLUMN `Meta` TEXT NULL'); } catch (Throwable $e) { error_log('[Meta] ' . $e->getMessage()); }
         }
+        // আগের Love/Haha ইত্যাদি রিয়েকশন এখন সব Like (একবারই চলে, পরে কিছু পায় না)
+        try {
+            $this->pdo->exec("UPDATE `ProfilePostReactions` SET `Reaction` = 'like' WHERE `Reaction` <> 'like'");
+            $this->pdo->exec("UPDATE `ProfileCommentReactions` SET `Reaction` = 'like' WHERE `Reaction` <> 'like'");
+        } catch (Throwable $e) { }
         $this->profilePostsReady = true;
     }
 

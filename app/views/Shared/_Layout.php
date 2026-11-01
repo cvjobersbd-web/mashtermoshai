@@ -29,16 +29,19 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     $__host = preg_replace('/[^A-Za-z0-9.\-:]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'mashtermoshai.com'));
     $__origin = $__scheme . '://' . $__host;
     $__abs = fn(string $u) => preg_match('#^https?://#i', $u) ? $u : $__origin . '/' . ltrim($u, '/');
-    $__pageTitle = $__isHome
+    $__pageTitle = !empty($ViewData['FullTitle']) ? (string)$ViewData['FullTitle'] : ($__isHome
         ? $safeSiteName . ' – Find Home Tutors & Tuitions in Bangladesh'
-        : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName;
+        : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName);
+    $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : $__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    $__ogImage = !empty($ViewData['OgImage']) ? (string)$ViewData['OgImage'] : '';
     $__desc = (string)($ViewData['Description'] ?? ($safeSiteName . ' — বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া। অভিজ্ঞ হোম টিউটর খুঁজুন অথবা টিউটর হিসেবে টিউশনে Apply করুন — সহজ, নিরাপদ ও দ্রুত।'));
     $__favicon = $__abs($layoutSettings->GetFaviconUrl());
     $__altNames = array_values(array_filter(['মাষ্টারমশাই', 'Mashter Moshai', 'MashterMoshai', $__host], fn($n) => strcasecmp($n, $safeSiteName) !== 0));
     ?>
     <title><?= e($__pageTitle) ?></title>
     <meta name="description" content="<?= e($__desc) ?>" />
-    <link rel="canonical" href="<?= e($__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>" />
+    <link rel="canonical" href="<?= e($__canonical) ?>" />
+    <?php if (!empty($ViewData['Robots'])): ?><meta name="robots" content="<?= e($ViewData['Robots']) ?>" /><?php endif; ?>
 
     <!-- ✅ ট্যাব আইকন + Google সার্চ রেজাল্টের আইকন (অ্যাডমিন সেটিংয়ের Navbar Logo) -->
     <link rel="icon" href="<?= e($__favicon) ?>" />
@@ -50,8 +53,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <meta property="og:title" content="<?= e($__pageTitle) ?>" />
     <meta property="og:description" content="<?= e($__desc) ?>" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="<?= e($__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>" />
-    <meta property="og:image" content="<?= e($__favicon) ?>" />
+    <meta property="og:url" content="<?= e($__canonical) ?>" />
+    <meta property="og:image" content="<?= e($__ogImage !== '' ? $__abs($__ogImage) : $__favicon) ?>" />
     <meta name="application-name" content="<?= e($safeSiteName) ?>" />
     <meta name="apple-mobile-web-app-title" content="<?= e($safeSiteName) ?>" />
     <?php if ($__isHome): ?>
@@ -734,39 +737,42 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     }
             }
 
-            /* ===== ✅ Logo Container Box (Fixed) ===== */
-            .brand-logo-box {
-                width: <?= e($safeLogoSize) ?> px;
-                height: <?= e($safeLogoSize) ?> px;
-                min-width: <?= e($safeLogoSize) ?> px;
-                min-height: <?= e($safeLogoSize) ?> px;
-                max-width: <?= e($safeLogoSize) ?> px;
-                max-height: <?= e($safeLogoSize) ?> px;
-                border-radius: <?= e($logoRadius) ?>;
-                overflow: hidden;
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: #fff;
-                border: 1px solid rgba(0,0,0,0.05);
-                transition: transform 0.2s ease;
-                padding: 2px;
-                box-sizing: border-box;
+            /* ===== ✅ Logo: সাদা বক্স / গোল বর্ডার ছাড়া, লোগোর নিজের আকারে ===== */
+            .brand-logo-box, .footer-brand-logo-box {
+                display: inline-flex; align-items: center; flex-shrink: 0;
+                background: none; border: none; padding: 0;
             }
+            .brand-logo-box img, .footer-brand-logo-box img {
+                display: block; height: <?= (int)max(40, $safeLogoSize + 4) ?>px; width: auto; max-width: 150px;
+                object-fit: contain; border-radius: 10px; transition: transform 0.2s ease;
+            }
+            /* লোগো পুরোটা দেখায় — কোনো অংশ কাটা বা জুম করা হয় না */
+            .brand-logo-box img, .footer-brand-logo-box img { border-radius: 8px; clip-path: none; transform: none; mix-blend-mode: normal; }
+            .brand-logo-box img { height: 62px; max-width: 240px; }
+            .brand-logo-box:hover img { transform: scale(1.04); }
+            @media (max-width: 768px) { .brand-logo-box img { height: 52px; max-width: 190px; } }
 
-                .brand-logo-box:hover {
-                    transform: scale(1.04);
-                }
-
-                .brand-logo-box img {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain;
-                }
+            /* ===== ✅ নেভবার মেনু: কোন পেজে আছেন বোঝা যায় ===== */
+            .nav-desktop-link {
+                position: relative; display: inline-flex; align-items: center; gap: 7px;
+                padding: 9px 14px; border-radius: 10px; font-size: 14px; font-weight: 500;
+                color: var(--nav-text) !important; text-decoration: none; opacity: .85;
+                transition: background .2s ease, opacity .2s ease, box-shadow .2s ease;
+            }
+            .nav-desktop-link i { font-size: 12px; }
+            /* ছোট ডেস্কটপে (১২৮০–১৪৪০px) ৬টা মেনু এক লাইনে ধরাতে একটু চাপা */
+            @media (max-width: 1440px) {
+                .nav-desktop-link { padding: 9px 10px; gap: 6px; font-size: 13.5px; }
+                .nav-desktop-link.active::after { left: 10px; right: 10px; }
+            }
+            .nav-desktop-link:hover { opacity: 1; }
+            .nav-desktop-link.active { opacity: 1; font-weight: 700; background: none; }
+            .nav-desktop-link.active::after {
+                content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 3px; border-radius: 3px;
+                background: var(--primary-color, #02B8F5);
+            }
+            .footer-brand-logo-box img { height: 76px; max-width: 260px; }
+            @media (max-width: 640px) { .footer-brand-logo-box img { height: 64px; } }
 
             .brand-site-name {
                 color: var(--nav-text);
@@ -777,35 +783,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 text-overflow: ellipsis;
                 max-width: 220px;
             }
-
-            /* ফুটারের জন্যও একই বক্স */
-            .footer-brand-logo-box {
-                width: <?= e($safeLogoSize) ?> px;
-                height: <?= e($safeLogoSize) ?> px;
-                min-width: <?= e($safeLogoSize) ?> px;
-                min-height: <?= e($safeLogoSize) ?> px;
-                max-width: <?= e($safeLogoSize) ?> px;
-                max-height: <?= e($safeLogoSize) ?> px;
-                border-radius: <?= e($logoRadius) ?>;
-                overflow: hidden;
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: #fff;
-                border: 1px solid rgba(0,0,0,0.05);
-                padding: 2px;
-                box-sizing: border-box;
-            }
-
-                .footer-brand-logo-box img {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain;
-                }
 
             @media (max-width: 768px) {
                 .brand-site-name {
@@ -861,8 +838,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 padding: 16px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.1);
             }
             .m-brand { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: #fff; }
-            .m-brand-logo { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: #fff; flex-shrink: 0; display: flex; }
-            .m-brand-logo img { width: 100%; height: 100%; object-fit: contain; }
+            .m-brand-logo { flex-shrink: 0; display: flex; align-items: center; }
+            .m-brand-logo img { height: 40px; width: auto; max-width: 110px; object-fit: contain; border-radius: 8px; }
             .m-brand-name { font-family: var(--font-heading); font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .m-close {
                 width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0;
@@ -961,7 +938,16 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             transition: background .2s, color .2s, transform .2s; }
         .footer-social-link:hover { background: #fff; color: var(--brand); transform: translateY(-2px); }
         @media (max-width: 640px) { .footer-social { justify-content: center; width: 100%; } }
+        /* ফুটারের লিংক কলাম */
+        .footer-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 40px; margin-top: 30px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.15); }
+        .footer-nav .footer-h { font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 12px; letter-spacing: .2px; }
+        .footer-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+        .footer-nav a { color: var(--footer-muted); text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: color .2s, transform .2s; }
+        .footer-nav a i { font-size: 11px; opacity: .6; }
+        .footer-nav a:hover { color: #fff; transform: translateX(2px); }
+        @media (max-width: 640px) { .footer-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; } .footer-nav > div:first-child { grid-column: 1 / -1; } }
 </style>
+    <?= blue_tick_css() ?>
 </head>
 <body>
     <?php if (session_get('UserName') === null): ?><?= csrf_field() ?><?php endif; ?>
@@ -978,37 +964,43 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                 <!-- ✅ Logo + Site Name (Dynamic) -->
                 <div class="flex-shrink-0">
-                    <a href="/" class="flex items-center gap-2.5">
+                    <a href="/" class="flex items-center" aria-label="<?= e($safeSiteName) ?> — Home" title="<?= e($safeSiteName) ?>">
                         <!-- Logo Box -->
-                        <div class="brand-logo-box"
-                             style="width:<?= e($safeLogoSize) ?>px !important; height:<?= e($safeLogoSize) ?>px !important; min-width:<?= e($safeLogoSize) ?>px !important; max-width:<?= e($safeLogoSize) ?>px !important; min-height:<?= e($safeLogoSize) ?>px !important; max-height:<?= e($safeLogoSize) ?>px !important; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <img src="<?= e($navbarLogo) ?>"
-                                 alt="<?= e($safeSiteName) ?> logo"
-                                 style="width:100% !important; height:100% !important; max-width:100% !important; max-height:100% !important; object-fit:contain !important; display:block;" />
-                        </div>
+                        <span class="brand-logo-box"><img src="<?= e($navbarLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
 
-                        <span class="brand-site-name hidden sm:inline font-serif" style="font-size:16px;">
-                            <?= e($safeSiteName) ?>
-                        </span>
                     </a>
                 </div>
 
-                <!-- Desktop Menu -->
-                <div class="hidden xl:flex items-center gap-5 2xl:gap-8">
-                    <a href="/" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-house me-1" style="font-size:12px;"></i>Home
+                <!-- Desktop Menu (যে পেজে আছে সেটা হাইলাইট) -->
+                <?php
+                $navPath = strtolower(rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/')) ?: '/';
+                $navOn = function (string $h) use ($navPath): bool {
+                    $h = strtolower($h);
+                    if ($h === '/') return in_array($navPath, ['/', '/home', '/home/index'], true);
+                    return $navPath === $h || str_starts_with($navPath, $h . '/');
+                };
+                ?>
+                <div class="hidden xl:flex items-center gap-1 2xl:gap-3">
+                    <a href="/" class="nav-desktop-link<?= $navOn('/') ? ' active' : '' ?>"<?= $navOn('/') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-house"></i>Home
                     </a>
-                    <a href="/FindTutor" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-chalkboard-user me-1" style="font-size:12px;"></i>Find Tutor
+                    <a href="/FindTutor" class="nav-desktop-link<?= $navOn('/FindTutor') ? ' active' : '' ?>"<?= $navOn('/FindTutor') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-chalkboard-user"></i>Find Tutor
                     </a>
-                    <a href="/Tuition/Circular" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-clipboard-list me-1" style="font-size:12px;"></i>Tuition Circular
+                    <a href="/Categories" class="nav-desktop-link<?= $navOn('/Categories') ? ' active' : '' ?>"<?= $navOn('/Categories') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-layer-group"></i>Categories
                     </a>
-                    <a href="/Notice" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-bullhorn me-1" style="font-size:12px;"></i>Notice
+                    <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-clipboard-list"></i>Tuition Circular
                     </a>
-                    <a href="/Helpdesk" class="nav-desktop-link text-sm font-medium transition hover:opacity-70" style="color:var(--nav-text);">
-                        <i class="fas fa-headset me-1" style="font-size:12px;"></i>Helpdesk
+                    <a href="/Notice" class="nav-desktop-link<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-bullhorn"></i>Notice
+                    </a>
+                    <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-headset"></i>Helpdesk
+                    </a>
+                    <a href="/Package" class="nav-desktop-link<?= $navOn('/Package') || $navOn('/Payment') ? ' active' : '' ?>"<?= $navOn('/Package') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-tags"></i>Package
                     </a>
                 </div>
 
@@ -1082,6 +1074,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     </a>
                                 </li>
                                 <?php if (!$isAdmin): ?>
+                                    <li>
+                                        <a class="dropdown-item" href="/Payment/My">
+                                            <i class="fas fa-receipt"></i> আমার পেমেন্ট
+                                        </a>
+                                    </li>
                                     <li>
                                         <a class="dropdown-item" href="/Friends">
                                             <i class="fas fa-user-group"></i> Friends
@@ -1195,9 +1192,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <nav class="m-nav">
                 <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span>Home</span></a>
                 <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor</span></a>
+                <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
                 <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                 <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span>Helpdesk</span></a>
+                <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
             </nav>
 
             <?php if ($mLoggedIn): ?>
@@ -1252,12 +1251,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                     <div class="flex items-start gap-2.5 text-center sm:text-left">
                         <!-- ✅ Footer Logo (Dynamic) -->
-                        <div class="footer-brand-logo-box"
-                             style="width:<?= e($safeLogoSize) ?>px !important; height:<?= e($safeLogoSize) ?>px !important; min-width:<?= e($safeLogoSize) ?>px !important; max-width:<?= e($safeLogoSize) ?>px !important; min-height:<?= e($safeLogoSize) ?>px !important; max-height:<?= e($safeLogoSize) ?>px !important; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <img src="<?= e($footerLogo) ?>"
-                                 alt="<?= e($safeSiteName) ?> logo"
-                                 style="width:100% !important; height:100% !important; max-width:100% !important; max-height:100% !important; object-fit:contain !important; display:block;" />
-                        </div>
+                        <span class="footer-brand-logo-box"><img src="<?= e($footerLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
 
                         <div>
                             <p class="font-serif text-base sm:text-lg font-bold tracking-wide" style="color:#FFFFFF;">
@@ -1283,8 +1277,30 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         </div>
                     </div>
                     <?php endif; ?>
-                    </div>
                 </div>
+
+                <?php
+                    // ✅ ফুটারের দরকারি লিংক (শুধু যে পেজগুলো আসলেই আছে)
+                    $__postReq = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
+                    $__footNav = [
+                        'Find a Tutor' => [['Find Tutors', '/FindTutor'], ['Mathematics Tutors', '/FindTutor?subject=mathematics'], ['English Tutors', '/FindTutor?subject=english'],
+                                           ['SSC Tutors', '/FindTutor?class=ssc'], ['HSC Tutors', '/FindTutor?class=hsc']],
+                        'Tuition' => [['Tuition Circular', '/Tuition/Circular'], ['Post Tuition Requirement', $__postReq], ['Become a Tutor', '/Teacher/RequestForm'], ['Packages', '/Package']],
+                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], (function_exists('home_faqs') && home_faqs()) ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
+                    ];
+                ?>
+                <nav class="footer-nav" aria-label="Footer">
+                    <?php foreach ($__footNav as $__h => $__links): ?>
+                        <div>
+                            <p class="footer-h"><?= e($__h) ?></p>
+                            <ul>
+                                <?php foreach ($__links as [$__t, $__u]): ?>
+                                    <li><a href="<?= e($__u) ?>"><i class="fas fa-chevron-right"></i><?= e($__t) ?></a></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endforeach; ?>
+                </nav>
 
                 <div class="border-t border-white/15 mt-8 pt-6 text-center">
                     <p class="text-xs sm:text-sm" style="color:var(--footer-muted);">

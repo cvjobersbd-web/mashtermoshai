@@ -117,7 +117,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
 
                 <div class="pf-actions">
                     <?php if ($isOwner): ?>
-                        <a href="/Profile?section=basic" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
+                        <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
                     <?php elseif (!$isAdminViewer): ?>
                         <div class="fr-actions" data-uid="<?= (int)$u->Id ?>" data-rel="<?= e($rel) ?>"><?= friend_actions_html((int)$u->Id, $rel) ?></div>
                         <?php if ($isTeacher): ?>
@@ -135,10 +135,18 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             <div class="pf-nav-col">
                 <nav class="pf-card pf-nav" aria-label="Profile sections">
                     <?php foreach ($nav as [$k, $label, $icon]): ?>
+                        <?php if ($k === 'settings' && $isOwner && !$isTeacher):
+                            $bts = $Model->TeacherStatus; ?>
+                            <a href="?tab=profile#ab-tutor" data-ab-go="tutor" class="pf-become<?= $bts === 'Pending' ? ' pending' : '' ?>">
+                                <i class="fas fa-chalkboard-user"></i> <?= $bts === 'Pending' ? 'আবেদন যাচাই হচ্ছে' : 'Become a Tutor' ?>
+                                <span class="pf-become-tag"><?= $bts === 'Pending' ? '<i class="fas fa-hourglass-half"></i>' : ($bts === 'Rejected' ? 'Retry' : 'Apply') ?></span>
+                            </a>
+                        <?php endif; ?>
                         <a href="?tab=<?= $k ?>" data-tab="<?= $k ?>" class="<?= $tab === $k ? 'active' : '' ?>"><i class="fas <?= $icon ?>"></i> <?= e($label) ?>
                             <?php if ($k === 'saved' && $Model->SavedItems): ?><span class="pf-n" data-saved-count><?= count($saved) ?></span><?php endif; ?>
                             <?php if ($k === 'friends' && $Model->FriendCount): ?><span class="pf-n"><?= (int)$Model->FriendCount ?></span><?php endif; ?>
                         </a>
+                        <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
                 </nav>
                 <?php $promo = profile_promo(); if ($promo['pp_enabled'] !== '0' && !is_blank($promo['pp_image'])):
@@ -329,7 +337,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                 <!-- ======================= PROFILE (About) ======================= -->
                 <section class="pf-sec <?= $tab === 'profile' ? 'active' : '' ?>" id="sec-profile">
                     <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখে।' : 'ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখতে পারেন।' ?></p></div>
-                        <?php if ($isOwner): ?><a href="/Profile?section=basic" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
+                        <?php if ($isOwner): ?><a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
                     <?php partial('Profile/_ShowAbout', ['u' => $u, 'isOwner' => $isOwner, 'isTeacher' => $isTeacher, 'ti' => $ti, 'canPrivate' => $canPrivate, 'Model' => $Model]); ?>
                 </section>
 
@@ -498,11 +506,11 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                             <h4><i class="fas fa-user-pen"></i> Profile</h4><p>অন্যরা আপনার প্রোফাইলে যা দেখে।</p>
                             <div class="set-links">
                                 <button type="button" data-intro="all"><i class="fas fa-quote-left"></i> Bio, শহর, বিষয় ও উক্তি <i class="fas fa-chevron-right chev"></i></button>
-                                <a href="/Profile?section=basic"><i class="fas fa-id-card"></i> নাম, ইমেইল, মোবাইল <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=education"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=address"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=links"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
-                                <?php if (!$isTeacher): ?><a href="/Profile?section=become-tutor"><i class="fas fa-chalkboard-user"></i> Become a Tutor <i class="fas fa-chevron-right chev"></i></a><?php endif; ?>
+                                <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1"><i class="fas fa-id-card"></i> নাম, ইমেইল, মোবাইল <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-education" data-ab-go="education" data-ab-open="1"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-address" data-ab-go="address" data-ab-open="1"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-links" data-ab-go="links" data-ab-open="1"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
+                                <?php if (!$isTeacher): ?><a href="?tab=profile#ab-tutor" data-ab-go="tutor"><i class="fas fa-chalkboard-user"></i> Become a Tutor <i class="fas fa-chevron-right chev"></i></a><?php endif; ?>
                                 <a href="/Friends"><i class="fas fa-user-group"></i> Friends & Requests <i class="fas fa-chevron-right chev"></i></a>
                             </div>
                         </div>
@@ -534,7 +542,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             <div class="pf-f"><label for="inBio">Bio <small>— নামের নিচে দেখাবে</small></label>
                 <textarea id="inBio" maxlength="160" rows="2" placeholder="যেমন: শিখছি, এগিয়ে যাচ্ছি, আরও ভালো একটা আগামির জন্য।"><?= e($intro->Bio) ?></textarea><div class="cnt"><span id="inBioN"><?= mb_strlen($intro->Bio) ?></span>/160</div></div>
             <div class="pf-f"><label for="inCity">শহর / জেলা</label><input type="text" id="inCity" maxlength="80" value="<?= e($intro->City) ?>" placeholder="যেমন: Chattogram" list="inCityList" />
-                <datalist id="inCityList"><?php foreach (['Dhaka', 'Chattogram', 'Sylhet', 'Rajshahi', 'Khulna', 'Barishal', 'Rangpur', 'Mymensingh', 'Cumilla', 'Gazipur', 'Narayanganj', 'Bogura', "Cox's Bazar"] as $c): ?><option value="<?= e($c) ?>"><?php endforeach; ?></datalist></div>
+                <datalist id="inCityList"><?= location_datalist_options() ?></datalist></div>
             <div class="pf-f"><label>Interested Subjects <small>— Enter বা কমা দিয়ে আলাদা করুন</small></label>
                 <div class="sj-box" id="sjBox"><input type="text" id="sjIn" maxlength="30" placeholder="Mathematics, Physics..." list="pmSubjList" /></div></div>
             <div class="pf-f"><label for="inQuote">প্রিয় উক্তি</label><input type="text" id="inQuote" maxlength="160" value="<?= e($intro->Quote) ?>" placeholder="Learning today for a brighter tomorrow." /></div>

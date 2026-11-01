@@ -145,7 +145,7 @@ $mine = $post->MyReaction;
 
     <div class="pc-stats">
         <button type="button" class="pc-rx-sum" data-pc="reactors" <?= $post->ReactionTotal ? '' : 'hidden' ?>>
-            <span class="pc-rx-icons"><?php foreach (array_slice(array_keys($post->Reactions), 0, 3) as $k): ?><span><?= $rx[$k][0] ?></span><?php endforeach; ?></span>
+            <span class="pc-rx-icons"><span><?= like_badge_html() ?></span></span>
             <span class="pc-rx-n"><?= (int)$post->ReactionTotal ?></span>
         </button>
         <span class="pc-stat-right">
@@ -157,9 +157,9 @@ $mine = $post->MyReaction;
     </div>
 
     <div class="pc-actions">
-        <button type="button" class="pc-act pc-like<?= $mine ? ' on rx-' . e($mine) : '' ?>" data-rx-target="post" data-id="<?= $post->Id ?>" data-mine="<?= e((string)$mine) ?>">
-            <span class="pc-like-ico"><?= $mine ? $rx[$mine][0] : '<i class="far fa-thumbs-up"></i>' ?></span>
-            <span class="pc-like-lbl"><?= $mine ? $rx[$mine][1] : 'Like' ?></span>
+        <button type="button" class="pc-act pc-like<?= $mine ? ' on rx-like' : '' ?>" data-rx-target="post" data-id="<?= $post->Id ?>" data-mine="<?= $mine ? 'like' : '' ?>" aria-pressed="<?= $mine ? 'true' : 'false' ?>">
+            <span class="pc-like-ico"><?= like_icon_html((bool)$mine) ?></span>
+            <span class="pc-like-lbl"><?= $mine ? 'Liked' : 'Like' ?></span>
         </button>
         <button type="button" class="pc-act" data-pc="comment"><i class="far fa-comment"></i> <?= $ptype === 'question' ? 'Answer' : 'Comment' ?></button>
         <?php if ($canShare): ?>

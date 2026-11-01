@@ -43,8 +43,9 @@
         if (!a) return;
         e.preventDefault(); showTab(a.getAttribute('data-tab'), true);
     });
+    var initHash = location.hash, initEdit = new URLSearchParams(location.search).get('edit');
     showTab(<?= js($tab) ?>, false);
-    if (location.hash === '#ab-password') showTab('settings');
+    if (initHash === '#ab-password') showTab('settings');
 
     // ===== নতুন পোস্ট =====
     var feed = $('#psFeed'), empty = $('#psEmpty'), countEl = $('#psPostCount');
@@ -267,6 +268,64 @@
         } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
         finally { feed.style.opacity = ''; }
     });
+
+    // ===== My Profile: বাম মেনু থেকে সেকশনে যাওয়া + সেখানেই এডিট =====
+    function markSub(k) { $$('.pf-sub a').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-ab-go') === k); }); }
+    function closeAb(c) {
+        c.classList.remove('editing');
+        var f = $('.ab-form', c); if (f) { f.reset(); var m = $('.ab-msg', f); if (m) m.remove(); }
+    }
+    function openAb(c) {
+        $$('.ab-card.editing').forEach(function (x) { if (x !== c) closeAb(x); });
+        c.classList.add('editing');
+        var first = $('.ab-form input, .ab-form select', c);
+        if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 80);
+    }
+    function goAb(k, open) {
+        if (k === 'password') {
+            showTab('settings'); markSub(k);
+            var pwc = $('#ab-password');
+            if (pwc) setTimeout(function () { pwc.scrollIntoView({ behavior: 'smooth', block: 'start' }); var i = $('#pwCur'); if (i) i.focus({ preventScroll: true }); }, 30);
+            return;
+        }
+        showTab('profile'); markSub(k);
+        var c = document.getElementById('ab-' + k); if (!c) return;
+        if (open && $('.ab-form', c)) openAb(c);
+        setTimeout(function () {
+            c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash');
+        }, 30);
+    }
+    document.addEventListener('click', function (e) {
+        var g = e.target.closest('[data-ab-go]');
+        if (g) { e.preventDefault(); goAb(g.getAttribute('data-ab-go'), g.hasAttribute('data-ab-open')); return; }
+        var ed = e.target.closest('[data-ab-edit]');
+        if (ed) { openAb(ed.closest('.ab-card')); markSub(ed.getAttribute('data-ab-edit')); return; }
+        var cn = e.target.closest('[data-ab-cancel]');
+        if (cn) closeAb(cn.closest('.ab-card'));
+    });
+    document.addEventListener('submit', async function (e) {
+        var f = e.target.closest('form[data-ab-form]'); if (!f) return;
+        e.preventDefault();
+        var btn = $('button[type=submit]', f), old = btn.innerHTML, m = $('.ab-msg', f);
+        if (m) m.remove();
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        var fd = new FormData(f); fd.append('__RequestVerificationToken', tokenVal());
+        try {
+            var d = await (await fetch(f.getAttribute('data-ab-form'), { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            if (!d.success) {
+                m = document.createElement('div'); m.className = 'ab-msg'; m.innerHTML = '<i class="fas fa-circle-exclamation"></i> ';
+                m.appendChild(document.createTextNode(d.message || 'Failed')); $('.ab-factions', f).before(m);
+                return;
+            }
+            say(d.message);
+            var u = new URL(location.href); u.searchParams.set('tab', 'profile'); u.searchParams.delete('edit'); u.searchParams.set('_r', Date.now().toString(36));
+            setTimeout(function () { location.replace(u.pathname + u.search + '#ab-' + f.getAttribute('data-sec')); }, 350);
+        } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }
+        finally { btn.disabled = false; btn.innerHTML = old; }
+    });
+    if (initEdit) goAb(initEdit, true);
+    else if (/^#ab-[a-z]+$/.test(initHash) && initHash !== '#ab-password') goAb(initHash.slice(4), false);
 
     window.PF = { $: $, $$: $$, postForm: postForm, say: say, hardReload: hardReload, openOv: openOv, closeOv: closeOv,
         closeMenus: closeMenus, showTab: showTab, lightbox: lightbox, OWNER: OWNER, IS_OWNER: IS_OWNER };

@@ -18,6 +18,9 @@ $tab = $Model->Tab;
 $friends = $Model->Friends;
 $intro = $Model->Intro;
 $tIntro = $Model->TIntro;
+$prefs = db()->GetTeachPrefs((int)$u->Id);
+$modeLabel = ['Online' => 'Online', 'Home' => 'Home Visit', 'Both' => 'Online, Home Visit'][$prefs->TeachMode] ?? '';
+$feeText = $prefs->FeeMin ? '৳' . number_format($prefs->FeeMin) . ($prefs->FeeMax ? '-' . number_format($prefs->FeeMax) : '+') . ' / month' : '';
 $saved = $Model->SavedItems;
 $cover = $Model->Extras->CoverImageUrl;
 $coverY = $Model->Extras->CoverPosY;
@@ -287,7 +290,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
 
                 <div class="pf-id">
                     <h1 class="pf-name"><?= e($name) ?>
-                        <i class="fas fa-circle-check" title="Verified Teacher"></i>
+                        <?php if (is_premium_teacher($u->Id)): ?><?= blue_tick_html() ?><?php else: ?><i class="fas fa-circle-check" title="Verified Teacher"></i><?php endif; ?>
                         <?php if ($Model->IsSuspended): ?><span class="pf-warn"><i class="fas fa-ban"></i> Suspended</span><?php endif; ?>
                     </h1>
                     <?php if ($headline !== ''): ?><div class="tp-headline" id="tpHeadline"><?= e($headline) ?></div><?php endif; ?>
@@ -310,7 +313,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                     </div>
                     <div class="pf-actions">
                         <?php if ($isOwner): ?>
-                            <a href="/Profile?section=basic" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
+                            <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
                         <?php elseif (!$isAdminViewer): ?>
                             <div class="fr-actions" data-uid="<?= (int)$u->Id ?>" data-rel="<?= e($rel) ?>"><?= friend_actions_html((int)$u->Id, $rel) ?></div>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
@@ -333,6 +336,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <?php if ($k === 'reviews' && $rs['count']): ?><span class="pf-n"><?= (int)$rs['count'] ?></span><?php endif; ?>
                             <?php if ($k === 'friends' && $Model->FriendCount): ?><span class="pf-n"><?= (int)$Model->FriendCount ?></span><?php endif; ?>
                         </a>
+                        <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
                 </nav>
                 <?php $tp = teacher_promo(); if ($tp['tp_enabled'] !== '0'):
@@ -538,7 +542,8 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                         <?php $inst = !is_blank($ti->Institution ?? null) ? $ti->Institution : $u->InstitutionName; if (!is_blank($inst)): ?><li><i class="fas fa-building-columns"></i> <?= e($inst) ?></li><?php endif; ?>
                                         <?php if ($location !== ''): ?><li><i class="fas fa-location-dot"></i> <?= e($location) ?></li><?php endif; ?>
                                         <?php if ($Model->ExpText !== ''): ?><li><i class="fas fa-briefcase"></i> <?= e($Model->ExpText) ?> experience</li><?php endif; ?>
-                                        <?php if (!is_blank($ti->HourlyRate ?? null)): ?><li><i class="fas fa-money-bill-wave"></i> Salary: <?= e(preg_match('/^\d+$/', trim((string)$ti->HourlyRate)) ? '৳' . number_format((int)$ti->HourlyRate) : $ti->HourlyRate) ?></li><?php endif; ?>
+                                        <?php if ($modeLabel !== ''): ?><li><i class="fas fa-laptop-house"></i> <?= e($modeLabel) ?></li><?php endif; ?>
+                                        <?php if ($feeText !== ''): ?><li><i class="fas fa-bangladeshi-taka-sign"></i> <?= e($feeText) ?></li><?php elseif (!is_blank($ti->HourlyRate ?? null)): ?><li><i class="fas fa-money-bill-wave"></i> Salary: <?= e(preg_match('/^\d+$/', trim((string)$ti->HourlyRate)) ? '৳' . number_format((int)$ti->HourlyRate) : $ti->HourlyRate) ?></li><?php endif; ?>
                                         <li><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></li>
                                     </ul>
                                     <?php if ($intro->Quote !== ''): ?><div class="am-quote"><?= e($intro->Quote) ?></div><?php endif; ?>
@@ -556,7 +561,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                 <!-- ======================= PROFILE (About) ======================= -->
                 <section class="pf-sec <?= $tab === 'profile' ? 'active' : '' ?>" id="sec-profile">
                     <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখে।' : 'ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখতে পারেন।' ?></p></div>
-                        <?php if ($isOwner): ?><a href="/Profile?section=basic" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
+                        <?php if ($isOwner): ?><a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
                     <?php partial('Profile/_ShowAbout', ['u' => $u, 'isOwner' => $isOwner, 'isTeacher' => true, 'ti' => $ti, 'canPrivate' => $canPrivate, 'Model' => $Model]); ?>
                 </section>
 
@@ -864,10 +869,10 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <h4><i class="fas fa-user-pen"></i> Profile</h4><p>অন্যরা আপনার প্রোফাইলে যা দেখে।</p>
                             <div class="set-links">
                                 <button type="button" data-intro="all"><i class="fas fa-quote-left"></i> Headline, Bio, শহর, বিষয় ও ক্লাস <i class="fas fa-chevron-right chev"></i></button>
-                                <a href="/Profile?section=basic"><i class="fas fa-id-card"></i> নাম, ইমেইল, মোবাইল <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=education"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=address"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Profile?section=links"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1"><i class="fas fa-id-card"></i> নাম, ইমেইল, মোবাইল <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-education" data-ab-go="education" data-ab-open="1"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-address" data-ab-go="address" data-ab-open="1"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="?tab=profile#ab-links" data-ab-go="links" data-ab-open="1"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="/Teacher/TeacherDashboard"><i class="fas fa-gauge"></i> Teacher Dashboard <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="/Friends"><i class="fas fa-user-group"></i> Friends & Requests <i class="fas fa-chevron-right chev"></i></a>
                             </div>
@@ -901,12 +906,21 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
             <div class="pf-f"><label for="inBio">Bio</label>
                 <textarea id="inBio" maxlength="160" rows="2" placeholder="যেমন: Helping students understand, not just memorize."><?= e($intro->Bio) ?></textarea><div class="cnt"><span id="inBioN"><?= mb_strlen($intro->Bio) ?></span>/160</div></div>
             <div class="pf-f"><label for="inCity">শহর / জেলা</label><input type="text" id="inCity" maxlength="80" value="<?= e($intro->City) ?>" placeholder="যেমন: Dhaka" list="inCityList" />
-                <datalist id="inCityList"><?php foreach (['Dhaka', 'Chattogram', 'Sylhet', 'Rajshahi', 'Khulna', 'Barishal', 'Rangpur', 'Mymensingh', 'Cumilla', 'Gazipur', 'Narayanganj', 'Bogura', "Cox's Bazar"] as $c): ?><option value="<?= e($c) ?>"><?php endforeach; ?></datalist></div>
+                <datalist id="inCityList"><?= location_datalist_options() ?></datalist></div>
             <div class="pf-f"><label>যে বিষয়গুলো পড়ান <small>— Enter বা কমা দিয়ে আলাদা করুন</small></label>
                 <div class="sj-box" id="sjBox" data-max="12"><input type="text" id="sjIn" maxlength="30" placeholder="Mathematics, Physics..." list="pmSubjList" /></div></div>
             <div class="pf-f"><label>ক্লাস / লেভেল</label>
-                <div class="pf-quick" id="lvQuick" style="margin-bottom:8px;"><?php foreach (['Class 1-5', 'Class 6-8', 'Class 9-10', 'SSC', 'HSC', 'Admission', 'O Level', 'A Level', 'University'] as $q): ?><button type="button" data-lv="<?= e($q) ?>"><?= e($q) ?></button><?php endforeach; ?></div>
+                <div class="pf-quick" id="lvQuick" style="margin-bottom:8px;"><?php foreach (['Class 1-5', 'Class 6-8', 'Class 9-10', 'SSC', 'HSC', 'Admission', 'O Level', 'A Level', 'University', 'Bangla Medium', 'English Medium'] as $q): ?><button type="button" data-lv="<?= e($q) ?>"><?= e($q) ?></button><?php endforeach; ?></div>
                 <div class="sj-box" id="lvBox" data-max="10"><input type="text" id="lvIn" maxlength="30" placeholder="SSC, HSC, Class 9-10..." /></div></div>
+            <div class="pf-2">
+                <div class="pf-f"><label for="inMode">কীভাবে পড়ান</label>
+                    <select id="inMode"><option value="">— বাছাই করুন —</option>
+                        <?php foreach (['Online' => 'Online', 'Home' => 'Home Visit (বাসায় গিয়ে)', 'Both' => 'Online + Home Visit'] as $k => $l): ?><option value="<?= $k ?>"<?= $prefs->TeachMode === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?>
+                    </select></div>
+                <div class="pf-f"><label>মাসিক বেতন (৳) <small>— Find Tutor পেজে দেখাবে</small></label>
+                    <div style="display:flex;gap:8px;"><input type="number" id="inFeeMin" min="0" max="1000000" placeholder="Min" value="<?= $prefs->FeeMin ?? '' ?>" style="width:100%;border:1.5px solid var(--pf-line);border-radius:10px;padding:10px 12px;font-size:15px;" />
+                    <input type="number" id="inFeeMax" min="0" max="1000000" placeholder="Max" value="<?= $prefs->FeeMax ?? '' ?>" style="width:100%;border:1.5px solid var(--pf-line);border-radius:10px;padding:10px 12px;font-size:15px;" /></div></div>
+            </div>
             <div class="pf-f"><label for="inQuote">প্রিয় উক্তি <small>(ঐচ্ছিক)</small></label><input type="text" id="inQuote" maxlength="160" value="<?= e($intro->Quote) ?>" placeholder="Education is the most powerful weapon..." /></div>
         </div>
         <div class="pf-modal-f"><button type="button" class="pf-btn" data-close>Cancel</button><button type="submit" class="pf-btn primary" id="introSave">Save</button></div>
@@ -1165,7 +1179,8 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
         var btn = $('#introSave'); btn.disabled = true;
         try {
             var d = await postForm('/Tutor/SaveIntro', { headline: $('#inHeadline').value, bio: $('#inBio').value, city: $('#inCity').value,
-                subjects: subj.list().join(','), levels: lv.list().join(','), quote: $('#inQuote').value });
+                subjects: subj.list().join(','), levels: lv.list().join(','), quote: $('#inQuote').value,
+                teachMode: $('#inMode').value, feeMin: $('#inFeeMin').value, feeMax: $('#inFeeMax').value });
             say(d.message, !d.success);
             if (d.success) { closeOv($('#introOv')); setTimeout(function () { hardReload(); }, 400); }
         } catch (err) { say('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।', true); }

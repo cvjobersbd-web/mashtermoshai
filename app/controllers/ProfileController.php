@@ -23,6 +23,15 @@ class ProfileController extends Controller
     /** GET /Profile/Index?section= */
     public function Index(): void
     {
+        // স্টুডেন্ট / টিচারের সব প্রোফাইল এডিট এখন প্রোফাইল পেজেই (My Profile) — আলাদা পেজে নয়
+        if (current_user_id() !== null && current_role() !== 'Admin') {
+            $sec = (string)input_str('section', '');
+            $sec = $sec === 'become-tutor' ? 'tutor' : $sec;
+            $q = ['tab' => 'profile'];
+            if (in_array($sec, ['basic', 'additional', 'address', 'education', 'links'], true)) $q['edit'] = $sec;
+            $hash = in_array($sec, ['basic', 'additional', 'address', 'education', 'links', 'tutor'], true) ? '#ab-' . $sec : '';
+            redirect('/Profile/Show?' . http_build_query($q) . $hash);
+        }
         $profile = $this->buildProfile();
         $this->view('Index', $profile, ['IsProfileComplete' => self::isProfileComplete($profile)]);
     }
@@ -221,63 +230,100 @@ class ProfileController extends Controller
         $this->redirectToAction('Index');
     }
 
+    /** এডিট শেষে: AJAX হলে JSON, না হলে আগের মতো রিডাইরেক্ট */
+    private function finishUpdate(string $section, bool $ok, string $msg): void
+    {
+        if (is_ajax()) json_response(['success' => $ok, 'message' => $msg]);
+        tempdata_set($ok ? 'Success' : 'Error', $msg);
+        if (current_role() === 'Admin') $this->redirectToAction('Index', null, ['section' => $section]);
+        redirect('/Profile/Show?tab=profile#ab-' . $section);
+    }
+
+    /** শুধু http(s) লিংক রাখা (javascript: ইত্যাদি বাদ) */
+    private function cleanUrl(string $field, string $label): ?string
+    {
+        $v = trim((string)input_str($field, ''));
+        if ($v === '') return null;
+        if (!preg_match('#^https?://[^\s<>"\']+$#i', $v) || mb_strlen($v) > 300) $this->finishUpdate('links', false, $label . ' লিংক https:// দিয়ে শুরু হতে হবে।');
+        return $v;
+    }
+
+    private function cleanStr(string $field, int $max): ?string
+    {
+        $v = trim(preg_replace('/\s+/u', ' ', (string)input_str($field, '')));
+        return $v === '' ? null : mb_substr($v, 0, $max);
+    }
+
     /** POST /Profile/UpdateBasic */
     public function UpdateBasic_POST(): void
     {
         $user = $this->requireUser();
-        $fullName = input_str('FullName');
-        $email = input_str('Email');
-        if (is_blank($fullName)) { tempdata_set('Error', 'Full Name is required.'); $this->redirectToAction('Index', null, ['section' => 'basic']); }
-        if (is_blank($email)) { tempdata_set('Error', 'Email is required.'); $this->redirectToAction('Index', null, ['section' => 'basic']); }
+        $fullName = trim(preg_replace('/\s+/u', ' ', (string)input_str('FullName', '')));
+        $email = trim((string)input_str('Email', ''));
+        $mobile = trim((string)input_str('MobileNumber', ''));
+        if ($fullName === '') $this->finishUpdate('basic', false, 'Full Name দিতে হবে।');
+        if (mb_strlen($fullName) > 100) $this->finishUpdate('basic', false, 'নাম খুব বড়।');
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) $this->finishUpdate('basic', false, 'সঠিক ইমেইল দিন।');
+        if (strcasecmp($email, (string)$user->Email) !== 0 && $this->db->EmailExists($email)) $this->finishUpdate('basic', false, 'এই ইমেইল দিয়ে আরেকটি অ্যাকাউন্ট আছে।');
+        if ($mobile !== '' && !preg_match('/^\+?[0-9 \-]{6,20}$/', $mobile)) $this->finishUpdate('basic', false, 'মোবাইল নম্বর সঠিক নয়।');
 
-        $user->FullName = trim($fullName);
-        $user->Email = trim($email);
-        $user->MobileNumber = input_str('MobileNumber');
-        if ($this->db->UpdateUserProfile($user)) {
+        $user->FullName = $fullName;
+        $user->Email = $email;
+        $user->MobileNumber = $mobile === '' ? null : $mobile;
+        $ok = $this->db->UpdateUserProfile($user);
+        if ($ok) {
             session_set('UserFullName', $user->FullName);
             session_set('UserEmail', $user->Email);
-            tempdata_set('Success', 'Basic information updated successfully!');
-        } else {
-            tempdata_set('Error', 'Failed to update profile.');
         }
-        $this->redirectToAction('Index', null, ['section' => 'basic']);
+        $this->finishUpdate('basic', $ok, $ok ? 'Basic Information আপডেট হয়েছে।' : 'আপডেট করা যায়নি। আবার চেষ্টা করুন।');
     }
 
     /** POST /Profile/UpdateAdditional */
     public function UpdateAdditional_POST(): void
     {
         $user = $this->requireUser();
-        foreach (['Gender', 'AgeRange', 'PrimaryDeviceType', 'YearsOfExperience', 'AreaType'] as $f) $user->$f = input_str($f);
-        if ($this->db->UpdateUserProfile($user)) tempdata_set('Success', 'Additional information updated successfully!');
-        $this->redirectToAction('Index', null, ['section' => 'additional']);
+        foreach (['Gender', 'AgeRange', 'PrimaryDeviceType', 'YearsOfExperience', 'AreaType'] as $f) $user->$f = $this->cleanStr($f, 30);
+        $ok = $this->db->UpdateUserProfile($user);
+        $this->finishUpdate('additional', $ok, $ok ? 'Additional Information আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 
     /** POST /Profile/UpdateAddress */
     public function UpdateAddress_POST(): void
     {
         $user = $this->requireUser();
-        foreach (['Country', 'StreetAddress', 'PermanentAddress'] as $f) $user->$f = input_str($f);
-        if ($this->db->UpdateUserProfile($user)) tempdata_set('Success', 'Address updated successfully!');
-        $this->redirectToAction('Index', null, ['section' => 'address']);
+        $user->Country = $this->cleanStr('Country', 60);
+        $user->StreetAddress = $this->cleanStr('StreetAddress', 200);
+        $user->PermanentAddress = $this->cleanStr('PermanentAddress', 200);
+        $ok = $this->db->UpdateUserProfile($user);
+        $this->finishUpdate('address', $ok, $ok ? 'Address আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 
     /** POST /Profile/UpdateEducation */
     public function UpdateEducation_POST(): void
     {
         $user = $this->requireUser();
-        foreach (['EducationLevel', 'CurrentStudyStatus', 'ExamDegreeTitle', 'InstitutionName', 'PassingYear'] as $f) $user->$f = input_str($f);
+        $user->EducationLevel = $this->cleanStr('EducationLevel', 40);
+        $user->CurrentStudyStatus = input_str('CurrentStudyStatus', 'No') === 'Yes' ? 'Yes' : 'No';
+        $user->ExamDegreeTitle = $this->cleanStr('ExamDegreeTitle', 120);
+        $user->InstitutionName = $this->cleanStr('InstitutionName', 150);
+        $year = $this->cleanStr('PassingYear', 10);
+        if ($year !== null && !preg_match('/^(19|20)\d\d$/', $year)) $this->finishUpdate('education', false, 'Passing Year সঠিক নয় (যেমন 2020)।');
+        $user->PassingYear = $year;
         $user->IsCSEStudent = input_bool('IsCSEStudent');
-        if ($this->db->UpdateUserProfile($user)) tempdata_set('Success', 'Education information updated successfully!');
-        $this->redirectToAction('Index', null, ['section' => 'education']);
+        $ok = $this->db->UpdateUserProfile($user);
+        $this->finishUpdate('education', $ok, $ok ? 'Education আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 
     /** POST /Profile/UpdateLinks */
     public function UpdateLinks_POST(): void
     {
         $user = $this->requireUser();
-        foreach (['CvLink', 'GithubProfile', 'PortfolioLink', 'LinkedInProfile'] as $f) $user->$f = input_str($f);
-        if ($this->db->UpdateUserProfile($user)) tempdata_set('Success', 'Important links updated successfully!');
-        $this->redirectToAction('Index', null, ['section' => 'links']);
+        $user->CvLink = $this->cleanUrl('CvLink', 'CV');
+        $user->GithubProfile = $this->cleanUrl('GithubProfile', 'GitHub');
+        $user->PortfolioLink = $this->cleanUrl('PortfolioLink', 'Portfolio');
+        $user->LinkedInProfile = $this->cleanUrl('LinkedInProfile', 'LinkedIn');
+        $ok = $this->db->UpdateUserProfile($user);
+        $this->finishUpdate('links', $ok, $ok ? 'Important Links আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 
     /** POST /Profile/UploadProfileImage */

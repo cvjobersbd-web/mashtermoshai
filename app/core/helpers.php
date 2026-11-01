@@ -170,15 +170,23 @@ function is_blank($v): bool { return $v === null || trim((string)$v) === ''; }
 /** পোস্ট/কমেন্টের রিয়েকশন: key => [ইমোজি, লেবেল, রঙ] */
 function reaction_meta(): array
 {
-    return [
-        'like'  => ['👍', 'Like', '#1877F2'],
-        'love'  => ['❤️', 'Love', '#E41E3F'],
-        'care'  => ['🥰', 'Care', '#F7B125'],
-        'haha'  => ['😆', 'Haha', '#F7B125'],
-        'wow'   => ['😮', 'Wow', '#F7B125'],
-        'sad'   => ['😢', 'Sad', '#F7B125'],
-        'angry' => ['😡', 'Angry', '#E9710F'],
-    ];
+    // শুধু Like (অন্য কোনো রিয়েকশন নেই)
+    return ['like' => [like_badge_html(), 'Like', '#0A66C2']];
+}
+
+/** Like বাটনের আইকন (নিজস্ব SVG — ইমোজি নয়) */
+function like_icon_html(bool $on): string
+{
+    $path = $on
+        ? 'M2 21h3.2c.44 0 .8-.36.8-.8V9.8c0-.44-.36-.8-.8-.8H2v12zm20.7-9.8c0-1.1-.9-2-2-2h-5.6l.86-4.15c.07-.33-.01-.68-.22-.95L14.6 2.6 8.5 8.7c-.32.32-.5.75-.5 1.2V19c0 1.1.9 2 2 2h8.2c.8 0 1.52-.48 1.84-1.21l2.48-5.8c.12-.27.18-.56.18-.86V11.2z'
+        : 'M13.11 5.72l-.57 2.89c-.12.59.04 1.2.42 1.66.38.46.94.73 1.54.73H20v1.08L17.43 18H9.34c-.18 0-.34-.16-.34-.34V9.82l4.11-4.1M14 2L7.59 8.41C7.21 8.79 7 9.3 7 9.83v7.83C7 18.95 8.05 20 9.34 20h8.1c.71 0 1.36-.37 1.72-.97l2.67-6.15c.11-.25.17-.52.17-.8V11c0-1.1-.9-2-2-2h-5.5l.92-4.65c.05-.22.02-.46-.08-.66-.23-.45-.52-.86-.88-1.22L14 2zM4 9H2v11h2c.55 0 1-.45 1-1v-9c0-.55-.45-1-1-1z';
+    return '<svg class="lk-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' . $path . '"/></svg>';
+}
+
+/** লাইক সংখ্যার পাশে ছোট গোল ব্যাজ */
+function like_badge_html(): string
+{
+    return '<i class="lk-badge" aria-hidden="true">' . like_icon_html(true) . '</i>';
 }
 
 /** পোস্টের প্রাইভেসি: key => [আইকন, লেবেল, বাংলা ব্যাখ্যা] */
@@ -579,6 +587,58 @@ function profile_promo(): array
     return $c;
 }
 
+/** Tuition Circular পেজের উপরের ব্যানার ছবি (অ্যাডমিন সেটিংস থেকে বদলানো যায়) */
+function circular_banner_defaults(): array
+{
+    return [
+        'tc_banner'         => 'https://i.ibb.co.com/JRf4zfwV/Tuition-Circular-Find-Your-Perfect-Tutor.png',
+        'tc_banner_enabled' => '1',
+    ];
+}
+
+function circular_banner(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(circular_banner_defaults());
+    return $c;
+}
+
+/** Find Tutor পেজের উপরের ব্যানার ছবি (অ্যাডমিন সেটিংস থেকে বদলানো যায়) */
+function package_banner_defaults(): array
+{
+    return [
+        'pk_banner'         => '',
+        'pk_banner_enabled' => '0',
+        'pk_banner_text'    => '0',
+    ];
+}
+function package_banner(): array
+{
+    static $c = null;
+    if ($c === null) {
+        try {
+            $c = db()->GetSiteContent(package_banner_defaults() + ['pk_noimg_v1' => '']);
+            // অ্যাডমিনের কথামতো: প্যাকেজ পেজে ছবি নয়, শুধু লেখা (একবারই বন্ধ করা হয়; পরে অ্যাডমিন চাইলে আবার চালু করতে পারে)
+            if ($c['pk_noimg_v1'] === '') { db()->SaveSiteContent(['pk_banner_enabled' => '0', 'pk_noimg_v1' => '1']); $c['pk_banner_enabled'] = '0'; }
+        } catch (Throwable $e) { $c = package_banner_defaults(); }
+    }
+    return $c;
+}
+function findtutor_banner_defaults(): array
+{
+    return [
+        'ft_banner'         => 'https://i.ibb.co.com/TDB39bQ8/Find-Your-Perfect-Tutor-Banner.png',
+        'ft_banner_enabled' => '1',
+    ];
+}
+
+function findtutor_banner(): array
+{
+    static $c = null;
+    if ($c === null) $c = db()->GetSiteContent(findtutor_banner_defaults());
+    return $c;
+}
+
 /** টিচার প্রোফাইলের বাম পাশের প্রোমো (ছবি খালি = ডিজাইন করা কার্ড "আরও বেশি শিক্ষার্থীর কাছে পৌঁছান") */
 function teacher_promo_defaults(): array
 {
@@ -736,3 +796,585 @@ function suspension_info(Obj $s): array
     ];
 }
 
+/**
+ * Tuition Circular / Find Tutor কমেন্ট এডিট-ডিলিট (POST: commentId, content)।
+ * এডিট: শুধু যে লিখেছে। ডিলিট: যে লিখেছে, পোস্টের মালিক, অথবা অ্যাডমিন।
+ */
+function feed_comment_action(string $kind, string $action): void
+{
+    $me = current_user_id();
+    if ($me === null) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+    $c = db()->GetFeedComment($kind, (int)(input_int('commentId', 0) ?? 0));
+    if (!$c) json_response(['success' => false, 'message' => 'কমেন্টটি পাওয়া যায়নি — হয়তো আগেই মুছে গেছে।']);
+    $isAdmin = current_role() === 'Admin';
+    if ($action === 'edit') {
+        if ($c->UserId !== $me) json_response(['success' => false, 'message' => 'শুধু নিজের কমেন্ট এডিট করা যায়।']);
+        $content = trim(str_replace("\r", '', (string)input_str('content', '')));
+        if ($content === '' || preg_replace('/^@\[[^\]]+\]\s*/u', '', $content) === '') json_response(['success' => false, 'message' => 'কমেন্ট খালি রাখা যাবে না।']);
+        if (mb_strlen($content) > 2000) json_response(['success' => false, 'message' => 'কমেন্ট সর্বোচ্চ ২০০০ অক্ষর।']);
+        if (!db()->UpdateFeedComment($kind, $c->Id, $content)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি।']);
+        json_response(['success' => true, 'content' => $content, 'message' => 'কমেন্ট আপডেট হয়েছে।']);
+    }
+    if ($c->UserId !== $me && $c->PostOwnerId !== $me && !$isAdmin) json_response(['success' => false, 'message' => 'এই কমেন্ট মোছার অনুমতি নেই।']);
+    $ids = db()->DeleteFeedCommentTree($kind, $c->Id);
+    if (!$ids) json_response(['success' => false, 'message' => 'মোছা যায়নি। আবার চেষ্টা করুন।']);
+    json_response(['success' => true, 'ids' => $ids, 'message' => 'কমেন্ট মুছে ফেলা হয়েছে।']);
+}
+
+/** কমেন্টের নিচে Edit / Delete বাটন (যার যেটা অনুমতি আছে) */
+function feed_comment_buttons(Obj $c, int $postOwnerId): string
+{
+    $me = current_user_id();
+    if ($me === null) return '';
+    $h = '';
+    if ((int)$c->UserId === $me) $h .= '<button type="button" data-cm-edit>Edit</button>';
+    if ((int)$c->UserId === $me || $postOwnerId === $me || current_role() === 'Admin') $h .= '<button type="button" data-cm-del class="fbc-del">Delete</button>';
+    return $h;
+}
+
+
+// ============================================================
+// টিউশনের অপশন: লোকেশন (জেলা → এলাকা), ক্লাস, বিষয়
+// অ্যাডমিন সেটিংস থেকে যোগ / বাদ দেওয়া যায় (SiteContents এ JSON হিসেবে থাকে)
+// ============================================================
+function default_bd_locations(): array
+{
+    $divisions = [
+        'Dhaka' => ['Dhaka', 'Gazipur', 'Narayanganj', 'Narsingdi', 'Manikganj', 'Munshiganj', 'Tangail', 'Kishoreganj', 'Faridpur', 'Madaripur', 'Shariatpur', 'Rajbari', 'Gopalganj'],
+        'Chattogram' => ['Chattogram', "Cox's Bazar", 'Cumilla', 'Feni', 'Noakhali', 'Lakshmipur', 'Chandpur', 'Brahmanbaria', 'Rangamati', 'Khagrachhari', 'Bandarban'],
+        'Rajshahi' => ['Rajshahi', 'Bogura', 'Pabna', 'Sirajganj', 'Natore', 'Naogaon', 'Chapainawabganj', 'Joypurhat'],
+        'Khulna' => ['Khulna', 'Jashore', 'Satkhira', 'Bagerhat', 'Kushtia', 'Jhenaidah', 'Magura', 'Narail', 'Chuadanga', 'Meherpur'],
+        'Barishal' => ['Barishal', 'Patuakhali', 'Bhola', 'Pirojpur', 'Barguna', 'Jhalokathi'],
+        'Sylhet' => ['Sylhet', 'Moulvibazar', 'Habiganj', 'Sunamganj'],
+        'Rangpur' => ['Rangpur', 'Dinajpur', 'Kurigram', 'Gaibandha', 'Nilphamari', 'Lalmonirhat', 'Thakurgaon', 'Panchagarh'],
+        'Mymensingh' => ['Mymensingh', 'Jamalpur', 'Sherpur', 'Netrokona'],
+    ];
+    $areas = [
+        'Dhaka' => ['Dhanmondi', 'Mirpur', 'Uttara', 'Mohammadpur', 'Gulshan', 'Banani', 'Bashundhara', 'Badda', 'Rampura', 'Motijheel', 'Farmgate', 'Tejgaon',
+            'Khilgaon', 'Jatrabari', 'Old Dhaka', 'Lalbagh', 'Wari', 'Shyamoli', 'Malibagh', 'Mohakhali', 'Banasree', 'Khilkhet', 'Savar', 'Keraniganj'],
+        'Chattogram' => ['Chawkbazar', 'Agrabad', 'Nasirabad', 'Khulshi', 'GEC', 'Panchlaish', 'Halishahar', 'Bahaddarhat', 'Muradpur', 'Pahartali', 'Kotwali',
+            'Patenga', 'Chandgaon', 'Hathazari', 'Oxygen', 'Lalkhan Bazar'],
+        'Gazipur' => ['Tongi', 'Joydebpur', 'Board Bazar', 'Chandra', 'Kaliakair'],
+        'Narayanganj' => ['Chashara', 'Fatullah', 'Siddhirganj', 'Rupganj'],
+        'Cumilla' => ['Kandirpar', 'Tomsom Bridge', 'Kotbari', 'Laksam'],
+        "Cox's Bazar" => ['Kolatoli', 'Teknaf', 'Ukhia'],
+        'Sylhet' => ['Zindabazar', 'Amberkhana', 'Shibganj', 'Subidbazar', 'Tilagor', 'Mirabazar'],
+        'Rajshahi' => ['Shaheb Bazar', 'Kazla', 'Binodpur', 'Laxmipur', 'Talaimari'],
+        'Khulna' => ['Sonadanga', 'Boyra', 'Khalishpur', 'Daulatpur', 'Gollamari'],
+        'Barishal' => ['Nathullabad', 'Band Road', 'Rupatali', 'Chowmatha'],
+        'Rangpur' => ['Jahaj Company More', 'Modern More', 'Lalbag (Rangpur)'],
+        'Mymensingh' => ['Ganginar Par', 'Charpara', 'Kachari'],
+        'Bogura' => ['Satmatha', 'Sherpur (Bogura)'],
+    ];
+    $out = ['Online' => []];
+    foreach ($divisions as $districts) foreach ($districts as $d) $out[$d] = $areas[$d] ?? [];
+    return $out;
+}
+
+function default_tuition_classes(): array
+{
+    return ['Play / Nursery', 'KG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'SSC',
+        'Class 11', 'Class 12', 'HSC', 'O Level', 'A Level', 'University Admission', 'Medical Admission', 'Engineering Admission', 'Diploma',
+        'University (Honours)', 'Masters', 'IELTS', 'Job Preparation'];
+}
+
+function default_tuition_subjects(): array
+{
+    return ['All Subjects', 'Bangla', 'English', 'Mathematics', 'General Math', 'Higher Math', 'Science', 'Physics', 'Chemistry', 'Biology', 'ICT',
+        'Bangladesh & Global Studies', 'Religion', 'Islam Studies', 'Hindu Religion', 'Accounting', 'Finance & Banking', 'Business Studies', 'Economics',
+        'Agriculture', 'Geography', 'History', 'Civics', 'Statistics', 'Arabic', 'Quran', 'Computer Science', 'Programming', 'Spoken English', 'IELTS',
+        'Drawing', 'Music'];
+}
+
+/** @return array{locations: array<string,string[]>, classes: string[], subjects: string[]} */
+function tuition_options(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $raw = db()->GetSiteContent(['opt_locations' => '', 'opt_classes' => '', 'opt_subjects' => '']);
+    $dec = function ($v) { $j = json_decode((string)$v, true); return is_array($j) ? $j : null; };
+    $loc = $dec($raw['opt_locations']);
+    $c = [
+        'locations' => is_array($loc) && $loc ? $loc : default_bd_locations(),
+        'classes' => $dec($raw['opt_classes']) ?: default_tuition_classes(),
+        'subjects' => $dec($raw['opt_subjects']) ?: default_tuition_subjects(),
+    ];
+    return $c;
+}
+
+/**
+ * লোকেশনের <select> অপশন (জেলা অনুযায়ী গ্রুপ করা)। $extra = তালিকায় নেই এমন মান (পোস্ট/টিউটরের)।
+ */
+function location_select_options(string $selected = '', array $extra = []): string
+{
+    $html = '';
+    $known = [];
+    foreach (tuition_options()['locations'] as $district => $areas) {
+        $known[mb_strtolower($district)] = true;
+        if (!$areas) {
+            $html .= '<option value="' . e($district) . '"' . (strcasecmp($selected, $district) === 0 ? ' selected' : '') . '>' . e($district) . '</option>';
+            continue;
+        }
+        $html .= '<optgroup label="' . e($district) . '">';
+        $html .= '<option value="' . e($district) . '"' . (strcasecmp($selected, $district) === 0 ? ' selected' : '') . '>' . e($district) . ' (সব এলাকা)</option>';
+        foreach ($areas as $a) {
+            $known[mb_strtolower($a)] = true;
+            $html .= '<option value="' . e($a) . '"' . (strcasecmp($selected, $a) === 0 ? ' selected' : '') . '>' . e($a) . '</option>';
+        }
+        $html .= '</optgroup>';
+    }
+    $other = array_values(array_filter(array_unique($extra), fn($x) => $x !== '' && !isset($known[mb_strtolower($x)])));
+    if ($selected !== '' && !isset($known[mb_strtolower($selected)]) && !in_array($selected, $other, true)) $other[] = $selected;
+    if ($other) {
+        $html .= '<optgroup label="অন্যান্য">';
+        foreach ($other as $o) $html .= '<option value="' . e($o) . '"' . (strcasecmp($selected, $o) === 0 ? ' selected' : '') . '>' . e($o) . '</option>';
+        $html .= '</optgroup>';
+    }
+    return $html;
+}
+
+/** লোকেশনের datalist অপশন ("এলাকা, জেলা") — লেখার ঘরে সাজেশন */
+function location_datalist_options(): string
+{
+    $html = '';
+    foreach (tuition_options()['locations'] as $district => $areas) {
+        $html .= '<option value="' . e($district) . '">';
+        foreach ($areas as $a) $html .= '<option value="' . e($a . ', ' . $district) . '">';
+    }
+    return $html;
+}
+
+
+// ============================================================
+// ===== প্যাকেজ / Subscription =====
+// ============================================================
+/** ইংরেজি সংখ্যা → বাংলা সংখ্যা */
+function bn_num($n): string { return strtr((string)$n, ['0' => '০', '1' => '১', '2' => '২', '3' => '৩', '4' => '৪', '5' => '৫', '6' => '৬', '7' => '৭', '8' => '৮', '9' => '৯']); }
+
+/** ৳1,000 আকারে টাকা */
+function taka($n): string { return '৳' . number_format((int)$n); }
+
+/** প্যাকেজের মেয়াদ/পরিমাণ লেখা: "১ মাস", "১২ মাস", "১টি পোস্ট", "৩টি পোস্ট · ১ মাস মেয়াদ" */
+function package_duration_label($p): string
+{
+    $m = (int)($p->DurationMonths ?? 0); $l = (int)($p->PostLimit ?? 0);
+    if (($p->Audience ?? '') === 'Student') {
+        $t = $l > 0 ? bn_num($l) . 'টি পোস্ট' : 'আনলিমিটেড পোস্ট';
+        return $m > 0 ? $t . ' · ' . bn_num($m) . ' মাস মেয়াদ' : $t;
+    }
+    return $m > 0 ? bn_num($m) . ' মাস' : 'আজীবন';
+}
+
+// ============================================================
+// ===== পেমেন্ট মেথডের লোগো =====
+// ============================================================
+/**
+ * মেথডের লোগো: অ্যাডমিন লোগো আপলোড করলে সেই ছবি, না হলে মেথডের রঙে নামসহ ব্যাজ।
+ * $size = px (উচ্চতা)
+ */
+function payment_logo_html($m, int $size = 40): string
+{
+    $name = (string)($m->Name ?? '');
+    if (!is_blank($m->LogoUrl ?? null)) {
+        return '<span class="pm-logo img" style="height:' . $size . 'px;"><img src="' . e($m->LogoUrl) . '" alt="' . e($name) . '" loading="lazy" /></span>';
+    }
+    $icon = ['bank' => 'fa-building-columns', 'mobile' => 'fa-mobile-screen-button'][$m->Kind ?? ''] ?? 'fa-wallet';
+    $color = preg_match('/^#[0-9A-Fa-f]{6}$/', (string)($m->Color ?? '')) ? $m->Color : '#475569';
+    return '<span class="pm-logo" style="--pm:' . e($color) . ';height:' . $size . 'px;font-size:' . max(11, (int)round($size * 0.36)) . 'px;">'
+        . '<i class="fas ' . $icon . '"></i><b>' . e($name) . '</b></span>';
+}
+
+/** লোগো ব্যাজের CSS (একবার পেজে বসাতে হয়) */
+function payment_logo_css(): string
+{
+    return '<style>.pm-logo{display:inline-flex;align-items:center;gap:.45em;padding:0 .8em;border-radius:10px;background:var(--pm);color:#fff;font-weight:800;letter-spacing:.2px;white-space:nowrap;line-height:1;}'
+        . '.pm-logo i{font-size:.95em;opacity:.95;}.pm-logo.img{padding:0;background:none;}.pm-logo.img img{height:100%;width:auto;max-width:140px;object-fit:contain;display:block;}</style>';
+}
+
+// ============================================================
+// ===== নীল টিক (Subscription চালু থাকা শিক্ষক) =====
+// ============================================================
+/** কোন কোন শিক্ষকের Subscription চালু — এক রিকোয়েস্টে একবারই ডাটাবেস থেকে আনে */
+function premium_teacher_map(): array
+{
+    static $map = null;
+    if ($map === null) { try { $map = db()->GetActiveTeacherSubscriptionMap(); } catch (Throwable $e) { $map = []; } }
+    return $map;
+}
+
+function is_premium_teacher($userId): bool { return $userId !== null && isset(premium_teacher_map()[(int)$userId]); }
+
+/** নীল ভেরিফায়েড টিক (ঢেউ খেলানো ব্যাজের ভিতরে সাদা টিক) */
+function blue_tick_html(string $title = 'Verified Teacher — Subscription চালু', string $cls = ''): string
+{
+    return '<span class="blue-tick' . ($cls !== '' ? ' ' . e($cls) : '') . '" title="' . e($title) . '" aria-label="' . e($title) . '" role="img">'
+        . '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1D9BF0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81C14.67 2.63 13.43 1.75 12 1.75s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91C2.63 9.33 1.75 10.57 1.75 12s.88 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/>'
+        . '<path fill="#fff" d="M10.54 16.2 6.8 12.46l1.41-1.41 2.26 2.26 4.8-5.23 1.47 1.36z"/></svg></span>';
+}
+
+/** নীল টিকের CSS — লেআউটে একবার বসানো আছে */
+function blue_tick_css(): string
+{
+    return '<style>.blue-tick{display:inline-flex;width:1.05em;height:1.05em;vertical-align:-0.14em;flex-shrink:0;margin-left:.2em}.blue-tick svg{width:100%;height:100%;display:block}</style>';
+}
+
+// ============================================================
+// ===== প্যাকেজের বিস্তারিত (সব প্যাকেজে যা পাবেন) — অ্যাডমিন এডিট করে =====
+// ============================================================
+function package_benefit_icons(): array
+{
+    return ['fa-certificate', 'fa-arrow-trend-up', 'fa-bullhorn', 'fa-clipboard-list', 'fa-users', 'fa-headset', 'fa-star', 'fa-bolt', 'fa-shield-halved',
+        'fa-chalkboard-user', 'fa-user-graduate', 'fa-pen-to-square', 'fa-location-dot', 'fa-coins', 'fa-comments', 'fa-bell', 'fa-eye', 'fa-gift', 'fa-crown', 'fa-handshake'];
+}
+
+function package_benefits_defaults(): array
+{
+    return [
+        'Teacher' => [
+            ['i' => 'fa-certificate', 't' => 'প্রোফাইলে নীল টিক', 'd' => 'আপনার প্রোফাইল আর Find Tutor কার্ডে নীল ভেরিফায়েড টিক দেখাবে — শিক্ষার্থী ও অভিভাবকরা বেশি ভরসা পাবেন।'],
+            ['i' => 'fa-arrow-trend-up', 't' => 'Find Tutor-এ আগে দেখাবে', 'd' => 'Subscription থাকা শিক্ষকরা টিউটর তালিকার উপরের দিকে দেখান, তাই বেশি শিক্ষার্থী আপনাকে খুঁজে পাবে।'],
+            ['i' => 'fa-bullhorn', 't' => 'Teacher Wanted পোস্ট', 'd' => 'নিজের বিষয়, এলাকা আর বেতন জানিয়ে “পড়াতে চাই” পোস্ট করতে পারবেন।'],
+            ['i' => 'fa-clipboard-list', 't' => 'Tuition Circular-এ Apply', 'd' => 'শিক্ষার্থীদের Tuition পোস্ট দেখে সরাসরি Apply ও যোগাযোগ করতে পারবেন।'],
+            ['i' => 'fa-users', 't' => 'স্টুডেন্ট ও ক্লাস ম্যানেজমেন্ট', 'd' => 'নিজের স্টুডেন্ট, ক্লাসের সময় আর মাসিক পেমেন্টের হিসাব এক জায়গায় রাখুন।'],
+            ['i' => 'fa-headset', 't' => 'অগ্রাধিকার সাপোর্ট', 'd' => 'কোনো সমস্যা হলে Helpdesk-এ আপনার প্রশ্ন আগে দেখা হবে।'],
+        ],
+        'Student' => [
+            ['i' => 'fa-pen-to-square', 't' => 'Teacher Needed পোস্ট', 'd' => 'কোন বিষয়, কোন ক্লাস, কোথায়, কতদিন আর বাজেট — সব জানিয়ে Tuition পোস্ট করুন।'],
+            ['i' => 'fa-certificate', 't' => 'যাচাইকৃত শিক্ষক', 'd' => 'অ্যাডমিন যাচাই করা শিক্ষকরাই আপনার পোস্টে Apply করতে পারবেন।'],
+            ['i' => 'fa-comments', 't' => 'সরাসরি যোগাযোগ', 'd' => 'আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন — আপনি প্রোফাইল ও রিভিউ দেখে বেছে নিন।'],
+            ['i' => 'fa-gift', 't' => 'Account সবসময় ফ্রি', 'd' => 'টিউটর খোঁজা, সেভ করা, রিভিউ দেখা — সব ফ্রি। শুধু পোস্ট করতে প্যাকেজ লাগে।'],
+        ],
+    ];
+}
+
+/** @return array{Teacher: array, Student: array} */
+function package_benefits(): array
+{
+    $def = package_benefits_defaults();
+    $out = $def;
+    try {
+        $v = db()->GetSiteContent(['pkg_benefits_teacher' => '', 'pkg_benefits_student' => '']);
+        foreach (['Teacher' => 'pkg_benefits_teacher', 'Student' => 'pkg_benefits_student'] as $aud => $k) {
+            if (($v[$k] ?? '') === '') continue;
+            $list = json_decode((string)$v[$k], true);
+            if (is_array($list)) $out[$aud] = array_values(array_filter($list, fn($b) => is_array($b) && ($b['t'] ?? '') !== ''));
+        }
+    } catch (Throwable $e) { }
+    return $out;
+}
+
+
+// ============================================================
+// হোম পেজের "Find Tutors by Subject / Class / Location" কার্ড
+// প্রতিটা কার্ডের একটা slug আছে — /FindTutor?subject=mathematics এভাবে লিংক হয়।
+// পরে আলাদা সাবজেক্ট পেজ বানালে এই slug দিয়েই বানানো যাবে।
+// ============================================================
+/** @return array<string, array{0:string,1:string,2:string[]}> slug => [লেবেল, আইকন, মিলবে এমন মান] */
+function tutor_subject_groups(): array
+{
+    return [
+        'mathematics' => ['Mathematics Tutor', 'fa-square-root-variable', ['Mathematics', 'Math', 'Maths', 'General Math', 'Higher Math']],
+        'english'     => ['English Tutor', 'fa-spell-check', ['English', 'Spoken English']],
+        'physics'     => ['Physics Tutor', 'fa-atom', ['Physics']],
+        'chemistry'   => ['Chemistry Tutor', 'fa-flask', ['Chemistry']],
+        'biology'     => ['Biology Tutor', 'fa-dna', ['Biology']],
+        'ict'         => ['ICT Tutor', 'fa-laptop-code', ['ICT', 'Computer Science', 'Programming']],
+        'bangla'      => ['Bangla Tutor', 'fa-book-open', ['Bangla', 'Bengali']],
+        'accounting'  => ['Accounting Tutor', 'fa-calculator', ['Accounting']],
+    ];
+}
+
+function tutor_class_groups(): array
+{
+    return [
+        'primary'      => ['Primary School Tutor', 'fa-shapes', ['Play / Nursery', 'Nursery', 'KG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Primary']],
+        'class-6-8'    => ['Class 6–8 Tutor', 'fa-book', ['Class 6', 'Class 7', 'Class 8']],
+        'ssc'          => ['SSC Tutor', 'fa-school', ['SSC', 'Class 9', 'Class 10']],
+        'hsc'          => ['HSC Tutor', 'fa-building-columns', ['HSC', 'Class 11', 'Class 12']],
+        'university'   => ['University Tutor', 'fa-graduation-cap', ['University (Honours)', 'University', 'Honours', 'Masters']],
+        'admission'    => ['Admission Tutor', 'fa-door-open', ['University Admission', 'Medical Admission', 'Engineering Admission', 'Admission']],
+        'professional' => ['Professional Course Tutor', 'fa-briefcase', ['IELTS', 'Job Preparation', 'Diploma', 'Professional Course']],
+    ];
+}
+
+/** লোকেশন কার্ড: slug => [নাম, ওই জেলা + তার এলাকাগুলো] */
+function tutor_location_groups(): array
+{
+    $locs = tuition_options()['locations'];
+    $out = [];
+    foreach (['Dhaka', 'Chattogram', 'Sylhet', 'Rajshahi', 'Khulna', 'Cumilla', 'Mymensingh', 'Rangpur', 'Barishal'] as $d) {
+        $areas = [];
+        foreach ($locs as $k => $list) if (strcasecmp($k, $d) === 0) $areas = (array)$list;
+        $alias = ['Chattogram' => ['Chittagong'], 'Cumilla' => ['Comilla'], 'Barishal' => ['Barisal']][$d] ?? [];
+        $out[strtolower($d)] = [$d, array_values(array_unique(array_merge([$d], $alias, $areas)))];
+    }
+    return $out;
+}
+
+/** টিউটর (GetTutorDirectory এর একটা) এই মানগুলোর কোনোটার সাথে মেলে কিনা — FindTutor পেজের JS এর মতো একই নিয়ম */
+function tutor_matches_group(Obj $t, string $field, array $values): bool
+{
+    $vals = array_map(fn($v) => mb_strtolower(trim((string)$v)), $values);
+    if ($field === 'location') {
+        $loc = mb_strtolower((string)$t->Location);
+        foreach ($vals as $v) if ($v !== '' && str_contains($loc, $v)) return true;
+        return false;
+    }
+    $list = $field === 'subject' ? (array)$t->Subjects : array_merge((array)$t->Levels, (array)$t->Mediums);
+    foreach ($list as $x) if (in_array(mb_strtolower(trim((string)$x)), $vals, true)) return true;
+    return false;
+}
+
+/** Find Tutor পেজে ?subject= / ?class= / ?location= দিয়ে এলে আগে থেকে বাছাই করা ফিল্টার: field => [value, label] */
+function find_tutor_preset(): array
+{
+    $out = [];
+    $s = strtolower(trim((string)input_str('subject', '')));
+    if ($s !== '') {
+        $g = tutor_subject_groups()[$s] ?? null;
+        $out['subject'] = $g ? [implode('|', $g[2]), preg_replace('/ Tutor$/', '', $g[0]) . ' (all)'] : [mb_substr(trim((string)input_str('subject')), 0, 40), mb_substr(trim((string)input_str('subject')), 0, 40)];
+    }
+    $c = strtolower(trim((string)input_str('class', '')));
+    if ($c !== '') {
+        $g = tutor_class_groups()[$c] ?? null;
+        $out['class'] = $g ? [implode('|', $g[2]), preg_replace('/ Tutor$/', '', $g[0]) . ' (all)'] : [mb_substr(trim((string)input_str('class')), 0, 40), mb_substr(trim((string)input_str('class')), 0, 40)];
+    }
+    // ক্যাটাগরি পেজের "See All" → /FindTutor?cat={slug}
+    $cat = strtolower(trim((string)input_str('cat', '')));
+    if ($cat !== '' && preg_match('/^[a-z0-9-]{1,120}$/', $cat)) {
+        try {
+            $co = db()->GetCategoryBySlug($cat);
+            if ($co && $co->KeywordList) {
+                $key = $co->MatchType === 'subject' ? 'subject' : 'class';
+                $out[$key] = [implode('|', $co->KeywordList), mb_substr($co->Name, 0, 40) . ' (category)'];
+            }
+        } catch (Throwable $e) { error_log('[find_tutor_preset cat] ' . $e->getMessage()); }
+    }
+    $l = trim((string)input_str('location', ''));
+    if ($l !== '') {
+        $g = tutor_location_groups()[strtolower($l)] ?? null;
+        $out['location'] = $g ? [$g[0], $g[0]] : [mb_substr($l, 0, 40), mb_substr($l, 0, 40)];
+    }
+    return $out;
+}
+
+/** হোম পেজের FAQ (FAQ সেকশন আর Google এর FAQ schema দুই জায়গাতেই ব্যবহার হয়) */
+/** হোম পেজের FAQ — ডিফল্ট প্রশ্ন-উত্তর (অ্যাডমিন কিছু সেভ না করলে এগুলো দেখায়) */
+function home_faq_defaults(): array
+{
+    return [
+        ['How can I find a tutor in Bangladesh?', 'You can search for tutors based on subject, class, curriculum and location through মাষ্টার মশাই.'],
+        ['How can I find a home tutor near me?', 'You can explore tutors based on your preferred location and subject requirements.'],
+        ['Can I find a Mathematics tutor through মাষ্টার মশাই?', 'Yes. You can search for tutors based on subjects such as Mathematics, English, Physics, Chemistry and more.'],
+        ['Can I post a tuition requirement?', 'Students and parents can post their tuition requirements through the Tuition Circular and receive suitable tutor applications.'],
+        ['How can a tutor join মাষ্টার মশাই?', 'Tutors can create a profile and use the available tutor services to find suitable tuition opportunities.'],
+    ];
+}
+
+/** FAQ সেটিং: ['enabled' => bool, 'items' => [[প্রশ্ন, উত্তর], ...]] — Admin → Settings থেকে বদলানো যায় */
+function home_faq_settings(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $items = home_faq_defaults();
+    $enabled = true;
+    try {
+        $v = db()->GetSiteContent(['home_faqs' => '', 'home_faq_enabled' => '1']);
+        $enabled = ($v['home_faq_enabled'] ?? '1') !== '0';
+        if (($v['home_faqs'] ?? '') !== '') {
+            $list = json_decode((string)$v['home_faqs'], true);
+            if (is_array($list)) {
+                $items = [];
+                foreach ($list as $f) {
+                    if (!is_array($f)) continue;
+                    $q = trim((string)($f['q'] ?? '')); $a = trim((string)($f['a'] ?? ''));
+                    if ($q !== '' && $a !== '') $items[] = [$q, $a];
+                }
+            }
+        }
+    } catch (Throwable $e) { }
+    return $c = ['enabled' => $enabled, 'items' => $items];
+}
+
+/** হোম পেজে যে FAQ গুলো দেখাবে (বন্ধ থাকলে খালি) */
+function home_faqs(): array
+{
+    $s = home_faq_settings();
+    return $s['enabled'] ? $s['items'] : [];
+}
+
+// ============================================================
+// ===== টিউশন ক্যাটাগরি (Categories পেজ) =====
+// ============================================================
+
+/** URL-এর জন্য slug: "A Level ( AS )" → "a-level-as" */
+function slugify(string $s): string
+{
+    $s = strtolower(trim($s));
+    $s = str_replace('&', ' and ', $s);
+    $s = preg_replace('/[^a-z0-9]+/', '-', $s);
+    return trim((string)$s, '-');
+}
+
+/**
+ * প্রথমবার যে ক্যাটাগরিগুলো বসে: গ্রুপ => [[নাম, আইকন, মেলানোর ধরন (class|subject), টিউটর মেলানোর শব্দ[]], ...]
+ * ছবি নেই — অ্যাডমিন Admin → Categories থেকে প্রতিটার ছবি দিতে পারবে (ততক্ষণ আইকন দেখায়)।
+ */
+function category_seed_data(): array
+{
+    $std = [];
+    for ($i = 1; $i <= 9; $i++) $std[] = ["Standard $i", ['fa-pencil', 'fa-book-open', 'fa-shapes', 'fa-ruler', 'fa-flask', 'fa-globe', 'fa-calculator', 'fa-microscope', 'fa-atom'][$i - 1], 'class', ["Class $i", "Standard $i"]];
+    $cls = [];
+    for ($i = 1; $i <= 10; $i++) $cls[] = ["Class $i", ['fa-pencil', 'fa-book-open', 'fa-shapes', 'fa-ruler', 'fa-flask', 'fa-globe', 'fa-calculator', 'fa-microscope', 'fa-atom', 'fa-school'][$i - 1], 'class', ["Class $i"]];
+    return [
+        'English Medium' => array_merge([
+            ['Pre-Schooling', 'fa-child-reaching', 'class', ['Play / Nursery', 'Pre-Schooling']],
+            ['Play', 'fa-cubes', 'class', ['Play / Nursery', 'Play']],
+            ['Nursery', 'fa-baby', 'class', ['Play / Nursery', 'Nursery']],
+            ['KG', 'fa-shapes', 'class', ['KG']],
+        ], $std, [
+            ['O Level', 'fa-graduation-cap', 'class', ['O Level']],
+            ['A Level ( AS )', 'fa-user-graduate', 'class', ['A Level', 'AS Level']],
+            ['A Level ( A2 )', 'fa-user-graduate', 'class', ['A Level', 'A2 Level']],
+        ]),
+        'Bangla Medium' => array_merge([
+            ['Pre-Schooling', 'fa-child-reaching', 'class', ['Play / Nursery', 'Pre-Schooling']],
+            ['Play', 'fa-cubes', 'class', ['Play / Nursery', 'Play']],
+            ['Nursery', 'fa-baby', 'class', ['Play / Nursery', 'Nursery']],
+            ['KG', 'fa-shapes', 'class', ['KG']],
+        ], $cls, [
+            ['HSC 1st Year', 'fa-building-columns', 'class', ['Class 11', 'HSC']],
+            ['HSC 2nd Year', 'fa-building-columns', 'class', ['Class 12', 'HSC']],
+        ]),
+        'Arts & Crafts' => [
+            ['Crafting', 'fa-scissors', 'subject', ['Crafting', 'Arts & Crafts']],
+            ['Dance', 'fa-person-running', 'subject', ['Dance']],
+            ['Instrumental Music', 'fa-drum', 'subject', ['Instrumental Music', 'Music']],
+            ['Music', 'fa-music', 'subject', ['Music', 'Singing']],
+            ['Drawing & Painting', 'fa-palette', 'subject', ['Drawing', 'Painting', 'Drawing & Painting']],
+            ['Handwriting', 'fa-pen-nib', 'subject', ['Handwriting']],
+            ['Guitar', 'fa-guitar', 'subject', ['Guitar']],
+            ['Make Up Tutoring', 'fa-wand-magic-sparkles', 'subject', ['Make Up', 'Makeup']],
+            ['Miming', 'fa-masks-theater', 'subject', ['Miming', 'Mime']],
+            ['Film Direction', 'fa-film', 'subject', ['Film Direction', 'Film Making']],
+            ['Reciting', 'fa-microphone', 'subject', ['Recitation', 'Reciting']],
+            ['Acting & Modeling', 'fa-star', 'subject', ['Acting', 'Modeling']],
+        ],
+        'Religious & Moral Studies' => [
+            ['Islamic Studies', 'fa-moon', 'subject', ['Islam Studies', 'Islamic Studies', 'Quran', 'Arabic']],
+            ['Hinduism Studies', 'fa-om', 'subject', ['Hindu Religion', 'Hinduism']],
+            ['Buddhism Studies', 'fa-dharmachakra', 'subject', ['Buddhism', 'Buddhist Religion']],
+            ['Christianity Studies', 'fa-cross', 'subject', ['Christianity', 'Christian Religion']],
+        ],
+        'Admission Help' => [
+            ['Public University Admission', 'fa-building-columns', 'class', ['University Admission', 'Public University Admission']],
+            ['Private University Admission', 'fa-building', 'class', ['University Admission', 'Private University Admission']],
+            ['Medical College Admission', 'fa-user-doctor', 'class', ['Medical Admission']],
+            ['Engineering University Admission', 'fa-gears', 'class', ['Engineering Admission']],
+            ['School Admission Test', 'fa-school', 'class', ['School Admission']],
+            ['IBA Admission Test', 'fa-chart-line', 'class', ['IBA Admission', 'IBA']],
+            ['MBA Admission Help', 'fa-briefcase', 'class', ['MBA Admission', 'MBA']],
+            ['Cadet Admission Help', 'fa-person-military-rifle', 'class', ['Cadet Admission', 'Cadet College']],
+        ],
+        'Int. Exam Preparation' => [
+            ['IELTS', 'fa-language', 'class', ['IELTS']],
+            ['TOEFL', 'fa-comments', 'class', ['TOEFL']],
+            ['GMAT', 'fa-chart-pie', 'class', ['GMAT']],
+            ['GRE', 'fa-award', 'class', ['GRE']],
+            ['SAT', 'fa-file-pen', 'class', ['SAT']],
+            ['GED', 'fa-certificate', 'class', ['GED']],
+        ],
+    ];
+}
+
+/** গ্রুপের নাম দেখে ডিফল্ট লেখার ধরন */
+function category_kind(string $groupName): string
+{
+    $g = strtolower($groupName);
+    if (str_contains($g, 'art') || str_contains($g, 'craft') || str_contains($g, 'music')) return 'arts';
+    if (str_contains($g, 'relig') || str_contains($g, 'moral')) return 'religion';
+    if (str_contains($g, 'admission')) return 'admission';
+    if (str_contains($g, 'exam') || str_contains($g, 'test prep')) return 'exam';
+    return 'school';
+}
+
+/**
+ * ক্যাটাগরির লেখা খালি থাকলে যে ডিফল্ট লেখা দেখায় (অ্যাডমিন এডিট পেজেও এগুলো আগে থেকে বসানো থাকে)।
+ * @return array{Highlights:string, About:string, WhyChoose:string}
+ */
+function category_default_texts(string $name, string $groupName): array
+{
+    $brand = 'মাষ্টার মশাই';
+    $kind = category_kind($groupName);
+    $full = in_array($kind, ['school'], true) ? trim($groupName . ' ' . $name) : $name;
+    $hl = [
+        'school'    => ['Strong Foundation In Core Subjects.', 'Homework Help & Exam Preparation.', 'Concept-Based, Easy Learning.', 'Regular Progress Tracking.'],
+        'arts'      => ['Step-By-Step Practical Lessons.', 'Creativity & Confidence Building.', 'Learn At Your Own Pace.', 'Flexible Home Or Online Classes.'],
+        'religion'  => ['Correct Reading & Pronunciation.', 'Understanding Of Core Teachings.', 'Moral & Ethical Values.', 'Patient & Respectful Tutors.'],
+        'admission' => ['Complete Syllabus Guideline.', 'Model Tests & Question Solving.', 'Time Management Strategy.', 'Weak Area Improvement.'],
+        'exam'      => ['Section-Wise Preparation.', 'Mock Tests With Feedback.', 'Score Improvement Strategy.', 'Flexible Study Schedule.'],
+    ][$kind];
+    $about = [
+        'school' => "## Are You Looking For An Experienced $full Tutor?\n**$brand** helps you find verified, experienced tutors for **$full**. Our tutors understand the curriculum and teach in a way that matches your child's pace and learning style.\n\n## How A $name Tutor Helps\n- Clear understanding of every chapter\n- Help with homework and class tests\n- Regular revision and exam preparation\n- Better reading, writing and problem-solving skills\n- Confidence and good study habits\n\n## Why Is A Good Tutor Important?\nEvery student learns differently. A dedicated tutor gives personal attention, finds weak areas early and keeps the student motivated — so learning becomes easier and more enjoyable for the whole family.",
+        'arts' => "## Want To Learn $name From An Experienced Tutor?\n**$brand** connects you with skilled tutors for **$name**. Whether you are a beginner or want to improve further, you can learn step by step at home or online.\n\n## What You Can Expect\n- Practical, hands-on lessons\n- Proper basics and correct techniques\n- Regular practice with feedback\n- Projects or performances to build confidence\n\n## Who Is It For?\nChildren, students and adults — anyone who wants to explore creativity, develop a new skill or turn a hobby into a passion.",
+        'religion' => "## Looking For A Trusted $name Tutor?\n**$brand** helps you find caring and knowledgeable tutors for **$name**. Learning is done with respect, patience and attention to correct understanding.\n\n## What Students Learn\n- Correct reading and pronunciation\n- Core teachings and their meaning\n- Daily practices and moral values\n- Good character and discipline\n\n## Why Choose A Personal Tutor?\nA personal tutor can teach at the student's own pace, answer questions clearly and guide the student with care — at home or online.",
+        'admission' => "## Preparing For $name?\n**$brand** helps you find experienced tutors who know the admission test pattern well. With the right guideline and regular practice, you can prepare with confidence.\n\n## How The Tutor Helps\n- Complete syllabus and preparation plan\n- Previous year question analysis\n- Regular model tests and solutions\n- Time management and exam strategy\n- Extra care on weak topics\n\n## Start Early, Prepare Smart\nAdmission tests are competitive. A focused tutor keeps you on track, measures your progress and helps you reach your target institution.",
+        'exam' => "## Planning To Take $name?\n**$brand** connects you with tutors who have strong experience in **$name** preparation. Get a clear study plan and practise every section with expert guidance.\n\n## What The Preparation Covers\n- Section-wise lessons and practice\n- Full-length mock tests\n- Detailed feedback on mistakes\n- Tips to improve your score quickly\n\n## Flexible Learning\nStudy at home or online, at a time that suits you — ideal for students and working professionals.",
+    ][$kind];
+    $why = "**$brand** — we bring you experienced tutors for **$full**. Through proven teaching methods, students learn faster, understand better and build real confidence.\n\n## Why Choose Us?\n- Verified Tutors In Your Area.\n- Subject Specialist Tutors.\n- Female Tutors Available.\n- Home & Online Tuition.\n- Easy Tutor Matching Support.\n- Helpdesk Support.\n\nClick **Hire A Tutor** below and post your requirement — suitable tutors will contact you soon.";
+    return ['Highlights' => implode("\n", $hl), 'About' => $about, 'WhyChoose' => $why];
+}
+
+/** ক্যাটাগরির লেখা (খালি ফিল্ডে ডিফল্ট বসিয়ে) */
+function category_texts(Obj $c): array
+{
+    $def = category_default_texts($c->Name, (string)($c->GroupName ?? ''));
+    return [
+        'Highlights' => array_values(array_filter(array_map('trim', preg_split('/\r?\n/', $c->Highlights !== '' ? $c->Highlights : $def['Highlights'])), fn($x) => $x !== '')),
+        'About' => $c->About !== '' ? $c->About : $def['About'],
+        'WhyChoose' => $c->WhyChoose !== '' ? $c->WhyChoose : $def['WhyChoose'],
+    ];
+}
+
+/**
+ * অ্যাডমিনের লেখা সাধারণ টেক্সটকে নিরাপদ HTML বানায়:
+ *  "## শিরোনাম" → শিরোনাম, "- লাইন" → টিক চিহ্নের তালিকা, **লেখা** → বোল্ড, ফাঁকা লাইন → নতুন অনুচ্ছেদ
+ */
+function category_rich_text(string $text): string
+{
+    $lines = preg_split('/\r?\n/', trim($text));
+    $html = ''; $para = []; $list = [];
+    $inline = fn($s) => preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', e($s));
+    $flushP = function () use (&$para, &$html, $inline) { if ($para) { $html .= '<p>' . implode('<br>', array_map($inline, $para)) . '</p>'; $para = []; } };
+    $flushL = function () use (&$list, &$html, $inline) { if ($list) { $html .= '<ul>' . implode('', array_map(fn($x) => '<li>' . $inline($x) . '</li>', $list)) . '</ul>'; $list = []; } };
+    foreach ($lines as $ln) {
+        $t = trim($ln);
+        if ($t === '') { $flushP(); $flushL(); continue; }
+        if (preg_match('/^#{2,3}\s*(.+)$/u', $t, $m)) { $flushP(); $flushL(); $html .= '<h3>' . $inline($m[1]) . '</h3>'; continue; }
+        if (preg_match('/^(?:[-*•✓✔]\s+)(.+)$/u', $t, $m)) { $flushP(); $list[] = $m[1]; continue; }
+        $flushL(); $para[] = $t;
+    }
+    $flushP(); $flushL();
+    return $html;
+}
+
+/** @return Obj[] এই ক্যাটাগরির সাথে মেলে এমন টিউটর (সাবস্ক্রাইবড ও বেশি রেটিং আগে) */
+function category_tutors(Obj $c, array $tutors): array
+{
+    $kw = array_map(fn($x) => mb_strtolower(trim($x)), $c->KeywordList);
+    if (!$kw) return [];
+    $out = array_values(array_filter($tutors, function ($t) use ($c, $kw) {
+        $vals = $c->MatchType === 'subject' ? (array)$t->Subjects : array_merge((array)$t->Levels, (array)$t->Mediums);
+        foreach ($vals as $v) if (in_array(mb_strtolower(trim((string)$v)), $kw, true)) return true;
+        return false;
+    }));
+    usort($out, fn($a, $b) => [(int)$b->IsPremium, $b->Rating, $b->TotalReviews] <=> [(int)$a->IsPremium, $a->Rating, $a->TotalReviews]);
+    return $out;
+}
+
+/** ক্যাটাগরির ছবি না থাকলে আইকনের রঙ (নাম অনুযায়ী একই রঙ থাকে) */
+function category_tint(string $name): array
+{
+    $p = [['#E3F6FD', '#028EA5'], ['#E7F8EF', '#157347'], ['#FFF4D6', '#B7791F'], ['#F1EAFE', '#6D28D9'], ['#FDECEE', '#C2185B'], ['#EAF1FE', '#1D63E0']];
+    return $p[abs(crc32($name)) % count($p)];
+}

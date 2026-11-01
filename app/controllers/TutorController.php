@@ -60,8 +60,13 @@ class TutorController extends Controller
         $headline = $this->clean('headline', 60);
         $levels = $this->list('levels', 10, 30);
         $subjects = $this->list('subjects', 12, 30);
+        $fee = function (string $k): ?int { $v = trim((string)input_str($k, '')); return $v === '' ? null : max(0, min(1000000, (int)$v)); };
+        $min = $fee('feeMin'); $max = $fee('feeMax');
+        if ($min !== null && $max !== null && $max < $min) $this->fail('সর্বোচ্চ বেতন সর্বনিম্নের চেয়ে কম হতে পারে না।');
+        if ($min === null && $max !== null) { $min = $max; $max = null; }
         $this->db->SaveIntro($me, $this->clean('bio', 160), $this->clean('city', 80), $subjects, $this->clean('quote', 160));
         $this->db->SaveTeacherIntro($me, $headline, $levels);
+        $this->db->SaveTeachPrefs($me, (string)input_str('teachMode', ''), $min, $max);
         json_response(['success' => true, 'message' => 'প্রোফাইল আপডেট হয়েছে।']);
     }
 

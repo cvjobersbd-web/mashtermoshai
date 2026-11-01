@@ -530,6 +530,27 @@ $heroImages = $Model->GetHeroImageList();
         .bt-prev-tag .l2 { padding-left: 0; }
         .bt-prev-perks { justify-content: center; }
     }
+    .tcb-prev-wrap { max-width: 760px; }
+    .opt-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; border-bottom: 1px solid #E8EEF5; }
+    .opt-tabs button { border: none; background: none; padding: 10px 14px; font-weight: 600; color: #64748B; border-bottom: 3px solid transparent; margin-bottom: -1px; cursor: pointer; }
+    .opt-tabs button.active { color: #08224A; border-bottom-color: #02B8F5; }
+    .opt-tabs span { font-size: 11.5px; background: #EEF3F9; color: #334155; padding: 1px 7px; border-radius: 9px; margin-left: 4px; }
+    .opt-add { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .opt-add .form-control { flex: 1; min-width: 180px; }
+    .opt-add .btn-save { white-space: nowrap; }
+    .opt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .opt-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 16px; background: #EEF3F9; color: #1E293B; font-size: 13.5px; }
+    .opt-chip button { width: 22px; height: 22px; border-radius: 50%; border: none; background: #fff; color: #64748B; cursor: pointer; font-size: 11px; line-height: 1; }
+    .opt-chip button:hover { background: #FEE2E2; color: #DC2626; }
+    .opt-locs { max-height: 460px; overflow-y: auto; border: 1px solid #E8EEF5; border-radius: 12px; }
+    .opt-d { padding: 10px 14px; border-top: 1px solid #F1F5F9; }
+    .opt-d:first-child { border-top: none; }
+    .opt-d-h { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #08224A; font-size: 14.5px; }
+    .opt-d-h small { font-weight: 500; color: #94A3B8; }
+    .opt-d-h .del { margin-left: auto; border: none; background: none; color: #94A3B8; cursor: pointer; font-size: 13px; }
+    .opt-d-h .del:hover { color: #DC2626; }
+    .opt-d .opt-chips { margin-top: 8px; }
+    .opt-d .opt-chip { font-size: 12.5px; padding: 3px 5px 3px 10px; }
     .pp-grid { display: grid; grid-template-columns: 240px 1fr; gap: 22px; align-items: start; }
     .pp-prev-label { font-size: 12px; font-weight: 700; color: #08224A; margin-bottom: 8px; }
     .pp-prev { display: block; border-radius: 16px; overflow: hidden; border: 1px solid #E8EEF5; background: #F4F7FB; box-shadow: 0 4px 16px rgba(15,27,45,.06); }
@@ -877,6 +898,157 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+    <!-- ===== ✅ Home Page — FAQ (প্রশ্ন ও উত্তর) ===== -->
+    <?php $fqSet = function_exists('home_faq_settings') ? home_faq_settings() : ['enabled' => true, 'items' => []]; ?>
+    <style>
+        .fq-list { display: flex; flex-direction: column; gap: 12px; }
+        .fq-row { display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid #DCECF5; border-radius: 14px; padding: 12px; background: #F8FCFF; }
+        .fq-row.has-err { border-color: #e74c3c; background: #FFF5F4; }
+        .fq-num { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: #E3F6FD; color: #028EA5; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+        .fq-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+        .fq-mid input, .fq-mid textarea { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 14px; outline: none; background: #fff; font-family: inherit; color: #08224A; }
+        .fq-mid input { font-weight: 700; }
+        .fq-mid textarea { min-height: 70px; resize: vertical; line-height: 1.6; }
+        .fq-mid input:focus, .fq-mid textarea:focus { border-color: #02B8F5; }
+        .fq-acts { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .fq-acts button { width: 32px; height: 32px; border: none; border-radius: 8px; background: #EAF5FB; color: #08224A; cursor: pointer; }
+        .fq-acts button:hover { background: #DCECF5; }
+        .fq-acts button.del { background: #FDECEA; color: #c0392b; }
+        .fq-acts button:disabled { opacity: .35; cursor: default; }
+        .fq-empty { text-align: center; color: #7A8CA0; font-size: 13.5px; border: 1.5px dashed #DCECF5; border-radius: 14px; padding: 18px; }
+        .fq-add { margin-top: 12px; border: 1.5px dashed #02B8F5; background: #F5FBFF; color: #028EA5; font-weight: 700; font-size: 14px; border-radius: 12px; padding: 10px 16px; cursor: pointer; width: 100%; }
+        .fq-add:hover { background: #E3F6FD; }
+        .fq-foot { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+        .fq-reset { border: 1.5px solid #DCECF5; background: #fff; color: #64748B; font-weight: 600; font-size: 14px; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+        .fq-reset:hover { border-color: #02B8F5; color: #08224A; }
+        /* প্রিভিউ — হোম পেজের মতো */
+        .fq-prev-wrap { margin-top: 18px; background: #F5FBFF; border-radius: 16px; padding: 18px; }
+        .fq-prev-label { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: #7A8CA0; margin-bottom: 12px; }
+        .fq-prev { display: flex; flex-direction: column; gap: 10px; }
+        .fq-prev details { background: #fff; border: 1px solid #DCECF5; border-radius: 16px; }
+        .fq-prev details[open] { border-color: #9FDDF5; box-shadow: 0 10px 26px rgba(2,184,245,.1); }
+        .fq-prev summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 15px 18px; font-weight: 700; font-size: 15px; color: #08224A; }
+        .fq-prev summary::-webkit-details-marker { display: none; }
+        .fq-prev summary .q { width: 30px; height: 30px; border-radius: 10px; background: #E3F6FD; color: #028EA5; display: flex; align-items: center; justify-content: center; font-size: 12.5px; flex-shrink: 0; }
+        .fq-prev summary b { flex: 1; font-weight: 700; }
+        .fq-prev summary .pl { color: #028EA5; transition: transform .25s; }
+        .fq-prev details[open] summary .pl { transform: rotate(45deg); }
+        .fq-prev p { padding: 0 18px 16px 62px; margin: 0; font-size: 14.5px; line-height: 1.7; color: #475569; white-space: pre-line; }
+        .fq-off { text-align: center; color: #7A8CA0; font-size: 13.5px; padding: 10px; }
+        @media (max-width: 576px) { .fq-row { flex-wrap: wrap; } .fq-acts { flex-direction: row; width: 100%; justify-content: flex-end; } .fq-prev p { padding-left: 18px; } }
+    </style>
+    <div class="settings-card" id="catSettings">
+        <h5><i class="fas fa-layer-group"></i> Categories (ক্যাটাগরি)</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            নেভবারের <b>Categories</b> পেজের ক্যাটাগরি (Play, Class 1, IELTS, Guitar ...) — নতুন ক্যাটাগরি ছবি দিয়ে যোগ করা, গ্রুপ বানানো,
+            আর প্রত্যেক ক্যাটাগরির “About This Category”, “Why Choose”, ব্যানার ইত্যাদি এডিট করা যায়।
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/Admin/Categories" class="btn btn-primary"><i class="fas fa-pen-to-square me-1"></i> Categories ম্যানেজ করুন</a>
+            <a href="/Categories" target="_blank" class="btn btn-outline-secondary"><i class="fas fa-external-link-alt me-1"></i> সাইটে দেখুন</a>
+        </div>
+    </div>
+
+    <div class="settings-card" id="fqSettings">
+        <h5><i class="fas fa-circle-question"></i> Home — FAQ (প্রশ্ন ও উত্তর)</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের "Frequently Asked Questions" সেকশনের প্রশ্ন আর উত্তর এখান থেকে যোগ, এডিট, মুছে ফেলা বা ▲▼ দিয়ে সাজাতে পারবেন।
+            এগুলো Google-এর জন্য FAQ Schema হিসেবেও যায়। (সর্বোচ্চ ২০টা)
+        </p>
+
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="fqEnabled" <?= $fqSet['enabled'] ? 'checked' : '' ?> onchange="fqPreview()" />
+            <label class="form-check-label fw-semibold" for="fqEnabled">হোম পেজে FAQ সেকশনটা দেখাও</label>
+        </div>
+
+        <div class="fq-list" id="fqList"></div>
+        <button type="button" class="fq-add" onclick="fqAdd()"><i class="fas fa-plus"></i> নতুন প্রশ্ন যোগ করুন</button>
+
+        <div class="fq-prev-wrap">
+            <div class="fq-prev-label"><i class="fas fa-eye"></i> Live Preview — হোম পেজে এভাবে দেখাবে</div>
+            <div class="fq-prev" id="fqPrev"></div>
+        </div>
+
+        <div class="fq-foot">
+            <button type="button" class="fq-reset" onclick="fqReset()"><i class="fas fa-rotate-left"></i> Default প্রশ্নগুলো</button>
+            <button type="button" class="btn-save" id="fqSaveBtn" onclick="fqSave()"><i class="fas fa-save"></i> Save FAQ</button>
+        </div>
+    </div>
+    <script>
+        var fqItems = <?= json_encode(array_map(fn($f) => ['q' => $f[0], 'a' => $f[1]], $fqSet['items']), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+        var fqErrIdx = -1;
+        function fqEsc(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+        function fqRender() {
+            var list = document.getElementById('fqList');
+            list.innerHTML = fqItems.length ? fqItems.map(function (f, i) {
+                return '<div class="fq-row' + (i === fqErrIdx ? ' has-err' : '') + '">' +
+                    '<span class="fq-num">Q' + (i + 1) + '</span>' +
+                    '<div class="fq-mid">' +
+                    '<input type="text" maxlength="200" data-i="' + i + '" data-k="q" placeholder="প্রশ্ন — যেমন: How can I find a tutor in Bangladesh?" value="' + fqEsc(f.q) + '" />' +
+                    '<textarea maxlength="1500" data-i="' + i + '" data-k="a" placeholder="উত্তর লিখুন...">' + fqEsc(f.a) + '</textarea></div>' +
+                    '<div class="fq-acts">' +
+                    '<button type="button" title="উপরে" onclick="fqMove(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '><i class="fas fa-arrow-up"></i></button>' +
+                    '<button type="button" title="নিচে" onclick="fqMove(' + i + ',1)"' + (i === fqItems.length - 1 ? ' disabled' : '') + '><i class="fas fa-arrow-down"></i></button>' +
+                    '<button type="button" class="del" title="মুছুন" onclick="fqDel(' + i + ')"><i class="fas fa-trash"></i></button>' +
+                    '</div></div>';
+            }).join('') : '<div class="fq-empty"><i class="fas fa-circle-question"></i> কোনো প্রশ্ন নেই — নিচের বাটনে চেপে যোগ করুন</div>';
+            fqPreview();
+        }
+        document.getElementById('fqList').addEventListener('input', function (e) {
+            var t = e.target, i = t.getAttribute('data-i'); if (i === null) return;
+            fqItems[+i][t.getAttribute('data-k')] = t.value; fqPreview();
+        });
+        function fqPreview() {
+            var pv = document.getElementById('fqPrev');
+            var shown = fqItems.filter(function (f) { return (f.q || '').trim() && (f.a || '').trim(); });
+            if (!document.getElementById('fqEnabled').checked) { pv.innerHTML = '<div class="fq-off"><i class="fas fa-eye-slash"></i> FAQ সেকশনটা এখন হোম পেজে লুকানো থাকবে</div>'; return; }
+            if (!shown.length) { pv.innerHTML = '<div class="fq-off"><i class="fas fa-eye-slash"></i> কোনো প্রশ্ন না থাকলে সেকশনটা দেখাবে না</div>'; return; }
+            var open = pv.querySelector('details[open]'), openIdx = open ? +open.getAttribute('data-i') : -1;
+            pv.innerHTML = shown.map(function (f, i) {
+                return '<details data-i="' + i + '"' + (i === openIdx ? ' open' : '') + '><summary><span class="q">Q' + (i + 1) + '</span><b>' + fqEsc(f.q.trim()) + '</b><i class="fas fa-plus pl"></i></summary><p>' + fqEsc(f.a.trim()) + '</p></details>';
+            }).join('');
+        }
+        function fqAdd() {
+            if (fqItems.length >= 20) { alert('সর্বোচ্চ ২০টা প্রশ্ন দেওয়া যাবে।'); return; }
+            fqItems.push({ q: '', a: '' }); fqErrIdx = -1; fqRender();
+            var inp = document.querySelector('#fqList input[data-i="' + (fqItems.length - 1) + '"]');
+            if (inp) { inp.focus(); inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+        }
+        function fqMove(i, d) { var j = i + d; if (j < 0 || j >= fqItems.length) return; var t = fqItems[i]; fqItems[i] = fqItems[j]; fqItems[j] = t; fqErrIdx = -1; fqRender(); }
+        function fqDel(i) {
+            var f = fqItems[i];
+            if (((f.q || '').trim() || (f.a || '').trim()) && !confirm('এই প্রশ্নটা মুছে ফেলবেন?')) return;
+            fqItems.splice(i, 1); fqErrIdx = -1; fqRender();
+        }
+        function fqSend(data, btn) {
+            var fd = new FormData();
+            Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });
+            var tok = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (tok) fd.append('__RequestVerificationToken', tok.value);
+            var html = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+            fetch('/Admin/SaveHomeFaqs', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (btn) { btn.disabled = false; btn.innerHTML = html; }
+                    if (d.success) {
+                        fqErrIdx = -1; fqItems = d.items || []; document.getElementById('fqEnabled').checked = !!d.enabled; fqRender();
+                    } else if (typeof d.index === 'number') {
+                        fqErrIdx = d.index; fqRender();
+                        var el = document.querySelector('#fqList [data-i="' + d.index + '"]'); if (el) el.focus();
+                    }
+                    alert(d.message || (d.success ? 'Saved' : 'Failed'));
+                })
+                .catch(function (e) { if (btn) { btn.disabled = false; btn.innerHTML = html; } alert('Error: ' + e.message); });
+        }
+        function fqSave() {
+            fqSend({ enabled: document.getElementById('fqEnabled').checked ? 'true' : 'false',
+                items: JSON.stringify(fqItems.map(function (f) { return { q: (f.q || '').trim(), a: (f.a || '').trim() }; })) }, document.getElementById('fqSaveBtn'));
+        }
+        function fqReset() { if (confirm('সব প্রশ্ন মুছে Default ৫টা প্রশ্ন-উত্তরে ফেরত যাবেন?')) fqSend({ reset: 'true' }, null); }
+        fqRender();
+    </script>
+
     <!-- ===== ✅ Profile Page — Promo Image ===== -->
     <?php $ppc = profile_promo(); ?>
     <div class="settings-card" id="ppSettings">
@@ -911,6 +1083,79 @@ $heroImages = $Model->GetHeroImageList();
             </div>
         </div>
     </div>
+
+    <!-- ===== ✅ টিউশনের অপশন: লোকেশন / ক্লাস / বিষয় ===== -->
+    <?php $topt = tuition_options(); ?>
+    <div class="settings-card" id="optSettings">
+        <h5><i class="fas fa-list-check"></i> টিউশনের অপশন — লোকেশন, ক্লাস ও বিষয়</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            Find Tutor আর Tuition Circular পেজের ফিল্টার আর পোস্ট লেখার ঘরে এই তালিকাগুলো দেখায়। নতুন যোগ করুন বা × দিয়ে বাদ দিন, তারপর <b>Save</b> চাপুন।
+        </p>
+        <div class="opt-tabs" role="tablist">
+            <button type="button" class="active" data-opt-tab="locations"><i class="fas fa-location-dot"></i> লোকেশন <span id="optCntLoc"></span></button>
+            <button type="button" data-opt-tab="classes"><i class="fas fa-graduation-cap"></i> ক্লাস <span id="optCntCls"></span></button>
+            <button type="button" data-opt-tab="subjects"><i class="fas fa-book"></i> বিষয় <span id="optCntSub"></span></button>
+        </div>
+
+        <div class="opt-pane" data-opt-pane="locations">
+            <div class="opt-add">
+                <select id="optDistrict" class="form-control"><option value="">— জেলা বাছাই করুন —</option></select>
+                <input type="text" id="optArea" class="form-control" maxlength="60" placeholder="এলাকার নাম (যেমন: Mirpur) — খালি রাখলে শুধু জেলা যোগ হবে" />
+                <input type="text" id="optNewDistrict" class="form-control" maxlength="60" placeholder="নতুন জেলা/শহরের নাম" hidden />
+                <button type="button" class="btn-save" id="optAddLoc"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <input type="search" id="optLocSearch" class="form-control mb-2" placeholder="জেলা বা এলাকা খুঁজুন..." />
+            <div class="opt-locs" id="optLocs"></div>
+        </div>
+        <div class="opt-pane" data-opt-pane="classes" hidden>
+            <div class="opt-add"><input type="text" id="optClassIn" class="form-control" maxlength="60" placeholder="নতুন ক্লাস (যেমন: Class 5, HSC, University)" />
+                <button type="button" class="btn-save" data-opt-add="classes"><i class="fas fa-plus"></i> Add</button></div>
+            <div class="opt-chips" id="optClasses"></div>
+        </div>
+        <div class="opt-pane" data-opt-pane="subjects" hidden>
+            <div class="opt-add"><input type="text" id="optSubjectIn" class="form-control" maxlength="60" placeholder="নতুন বিষয় (যেমন: Physics, Bangla)" />
+                <button type="button" class="btn-save" data-opt-add="subjects"><i class="fas fa-plus"></i> Add</button></div>
+            <div class="opt-chips" id="optSubjects"></div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <button type="button" class="upload-btn" id="optReset"><i class="fas fa-rotate-left"></i> এই তালিকা Default করুন</button>
+            <button type="button" class="btn-save" id="optSave"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+
+    <!-- ===== ✅ Tuition Circular / Find Tutor — Banner Image ===== -->
+    <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
+    <div class="settings-card" id="<?= $bk ?>bSettings">
+        <h5><i class="fas <?= $bicon ?>"></i> <?= $bname ?> — উপরের ব্যানার ছবি</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            <?= $bname ?> পেজের একদম উপরের বড় ছবি। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে পেজে বদলে যাবে।
+        </p>
+        <div class="tcb-prev-wrap">
+            <div class="pp-prev-label"><i class="fas fa-eye"></i> Preview</div>
+            <a class="pp-prev"><img id="<?= $bk ?>bPreview" src="<?= e($bv[$bk . '_banner']) ?>" alt="Banner preview" onerror="this.style.opacity=.25" /></a>
+            <div class="pp-prev-off" id="<?= $bk ?>bPrevOff" <?= $bv[$bk . '_banner_enabled'] !== '0' ? 'hidden' : '' ?>><i class="fas fa-eye-slash"></i> ব্যানার এখন লুকানো — পেজে শুধু লেখা দেখাবে</div>
+        </div>
+        <div class="form-check form-switch my-3">
+            <input class="form-check-input" type="checkbox" id="<?= $bk ?>_banner_enabled" <?= $bv[$bk . '_banner_enabled'] !== '0' ? 'checked' : '' ?> onchange="document.getElementById('<?= $bk ?>bPrevOff').hidden = this.checked" />
+            <label class="form-check-label fw-semibold" for="<?= $bk ?>_banner_enabled"><?= $bname ?> পেজে ব্যানার দেখাও</label>
+        </div>
+        <label class="form-label fw-semibold">ছবি</label>
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+            <label for="<?= $bk ?>bFile" class="upload-btn" id="<?= $bk ?>bUploadLbl"><i class="fas fa-upload"></i> Upload New Image</label>
+            <input type="file" id="<?= $bk ?>bFile" data-banner="<?= $bk ?>" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
+        </div>
+        <input type="text" class="form-control mb-1" id="<?= $bk ?>_banner" value="<?= e($bv[$bk . '_banner']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." oninput="var p = document.getElementById('<?= $bk ?>bPreview'); p.src = this.value; p.style.opacity = 1;" />
+        <?php if ($bk === 'pk'): ?>
+        <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. ছবির <strong>ডান দিকে</strong> ইলাস্ট্রেশন রাখুন — বাম দিকে “মাষ্টার মশাই প্যাকেজ” লেখা আর ট্যাব বসে (যেমন <strong>1600×420 px</strong>)।</span>
+        <?php else: ?>
+        <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. চওড়া ছবি ভালো দেখায় (যেমন <strong>1500×280 px</strong>)।</span>
+        <?php endif; ?>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <button type="button" class="upload-btn" onclick="saveBanner('<?= $bk ?>', '<?= $bw ?>', true)"><i class="fas fa-rotate-left"></i> Default ছবি</button>
+            <button type="button" class="btn-save" id="<?= $bk ?>bSaveBtn" onclick="saveBanner('<?= $bk ?>', '<?= $bw ?>', false)"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+    <?php endforeach; ?>
 
     <!-- ===== ✅ Teacher Profile — Promo Image ===== -->
     <?php $tpc = teacher_promo(); ?>
@@ -1758,6 +2003,138 @@ $heroImages = $Model->GetHeroImageList();
                         document.getElementById('pp_enabled').checked = d.pp_enabled !== '0';
                         document.getElementById('ppPrevOff').hidden = d.pp_enabled !== '0';
                         var pv = document.getElementById('ppPreview'); pv.src = d.pp_image; pv.style.opacity = 1;
+                    }
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                })
+                .catch(function (e) { btn.innerHTML = html; btn.disabled = false; alert('Error: ' + e.message); });
+        }
+
+        // ===== টিউশনের অপশন (লোকেশন / ক্লাস / বিষয়) =====
+        (function () {
+            var OPT = { locations: <?= js((object)$topt['locations']) ?>, classes: <?= js($topt['classes']) ?>, subjects: <?= js($topt['subjects']) ?> };
+            var cur = 'locations';
+            function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+            function has(list, v) { return list.some(function (x) { return x.toLowerCase() === v.toLowerCase(); }); }
+            function counts() {
+                var n = 0; Object.keys(OPT.locations).forEach(function (d) { n += 1 + OPT.locations[d].length; });
+                document.getElementById('optCntLoc').textContent = n;
+                document.getElementById('optCntCls').textContent = OPT.classes.length;
+                document.getElementById('optCntSub').textContent = OPT.subjects.length;
+            }
+            function chips(list, kind) {
+                return list.map(function (v, i) { return '<span class="opt-chip">' + esc(v) + '<button type="button" data-opt-rm="' + kind + '" data-i="' + i + '" aria-label="Remove">✕</button></span>'; }).join('');
+            }
+            function paintList(kind) { document.getElementById(kind === 'classes' ? 'optClasses' : 'optSubjects').innerHTML = chips(OPT[kind], kind); counts(); }
+            function paintLocs() {
+                var q = document.getElementById('optLocSearch').value.trim().toLowerCase();
+                var sel = document.getElementById('optDistrict'), keep = sel.value;
+                sel.innerHTML = '<option value="">— জেলা বাছাই করুন —</option>' + Object.keys(OPT.locations).map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('') + '<option value="__new">+ নতুন জেলা / শহর</option>';
+                sel.value = keep;
+                document.getElementById('optLocs').innerHTML = Object.keys(OPT.locations).filter(function (d) {
+                    return !q || d.toLowerCase().indexOf(q) > -1 || OPT.locations[d].some(function (a) { return a.toLowerCase().indexOf(q) > -1; });
+                }).map(function (d) {
+                    var areas = OPT.locations[d];
+                    return '<div class="opt-d"><div class="opt-d-h"><i class="fas fa-location-dot" style="color:#02B8F5;"></i> ' + esc(d) + ' <small>' + areas.length + ' এলাকা</small>'
+                        + '<button type="button" class="del" data-opt-rmd="' + esc(d) + '"><i class="fas fa-trash-can"></i> জেলা বাদ দিন</button></div>'
+                        + (areas.length ? '<div class="opt-chips">' + areas.map(function (a, i) { return '<span class="opt-chip">' + esc(a) + '<button type="button" data-opt-rma="' + esc(d) + '" data-i="' + i + '" aria-label="Remove">✕</button></span>'; }).join('') + '</div>' : '')
+                        + '</div>';
+                }).join('') || '<p style="padding:14px;margin:0;color:#94A3B8;">কিছু পাওয়া যায়নি।</p>';
+                counts();
+            }
+            document.querySelectorAll('[data-opt-tab]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    cur = b.getAttribute('data-opt-tab');
+                    document.querySelectorAll('[data-opt-tab]').forEach(function (x) { x.classList.toggle('active', x === b); });
+                    document.querySelectorAll('[data-opt-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-opt-pane') !== cur; });
+                });
+            });
+            document.getElementById('optDistrict').addEventListener('change', function () { document.getElementById('optNewDistrict').hidden = this.value !== '__new'; });
+            document.getElementById('optLocSearch').addEventListener('input', paintLocs);
+            document.getElementById('optAddLoc').addEventListener('click', function () {
+                var d = document.getElementById('optDistrict').value, a = document.getElementById('optArea').value.trim();
+                if (d === '__new') d = document.getElementById('optNewDistrict').value.trim();
+                if (!d) { alert('জেলা বাছাই করুন বা নতুন জেলার নাম লিখুন।'); return; }
+                var exist = Object.keys(OPT.locations).filter(function (x) { return x.toLowerCase() === d.toLowerCase(); })[0];
+                if (!exist) { OPT.locations[d] = []; exist = d; }
+                if (a) { if (has(OPT.locations[exist], a)) { alert('এই এলাকা আগেই আছে।'); return; } OPT.locations[exist].push(a); }
+                document.getElementById('optArea').value = ''; document.getElementById('optNewDistrict').value = '';
+                document.getElementById('optDistrict').value = exist; document.getElementById('optNewDistrict').hidden = true;
+                document.getElementById('optLocSearch').value = exist; paintLocs();
+            });
+            document.querySelectorAll('[data-opt-add]').forEach(function (b) {
+                var kind = b.getAttribute('data-opt-add'), inp = document.getElementById(kind === 'classes' ? 'optClassIn' : 'optSubjectIn');
+                function add() {
+                    var v = inp.value.trim(); if (!v) return;
+                    if (has(OPT[kind], v)) { alert('এটা আগেই আছে।'); return; }
+                    OPT[kind].push(v); inp.value = ''; paintList(kind); inp.focus();
+                }
+                b.addEventListener('click', add);
+                inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+            });
+            document.getElementById('optSettings').addEventListener('click', function (e) {
+                var r = e.target.closest('[data-opt-rm]');
+                if (r) { var k = r.getAttribute('data-opt-rm'); OPT[k].splice(+r.getAttribute('data-i'), 1); paintList(k); return; }
+                var ra = e.target.closest('[data-opt-rma]');
+                if (ra) { OPT.locations[ra.getAttribute('data-opt-rma')].splice(+ra.getAttribute('data-i'), 1); paintLocs(); return; }
+                var rd = e.target.closest('[data-opt-rmd]');
+                if (rd && confirm(rd.getAttribute('data-opt-rmd') + ' জেলা আর এর সব এলাকা বাদ দেবেন?')) { delete OPT.locations[rd.getAttribute('data-opt-rmd')]; paintLocs(); }
+            });
+            async function send(reset) {
+                if (reset && !confirm('এই তালিকা আগের (ডিফল্ট) অবস্থায় ফেরত যাবে। নিশ্চিত?')) return;
+                var fd = new FormData(); fd.append('which', cur); fd.append('data', JSON.stringify(OPT[cur])); if (reset) fd.append('reset', 'true');
+                fd.append('__RequestVerificationToken', getToken());
+                var btn = document.getElementById('optSave'), html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                try {
+                    var d = await (await fetch('/Admin/SaveTuitionOptions', { method: 'POST', body: fd })).json();
+                    if (d.success) { OPT[cur] = d.data; if (cur === 'locations') paintLocs(); else paintList(cur); }
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                } catch (err) { alert('Error: ' + err.message); }
+                btn.disabled = false; btn.innerHTML = html;
+            }
+            document.getElementById('optSave').addEventListener('click', function () { send(false); });
+            document.getElementById('optReset').addEventListener('click', function () { send(true); });
+            paintLocs(); paintList('classes'); paintList('subjects');
+        })();
+
+        // ===== Tuition Circular / Find Tutor banner =====
+        document.querySelectorAll('input[type=file][data-banner]').forEach(function (inp) {
+            inp.addEventListener('change', function () {
+                var k = inp.getAttribute('data-banner'), f = inp.files[0]; if (!f) return;
+                if (f.size > 5 * 1024 * 1024) { alert('Image must be less than 5MB'); inp.value = ''; return; }
+                var fd = new FormData(); fd.append('promoImage', f); fd.append('__RequestVerificationToken', getToken());
+                var lbl = document.getElementById(k + 'bUploadLbl'), html = lbl.innerHTML;
+                lbl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+                fetch('/Admin/UploadProfilePromo', { method: 'POST', body: fd })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        lbl.innerHTML = html; inp.value = '';
+                        if (!d.success) { alert('❌ ' + (d.message || 'Upload failed')); return; }
+                        document.getElementById(k + '_banner').value = d.imageUrl;
+                        var pv = document.getElementById(k + 'bPreview'); pv.src = d.imageUrl; pv.style.opacity = 1;
+                        alert('✅ ছবি আপলোড হয়েছে — এখন Save চাপুন।');
+                    })
+                    .catch(function (e) { lbl.innerHTML = html; alert('Error: ' + e.message); });
+            });
+        });
+        function saveBanner(k, which, reset) {
+            if (reset && !confirm('আগের (ডিফল্ট) ব্যানারে ফেরত যাবেন?')) return;
+            var fd = new FormData();
+            fd.append('which', which);
+            fd.append(k + '_banner', document.getElementById(k + '_banner').value);
+            fd.append(k + '_banner_enabled', document.getElementById(k + '_banner_enabled').checked ? 'true' : 'false');
+            if (reset) fd.append('reset', 'true');
+            fd.append('__RequestVerificationToken', getToken());
+            var btn = document.getElementById(k + 'bSaveBtn'), html = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; btn.disabled = true;
+            fetch('/Admin/SaveCircularBanner', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    btn.innerHTML = html; btn.disabled = false;
+                    if (d.success && d[k + '_banner']) {
+                        document.getElementById(k + '_banner').value = d[k + '_banner'];
+                        document.getElementById(k + '_banner_enabled').checked = d[k + '_banner_enabled'] !== '0';
+                        document.getElementById(k + 'bPrevOff').hidden = d[k + '_banner_enabled'] !== '0';
+                        var pv = document.getElementById(k + 'bPreview'); pv.src = d[k + '_banner']; pv.style.opacity = 1;
                     }
                     alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
                 })
