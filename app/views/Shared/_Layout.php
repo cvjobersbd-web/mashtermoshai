@@ -987,7 +987,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/FindTutor" class="nav-desktop-link<?= $navOn('/FindTutor') ? ' active' : '' ?>"<?= $navOn('/FindTutor') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-chalkboard-user"></i>Find Tutor
                     </a>
-<<<<<<< HEAD
                     <a href="/Categories" class="nav-desktop-link<?= $navOn('/Categories') ? ' active' : '' ?>"<?= $navOn('/Categories') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-layer-group"></i>Categories
                     </a>
@@ -997,14 +996,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Notice" class="nav-desktop-link<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-bullhorn"></i>Notice
                     </a>
-=======
-                    <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-clipboard-list"></i>Tuition Circular
-                    </a>
-                    <a href="/Notice" class="nav-desktop-link<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-bullhorn"></i>Notice
-                    </a>
->>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
                     <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-headset"></i>Helpdesk
                     </a>

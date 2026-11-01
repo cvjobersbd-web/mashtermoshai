@@ -12,10 +12,7 @@ require_once __DIR__ . '/CircularData.php';
 require_once __DIR__ . '/FindTutorData.php';
 require_once __DIR__ . '/PackageData.php';
 require_once __DIR__ . '/PaymentData.php';
-<<<<<<< HEAD
 require_once __DIR__ . '/CategoryData.php';
-=======
->>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
 
 class Db
 {
@@ -24,10 +21,7 @@ class Db
     use FindTutorData;
     use PackageData;
     use PaymentData;
-<<<<<<< HEAD
     use CategoryData;
-=======
->>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
 
     private PDO $pdo;
 

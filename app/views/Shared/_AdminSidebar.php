@@ -281,10 +281,7 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
-<<<<<<< HEAD
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category',
-=======
->>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
     $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments;
@@ -394,14 +391,11 @@ try {
             </a>
         </li>
         <li>
-<<<<<<< HEAD
             <a href="/Admin/Categories" class="<?= $currentAction === 'Categories' || $currentAction === 'EditCategory' ? 'active' : '' ?>">
                 <i class="fas fa-layer-group"></i> Categories
             </a>
         </li>
         <li>
-=======
->>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
             <a href="/Admin/Settings" class="<?= $currentAction === 'Settings' ? 'active' : '' ?>">
                 <i class="fas fa-cog"></i> Settings
             </a>
