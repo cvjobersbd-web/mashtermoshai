@@ -937,6 +937,7 @@ $heroImages = $Model->GetHeroImageList();
         .fq-off { text-align: center; color: #7A8CA0; font-size: 13.5px; padding: 10px; }
         @media (max-width: 576px) { .fq-row { flex-wrap: wrap; } .fq-acts { flex-direction: row; width: 100%; justify-content: flex-end; } .fq-prev p { padding-left: 18px; } }
     </style>
+<<<<<<< HEAD
     <div class="settings-card" id="catSettings">
         <h5><i class="fas fa-layer-group"></i> Categories (ক্যাটাগরি)</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
@@ -949,6 +950,8 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+=======
+>>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
     <div class="settings-card" id="fqSettings">
         <h5><i class="fas fa-circle-question"></i> Home — FAQ (প্রশ্ন ও উত্তর)</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">

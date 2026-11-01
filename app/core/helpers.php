@@ -1139,6 +1139,7 @@ function find_tutor_preset(): array
         $g = tutor_class_groups()[$c] ?? null;
         $out['class'] = $g ? [implode('|', $g[2]), preg_replace('/ Tutor$/', '', $g[0]) . ' (all)'] : [mb_substr(trim((string)input_str('class')), 0, 40), mb_substr(trim((string)input_str('class')), 0, 40)];
     }
+<<<<<<< HEAD
     // ক্যাটাগরি পেজের "See All" → /FindTutor?cat={slug}
     $cat = strtolower(trim((string)input_str('cat', '')));
     if ($cat !== '' && preg_match('/^[a-z0-9-]{1,120}$/', $cat)) {
@@ -1150,6 +1151,8 @@ function find_tutor_preset(): array
             }
         } catch (Throwable $e) { error_log('[find_tutor_preset cat] ' . $e->getMessage()); }
     }
+=======
+>>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
     $l = trim((string)input_str('location', ''));
     if ($l !== '') {
         $g = tutor_location_groups()[strtolower($l)] ?? null;
@@ -1202,6 +1205,7 @@ function home_faqs(): array
     $s = home_faq_settings();
     return $s['enabled'] ? $s['items'] : [];
 }
+<<<<<<< HEAD
 
 // ============================================================
 // ===== টিউশন ক্যাটাগরি (Categories পেজ) =====
@@ -1378,3 +1382,5 @@ function category_tint(string $name): array
     $p = [['#E3F6FD', '#028EA5'], ['#E7F8EF', '#157347'], ['#FFF4D6', '#B7791F'], ['#F1EAFE', '#6D28D9'], ['#FDECEE', '#C2185B'], ['#EAF1FE', '#1D63E0']];
     return $p[abs(crc32($name)) % count($p)];
 }
+=======
+>>>>>>> 944e022191f7b91aacb1a07158a2472767509e82
