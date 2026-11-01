@@ -194,7 +194,6 @@ function post_privacy_meta(): array
 {
     return [
         'Public'  => ['fa-earth-asia', 'Public', 'সবাই দেখতে পারবে'],
-        'Friends' => ['fa-user-group', 'Friends', 'শুধু আপনার ফ্রেন্ডরা'],
         'OnlyMe'  => ['fa-lock', 'Only me', 'শুধু আপনি'],
     ];
 }

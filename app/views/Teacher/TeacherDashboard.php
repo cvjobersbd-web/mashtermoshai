@@ -517,8 +517,8 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                 </a>
             </li>
             <li>
-                <a href="/Friends">
-                    <i class="fas fa-user-group"></i> Friends
+                <a href="/Profile/Views">
+                    <i class="fas fa-eye"></i> Profile Views
                 </a>
             </li>
         </ul>

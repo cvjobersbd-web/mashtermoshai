@@ -37,8 +37,8 @@ class ProfileController extends Controller
     }
 
     /**
-     * GET /Profile/Show/{id}?tab=posts|about|friends — ফেসবুকের মতো পাবলিক প্রোফাইল (টাইমলাইন)।
-     * id না দিলে নিজের প্রোফাইল। ফোন / ইমেইল / ঠিকানা শুধু ফ্রেন্ড (আর নিজে) দেখতে পারে।
+     * GET /Profile/Show/{id}?tab=overview|profile|... — পাবলিক প্রোফাইল (টাইমলাইন)। অন্য কেউ দেখলে "Who viewed" তালিকায় ওঠে।
+     * id না দিলে নিজের প্রোফাইল। ফোন / ইমেইল / ঠিকানা শুধু নিজে (আর অ্যাডমিন) দেখতে পারে।
      */
     public function Show(): void
     {
@@ -54,6 +54,13 @@ class ProfileController extends Controller
         $suspended = $this->db->GetActiveSuspension($id) !== null || !$user->IsActive;
         if ($suspended && !$isAdminViewer && !$isOwner) not_found('এই প্রোফাইলটি এখন দেখা যাচ্ছে না।');
 
+        // LinkedIn এর মতো: কে প্রোফাইল দেখল (নিজে বা অ্যাডমিন দেখলে গোনা হয় না)
+        $ownerViews = null;
+        if (!$isOwner && !$isAdminViewer && current_role() !== 'Admin') $this->db->RecordProfileView($id, $me);
+        if ($isOwner && !$isAdminViewer) {
+            $ownerViews = ['stats' => $this->db->GetProfileViewStats($id), 'recent' => $this->db->GetProfileViewers($id, 90, '', 5, 0, $this->db->GetProfileViewsSeenAt($id))];
+        }
+
         $teacherInfo = null;
         $teacherStatus = $user->Role === 'Teacher' ? 'Approved' : 'None';
         try {
@@ -63,24 +70,22 @@ class ProfileController extends Controller
         } catch (Throwable $e) { $teacherInfo = null; }
 
         // টিচারের প্রোফাইল আলাদা ডিজাইনে
-        if ($user->Role === 'Teacher') { $this->showTeacher($user, $me, $isOwner, $isAdminViewer, $relation, $suspended, $teacherInfo); return; }
+        if ($user->Role === 'Teacher') { $this->showTeacher($user, $me, $isOwner, $isAdminViewer, $relation, $suspended, $teacherInfo, $ownerViews); return; }
 
         // ট্যাব (পুরোনো লিংক posts/about ও কাজ করে)
         $tab = (string)input_str('tab', 'overview');
         $tab = ['posts' => 'overview', 'about' => 'profile'][$tab] ?? $tab;
         $isTeacherProfile = $user->Role === 'Teacher';
-        $allowed = ['overview', 'profile', 'friends', 'goals', 'activities'];
+        $allowed = ['overview', 'profile', 'goals', 'activities'];
         if ($isOwner) $allowed = array_merge($allowed, ['tutors', 'saved', 'settings'], $isTeacherProfile ? [] : ['circulars']);
         if (!in_array($tab, $allowed, true)) $tab = 'overview';
 
         $posts = $this->db->GetProfilePosts($id, $me, $isAdminViewer, null, 10);
-        $friends = $this->db->GetFriendsOfUserForViewer($id, $me);
 
         $this->view('Profile/Show', obj([
             'User' => $user, 'IsOwner' => $isOwner, 'Relation' => $relation, 'IsAdminViewer' => $isAdminViewer,
-            'CanSeePrivate' => $isOwner || $isAdminViewer || $relation === 'friends',
-            'FriendCount' => count($friends), 'Friends' => $friends,
-            'MutualCount' => $isOwner ? 0 : $this->db->CountMutualFriends($me, $id),
+            'CanSeePrivate' => $isOwner || $isAdminViewer,
+            'ProfileViews' => $ownerViews,
             'TeacherInfo' => $user->Role === 'Teacher' || $isOwner ? $teacherInfo : null, 'TeacherStatus' => $teacherStatus,
             'Posts' => $posts, 'HasMore' => count($posts) === 10,
             'PostCount' => $this->db->CountProfilePosts($id, $me, $isAdminViewer),
@@ -97,13 +102,35 @@ class ProfileController extends Controller
         ]));
     }
 
+    /**
+     * GET /Profile/Views?role=Teacher|User&page= — "Who viewed your profile" (শুধু নিজের)
+     */
+    public function Views(): void
+    {
+        $me = current_user_id();
+        if ($me === null) redirect('/Account/Login?returnUrl=' . rawurlencode('/Profile/Views'));
+        if (current_role() === 'Admin') redirect('/Admin/Dashboard');
+        $role = (string)input_str('role', '');
+        if (!in_array($role, ['Teacher', 'User'], true)) $role = '';
+        $page = max(1, (int)input_int('page', 1));
+        $per = 30;
+        $seen = $this->db->GetProfileViewsSeenAt($me);
+        $viewers = $this->db->GetProfileViewers($me, 90, $role, $per + 1, ($page - 1) * $per, $seen);
+        $hasMore = count($viewers) > $per;
+        $viewers = array_slice($viewers, 0, $per);
+        $stats = $this->db->GetProfileViewStats($me);
+        $this->db->MarkProfileViewsSeen($me);
+        $this->view('Profile/Views', $viewers, ['Stats' => $stats, 'Role' => $role, 'Page' => $page, 'HasMore' => $hasMore,
+            'User' => $this->db->GetUserById($me)]);
+    }
+
     /** টিচার প্রোফাইল (Profile/ShowTeacher) */
-    private function showTeacher(Obj $user, int $me, bool $isOwner, bool $isAdminViewer, string $relation, bool $suspended, ?Obj $teacherInfo): void
+    private function showTeacher(Obj $user, int $me, bool $isOwner, bool $isAdminViewer, string $relation, bool $suspended, ?Obj $teacherInfo, ?array $ownerViews = null): void
     {
         $id = (int)$user->Id;
         $tab = (string)input_str('tab', 'overview');
         $tab = ['posts' => 'overview', 'about' => 'profile', 'dashboard' => 'overview', 'tutors' => 'students', 'activities' => 'overview', 'goals' => 'overview'][$tab] ?? $tab;
-        $allowed = ['overview', 'profile', 'subjects', 'reviews', 'certificates', 'friends'];
+        $allowed = ['overview', 'profile', 'subjects', 'reviews', 'certificates'];
         if ($isOwner) $allowed = array_merge($allowed, ['students', 'schedule', 'tuitionposts', 'saved', 'earnings', 'settings']);
         if (!in_array($tab, $allowed, true)) $tab = 'overview';
 
@@ -113,7 +140,6 @@ class ProfileController extends Controller
         $students = $db->GetTeacherStudents($id);
         $classes = $isOwner ? $db->GetTeacherClasses($id) : [];
         $posts = $db->GetProfilePosts($id, $me, $isAdminViewer, null, 10);
-        $friends = $db->GetFriendsOfUserForViewer($id, $me);
         $tIntro = $db->GetTeacherIntro($id);
         $myReview = null; $canReview = false;
         if (!$isOwner && !$isAdminViewer) {
@@ -125,9 +151,8 @@ class ProfileController extends Controller
 
         $this->view('Profile/ShowTeacher', obj([
             'User' => $user, 'IsOwner' => $isOwner, 'Relation' => $relation, 'IsAdminViewer' => $isAdminViewer,
-            'CanSeePrivate' => $isOwner || $isAdminViewer || $relation === 'friends',
-            'FriendCount' => count($friends), 'Friends' => $friends,
-            'MutualCount' => $isOwner ? 0 : $db->CountMutualFriends($me, $id),
+            'CanSeePrivate' => $isOwner || $isAdminViewer,
+            'ProfileViews' => $ownerViews,
             'TeacherInfo' => $teacherInfo, 'TeacherStatus' => 'Approved',
             'Posts' => $posts, 'HasMore' => count($posts) === 10,
             'PostCount' => $db->CountProfilePosts($id, $me, $isAdminViewer),

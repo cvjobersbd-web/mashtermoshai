@@ -108,7 +108,7 @@ $forms = !$isOwner ? [] : [
                 <?php if (isset($forms[$k])): ?>
                     <form class="ab-form" data-ab-form="<?= e($forms[$k][0]) ?>" data-sec="<?= $k ?>" autocomplete="off" novalidate>
                         <div class="ab-fgrid"><?= $forms[$k][1] ?></div>
-                        <?php if ($k === 'basic' || $k === 'address'): ?><p class="ab-note"><i class="fas fa-user-group"></i> <?= $k === 'basic' ? 'ইমেইল ও মোবাইল' : 'বর্তমান ও স্থায়ী ঠিকানা' ?> শুধু আপনার ফ্রেন্ডরা দেখতে পারেন।</p><?php endif; ?>
+                        <?php if ($k === 'basic' || $k === 'address'): ?><p class="ab-note"><i class="fas fa-lock"></i> <?= $k === 'basic' ? 'ইমেইল ও মোবাইল' : 'বর্তমান ও স্থায়ী ঠিকানা' ?> গোপন থাকে — অন্যরা দেখতে পায় না।</p><?php endif; ?>
                         <div class="ab-factions"><button type="button" class="pf-btn" data-ab-cancel>Cancel</button><button type="submit" class="pf-btn primary"><i class="fas fa-check"></i> Save</button></div>
                     </form>
                 <?php endif; ?>
@@ -123,11 +123,11 @@ $forms = !$isOwner ? [] : [
                             <div class="ab-row">
                                 <i class="<?= $fa ?> <?= $ic ?>"></i>
                                 <div>
-                                    <small><?= e($lb) ?><?php if ($priv && $isOwner): ?> · <i class="fas fa-user-group" title="শুধু ফ্রেন্ডরা দেখতে পারে"></i><?php endif; ?></small>
+                                    <small><?= e($lb) ?><?php if ($priv && $isOwner): ?> · <i class="fas fa-user-group" title="শুধু আপনি দেখতে পারেন"></i><?php endif; ?></small>
                                     <?php if ($v === ''): ?>
                                         <span class="empty">যোগ করা হয়নি</span>
                                     <?php elseif ($priv && !$canPrivate): ?>
-                                        <span class="lock"><i class="fas fa-lock"></i> শুধু ফ্রেন্ডরা দেখতে পারে</span>
+                                        <span class="lock"><i class="fas fa-lock"></i> গোপন — শুধু প্রোফাইলের মালিক দেখতে পারেন</span>
                                     <?php elseif ($isLink): ?>
                                         <a href="<?= e($v) ?>" target="_blank" rel="noopener nofollow"><?= e(preg_replace('#^https?://(www\.)?#i', '', rtrim($v, '/'))) ?></a>
                                     <?php elseif ($lb === 'Email'): ?>

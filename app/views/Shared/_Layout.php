@@ -362,7 +362,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 pointer-events: auto;
             }
 
-            /* ===== Friends icon (নেভবার) ===== */
+            /* ===== Profile Views icon (নেভবার) ===== */
             .fr-nav-wrapper { margin-right: 4px; }
             .fr-nav-wrapper .notification-bell { text-decoration: none; font-size: 19px; }
             .fr-nav-wrapper .notif-badge { background: #FFB300 !important; color: #08224A !important; }
@@ -1031,13 +1031,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     ?>
 
                         <?php if (!$isAdmin):
-                            $frReq = 0;
-                            try { $frReq = db()->CountIncomingFriendRequests((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
+                            $frReq = 0; // কতজন নতুন করে প্রোফাইল দেখেছে (শেষবার তালিকা দেখার পর)
+                            try { $frReq = db()->CountNewProfileViewers((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
                         ?>
-                            <!-- Friends -->
+                            <!-- Who viewed my profile (LinkedIn এর মতো) -->
                             <div class="notification-wrapper fr-nav-wrapper">
-                                <a href="/Friends" class="notification-bell" title="Friends" aria-label="Friends">
-                                    <i class="fas fa-user-group"></i>
+                                <a href="/Profile/Views" class="notification-bell" title="Who viewed your profile" aria-label="Who viewed your profile<?= $frReq ? ' — ' . (int)$frReq . ' new' : '' ?>">
+                                    <i class="fas fa-eye"></i>
                                     <span class="notif-badge show" id="frNavBadge" style="<?= $frReq > 0 ? '' : 'display:none' ?>"><?= $frReq > 9 ? '9+' : $frReq ?></span>
                                 </a>
                             </div>
@@ -1097,8 +1097,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="/Friends">
-                                            <i class="fas fa-user-group"></i> Friends
+                                        <a class="dropdown-item" href="/Profile/Views">
+                                            <i class="fas fa-eye"></i> Profile Views
                                             <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> new</span><?php endif; ?>
                                         </a>
                                     </li>
@@ -1222,7 +1222,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <nav class="m-nav">
                     <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
                     <?php if ($mRole !== 'Admin'): ?>
-                        <a href="/Friends" class="<?= $mActive('/Friends') ?>"><i class="fas fa-user-group"></i><span>Friends</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                        <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <?php endif; ?>
                     <?php if ($mRole === 'User' || $mRole === 'Admin'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
