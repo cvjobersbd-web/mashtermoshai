@@ -765,6 +765,17 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 .nav-desktop-link { padding: 9px 10px; gap: 6px; font-size: 13.5px; }
                 .nav-desktop-link.active::after { left: 10px; right: 10px; }
             }
+            /* ১৮০০px এর ছোট স্ক্রিনে Notice/Helpdesk/Package → "More" ড্রপডাউনে (নেভবার এক লাইনে থাকে) */
+            .nav-more { display: none; position: relative; }
+            button.nav-desktop-link { background: none; border: none; cursor: pointer; font-family: inherit; }
+            .nav-more-dd { position: absolute; top: calc(100% + 8px); right: 0; min-width: 190px; background: #fff; border-radius: 12px; padding: 6px;
+                box-shadow: 0 14px 34px rgba(8,34,74,.22); display: none; z-index: 1200; }
+            .nav-more.open .nav-more-dd { display: block; }
+            .nav-more-dd a { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; color: #1E293B; text-decoration: none; font-size: 14px; font-weight: 600; }
+            .nav-more-dd a i { width: 16px; color: #0F6E86; }
+            .nav-more-dd a:hover { background: #F1F5F9; }
+            .nav-more-dd a.on { background: #E0F2FE; color: #0369A1; }
+            @media (max-width: 1799px) { .nav-wide { display: none !important; } .nav-more { display: block; } }
             .nav-desktop-link:hover { opacity: 1; }
             .nav-desktop-link.active { opacity: 1; font-weight: 700; background: none; }
             .nav-desktop-link.active::after {
@@ -984,6 +995,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/" class="nav-desktop-link<?= $navOn('/') ? ' active' : '' ?>"<?= $navOn('/') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-house"></i>Home
                     </a>
+                    <a href="/Feed" class="nav-desktop-link<?= $navOn('/Feed') ? ' active' : '' ?>"<?= $navOn('/Feed') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-graduation-cap"></i>Educational Feed
+                    </a>
                     <a href="/FindTutor" class="nav-desktop-link<?= $navOn('/FindTutor') ? ' active' : '' ?>"<?= $navOn('/FindTutor') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-chalkboard-user"></i>Find Tutor
                     </a>
@@ -993,15 +1007,26 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-clipboard-list"></i>Tuition Circular
                     </a>
-                    <a href="/Notice" class="nav-desktop-link<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
+                    <a href="/Notice" class="nav-desktop-link nav-wide<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-bullhorn"></i>Notice
                     </a>
-                    <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
+                    <a href="/Helpdesk" class="nav-desktop-link nav-wide<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-headset"></i>Helpdesk
                     </a>
-                    <a href="/Package" class="nav-desktop-link<?= $navOn('/Package') || $navOn('/Payment') ? ' active' : '' ?>"<?= $navOn('/Package') ? ' aria-current="page"' : '' ?>>
+                    <a href="/Package" class="nav-desktop-link nav-wide<?= $navOn('/Package') || $navOn('/Payment') ? ' active' : '' ?>"<?= $navOn('/Package') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-tags"></i>Package
                     </a>
+                    <?php $moreOn = $navOn('/Notice') || $navOn('/Helpdesk') || $navOn('/Package') || $navOn('/Payment'); ?>
+                    <div class="nav-more">
+                        <button type="button" class="nav-desktop-link<?= $moreOn ? ' active' : '' ?>" aria-haspopup="true" aria-expanded="false" id="navMoreBtn">
+                            <i class="fas fa-ellipsis"></i>More <i class="fas fa-chevron-down" style="font-size:10px;"></i>
+                        </button>
+                        <div class="nav-more-dd" role="menu">
+                            <a href="/Notice" role="menuitem" class="<?= $navOn('/Notice') ? 'on' : '' ?>"><i class="fas fa-bullhorn"></i>Notice</a>
+                            <a href="/Helpdesk" role="menuitem" class="<?= $navOn('/Helpdesk') ? 'on' : '' ?>"><i class="fas fa-headset"></i>Helpdesk</a>
+                            <a href="/Package" role="menuitem" class="<?= $navOn('/Package') || $navOn('/Payment') ? 'on' : '' ?>"><i class="fas fa-tags"></i>Package</a>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Side (বেল সব স্ক্রিনে, প্রোফাইল/লগইন শুধু ডেস্কটপে, ☰ শুধু মোবাইলে) -->
@@ -1191,6 +1216,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <div class="m-label">Menu</div>
             <nav class="m-nav">
                 <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span>Home</span></a>
+                <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span>Educational Feed</span></a>
                 <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor</span></a>
                 <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
@@ -1672,5 +1698,14 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         })();
     </script>
 
+<script>
+(function () {
+    var b = document.getElementById('navMoreBtn'); if (!b) return;
+    var w = b.parentNode;
+    b.addEventListener('click', function (e) { e.stopPropagation(); var o = w.classList.toggle('open'); b.setAttribute('aria-expanded', o ? 'true' : 'false'); });
+    document.addEventListener('click', function (e) { if (!w.contains(e.target)) { w.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { w.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); } });
+})();
+</script>
 </body>
 </html>

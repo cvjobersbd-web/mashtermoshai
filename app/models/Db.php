@@ -13,6 +13,7 @@ require_once __DIR__ . '/FindTutorData.php';
 require_once __DIR__ . '/PackageData.php';
 require_once __DIR__ . '/PaymentData.php';
 require_once __DIR__ . '/CategoryData.php';
+require_once __DIR__ . '/EduFeedData.php';
 
 class Db
 {
@@ -22,6 +23,7 @@ class Db
     use PackageData;
     use PaymentData;
     use CategoryData;
+    use EduFeedData;
 
     private PDO $pdo;
 

@@ -17,6 +17,8 @@ try {
 
 $pendingReviews = 0;
 try { $pendingReviews = db()->CountReviews('Pending'); } catch (Throwable $e) { }
+$pendingEduPosts = 0;
+try { $pendingEduPosts = (int)(db()->CountEduPostsByStatus()['Pending'] ?? 0); } catch (Throwable $e) { }
 $pendingPayments = 0;
 try { $pendingPayments = db()->CountPendingPayments(); } catch (Throwable $e) { }
 
@@ -281,10 +283,10 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
-        'Categories' => 'Categories', 'EditCategory' => 'Edit Category',
+        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
-    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments;
+    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
 ?>
 <div class="admin-mbar">
     <button class="admin-mbar-btn" id="adminSidebarToggle" type="button" aria-label="Open admin menu" aria-controls="adminSidebar" aria-expanded="false">
@@ -362,6 +364,14 @@ try {
         <li>
             <a href="/Admin/ManageNotices" class="<?= $currentAction === 'ManageNotices' || $currentAction === 'AddNotice' || $currentAction === 'EditNotice' ? 'active' : '' ?>">
                 <i class="fas fa-newspaper"></i> News &amp; Announcements
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/EduFeed" class="<?= $currentAction === 'EduFeed' ? 'active' : '' ?>">
+                <i class="fas fa-graduation-cap"></i> Educational Feed
+                <?php if ($pendingEduPosts > 0): ?>
+                    <span class="badge-sidebar warning"><?= e($pendingEduPosts) ?></span>
+                <?php endif; ?>
             </a>
         </li>
         <li>

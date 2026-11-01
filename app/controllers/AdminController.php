@@ -846,6 +846,44 @@ class AdminController extends Controller
     }
 
     // ============================================================
+    // ===== EDUCATIONAL FEED (পোস্ট রিভিউ — Approve / Reject) =====
+    // ============================================================
+    /** GET /Admin/EduFeed?status=Pending|Approved|Rejected|all&page= */
+    public function EduFeed(): void
+    {
+        $this->requireAdminPage();
+        $status = (string)input_str('status', 'Pending');
+        if (!in_array($status, ['Pending', 'Approved', 'Rejected', 'all'], true)) $status = 'Pending';
+        $page = max(1, (int)input_int('page', 1));
+        $per = 20;
+        $counts = $this->db->CountEduPostsByStatus();
+        $this->view(null, $this->db->GetEduPostsAdmin($status, $per, ($page - 1) * $per), [
+            'Status' => $status, 'Counts' => $counts, 'Page' => $page, 'Pages' => max(1, (int)ceil(($counts[$status] ?? 0) / $per)),
+        ]);
+    }
+
+    /** POST /Admin/EduFeedStatus — id, status (Approved|Rejected|Pending), reason */
+    public function EduFeedStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        $p = $this->db->GetEduPost((int)input_int('id', 0));
+        if (!$p) json_response(['success' => false, 'message' => 'পোস্টটি পাওয়া যায়নি (মুছে ফেলা হয়ে থাকতে পারে)।']);
+        $status = (string)input_str('status', '');
+        if (!in_array($status, ['Approved', 'Rejected', 'Pending'], true)) json_response(['success' => false, 'message' => 'ভুল স্ট্যাটাস।']);
+        $reason = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('reason', '')))), 0, 300);
+        $this->db->SetEduPostStatus($p->Id, $status, $reason, (int)current_user_id());
+        if ($status !== $p->Status && $p->UserId !== (int)current_user_id()) {
+            if ($status === 'Approved') {
+                $this->db->CreateNotification($p->UserId, 'পোস্ট Approve হয়েছে 🎉', 'আপনার Educational Feed পোস্টটি Approve হয়েছে — এখন সবাই দেখতে পাচ্ছে।', 'success', $p->Url, 'fa-circle-check');
+            } elseif ($status === 'Rejected') {
+                $this->db->CreateNotification($p->UserId, 'পোস্ট Approve হয়নি', 'আপনার Educational Feed পোস্টটি Approve করা হয়নি।' . ($reason !== '' ? ' কারণ: ' . $reason : ''), 'warning', '/Feed?tab=mine', 'fa-circle-xmark');
+            }
+        }
+        $msg = ['Approved' => 'পোস্ট Approve হয়েছে — ফিডে দেখাচ্ছে।', 'Rejected' => 'পোস্ট Reject করা হয়েছে।', 'Pending' => 'পোস্ট আবার Pending-এ রাখা হয়েছে।'][$status];
+        json_response(['success' => true, 'message' => $msg, 'counts' => $this->db->CountEduPostsByStatus()]);
+    }
+
+    // ============================================================
     // ===== CATEGORIES (Categories পেজের ক্যাটাগরি + গ্রুপ) =====
     // ============================================================
     /** GET /Admin/Categories */
