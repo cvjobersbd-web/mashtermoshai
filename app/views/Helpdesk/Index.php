@@ -859,12 +859,12 @@ $userProfileImg = session_get('ProfileImageLink');
     }
 
     /* ============================================================
-       ✅ নতুন ডিজাইন — ব্যানার, "কিভাবে সাহায্য করতে পারি?", ৪টা কার্ড, কমিউনিটি পোস্ট
+       ✅ নতুন ডিজাইন — ব্যানার, ৪টা কার্ড, কমিউনিটি পোস্ট
        ============================================================ */
     .hd-page { background: radial-gradient(1200px 420px at 50% 0, #DDF1FC 0%, rgba(221,241,252,0) 70%), linear-gradient(180deg, #EAF6FD 0%, #F5FBFF 420px); padding: 18px 20px 70px; }
     .hd-container { max-width: 1000px; }
     .hd-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-    .hd-banner { position: relative; margin: 0 0 -6px; }
+    .hd-banner { position: relative; margin: 0 0 6px; }
     .hd-banner img { display: block; width: 100%; height: auto; }
     .hd-banner .hd-fallback { display: none; }
     .hd-banner.failed img { display: none; }
@@ -934,7 +934,6 @@ $userProfileImg = session_get('ProfileImageLink');
 $hdb = function_exists('helpdesk_banner') ? helpdesk_banner() : ['hd_banner' => '', 'hd_banner_enabled' => '0'];
 $hdBannerOn = ($hdb['hd_banner_enabled'] ?? '1') !== '0' && !is_blank($hdb['hd_banner'] ?? '');
 $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
-$hdTopics = [['Account & Profile', 'account'], ['Tuition Support', 'tuition'], ['Payment & Package', 'payment'], ['Technical Issue', 'problem']];
 ?>
 <div class="hd-page">
     <div class="hd-container">
@@ -958,14 +957,6 @@ $hdTopics = [['Account & Profile', 'account'], ['Tuition Support', 'tuition'], [
                 <p>আপনার সমস্যা বা প্রশ্নের দ্রুত সমাধান পান — আমাদের সাপোর্ট টিম ও কমিউনিটির সহায়তায়।</p>
             </div>
         <?php endif; ?>
-
-        <!-- ===== কিভাবে সাহায্য করতে পারি? ===== -->
-        <div class="hd-ask">
-            <h2>কিভাবে সাহায্য করতে পারি?</h2>
-            <div class="hd-pop"><span>জনপ্রিয়:</span>
-                <?php foreach ($hdTopics as [$lbl, $kw]): ?><a href="/Helpdesk?search=<?= rawurlencode($kw) ?>"><?= e($lbl) ?></a><?php endforeach; ?>
-            </div>
-        </div>
 
         <!-- ===== ৪টা কার্ড ===== -->
         <div class="hd-cards">
