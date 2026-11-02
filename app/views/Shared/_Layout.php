@@ -1078,12 +1078,12 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     <small><?= e(session_get('UserName')) ?></small>
                                 </li>
                                 <li><hr class="dropdown-divider" /></li>
-                                <li>
-                                    <a class="dropdown-item" href="<?= $isAdmin ? '/Profile' : '/Profile/Show' ?>">
-                                        <i class="fas fa-id-card"></i> My Profile
-                                    </a>
-                                </li>
-                                <?php if (!$isAdmin): ?>
+                                <?php if (!$isAdmin): /* অ্যাডমিনের জন্য শুধু Admin Panel */ ?>
+                                    <li>
+                                        <a class="dropdown-item" href="/Profile/Show">
+                                            <i class="fas fa-id-card"></i> My Profile
+                                        </a>
+                                    </li>
                                     <li>
                                         <a class="dropdown-item" href="/Payment/My">
                                             <i class="fas fa-receipt"></i> আমার পেমেন্ট
@@ -1097,7 +1097,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     </li>
                                 <?php endif; ?>
 
-                                <?php if ($userRole === 'User' || $userRole === 'Admin'): ?>
+                                <?php if ($userRole === 'User'): ?>
                                     <li>
                                         <a class="dropdown-item" href="/User/Dashboard">
                                             <i class="fas fa-chart-pie"></i> Student Dashboard
@@ -1119,11 +1119,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         <a class="dropdown-item" href="/Admin/Dashboard">
                                             <i class="fas fa-shield-alt"></i> Admin Panel
                                             <span class="badge-role admin">Admin</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="/Admin/Settings">
-                                            <i class="fas fa-cog"></i> Site Settings
                                         </a>
                                     </li>
                                 <?php endif; ?>
@@ -1210,28 +1205,24 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
             </nav>
 
-            <?php if ($mLoggedIn): ?>
+            <?php if ($mLoggedIn && $mRole !== 'Admin'): ?>
                 <div class="m-label">My Account</div>
                 <nav class="m-nav">
-                    <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
-                    <?php if ($mRole !== 'Admin'): ?>
-                        <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
-                    <?php endif; ?>
-                    <?php if ($mRole === 'User' || $mRole === 'Admin'): ?>
+                    <a href="/Profile/Show" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
+                    <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                    <?php if ($mRole === 'User'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
                     <?php endif; ?>
                     <?php if ($mRole === 'Teacher'): ?>
                         <a href="/Teacher/TeacherDashboard" class="<?= $mActive('/Teacher') ?>"><i class="fas fa-chalkboard-teacher"></i><span>Teacher Dashboard</span></a>
                     <?php endif; ?>
                 </nav>
-
-                <?php if ($mRole === 'Admin'): ?>
-                    <div class="m-label">Admin Panel</div>
-                    <nav class="m-nav">
-                        <a href="/Admin/Dashboard" class="<?= $mActive('/Admin/Dashboard') ?>"><i class="fas fa-shield-alt"></i><span>Admin Dashboard</span></a>
-                        <a href="/Admin/Settings" class="<?= $mActive('/Admin/Settings') ?>"><i class="fas fa-cog"></i><span>Site Settings</span></a>
-                    </nav>
-                <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($mLoggedIn && $mRole === 'Admin'): ?>
+                <div class="m-label">Admin</div>
+                <nav class="m-nav">
+                    <a href="/Admin/Dashboard" class="<?= $mActive('/Admin') ?>"><i class="fas fa-shield-alt"></i><span>Admin Panel</span></a>
+                </nav>
             <?php endif; ?>
         </div>
 

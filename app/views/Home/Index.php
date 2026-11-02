@@ -195,7 +195,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         transition: opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1);
     }
     .hw-step.in { opacity: 1; transform: none; }
-    .hw-step:nth-child(2) { transition-delay: .12s; } .hw-step:nth-child(3) { transition-delay: .24s; } .hw-step:nth-child(4) { transition-delay: .36s; }
+    .hw-step:nth-of-type(2) { transition-delay: .12s; } .hw-step:nth-of-type(3) { transition-delay: .24s; } .hw-step:nth-of-type(4) { transition-delay: .36s; }
 
     .hw-icon-wrap { position: relative; height: 150px; display: flex; align-items: center; justify-content: center; }
     .hw-icon {
@@ -213,15 +213,10 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     }
     .hw-step:hover .hw-icon { transform: translateY(-6px) scale(1.04); background: #0099D6; box-shadow: 0 16px 30px rgba(2,184,245,0.38); }
 
-    /* বাঁকা ড্যাশ তীর (একটা উপরে, একটা নিচে — পালাক্রমে) */
-    .hw-arrow {
-        position: absolute; z-index: 1; pointer-events: none;
-        left: calc(50% + 50px); width: calc(100% - 76px); height: 80px; overflow: visible;
-    }
-    .hw-arrow.up { top: 2px; }
-    .hw-arrow.down { bottom: 2px; }
-    .hw-arrow path { fill: none; stroke: #8FD8F2; stroke-width: 2; stroke-dasharray: 7 7; stroke-linecap: round; }
-    .hw-step.in .hw-arrow path { animation: hwDash 1.2s linear infinite; }
+    /* বাঁকা ড্যাশ তীর — JS দিয়ে আসল বৃত্তের অবস্থান মেপে আঁকা (এক বৃত্তের কিনারা থেকে পরেরটার কিনারায়) */
+    .hw-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; opacity: 0; transition: opacity .6s ease .3s; }
+    .hw-lines.on { opacity: 1; }
+    .hw-lines path.l { fill: none; stroke: #8FD8F2; stroke-width: 2; stroke-dasharray: 7 7; stroke-linecap: round; animation: hwDash 1.2s linear infinite; }
     @keyframes hwDash { to { stroke-dashoffset: -28; } }
 
     .hw-step h3 { margin: 18px 0 10px; font-size: 20px; font-weight: 700; color: #08224A; }
@@ -232,7 +227,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     /* ট্যাবলেট: ২ কলাম, তীর লুকানো */
     @media (max-width: 1024px) {
         .hw-steps { grid-template-columns: repeat(2, 1fr); row-gap: 36px; }
-        .hw-arrow { display: none; }
+        .hw-lines { display: none; }
         .hw-icon-wrap { height: 110px; }
     }
     /* মোবাইল: উপর-নিচে টাইমলাইন */
@@ -257,7 +252,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     }
     @media (prefers-reduced-motion: reduce) {
         .hw-step { opacity: 1; transform: none; transition: none; }
-        .hw-step.in .hw-arrow path { animation: none; }
+        .hw-lines path.l { animation: none; }
     }
 </style>
 
@@ -266,22 +261,15 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         <h2 class="hw-title">The ways <span class="hl">Parents / Students</span> find a tutor.</h2>
         <p class="hw-sub">মাত্র ৪টি সহজ ধাপে আপনার পছন্দের টিউটর খুঁজে নিন</p>
 
-        <div class="hw-steps">
+        <div class="hw-steps" id="hwSteps">
+            <svg class="hw-lines" id="hwLines" aria-hidden="true">
+                <defs><marker id="hwHead" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto">
+                    <path d="M2 2 L10 6 L2 10" fill="none" stroke="#5CC8EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></marker></defs>
+            </svg>
             <?php foreach ($hwSteps as $i => [$icon, $title, $desc, $href]): ?>
                 <a class="hw-step" href="<?= e($href) ?>">
                     <div class="hw-icon-wrap">
                         <span class="hw-icon"><i class="fas <?= e($icon) ?>"></i><span class="hw-num"><?= $i + 1 ?></span></span>
-                        <?php if ($i < count($hwSteps) - 1): $up = $i % 2 === 0; ?>
-                            <svg class="hw-arrow <?= $up ? 'up' : 'down' ?>" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true">
-                                <?php if ($up): ?>
-                                    <path d="M4 66 C 50 -6, 150 -6, 190 58" />
-                                    <path d="M180 50 L 191 60 L 194 45" style="stroke-dasharray:none" />
-                                <?php else: ?>
-                                    <path d="M4 14 C 50 86, 150 86, 190 22" />
-                                    <path d="M180 30 L 191 20 L 194 35" style="stroke-dasharray:none" />
-                                <?php endif; ?>
-                            </svg>
-                        <?php endif; ?>
                     </div>
                     <h3><?= e($title) ?></h3>
                     <p><?= e($desc) ?></p>
@@ -299,6 +287,42 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
         }, { threshold: 0.2 });
         steps.forEach(function (s) { io.observe(s); });
+    })();
+    // তীর আঁকা: প্রতিটা বৃত্তের কেন্দ্র মেপে, একটা উপরে বাঁকা, পরেরটা নিচে — পালাক্রমে
+    (function () {
+        var box = document.getElementById('hwSteps'), svg = document.getElementById('hwLines'); if (!box || !svg) return;
+        var NS = 'http://www.w3.org/2000/svg';
+        function pos(el) { // transform বাদ দিয়ে লেআউটের আসল অবস্থান (fade-in এর সময়ও ঠিক থাকে)
+            var x = 0, y = 0, e = el;
+            while (e && e !== box) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; }
+            if (e !== box) { var r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); return { x: r.left - b.left, y: r.top - b.top }; }
+            return { x: x, y: y };
+        }
+        function draw() {
+            svg.querySelectorAll('path.l').forEach(function (p) { p.remove(); });
+            if (getComputedStyle(svg).display === 'none') return;
+            var icons = box.querySelectorAll('.hw-icon');
+            for (var i = 0; i < icons.length - 1; i++) {
+                var a = icons[i], b = icons[i + 1], pa = pos(a), pb = pos(b);
+                var ra = a.offsetWidth / 2, rb = b.offsetWidth / 2;
+                var ca = { x: pa.x + ra, y: pa.y + a.offsetHeight / 2 }, cb = { x: pb.x + rb, y: pb.y + b.offsetHeight / 2 };
+                if (Math.abs(ca.y - cb.y) > 20) continue; // একই লাইনে না থাকলে তীর নয়
+                var up = i % 2 === 0, s = up ? -1 : 1, gap = 10, ang = 40 * Math.PI / 180;
+                var sx = ca.x + (ra + gap) * Math.cos(ang), sy = ca.y + s * (ra + gap) * Math.sin(ang);
+                var ex = cb.x - (rb + gap) * Math.cos(ang), ey = cb.y + s * (rb + gap) * Math.sin(ang);
+                var d = ex - sx, h = Math.min(70, Math.max(34, d * 0.32));
+                var p = document.createElementNS(NS, 'path');
+                p.setAttribute('class', 'l');
+                p.setAttribute('d', 'M' + sx.toFixed(1) + ' ' + sy.toFixed(1) + ' C ' + (sx + d * 0.22).toFixed(1) + ' ' + (sy + s * h).toFixed(1) + ', '
+                    + (ex - d * 0.22).toFixed(1) + ' ' + (ey + s * h).toFixed(1) + ', ' + ex.toFixed(1) + ' ' + ey.toFixed(1));
+                p.setAttribute('marker-end', 'url(#hwHead)');
+                svg.appendChild(p);
+            }
+            svg.classList.add('on');
+        }
+        var t; function later() { clearTimeout(t); t = setTimeout(draw, 80); }
+        draw(); window.addEventListener('resize', later); window.addEventListener('load', draw);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
     })();
 </script>
 <?php endif; /* home_section: how */ ?>
