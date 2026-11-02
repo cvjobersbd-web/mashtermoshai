@@ -50,30 +50,10 @@
     .hf-empty p { margin: 0; color: #64748B; font-size: 14.5px; line-height: 1.6; }
 
     /* Packages */
+    #home-packages .pk-grid { margin-top: 4px; }
     .hp-tabs { display: inline-flex; gap: 6px; background: #fff; border: 1px solid #DCECF5; border-radius: 999px; padding: 5px; margin: 0 auto 26px; }
     .hp-tabs button { border: none; background: none; padding: 10px 22px; border-radius: 999px; font-weight: 700; font-size: 14.5px; color: #475569; cursor: pointer; font-family: inherit; display: inline-flex; gap: 8px; align-items: center; }
     .hp-tabs button.on { background: #08224A; color: #fff; }
-    .hp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
-    .hp-grid[hidden] { display: none; }
-    .hp-card { background: #fff; border: 1.5px solid #DCECF5; border-radius: 22px; padding: 24px 22px; display: flex; flex-direction: column; position: relative; transition: transform .25s, box-shadow .25s; }
-    .hp-card:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(8,34,74,.1); }
-    .hp-card.ft { border-color: #02B8F5; box-shadow: 0 14px 34px rgba(2,184,245,.16); }
-    .hp-badge { position: absolute; top: -12px; left: 22px; background: linear-gradient(135deg, #F5A623, #F97316); color: #fff; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; }
-    .hp-name { font-size: 18px; font-weight: 800; color: #08224A; }
-    .hp-dur { color: #64748B; font-size: 13.5px; margin-top: 2px; }
-    .hp-price { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
-    .hp-price b { font-size: 32px; color: #08224A; line-height: 1; }
-    .hp-price s { color: #94A3B8; font-size: 15px; }
-    .hp-price .off { font-size: 12px; font-weight: 800; background: #DCFCE7; color: #15803D; padding: 2px 8px; border-radius: 999px; }
-    .hp-feat { list-style: none; margin: 16px 0 20px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-    .hp-feat li { display: flex; gap: 9px; font-size: 14px; color: #334155; line-height: 1.45; }
-    .hp-feat li i { color: #16A34A; margin-top: 3px; font-size: 12px; }
-    .hp-feat li.more { color: #028EA5; font-weight: 700; }
-    .hp-btn { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border-radius: 12px; background: #EEF6FC; color: #08224A; font-weight: 700;
-        text-decoration: none; transition: background .2s, color .2s; }
-    .hp-btn:hover { background: #08224A; color: #fff; }
-    .hp-card.ft .hp-btn { background: #02B8F5; color: #fff; } .hp-card.ft .hp-btn:hover { background: #0099D6; }
-    .hp-empty { text-align: center; color: #64748B; background: #fff; border-radius: 18px; padding: 30px; border: 1px dashed #CBD5E1; }
 
     @media (max-width: 1024px) { .hf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hf-grid > :nth-child(3) { display: none; } }
     @media (max-width: 640px) {

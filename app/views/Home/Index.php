@@ -652,6 +652,7 @@ $hpTab = session_get('UserRole') === 'User' ? 'Student' : 'Teacher';
 if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $hpTab = $hpTab === 'Teacher' ? 'Student' : 'Teacher';
 ?>
 <?php if ($homePk['Teacher'] || $homePk['Student']): ?>
+<?php partial('Package/_CardStyles'); ?>
 <section class="hs-sec" id="home-packages" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Packages">
     <div class="hs-wrap">
         <?php partial('Home/_SectionHead', ['title' => 'Our', 'hl' => 'Packages', 'sub' => 'শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'href' => '/Package', 'btn' => 'View More']); ?>
@@ -662,26 +663,8 @@ if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $
             </div></div>
         <?php endif; ?>
         <?php foreach (['Teacher', 'Student'] as $aud): if (!$homePk[$aud]) continue; ?>
-            <div class="hp-grid" data-hp-grid="<?= $aud ?>"<?= $aud === $hpTab ? '' : ' hidden' ?>>
-                <?php foreach (array_slice($homePk[$aud], 0, 4) as $p): $free = $hpFree && $aud === 'Student'; ?>
-                    <div class="hp-card<?= $p->IsFeatured ? ' ft' : '' ?>">
-                        <?php if (!is_blank($p->Badge)): ?><span class="hp-badge"><?= e($p->Badge) ?></span><?php endif; ?>
-                        <div class="hp-name"><?= e($p->Name) ?></div>
-                        <?php if (trim($p->Name) !== $p->DurationLabel): ?><div class="hp-dur"><?= e($p->DurationLabel) ?></div><?php endif; ?>
-                        <div class="hp-price">
-                            <?php if ($free): ?><b style="color:#15803D;">ফ্রি</b><s><?= e(taka($p->Price)) ?></s>
-                            <?php else: ?><b><?= e(taka($p->Price)) ?></b><?php if ($p->RegularPrice): ?><s><?= e(taka($p->RegularPrice)) ?></s><span class="off"><?= (int)$p->Discount ?>% ছাড়</span><?php endif; ?><?php endif; ?>
-                        </div>
-                        <?php if ($p->FeatureList): ?>
-                            <ul class="hp-feat">
-                                <?php foreach (array_slice($p->FeatureList, 0, 4) as $f): ?><li><i class="fas fa-check"></i><span><?= e($f) ?></span></li><?php endforeach; ?>
-                                <?php if (count($p->FeatureList) > 4): ?><li class="more"><i class="fas fa-plus" style="color:inherit;"></i><span>আরো <?= count($p->FeatureList) - 4 ?>টি সুবিধা</span></li><?php endif; ?>
-                            </ul>
-                        <?php else: ?><div style="height:18px;"></div><?php endif; ?>
-                        <?php if ($free): ?><a class="hp-btn" href="/Tuition/Circular">ফ্রিতে পোস্ট করুন <i class="fas fa-arrow-right"></i></a>
-                        <?php else: ?><a class="hp-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>"><?= $aud === 'Teacher' ? 'Subscribe Now' : 'Buy Now' ?> <i class="fas fa-arrow-right"></i></a><?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
+            <div class="pk-grid<?= count($homePk[$aud]) < 3 ? ' few' : '' ?>" data-hp-grid="<?= $aud ?>"<?= $aud === $hpTab ? '' : ' hidden' ?>>
+                <?php foreach (array_slice($homePk[$aud], 0, 4) as $p) partial('Package/_Card', ['p' => $p, 'cta' => $aud === 'Teacher' ? 'Subscribe করুন' : 'পোস্ট প্যাকেজ নিন', 'studentFree' => $hpFree]); ?>
             </div>
         <?php endforeach; ?>
         <div class="hs-foot"><a class="hs-more" href="/Package">View All Packages <i class="fas fa-arrow-right"></i></a></div>
