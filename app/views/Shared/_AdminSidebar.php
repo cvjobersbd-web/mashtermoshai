@@ -293,6 +293,9 @@ try {
     .admin-sidebar ul.sg-side li a i { font-size: 12px !important; width: 18px !important; }
     .admin-sidebar ul.sg-side li a:hover { opacity: 1; }
     .admin-sidebar ul.sg-side li a.active { opacity: 1; background: rgba(2,184,245,.18) !important; color: #fff !important; border-left: none !important; }
+
+    .adm-level { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: #CFE8F5; }
+    .adm-level.super { background: linear-gradient(135deg, #F5A623, #FFB300); color: #3B2600; }
 </style>
 
 
@@ -304,7 +307,7 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
-        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings',
+        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
     $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
@@ -326,16 +329,20 @@ try {
         <div>
             <h4><i class="fas fa-shield-alt me-2"></i>Admin Panel</h4>
             <small><?= e(site_settings()->GetSafeSiteName()) ?></small>
+            <span class="adm-level <?= admin_is_super() ? 'super' : '' ?>"><i class="fas <?= admin_is_super() ? 'fa-crown' : 'fa-user-shield' ?>"></i> <?= admin_is_super() ? 'Super Admin' : 'Admin' ?></span>
         </div>
         <button type="button" class="admin-sidebar-close" id="adminSidebarClose" aria-label="Close admin menu"><i class="fas fa-times"></i></button>
     </div>
 
     <ul class="admin-sidebar-menu">
+        <?php if (admin_can(admin_action_rule('Dashboard'))): ?>
         <li>
             <a href="/Admin/Dashboard" class="<?= $currentAction === 'Dashboard' ? 'active' : '' ?>">
                 <i class="fas fa-chart-pie"></i> Dashboard
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TeacherRequests'))): ?>
         <li>
             <a href="/Admin/TeacherRequests" class="<?= $currentAction === 'TeacherRequests' ? 'active' : '' ?>">
                 <i class="fas fa-user-graduate"></i> Teacher Requests
@@ -344,26 +351,34 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
 
         <!-- ✅ Teacher Overview -->
+        <?php if (admin_can(admin_action_rule('TeacherOverview'))): ?>
         <li>
             <a href="/Admin/TeacherOverview" class="<?= $currentAction === 'TeacherOverview' ? 'active' : '' ?>">
                 <i class="fas fa-chart-line"></i> Teacher Overview
             </a>
         </li>
+        <?php endif; ?>
 
         <!-- ✅ নতুন যুক্ত করা হলো: User Overview -->
+        <?php if (admin_can(admin_action_rule('UserOverview'))): ?>
         <li>
             <a href="/Admin/UserOverview" class="<?= $currentAction === 'UserOverview' ? 'active' : '' ?>">
                 <i class="fas fa-users-viewfinder"></i> User Overview
             </a>
         </li>
+        <?php endif; ?>
 
+        <?php if (admin_can(admin_action_rule('TuitionPosts'))): ?>
         <li>
             <a href="/Admin/TuitionPosts" class="<?= $currentAction === 'TuitionPosts' || $currentAction === 'AddTuitionPost' || $currentAction === 'EditTuitionPost' ? 'active' : '' ?>">
                 <i class="fas fa-clipboard-list"></i> Tuition Posts
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TuitionApplications'))): ?>
         <li>
             <a href="/Admin/TuitionApplications" class="<?= $currentAction === 'TuitionApplications' ? 'active' : '' ?>">
                 <i class="fas fa-user-check"></i> Tuition Applications
@@ -372,21 +387,27 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TutorRequests'))): ?>
         <li>
             <a href="/Admin/TutorRequests" class="<?= $currentAction === 'TutorRequests' ? 'active' : '' ?>">
                 <i class="fas fa-envelope-open-text"></i> Tutor Requests
             </a>
         </li>
+        <?php endif; ?>
         <li>
             <a href="/Helpdesk" class="<?= $currentControllerSidebar === 'Helpdesk' ? 'active' : '' ?>">
                 <i class="fas fa-headset"></i> Helpdesk
             </a>
         </li>
+        <?php if (admin_can(admin_action_rule('ManageNotices'))): ?>
         <li>
             <a href="/Admin/ManageNotices" class="<?= $currentAction === 'ManageNotices' || $currentAction === 'AddNotice' || $currentAction === 'EditNotice' ? 'active' : '' ?>">
                 <i class="fas fa-newspaper"></i> News &amp; Announcements
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('EduFeed'))): ?>
         <li>
             <a href="/Admin/EduFeed" class="<?= $currentAction === 'EduFeed' ? 'active' : '' ?>">
                 <i class="fas fa-graduation-cap"></i> Educational Feed
@@ -395,6 +416,8 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Reviews'))): ?>
         <li>
             <a href="/Admin/Reviews" class="<?= $currentAction === 'Reviews' ? 'active' : '' ?>">
                 <i class="fas fa-star"></i> Reviews
@@ -403,6 +426,8 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Payments'))): ?>
         <li>
             <a href="/Admin/Payments" class="<?= $currentAction === 'Payments' ? 'active' : '' ?>">
                 <i class="fas fa-money-bill-wave"></i> Payments
@@ -411,21 +436,41 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('PaymentMethods'))): ?>
         <li>
             <a href="/Admin/PaymentMethods" class="<?= $currentAction === 'PaymentMethods' ? 'active' : '' ?>">
                 <i class="fas fa-wallet"></i> Payment Methods
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Packages'))): ?>
         <li>
             <a href="/Admin/Packages" class="<?= $currentAction === 'Packages' ? 'active' : '' ?>">
                 <i class="fas fa-box-open"></i> Packages
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Categories'))): ?>
         <li>
             <a href="/Admin/Categories" class="<?= $currentAction === 'Categories' || $currentAction === 'EditCategory' ? 'active' : '' ?>">
                 <i class="fas fa-layer-group"></i> Categories
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_is_super()): ?>
+        <li>
+            <a href="/Admin/Admins" class="<?= $currentAction === 'Admins' ? 'active' : '' ?>">
+                <i class="fas fa-user-shield"></i> Admins
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/ActivityLog" class="<?= $currentAction === 'ActivityLog' ? 'active' : '' ?>">
+                <i class="fas fa-clock-rotate-left"></i> Activity Log
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Settings'))): ?>
         <li>
             <?php $sgOpen = $currentAction === 'Settings'; $sgSideCur = $sgOpen ? (string)input_str('s', '') : '-'; ?>
             <div class="sg-parent">
@@ -465,6 +510,7 @@ try {
             })();
             </script>
         </li>
+        <?php endif; ?>
         <li style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px; padding-top: 10px;">
             <a href="#" onclick="document.documentElement.classList.remove('a-open'); adminChangePasswordFromSidebar(); return false;" style="color: #FFB300;">
                 <i class="fas fa-key"></i> Change Password

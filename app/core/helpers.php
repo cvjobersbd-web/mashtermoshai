@@ -451,6 +451,11 @@ function redirect_to(string $action, string $controller, array $params = []): vo
 
 function json_response($data, int $status = 200): void
 {
+    // অ্যাডমিনের কাজ সফল হলে Activity Log এ লেখা (AdminController সেট করে)
+    if (isset($GLOBALS['__on_json_success']) && is_callable($GLOBALS['__on_json_success']) && is_array($data) && ($data['success'] ?? false) === true) {
+        $cb = $GLOBALS['__on_json_success']; unset($GLOBALS['__on_json_success']);
+        try { $cb($data); } catch (Throwable $e) { error_log('[json success hook] ' . $e->getMessage()); }
+    }
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
@@ -1396,6 +1401,13 @@ function category_tint(string $name): array
 /** Admin → Settings এর সাব-মেনু: key => title, short, desc, icon, রঙ (Settings পেজ আর সাইডবার দুই জায়গায় ব্যবহার হয়) */
 function admin_settings_groups(): array
 {
+    $g = admin_settings_groups_all();
+    if (function_exists('admin_is_super') && !admin_is_super()) unset($g['email']); // SMTP পাসওয়ার্ড — শুধু Super Admin
+    return $g;
+}
+
+function admin_settings_groups_all(): array
+{
     return [
         'general' => ['title' => 'Branding & Theme', 'short' => 'Branding', 'icon' => 'fa-palette', 'bg' => '#F1EAFE', 'fg' => '#6D28D9',
             'desc' => 'সাইটের নাম, নেভবার ও ফুটারের লোগো, আর পুরো সাইটের থিম কালার।'],
@@ -1466,4 +1478,91 @@ function home_category_ids(): array
         $list = json_decode((string)($v['home_cats'] ?? ''), true);
         return is_array($list) ? array_values(array_unique(array_filter(array_map('intval', $list), fn($x) => $x > 0))) : [];
     } catch (Throwable $e) { return []; }
+}
+
+// ============================================================
+// ===== SUPER ADMIN / ADMIN অনুমতি =====
+// ============================================================
+/** সাধারণ অ্যাডমিনকে যে অংশগুলোর অনুমতি দেওয়া যায়: key => [নাম, আইকন, ব্যাখ্যা] */
+function admin_permissions(): array
+{
+    return [
+        'users'      => ['Users & Teachers', 'fa-users', 'ইউজার/টিচার দেখা, Suspend, চালু/বন্ধ, পাসওয়ার্ড বদল'],
+        'teachers'   => ['Teacher Requests', 'fa-user-check', 'শিক্ষক হওয়ার আবেদন Approve / Reject'],
+        'tuition'    => ['Tuition', 'fa-clipboard-list', 'Tuition Posts, Applications, Tutor Requests'],
+        'notices'    => ['News & Announcements', 'fa-newspaper', 'নোটিশ যোগ / এডিট / মুছে ফেলা'],
+        'edufeed'    => ['Educational Feed', 'fa-graduation-cap', 'পোস্ট Approve / Reject'],
+        'reviews'    => ['Reviews', 'fa-star', 'রিভিউ Approve / মুছে ফেলা'],
+        'payments'   => ['Payments', 'fa-money-bill-wave', 'পেমেন্ট যাচাই — Approve / Reject'],
+        'categories' => ['Categories', 'fa-layer-group', 'ক্যাটাগরি যোগ / এডিট'],
+        'settings'   => ['Site Settings', 'fa-cog', 'লোগো, হোম পেজ, ব্যানার ইত্যাদি (Email ছাড়া)'],
+    ];
+}
+
+/** AdminController এর প্রতিটা অ্যাকশন কোন অনুমতির অধীনে — 'always' = সব অ্যাডমিন, 'super' = শুধু Super Admin; তালিকায় না থাকলে 'super' */
+function admin_action_rule(string $action): string
+{
+    static $map = null;
+    if ($map === null) {
+        $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
+        $groups = [
+            'users' => ['TeacherOverview', 'UserOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword'],
+            'teachers' => ['TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
+            'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
+                'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
+            'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
+            'edufeed' => ['EduFeed', 'EduFeedStatus'],
+            'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
+            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment'],
+            'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
+                'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
+            'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
+                'UploadHeroImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo'],
+        ];
+        foreach ($groups as $k => $acts) foreach ($acts as $a) $map[$a] = $k;
+        // বাকি সব (Admins, ActivityLog, Packages, PaymentMethods, Email, DeleteUser ...) শুধু Super Admin
+    }
+    return $map[$action] ?? 'super';
+}
+
+/** এখনকার অ্যাডমিনের অনুমতি (রিকোয়েস্টে একবারই ডাটাবেস দেখে) */
+function current_admin_access(): ?array
+{
+    static $c = false;
+    if ($c !== false) return $c;
+    $c = null;
+    if (session_get('UserRole') === 'Admin' && ($id = current_user_id()) !== null) { try { $c = db()->GetAdminAccess($id); } catch (Throwable $e) { $c = null; } }
+    return $c;
+}
+function admin_is_super(): bool { $a = current_admin_access(); return $a !== null && $a['super']; }
+/** $key = অনুমতির key, 'always' বা 'super' */
+function admin_can(string $key): bool
+{
+    $a = current_admin_access();
+    if ($a === null || !$a['active']) return false;
+    if ($a['super'] || $key === 'always') return true;
+    if ($key === 'super') return false;
+    return in_array($key, $a['perms'], true);
+}
+
+/** প্রতিটা রিকোয়েস্টে: অ্যাডমিনকে বন্ধ করা হলে বা অ্যাডমিন থেকে সরালে সাথে সাথে লগআউট */
+function validate_admin_session(): void
+{
+    if (session_get('UserRole') !== 'Admin') return;
+    $a = current_admin_access();
+    if ($a !== null && $a['active']) return;
+    $_SESSION = [];
+    if (session_status() === PHP_SESSION_ACTIVE) { session_regenerate_id(true); }
+}
+
+/** অ্যাডমিনের পাসওয়ার্ড শক্ত কিনা — ঠিক থাকলে '' নাহলে কী লাগবে তা ফেরত দেয় */
+function admin_password_problem(string $pw): string
+{
+    $miss = [];
+    if (mb_strlen($pw) < 8) $miss[] = 'কমপক্ষে ৮ অক্ষর';
+    if (!preg_match('/[A-Z]/', $pw)) $miss[] = 'একটা বড় হাতের অক্ষর (A-Z)';
+    if (!preg_match('/[a-z]/', $pw)) $miss[] = 'একটা ছোট হাতের অক্ষর (a-z)';
+    if (!preg_match('/\d/', $pw)) $miss[] = 'একটা সংখ্যা (0-9)';
+    if (!preg_match('/[^A-Za-z0-9]/', $pw)) $miss[] = 'একটা চিহ্ন (যেমন @ # !)';
+    return $miss ? 'অ্যাডমিনের পাসওয়ার্ডে লাগবে: ' . implode(', ', $miss) . '।' : '';
 }

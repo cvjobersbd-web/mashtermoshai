@@ -3,16 +3,69 @@ class AdminController extends Controller
 {
     private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    /** পেজ অ্যাকশনের জন্য: Admin না হলে Login এ পাঠায় */
+    /** পেজ অ্যাকশনের জন্য: Admin না হলে Login এ পাঠায়; অনুমতি না থাকলে "অনুমতি নেই" পেজ */
     private function requireAdminPage(): void
     {
         if (!is_admin()) $this->redirectToAction('Login', 'Account');
+        $rule = admin_action_rule($this->actionName());
+        if (!admin_can($rule)) {
+            http_response_code(403);
+            $this->view('Admin/NoAccess', null, ['Rule' => $rule]);
+        }
     }
 
-    /** JSON অ্যাকশনের জন্য */
+    /** JSON অ্যাকশনের জন্য — অনুমতি যাচাই + POST হলে Activity Log এ লেখা */
     private function requireAdminJson(): void
     {
         if (!is_admin()) json_response(['success' => false, 'message' => 'Unauthorized']);
+        $action = $this->actionName();
+        $rule = admin_action_rule($action);
+        if (!admin_can($rule)) {
+            json_response(['success' => false, 'message' => $rule === 'super' ? 'এই কাজটা শুধু Super Admin করতে পারেন।' : 'এই কাজের অনুমতি আপনার নেই — Super Admin এর সাথে যোগাযোগ করুন।']);
+        }
+        if (is_post() && !isset($this->logged)) { $this->logged = true; $this->logActivity($action); }
+    }
+
+    private bool $logged;
+
+    private function actionName(): string { return (string)($GLOBALS['__route']['action'] ?? ''); }
+
+    /** Activity Log: কাজের নাম (বাংলায়) + কোন id / কী */
+    private function logActivity(string $action): void
+    {
+        $labels = [
+            'ApprovePayment' => 'পেমেন্ট Approve', 'RejectPayment' => 'পেমেন্ট Reject', 'DeletePayment' => 'পেমেন্ট মুছেছেন',
+            'ProcessTeacherRequest' => 'টিচার আবেদন প্রসেস', 'DeleteTeacherAccount' => 'টিচার অ্যাকাউন্ট মুছেছেন',
+            'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
+            'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
+            'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ',
+            'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
+            'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
+            'AddNotice' => 'নোটিশ যোগ', 'EditNotice' => 'নোটিশ এডিট', 'DeleteNotice' => 'নোটিশ মুছেছেন',
+            'DeleteTuitionPost' => 'টিউশন পোস্ট মুছেছেন', 'UpdateApplicationStatus' => 'টিউশন অ্যাপ্লিকেশন স্ট্যাটাস',
+            'SaveAdmin' => 'অ্যাডমিন যোগ/এডিট', 'AdminSetActive' => 'অ্যাডমিন চালু/বন্ধ', 'RemoveAdmin' => 'অ্যাডমিন সরিয়েছেন', 'ResetAdminPassword' => 'অ্যাডমিনের পাসওয়ার্ড রিসেট',
+        ];
+        if (str_starts_with($action, 'Upload') || in_array($action, ['CategoryDefaultText', 'SendTestEmail'], true)) return; // শুধু ছবি আপলোড/প্রিভিউ — লগ নয়
+        $bits = [];
+        foreach (['id', 'userId', 'postId', 'paymentId', 'status', 'which', 'name', 'email'] as $k) {
+            $v = $_POST[$k] ?? null;
+            if (is_string($v) && $v !== '' && mb_strlen($v) <= 80) $bits[] = $k . ': ' . $v;
+        }
+        $label = $labels[$action] ?? $action; $detail = implode(' · ', $bits); $db = $this->db; $uid = (int)current_user_id();
+        // শুধু সফল হলে লেখা হয় (ব্যর্থ চেষ্টা লগে আসে না)
+        $GLOBALS['__on_json_success'] = function () use ($db, $uid, $label, $detail) { $db->LogAdminActivity($uid, $label, $detail); };
+    }
+
+    /** সাধারণ অ্যাডমিন অন্য অ্যাডমিনের অ্যাকাউন্টে হাত দিতে পারবে না (শুধু Super Admin) */
+    private function guardAdminTarget(int $userId): void
+    {
+        $u = $userId > 0 ? $this->db->GetUserById($userId) : null;
+        if ($u && $u->Role === 'Admin' && !admin_is_super()) json_response(['success' => false, 'message' => 'অন্য অ্যাডমিনের অ্যাকাউন্ট শুধু Super Admin বদলাতে পারেন।']);
+        if ($u && $u->Role === 'Admin' && (int)$u->Id === (int)current_user_id() && in_array($this->actionName(), ['ToggleUserStatus', 'SuspendUser', 'DeleteUser'], true)) {
+            json_response(['success' => false, 'message' => 'নিজের অ্যাকাউন্টে এটা করা যাবে না।']);
+        }
     }
 
     // ============================================================
@@ -103,6 +156,7 @@ class AdminController extends Controller
     public function SuspendUser_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0) ?? 0;
         $user = $this->db->GetUserById($id);
         if (!$user) json_response(['success' => false, 'message' => 'User not found.']);
@@ -140,6 +194,7 @@ class AdminController extends Controller
     public function UnsuspendUser_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0) ?? 0;
         if (!$this->db->LiftSuspension($id, current_user_id())) json_response(['success' => false, 'message' => 'এই ইউজার এখন Suspend অবস্থায় নেই।']);
         $this->db->CreateNotification($id, 'Suspension Lifted', 'আপনার অ্যাকাউন্টের Suspend তুলে নেওয়া হয়েছে। আবার স্বাগতম!', 'success', null, 'fa-user-check');
@@ -149,6 +204,7 @@ class AdminController extends Controller
     public function DeleteUser_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
         if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot delete your own account']);
         try {
@@ -161,6 +217,7 @@ class AdminController extends Controller
     public function ToggleUserStatus_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
         $isActive = input_bool('isActive');
         if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot disable your own account']);
@@ -179,9 +236,12 @@ class AdminController extends Controller
     public function UpdatePassword_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
         $pw = (string)input_str('newPassword', '');
         if (trim($pw) === '' || strlen($pw) < 6) json_response(['success' => false, 'message' => 'Password must be at least 6 characters']);
+        $tu = $this->db->GetUserById((int)$id);
+        if ($tu && $tu->Role === 'Admin' && ($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp]);
         if ($this->db->UpdatePassword($id, $pw)) {
             $this->db->CreateNotification($id, '🔑 Password Changed', 'Your account password was changed by an administrator.', 'warning', null, 'fa-key');
             json_response(['success' => true, 'message' => 'Password updated successfully']);
@@ -883,6 +943,98 @@ class AdminController extends Controller
         $ids = array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))));
         $this->db->ReorderPackages($aud, $ids);
         json_response(['success' => true]);
+    }
+
+    // ============================================================
+    // ===== ADMINS (শুধু Super Admin) — অ্যাডমিন যোগ, অনুমতি, চালু/বন্ধ, Activity Log =====
+    // ============================================================
+    /** GET /Admin/Admins */
+    public function Admins(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetAdminList());
+    }
+
+    /** POST /Admin/SaveAdmin — id (0 = নতুন), fullName, email, password, isSuper, perms (কমা দিয়ে) */
+    public function SaveAdmin_POST(): void
+    {
+        $this->requireAdminJson();
+        $me = (int)current_user_id();
+        $id = (int)input_int('id', 0);
+        $super = input_bool('isSuper');
+        $perms = array_values(array_intersect(array_filter(explode(',', (string)input_str('perms', ''))), array_keys(admin_permissions())));
+        if (!$super && !$perms) json_response(['success' => false, 'message' => 'সাধারণ অ্যাডমিনের জন্য অন্তত একটা অংশে টিক দিন, অথবা Super Admin বানান।']);
+        if ($id > 0) {
+            $a = $this->db->GetAdminAccess($id);
+            if ($a === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+            if ($a['super'] && !$super && $this->db->CountActiveSuperAdmins($id) === 0) json_response(['success' => false, 'message' => 'অন্তত একজন Super Admin থাকতেই হবে।']);
+            if ($id === $me && !$super) json_response(['success' => false, 'message' => 'নিজেকে Super Admin থেকে নামানো যাবে না — অন্য Super Admin কে দিয়ে করান।']);
+            $this->db->SetAdminAccess($id, $super, $perms, $me);
+            json_response(['success' => true, 'message' => 'অনুমতি সেভ হয়েছে।']);
+        }
+        $name = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('fullName', '')))), 0, 80);
+        $email = strtolower(trim((string)input_str('email', '')));
+        $pw = (string)input_str('password', '');
+        if ($name === '') json_response(['success' => false, 'message' => 'নাম লিখুন।', 'field' => 'fullName']);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 120) json_response(['success' => false, 'message' => 'সঠিক ইমেইল দিন।', 'field' => 'email']);
+        if (($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp, 'field' => 'password']);
+        $ex = $this->db->one("SELECT `Id`, `Role` FROM `Users` WHERE LOWER(`Email`) = LOWER(:e) ORDER BY `Id` LIMIT 1", ['e' => $email]);
+        if ($ex && $ex->Role === 'Admin') json_response(['success' => false, 'message' => 'এই ইমেইলে আগে থেকেই একজন অ্যাডমিন আছেন।', 'field' => 'email']);
+        try {
+            [$newId, $was] = $this->db->CreateOrPromoteAdmin($name, $email, $pw);
+            $this->db->SetAdminAccess($newId, $super, $perms, $me);
+        } catch (Throwable $e) {
+            error_log('[SaveAdmin] ' . $e->getMessage());
+            json_response(['success' => false, 'message' => 'অ্যাডমিন বানানো যায়নি। আবার চেষ্টা করুন।']);
+        }
+        $u = $this->db->GetUserById($newId);
+        json_response(['success' => true, 'message' => ($was ? 'আগের অ্যাকাউন্টটাকে ' : 'নতুন ') . ($super ? 'Super Admin' : 'Admin') . ' বানানো হয়েছে। লগইন: ' . $email . ' (অথবা username: ' . ($u->UserName ?? '') . ')']);
+    }
+
+    /** POST /Admin/AdminSetActive — id, on */
+    public function AdminSetActive_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0); $on = input_bool('on');
+        $a = $this->db->GetAdminAccess($id);
+        if ($a === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        if ($id === (int)current_user_id()) json_response(['success' => false, 'message' => 'নিজেকে বন্ধ করা যাবে না।']);
+        if (!$on && $a['super'] && $this->db->CountActiveSuperAdmins($id) === 0) json_response(['success' => false, 'message' => 'শেষ Super Admin কে বন্ধ করা যাবে না।']);
+        $this->db->SetUserActive($id, $on);
+        json_response(['success' => true, 'message' => $on ? 'অ্যাডমিন আবার চালু হয়েছে।' : 'অ্যাডমিন বন্ধ — সাথে সাথে লগআউট হয়ে গেছে, আর লগইন করতে পারবে না।']);
+    }
+
+    /** POST /Admin/RemoveAdmin — id (অ্যাকাউন্ট থাকে, শুধু অ্যাডমিন ক্ষমতা যায়) */
+    public function RemoveAdmin_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $a = $this->db->GetAdminAccess($id);
+        if ($a === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        if ($id === (int)current_user_id()) json_response(['success' => false, 'message' => 'নিজেকে সরানো যাবে না — অন্য Super Admin কে দিয়ে করান।']);
+        if ($a['super'] && $this->db->CountActiveSuperAdmins($id) === 0) json_response(['success' => false, 'message' => 'শেষ Super Admin কে সরানো যাবে না।']);
+        $this->db->RemoveAdmin($id);
+        json_response(['success' => true, 'message' => 'অ্যাডমিন থেকে সরানো হয়েছে (অ্যাকাউন্টটা এখন সাধারণ ইউজার)।']);
+    }
+
+    /** POST /Admin/ResetAdminPassword — id, password */
+    public function ResetAdminPassword_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0); $pw = (string)input_str('password', '');
+        if ($this->db->GetAdminAccess($id) === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        if (($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp]);
+        $this->db->UpdatePassword($id, $pw);
+        json_response(['success' => true, 'message' => 'পাসওয়ার্ড বদলানো হয়েছে।']);
+    }
+
+    /** GET /Admin/ActivityLog?admin=&date=&page= */
+    public function ActivityLog(): void
+    {
+        $this->requireAdminPage();
+        $admin = (int)input_int('admin', 0); $date = (string)input_str('date', ''); $page = max(1, (int)input_int('page', 1)); $per = 50;
+        $rows = $this->db->GetAdminActivity($admin, $per + 1, ($page - 1) * $per, $date);
+        $this->view(null, array_slice($rows, 0, $per), ['Admins' => $this->db->GetAdminList(), 'Admin' => $admin, 'Date' => $date, 'Page' => $page, 'HasMore' => count($rows) > $per]);
     }
 
     // ============================================================

@@ -15,6 +15,7 @@ require_once __DIR__ . '/PaymentData.php';
 require_once __DIR__ . '/CategoryData.php';
 require_once __DIR__ . '/EduFeedData.php';
 require_once __DIR__ . '/ProfileViewData.php';
+require_once __DIR__ . '/AdminAccessData.php';
 
 class Db
 {
@@ -26,6 +27,7 @@ class Db
     use CategoryData;
     use EduFeedData;
     use ProfileViewData;
+    use AdminAccessData;
 
     private PDO $pdo;
 

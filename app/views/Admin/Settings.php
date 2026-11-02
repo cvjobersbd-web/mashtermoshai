@@ -631,6 +631,7 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
                         ['/Admin/Packages', 'fa-box-open', '#FFF4D6', '#B7791F', 'Packages', 'শিক্ষক ও শিক্ষার্থীর প্যাকেজ আর দাম'],
                         ['/Admin/PaymentMethods', 'fa-wallet', '#E7F8EF', '#157347', 'Payment Methods', 'bKash, Nagad ইত্যাদি পেমেন্টের নিয়ম'],
                         ['/Admin/EduFeed', 'fa-graduation-cap', '#E0F2FE', '#0369A1', 'Educational Feed', 'ইউজারদের পোস্ট Approve / Reject']] as [$h, $ic, $bg, $fg, $t, $d]): ?>
+            <?php if (!admin_can(admin_action_rule(basename($h)))) continue; ?>
             <a class="sg-tile" href="<?= $h ?>">
                 <span class="ic" style="background:<?= $bg ?>;color:<?= $fg ?>;"><i class="fas <?= $ic ?>"></i></span>
                 <span><b><?= e($t) ?></b><small><?= e($d) ?></small></span>
@@ -1463,6 +1464,7 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
         </div>
     </div>
 
+<?php if (admin_is_super()): /* SMTP সেটিং — শুধু Super Admin */ ?>
     <!-- ===== ✅ Email (SMTP) Settings — Forgot Password ===== -->
     <?php $ms = mail_settings(); $msHasPass = $ms['mail_pass'] !== ''; ?>
     <div class="settings-card" id="mailSettings" data-sg="email">
@@ -1568,6 +1570,7 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
             });
         }
     </script>
+<?php endif; ?>
 
     <!-- ===== ✅ Footer Social Media ===== -->
     <?php $smLinks = social_links(); $smPl = social_platforms(); ?>
