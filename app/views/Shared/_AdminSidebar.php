@@ -281,7 +281,13 @@ try {
     .admin-sidebar .sg-toggle:hover { background: rgba(255,255,255,.12); color: #fff; }
     .admin-sidebar .sg-toggle i { transition: transform .25s; transform: rotate(-90deg); }
     .admin-sidebar .sg-toggle.open i { transform: rotate(0deg); }
-    .admin-sidebar ul.sg-side[hidden] { display: none; }
+    .admin-sidebar ul.sg-side { overflow: hidden; transition: height .35s cubic-bezier(.22,1,.36,1), margin .35s ease, border-color .35s ease; }
+    .admin-sidebar ul.sg-side li { opacity: 0; transform: translateX(-8px); transition: opacity .25s ease, transform .3s cubic-bezier(.22,1,.36,1); }
+    .admin-sidebar ul.sg-side.open li { opacity: 1; transform: none; }
+    .admin-sidebar ul.sg-side.open li:nth-child(2) { transition-delay: .03s; } .admin-sidebar ul.sg-side.open li:nth-child(3) { transition-delay: .06s; }
+    .admin-sidebar ul.sg-side.open li:nth-child(4) { transition-delay: .09s; } .admin-sidebar ul.sg-side.open li:nth-child(5) { transition-delay: .12s; }
+    .admin-sidebar ul.sg-side.open li:nth-child(6) { transition-delay: .15s; } .admin-sidebar ul.sg-side.open li:nth-child(7) { transition-delay: .18s; }
+    .admin-sidebar ul.sg-side:not(.open) { margin-top: 0; margin-bottom: 0; border-left-color: transparent; }
     .admin-sidebar ul.sg-side { list-style: none; margin: 2px 0 6px; padding: 0 0 0 18px; border-left: 2px solid rgba(255,255,255,.08); margin-left: 30px; }
     .admin-sidebar ul.sg-side li a { padding: 8px 12px !important; font-size: 13px !important; opacity: .8; border-radius: 8px; }
     .admin-sidebar ul.sg-side li a i { font-size: 12px !important; width: 18px !important; }
@@ -431,7 +437,7 @@ try {
                 </button>
             </div>
             <?php if (function_exists('admin_settings_groups')): ?>
-                <ul class="sg-side" id="sgSide"<?= $sgOpen ? '' : ' hidden' ?>>
+                <ul class="sg-side<?= $sgOpen ? ' open' : '' ?>" id="sgSide"<?= $sgOpen ? '' : ' style="height:0" aria-hidden="true"' ?>>
                     <?php foreach (admin_settings_groups() as $k => $g): ?>
                         <li><a href="/Admin/Settings?s=<?= $k ?>" data-sg-side="<?= $k ?>" class="<?= $sgSideCur === $k ? 'active' : '' ?>"><i class="fas <?= $g['icon'] ?>"></i> <?= e($g['short']) ?></a></li>
                     <?php endforeach; ?>
@@ -440,10 +446,21 @@ try {
             <script>
             (function () {
                 var b = document.getElementById('sgToggle'), ul = document.getElementById('sgSide'); if (!b || !ul) return;
+                var busy = false;
                 b.addEventListener('click', function (e) {
                     e.preventDefault(); e.stopPropagation();
-                    var open = ul.hidden; ul.hidden = !open;
+                    var open = !ul.classList.contains('open');
                     b.classList.toggle('open', open); b.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    ul.setAttribute('aria-hidden', open ? 'false' : 'true');
+                    // উচ্চতা মেপে ধীরে ধীরে খোলা/বন্ধ (smooth slide)
+                    var from = ul.getBoundingClientRect().height;
+                    ul.classList.toggle('open', open);
+                    var to = open ? ul.scrollHeight : 0;
+                    ul.style.height = from + 'px';
+                    ul.offsetHeight; // reflow
+                    ul.style.height = to + 'px';
+                    clearTimeout(ul._t);
+                    ul._t = setTimeout(function () { if (ul.classList.contains('open')) ul.style.height = 'auto'; }, 360);
                 });
             })();
             </script>
