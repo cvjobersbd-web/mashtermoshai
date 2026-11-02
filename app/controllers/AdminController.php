@@ -45,9 +45,9 @@ class AdminController extends Controller
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
             'AddNotice' => 'নোটিশ যোগ', 'EditNotice' => 'নোটিশ এডিট', 'DeleteNotice' => 'নোটিশ মুছেছেন',
             'DeleteTuitionPost' => 'টিউশন পোস্ট মুছেছেন', 'UpdateApplicationStatus' => 'টিউশন অ্যাপ্লিকেশন স্ট্যাটাস',
-            'SaveAdmin' => 'অ্যাডমিন যোগ/এডিট', 'AdminSetActive' => 'অ্যাডমিন চালু/বন্ধ', 'RemoveAdmin' => 'অ্যাডমিন সরিয়েছেন', 'ResetAdminPassword' => 'অ্যাডমিনের পাসওয়ার্ড রিসেট',
+            'SaveAdmin' => 'অ্যাডমিন যোগ/এডিট', 'AdminSetActive' => 'অ্যাডমিন চালু/বন্ধ', 'RemoveAdmin' => 'অ্যাডমিন সরিয়েছেন', 'ResetAdminPassword' => 'অ্যাডমিনের পাসওয়ার্ড রিসেট', 'UploadAdminPhoto' => 'অ্যাডমিনের প্রোফাইল ছবি', 'RemoveAdminPhoto' => 'অ্যাডমিনের প্রোফাইল ছবি সরানো',
         ];
-        if (str_starts_with($action, 'Upload') || in_array($action, ['CategoryDefaultText', 'SendTestEmail'], true)) return; // শুধু ছবি আপলোড/প্রিভিউ — লগ নয়
+        if ((str_starts_with($action, 'Upload') && $action !== 'UploadAdminPhoto') || in_array($action, ['CategoryDefaultText', 'SendTestEmail'], true)) return; // শুধু ছবি আপলোড/প্রিভিউ — লগ নয়
         $bits = [];
         foreach (['id', 'userId', 'postId', 'paymentId', 'status', 'which', 'name', 'email'] as $k) {
             $v = $_POST[$k] ?? null;
@@ -1026,6 +1026,42 @@ class AdminController extends Controller
         if (($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp]);
         $this->db->UpdatePassword($id, $pw);
         json_response(['success' => true, 'message' => 'পাসওয়ার্ড বদলানো হয়েছে।']);
+    }
+
+    /** POST /Admin/UploadAdminPhoto — id, photo (ফাইল) — অ্যাডমিনের প্রোফাইল ছবি (Super Admin) */
+    public function UploadAdminPhoto_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $u = $this->db->GetUserById($id);
+        if (!$u || $u->Role !== 'Admin') json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        $file = upload_file('photo');
+        if (!$file) json_response(['success' => false, 'message' => 'একটা ছবি বেছে নিন।']);
+        $ext = strtolower('.' . pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, self::IMAGE_EXTS, true)) json_response(['success' => false, 'message' => 'শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।']);
+        if ($file['size'] > 5 * 1024 * 1024) json_response(['success' => false, 'message' => 'ছবি ৫MB এর কম হতে হবে।']);
+        if (@getimagesize($file['tmp_name']) === false) json_response(['success' => false, 'message' => 'ফাইলটি সঠিক ছবি নয়।']);
+        try { $url = save_upload($file, 'profiles', 'admin_' . $id . '_' . ticks(), $ext); }
+        catch (Throwable $e) { json_response(['success' => false, 'message' => 'ছবি সেভ করা যায়নি।']); }
+        $old = (string)($u->ProfileImageLink ?? '');
+        $this->db->exec('UPDATE `Users` SET `ProfileImageLink` = :p WHERE `Id` = :i', ['p' => $url, 'i' => $id]);
+        if ($old !== '' && str_starts_with($old, '/uploads/profiles/admin_')) delete_upload($old);
+        if ($id === (int)current_user_id()) session_set('ProfileImageLink', $url);
+        json_response(['success' => true, 'message' => 'প্রোফাইল ছবি আপডেট হয়েছে।', 'url' => $url]);
+    }
+
+    /** POST /Admin/RemoveAdminPhoto — id */
+    public function RemoveAdminPhoto_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $u = $this->db->GetUserById($id);
+        if (!$u || $u->Role !== 'Admin') json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        $old = (string)($u->ProfileImageLink ?? '');
+        $this->db->exec('UPDATE `Users` SET `ProfileImageLink` = NULL WHERE `Id` = :i', ['i' => $id]);
+        if ($old !== '' && str_starts_with($old, '/uploads/profiles/admin_')) delete_upload($old);
+        if ($id === (int)current_user_id()) session_set('ProfileImageLink', '');
+        json_response(['success' => true, 'message' => 'প্রোফাইল ছবি সরানো হয়েছে।']);
     }
 
     /** GET /Admin/ActivityLog?admin=&date=&page= */

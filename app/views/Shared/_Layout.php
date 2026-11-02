@@ -216,6 +216,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 flex-shrink: 0;
             }
 
+            .profile-dropdown .nav-av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.7); flex-shrink: 0; }
+            .profile-dropdown .nav-av[hidden], .profile-dropdown .dropdown-toggle i[hidden] { display: none !important; }
             .profile-dropdown .dropdown-toggle {
                 white-space: nowrap;
             }
@@ -1068,7 +1070,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                         <div class="profile-dropdown dropdown hidden xl:block" id="profileDropdown">
                             <button class="dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle"></i>
+                                <?php $navImg = (string)(session_get('ProfileImageLink') ?? ''); ?>
+                                <img class="nav-av" data-nav-avatar src="<?= e($navImg) ?>" alt=""<?= $navImg === '' ? ' hidden' : '' ?> onerror="this.hidden = true; this.nextElementSibling.hidden = false;" onload="this.nextElementSibling.hidden = true;" />
+                                <i class="fas fa-user-circle"<?= $navImg !== '' ? ' hidden' : '' ?>></i>
                                 <span><?= e($userFullName) ?></span>
                                 <span class="caret"><i class="fas fa-chevron-down"></i></span>
                             </button>

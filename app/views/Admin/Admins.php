@@ -58,6 +58,19 @@ $me = (int)current_user_id();
     .am-msg.bad { color: #B91C1C; } .am-msg.ok { color: #15803D; }
     .am-mf { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
     .am-info { background: #F0F9FF; border: 1px solid #BAE6FD; color: #0C4A6E; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 18px; line-height: 1.7; }
+    .am-avw { position: relative; }
+    .am-av { width: 56px; height: 56px; }
+    .am-cam { position: absolute; right: -4px; bottom: -4px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; background: #02B8F5; color: #fff; font-size: 11px;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,.2); padding: 0; transition: transform .2s; }
+    .am-cam:hover { transform: scale(1.1); background: #0099D6; }
+    .am-avw.busy .am-av::after { content: ''; position: absolute; inset: 0; background: rgba(8,34,74,.55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='white' stroke-width='3' stroke-dasharray='40 20'/%3E%3C/svg%3E") center / 22px no-repeat; animation: amSpin 1s linear infinite; }
+    @keyframes amSpin { to { transform: rotate(360deg); } }
+    .am-pmenu { position: absolute; left: 0; top: calc(100% + 8px); background: #fff; border: 1px solid #E3ECF5; border-radius: 12px; box-shadow: 0 12px 30px rgba(8,34,74,.15); padding: 6px; z-index: 30; min-width: 160px; }
+    .am-pmenu[hidden] { display: none; }
+    .am-pmenu button { display: flex; gap: 9px; align-items: center; width: 100%; border: none; background: none; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 13.5px; color: #334155; text-align: left; font-family: inherit; }
+    .am-pmenu button:hover { background: #F1F5F9; }
+    .am-pmenu button.del { color: #DC2626; }
+    .am-pmenu button[hidden] { display: none; }
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 14px; } }
     @media (max-width: 640px) { .am-card { grid-template-columns: auto minmax(0, 1fr); } .am-acts { grid-column: 1 / -1; justify-content: flex-start; } .am-type, .am-pgrid { grid-template-columns: 1fr; } }
 </style>
@@ -80,7 +93,14 @@ $me = (int)current_user_id();
         <?php foreach ($admins as $a): ?>
             <div class="am-card<?= $a->IsSuper ? ' super' : '' ?><?= $a->IsActive ? '' : ' off' ?>" data-id="<?= (int)$a->Id ?>" data-name="<?= e($a->Name) ?>"
                  data-super="<?= $a->IsSuper ? '1' : '0' ?>" data-perms="<?= e(implode(',', $a->PermList)) ?>">
-                <span class="am-av"><?= e($a->Initials) ?><?php if (!is_blank($a->ProfileImageLink)): ?><img src="<?= e($a->ProfileImageLink) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                <div class="am-avw">
+                    <span class="am-av"><?= e($a->Initials) ?><?php if (!is_blank($a->ProfileImageLink)): ?><img src="<?= e($a->ProfileImageLink) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                    <button type="button" class="am-cam" data-am="photo" title="প্রোফাইল ছবি বদলান" aria-label="প্রোফাইল ছবি বদলান"><i class="fas fa-camera"></i></button>
+                    <div class="am-pmenu" hidden>
+                        <button type="button" data-am="upload"><i class="fas fa-upload"></i> ছবি আপলোড</button>
+                        <button type="button" data-am="unphoto" class="del"<?= is_blank($a->ProfileImageLink) ? ' hidden' : '' ?>><i class="fas fa-trash"></i> ছবি সরান</button>
+                    </div>
+                </div>
                 <div class="am-who">
                     <b><?= e($a->Name) ?></b>
                     <?php if ($a->IsSuper): ?><span class="am-tag super"><i class="fas fa-crown"></i> Super Admin</span><?php else: ?><span class="am-tag adm">Admin</span><?php endif; ?>
@@ -104,6 +124,8 @@ $me = (int)current_user_id();
         <?php endforeach; ?>
     </div>
 </div>
+
+<input type="file" id="amPhotoIn" accept="image/jpeg,image/png,image/gif,image/webp" hidden />
 
 <!-- নতুন / এডিট -->
 <div class="am-modal" id="amModal" role="dialog" aria-modal="true" aria-labelledby="amTitle">
@@ -187,8 +209,44 @@ $me = (int)current_user_id();
         else { show(msg, r.message || 'সেভ হয়নি।'); if (r.field && form[r.field]) { form[r.field].classList.add('bad'); form[r.field].focus(); } }
     });
 
+    // ----- প্রোফাইল ছবি -----
+    var photoIn = document.getElementById('amPhotoIn'), photoCard = null;
+    function closeMenus(except) { document.querySelectorAll('.am-pmenu').forEach(function (m) { if (m !== except) m.hidden = true; }); }
+    document.addEventListener('click', function (e) { if (!e.target.closest('.am-avw')) closeMenus(null); });
+    photoIn.addEventListener('change', async function () {
+        var f = photoIn.files[0]; photoIn.value = ''; if (!f || !photoCard) return;
+        if (!/^image\/(jpeg|png|gif|webp)$/.test(f.type)) { alert('শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।'); return; }
+        if (f.size > 5 * 1024 * 1024) { alert('ছবি ৫MB এর কম হতে হবে।'); return; }
+        var w = photoCard.querySelector('.am-avw'); w.classList.add('busy');
+        var fd = new FormData(); fd.append('id', photoCard.getAttribute('data-id')); fd.append('photo', f); fd.append('__RequestVerificationToken', tok());
+        var r;
+        try { r = await (await fetch('/Admin/UploadAdminPhoto', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); }
+        catch (er) { r = { success: false, message: 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।' }; }
+        w.classList.remove('busy');
+        if (!r.success) { alert('❌ ' + (r.message || 'আপলোড হয়নি।')); return; }
+        setPhoto(photoCard, r.url);
+    });
+    function setPhoto(card, url) {
+        var av = card.querySelector('.am-av'), img = av.querySelector('img');
+        if (url) { if (!img) { img = document.createElement('img'); img.alt = ''; av.appendChild(img); } img.src = url; }
+        else if (img) img.remove();
+        card.querySelector('[data-am="unphoto"]').hidden = !url;
+        // নিজের ছবি হলে নেভবারেও বদলাই
+        if (card.querySelector('.am-tag.me')) document.querySelectorAll('[data-nav-avatar]').forEach(function (n) { if (url) { n.src = url; n.hidden = false; } else { n.hidden = true; if (n.nextElementSibling) n.nextElementSibling.hidden = false; } });
+    }
+
     document.addEventListener('click', async function (e) {
         var b = e.target.closest('[data-am]'); if (!b) return;
+        if (b.getAttribute('data-am') === 'photo') { var mn = b.parentNode.querySelector('.am-pmenu'); closeMenus(mn); mn.hidden = !mn.hidden; return; }
+        if (b.getAttribute('data-am') === 'upload') { closeMenus(null); photoCard = b.closest('[data-id]'); photoIn.click(); return; }
+        if (b.getAttribute('data-am') === 'unphoto') {
+            closeMenus(null);
+            var pc = b.closest('[data-id]');
+            if (!confirm('প্রোফাইল ছবি সরাবেন?')) return;
+            var rr = await post('/Admin/RemoveAdminPhoto', { id: pc.getAttribute('data-id') });
+            if (rr.success) setPhoto(pc, ''); else alert('❌ ' + rr.message);
+            return;
+        }
         var card = b.closest('[data-id]'), id = card.getAttribute('data-id'), name = card.getAttribute('data-name'), act = b.getAttribute('data-am');
         if (act === 'edit') return open(card);
         if (act === 'pw') { pwId = id; document.getElementById('pwWho').textContent = name; document.getElementById('pwNew').value = ''; document.getElementById('pwMsg').textContent = ''; pwModal.classList.add('open'); document.getElementById('pwNew').focus(); return; }
