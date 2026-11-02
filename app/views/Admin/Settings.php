@@ -801,6 +801,184 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
         </div>
     </div>
 
+    <!-- ===== ✅ HOME — সেকশন চালু / বন্ধ ===== -->
+    <!-- ============================================================ -->
+    <?php
+        $hsOff = function_exists('home_sections_off') ? home_sections_off() : [];
+        $hsList = function_exists('home_section_list') ? home_section_list() : [];
+        $hcGroups = []; try { $hcGroups = db()->GetCategoryGroups(false); } catch (Throwable $e) { }
+        $hcPicked = function_exists('home_category_ids') ? home_category_ids() : [];
+        $hcAll = [];
+        foreach ($hcGroups as $g) foreach ($g->Categories as $c) $hcAll[] = ['id' => $c->Id, 'name' => $c->Name, 'group' => $g->Name, 'icon' => $c->Icon, 'img' => $c->ImageUrl, 'on' => $c->IsActive && $g->IsActive];
+    ?>
+    <style>
+        .hs-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+        .hs-row { display: flex; align-items: center; gap: 12px; border: 1.5px solid #E3ECF5; border-radius: 12px; padding: 11px 14px; background: #fff; cursor: pointer; margin: 0; transition: border-color .2s, background .2s; }
+        .hs-row:hover { border-color: #9FDDF5; }
+        .hs-row.off { background: #F8FAFC; }
+        .hs-row.off .hs-t, .hs-row.off .hs-ic { opacity: .5; }
+        .hs-ic { width: 36px; height: 36px; border-radius: 10px; background: #E3F6FD; color: #028EA5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hs-t { flex: 1; min-width: 0; } .hs-t b { display: block; color: #08224A; font-size: 14.5px; } .hs-t small { display: block; color: #64748B; font-size: 12.5px; line-height: 1.4; }
+        .hs-sw { appearance: none; -webkit-appearance: none; width: 42px; height: 23px; border-radius: 20px; background: #CBD5E1; position: relative; cursor: pointer; transition: background .2s; margin: 0; flex-shrink: 0; }
+        .hs-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        .hs-sw:checked { background: #22C55E; } .hs-sw:checked::after { transform: translateX(19px); }
+        .hc-modes { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .hc-modes label { display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid #E3ECF5; border-radius: 12px; padding: 12px 14px; cursor: pointer; margin: 0; flex: 1 1 260px; }
+        .hc-modes label:has(input:checked) { border-color: #02B8F5; background: #F0FAFF; }
+        .hc-modes input { margin-top: 4px; }
+        .hc-modes b { display: block; color: #08224A; font-size: 14.5px; } .hc-modes small { color: #64748B; font-size: 12.5px; }
+        .hc-pane { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+        .hc-pane[hidden] { display: none; }
+        .hc-box { border: 1.5px solid #E3ECF5; border-radius: 12px; padding: 12px; min-width: 0; }
+        .hc-box h6 { margin: 0 0 10px; font-size: 13.5px; font-weight: 800; color: #08224A; display: flex; justify-content: space-between; align-items: center; }
+        .hc-sel { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow: auto; }
+        .hc-item { display: flex; align-items: center; gap: 9px; border: 1px solid #E3ECF5; border-radius: 10px; padding: 7px 9px; background: #fff; }
+        .hc-item .n { width: 22px; height: 22px; border-radius: 6px; background: #08224A; color: #fff; font-size: 11.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hc-item .t { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: #1E293B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hc-item .t small { color: #94A3B8; font-weight: 500; }
+        .hc-item button { border: 1px solid #DCECF5; background: #fff; border-radius: 6px; width: 26px; height: 24px; font-size: 11px; color: #475569; cursor: pointer; padding: 0; }
+        .hc-item button:disabled { opacity: .35; cursor: default; }
+        .hc-item button.x { color: #DC2626; }
+        .hc-empty { color: #94A3B8; font-size: 13px; text-align: center; padding: 18px 8px; }
+        .hc-all { max-height: 360px; overflow: auto; }
+        .hc-all .g { font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin: 10px 0 4px; }
+        .hc-all label { display: flex; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; cursor: pointer; margin: 0; font-size: 13.5px; color: #1E293B; }
+        .hc-all label:hover { background: #F1F5F9; }
+        .hc-all label.dis { opacity: .5; }
+        @media (max-width: 768px) { .hc-pane { grid-template-columns: 1fr; } .hs-rows { grid-template-columns: 1fr; } }
+    </style>
+    <div class="settings-card" id="hsSettings" data-sg="home">
+        <h5><i class="fas fa-toggle-on"></i> Home — সেকশন চালু / বন্ধ</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের কোন সেকশন দেখাবে আর কোনটা লুকানো থাকবে — সুইচ দিয়ে ঠিক করুন, তারপর Save চাপুন। বন্ধ করা সেকশনের লেখা/ছবি মুছে যায় না, পরে আবার চালু করা যায়।
+        </p>
+        <div class="hs-rows" id="hsRows">
+            <?php foreach ($hsList as $k => [$label, $desc, $icon]): $on = home_section_on($k); ?>
+                <label class="hs-row<?= $on ? '' : ' off' ?>">
+                    <span class="hs-ic"><i class="fas <?= e($icon) ?>"></i></span>
+                    <span class="hs-t"><b><?= e($label) ?></b><small><?= e($desc) ?></small></span>
+                    <input type="checkbox" class="hs-sw" data-hs="<?= e($k) ?>"<?= $on ? ' checked' : '' ?> aria-label="<?= e($label) ?>" />
+                </label>
+            <?php endforeach; ?>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <a href="/" target="_blank" class="upload-btn" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> হোম পেজ দেখুন</a>
+            <button type="button" class="btn-save" id="hsSave"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+
+    <!-- ===== ✅ HOME — Explore Categories এ কোন ক্যাটাগরি ===== -->
+    <div class="settings-card" id="hcSettings" data-sg="home">
+        <h5><i class="fas fa-layer-group"></i> Home — Explore Categories</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের "Explore Categories" সেকশনে কোন ক্যাটাগরিগুলো দেখাবে। নিজে বাছাই করলে যে ক্রমে সাজাবেন সেভাবেই দেখাবে (সর্বোচ্চ ১২টা)।
+        </p>
+        <div class="hc-modes">
+            <label><input type="radio" name="hcMode" value="auto"<?= $hcPicked ? '' : ' checked' ?> /><span><b>অটোমেটিক</b><small>প্রত্যেক গ্রুপ থেকে মিলিয়ে ৮টা ক্যাটাগরি নিজে থেকে দেখাবে</small></span></label>
+            <label><input type="radio" name="hcMode" value="manual"<?= $hcPicked ? ' checked' : '' ?> /><span><b>নিজে বাছাই করব</b><small>নিচের তালিকা থেকে টিক দিন, ▲▼ দিয়ে ক্রম ঠিক করুন</small></span></label>
+        </div>
+        <div class="hc-pane" id="hcPane"<?= $hcPicked ? '' : ' hidden' ?>>
+            <div class="hc-box">
+                <h6><span><i class="fas fa-list-ol"></i> হোম পেজে যা দেখাবে</span><span id="hcCount" style="color:#64748B;font-weight:700;"></span></h6>
+                <div class="hc-sel" id="hcSel"></div>
+            </div>
+            <div class="hc-box">
+                <h6><span><i class="fas fa-layer-group"></i> সব ক্যাটাগরি</span></h6>
+                <input type="search" id="hcSearch" class="form-control" placeholder="খুঁজুন — যেমন: IELTS, Guitar, Class 5" style="margin-bottom:6px;" />
+                <div class="hc-all" id="hcAll">
+                    <?php $lastG = null; foreach ($hcAll as $c): ?>
+                        <?php if ($c['group'] !== $lastG): $lastG = $c['group']; ?><div class="g"><?= e($c['group']) ?></div><?php endif; ?>
+                        <label class="<?= $c['on'] ? '' : 'dis' ?>" data-name="<?= e(mb_strtolower($c['name'] . ' ' . $c['group'])) ?>"><input type="checkbox" value="<?= (int)$c['id'] ?>" /> <?= e($c['name']) ?><?= $c['on'] ? '' : ' <small>(বন্ধ)</small>' ?></label>
+                    <?php endforeach; ?>
+                    <?php if (!$hcAll): ?><div class="hc-empty">কোনো ক্যাটাগরি নেই — <a href="/Admin/Categories">Admin → Categories</a> থেকে যোগ করুন।</div><?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <a href="/Admin/Categories" class="upload-btn" style="text-decoration:none;"><i class="fas fa-pen-to-square"></i> ক্যাটাগরি এডিট</a>
+            <button type="button" class="btn-save" id="hcSave"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+    <script>
+    (function () {
+        function tok() { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; }
+        async function post(url, data) {
+            var fd = new FormData(); Object.keys(data).forEach(function (k) { fd.append(k, data[k]); }); fd.append('__RequestVerificationToken', tok());
+            try { var r = await fetch(url, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }); return await r.json(); }
+            catch (e) { return { success: false, message: 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।' }; }
+        }
+        // ----- সেকশন চালু/বন্ধ -----
+        document.querySelectorAll('#hsRows .hs-sw').forEach(function (sw) {
+            sw.addEventListener('change', function () { sw.closest('.hs-row').classList.toggle('off', !sw.checked); });
+        });
+        document.getElementById('hsSave').addEventListener('click', async function () {
+            var b = this, data = {};
+            document.querySelectorAll('#hsRows .hs-sw').forEach(function (sw) { data[sw.getAttribute('data-hs')] = sw.checked; });
+            b.disabled = true;
+            var r = await post('/Admin/SaveHomeSections', { sections: JSON.stringify(data) });
+            b.disabled = false;
+            alert((r.success ? '✅ ' : '❌ ') + (r.message || ''));
+            if (r.success) {
+                // একই সুইচ অন্য কার্ডেও আছে — মিলিয়ে দিই
+                var fq = document.getElementById('fqEnabled'); if (fq) { fq.checked = data.faq; if (typeof fqPreview === 'function') fqPreview(); }
+                var bt = document.querySelector('#btSettings input[type="checkbox"][id*="nabled"], #btSettings input[name="bt_enabled"]'); if (bt) bt.checked = data.become;
+            }
+        });
+
+        // FAQ / Become a Tutor কার্ডের নিজস্ব সুইচ বদলালে এখানেও মিলিয়ে দিই
+        document.addEventListener('change', function (e) {
+            var map = { fqEnabled: 'faq', bt_enabled: 'become' }, k = map[e.target.id]; if (!k) return;
+            var sw = document.querySelector('#hsRows .hs-sw[data-hs="' + k + '"]'); if (sw) { sw.checked = e.target.checked; sw.closest('.hs-row').classList.toggle('off', !sw.checked); }
+        });
+        // ----- Explore Categories -----
+        var ALL = <?= js(array_column($hcAll, null, 'id')) ?>, sel = <?= js($hcPicked) ?>, MAX = 12;
+        sel = sel.filter(function (id) { return ALL[id]; });
+        var selBox = document.getElementById('hcSel'), all = document.getElementById('hcAll'), pane = document.getElementById('hcPane');
+        function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function draw() {
+            selBox.innerHTML = sel.length ? sel.map(function (id, i) {
+                var c = ALL[id];
+                return '<div class="hc-item" data-id="' + id + '"><span class="n">' + (i + 1) + '</span><span class="t">' + esc(c.name) + ' <small>· ' + esc(c.group) + (c.on ? '' : ' · বন্ধ') + '</small></span>'
+                    + '<button type="button" data-mv="-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="উপরে"><i class="fas fa-chevron-up"></i></button>'
+                    + '<button type="button" data-mv="1"' + (i === sel.length - 1 ? ' disabled' : '') + ' aria-label="নিচে"><i class="fas fa-chevron-down"></i></button>'
+                    + '<button type="button" class="x" data-rm aria-label="সরান"><i class="fas fa-xmark"></i></button></div>';
+            }).join('') : '<div class="hc-empty">ডান পাশের তালিকা থেকে ক্যাটাগরিতে টিক দিন।</div>';
+            document.getElementById('hcCount').textContent = sel.length + ' / ' + MAX;
+            all.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = sel.indexOf(+cb.value) !== -1; });
+        }
+        all.addEventListener('change', function (e) {
+            var cb = e.target; if (cb.type !== 'checkbox') return;
+            var id = +cb.value, i = sel.indexOf(id);
+            if (cb.checked && i === -1) { if (sel.length >= MAX) { cb.checked = false; alert('সর্বোচ্চ ' + MAX + 'টা ক্যাটাগরি বাছাই করা যাবে।'); return; } sel.push(id); }
+            if (!cb.checked && i !== -1) sel.splice(i, 1);
+            draw();
+        });
+        selBox.addEventListener('click', function (e) {
+            var b = e.target.closest('button'); if (!b) return;
+            var id = +b.closest('[data-id]').getAttribute('data-id'), i = sel.indexOf(id);
+            if (b.hasAttribute('data-rm')) sel.splice(i, 1);
+            else { var j = i + +b.getAttribute('data-mv'); if (j < 0 || j >= sel.length) return; sel.splice(j, 0, sel.splice(i, 1)[0]); }
+            draw();
+        });
+        document.getElementById('hcSearch').addEventListener('input', function () {
+            var q = this.value.trim().toLowerCase();
+            all.querySelectorAll('label[data-name]').forEach(function (l) { l.style.display = !q || l.getAttribute('data-name').indexOf(q) !== -1 ? '' : 'none'; });
+        });
+        document.querySelectorAll('input[name="hcMode"]').forEach(function (r) { r.addEventListener('change', function () { pane.hidden = document.querySelector('input[name="hcMode"]:checked').value !== 'manual'; }); });
+        document.getElementById('hcSave').addEventListener('click', async function () {
+            var manual = document.querySelector('input[name="hcMode"]:checked').value === 'manual';
+            if (manual && !sel.length) { alert('অন্তত ১টা ক্যাটাগরিতে টিক দিন, অথবা "অটোমেটিক" বেছে নিন।'); return; }
+            var b = this; b.disabled = true;
+            var r = await post('/Admin/SaveHomeCategories', { ids: manual ? sel.join(',') : '' });
+            b.disabled = false;
+            alert((r.success ? '✅ ' : '❌ ') + (r.message || ''));
+            if (r.success && !manual) { sel = []; draw(); }
+        });
+        draw();
+    })();
+    </script>
+
+    <!-- ============================================================ -->
     <!-- ===== Hero Images Section ===== -->
     <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-images"></i> Hero Images</h5>

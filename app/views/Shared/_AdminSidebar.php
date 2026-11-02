@@ -274,7 +274,14 @@ try {
     }
 
     /* Settings সাব-মেনু */
-    .admin-sidebar .sg-chev { margin-left: auto; font-size: 10px !important; opacity: .6; width: auto !important; }
+    .admin-sidebar .sg-parent { position: relative; }
+    .admin-sidebar .sg-parent > a { padding-right: 52px !important; }
+    .admin-sidebar .sg-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 8px; border: none;
+        background: transparent; color: rgba(255,255,255,.75); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: background .2s, color .2s; z-index: 2; }
+    .admin-sidebar .sg-toggle:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .admin-sidebar .sg-toggle i { transition: transform .25s; transform: rotate(-90deg); }
+    .admin-sidebar .sg-toggle.open i { transform: rotate(0deg); }
+    .admin-sidebar ul.sg-side[hidden] { display: none; }
     .admin-sidebar ul.sg-side { list-style: none; margin: 2px 0 6px; padding: 0 0 0 18px; border-left: 2px solid rgba(255,255,255,.08); margin-left: 30px; }
     .admin-sidebar ul.sg-side li a { padding: 8px 12px !important; font-size: 13px !important; opacity: .8; border-radius: 8px; }
     .admin-sidebar ul.sg-side li a i { font-size: 12px !important; width: 18px !important; }
@@ -414,17 +421,32 @@ try {
             </a>
         </li>
         <li>
-            <a href="/Admin/Settings" class="<?= $currentAction === 'Settings' && (string)input_str('s', '') === '' ? 'active' : '' ?>" data-sg-side="">
-                <i class="fas fa-cog"></i> Settings
-                <i class="fas fa-chevron-<?= $currentAction === 'Settings' ? 'down' : 'right' ?> sg-chev"></i>
-            </a>
-            <?php if ($currentAction === 'Settings' && function_exists('admin_settings_groups')): $sgSideCur = (string)input_str('s', ''); ?>
-                <ul class="sg-side">
+            <?php $sgOpen = $currentAction === 'Settings'; $sgSideCur = $sgOpen ? (string)input_str('s', '') : '-'; ?>
+            <div class="sg-parent">
+                <a href="/Admin/Settings" class="<?= $sgOpen && $sgSideCur === '' ? 'active' : '' ?><?= $sgOpen ? ' sg-here' : '' ?>" data-sg-side="">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <button type="button" class="sg-toggle<?= $sgOpen ? ' open' : '' ?>" id="sgToggle" aria-expanded="<?= $sgOpen ? 'true' : 'false' ?>" aria-controls="sgSide" title="সাব-মেনু খুলুন / বন্ধ করুন">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <?php if (function_exists('admin_settings_groups')): ?>
+                <ul class="sg-side" id="sgSide"<?= $sgOpen ? '' : ' hidden' ?>>
                     <?php foreach (admin_settings_groups() as $k => $g): ?>
                         <li><a href="/Admin/Settings?s=<?= $k ?>" data-sg-side="<?= $k ?>" class="<?= $sgSideCur === $k ? 'active' : '' ?>"><i class="fas <?= $g['icon'] ?>"></i> <?= e($g['short']) ?></a></li>
                     <?php endforeach; ?>
                 </ul>
             <?php endif; ?>
+            <script>
+            (function () {
+                var b = document.getElementById('sgToggle'), ul = document.getElementById('sgSide'); if (!b || !ul) return;
+                b.addEventListener('click', function (e) {
+                    e.preventDefault(); e.stopPropagation();
+                    var open = ul.hidden; ul.hidden = !open;
+                    b.classList.toggle('open', open); b.setAttribute('aria-expanded', open ? 'true' : 'false');
+                });
+            })();
+            </script>
         </li>
         <li style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px; padding-top: 10px;">
             <a href="#" onclick="document.documentElement.classList.remove('a-open'); adminChangePasswordFromSidebar(); return false;" style="color: #FFB300;">

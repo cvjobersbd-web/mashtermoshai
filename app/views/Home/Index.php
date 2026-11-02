@@ -17,6 +17,7 @@ $tutorSectionImg = is_blank($settings->TutorSectionImageUrl)
 $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 ?>
 
+<?php if (home_section_on('hero')): ?>
 <!-- ========================================= -->
 <!-- HERO SECTION -->
 <!-- ========================================= -->
@@ -158,7 +159,9 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         })();
     </script>
 <?php endif; ?>
+<?php endif; /* home_section: hero */ ?>
 
+<?php if (home_section_on('how')): ?>
 <!-- ========================================= -->
 <!-- ✅ HOW IT WORKS — ধাপে ধাপে (Parents / Students) -->
 <!-- ========================================= -->
@@ -298,13 +301,14 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         steps.forEach(function (s) { io.observe(s); });
     })();
 </script>
+<?php endif; /* home_section: how */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ CATEGORIES (Admin → Categories থেকে) -->
 <!-- ========================================= -->
 <?php $homeCats = is_array($ViewBag->HomeCategories) ? $ViewBag->HomeCategories : []; ?>
 <?php partial('Home/_Styles'); ?>
-<?php if ($homeCats): ?>
+<?php if ($homeCats && home_section_on('categories')): ?>
 <?php partial('Categories/_CardStyles'); ?>
 <section class="hs-sec hs-cats" id="home-categories" style="background:#fff;" aria-label="Categories">
     <div class="hs-wrap">
@@ -320,7 +324,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <!-- ========================================= -->
 <!-- ✅ FEATURED TUITIONS (Home Page) -->
 <!-- ========================================= -->
-<?php if (count($homeTuitions) > 0): ?>
+<?php if (count($homeTuitions) > 0 && home_section_on('tuitions')): ?>
     <section class="py-8 sm:py-10 md:py-12 lg:py-16" style="background-color:<?= e($settings->SecondaryColor) ?>;">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -412,6 +416,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     </section>
 <?php endif; ?>
 
+<?php if (home_section_on('feed')): ?>
 <!-- ========================================= -->
 <!-- ✅ EDUCATIONAL FEED — সর্বশেষ Approve হওয়া পোস্ট -->
 <!-- ========================================= -->
@@ -456,6 +461,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         <div class="hs-foot"><a class="hs-more" href="/Feed">View More Posts <i class="fas fa-arrow-right"></i></a></div>
     </div>
 </section>
+<?php endif; /* home_section: feed */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ BECOME A TUTOR (Teacher Request Form এর সাথে যুক্ত) -->
@@ -591,6 +597,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 </section>
 <?php endif; ?>
 
+<?php if (home_section_on('features')): ?>
 <!-- ========================================= -->
 <!-- KEY FEATURES -->
 <!-- ========================================= -->
@@ -641,6 +648,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         </div>
     </div>
 </section>
+<?php endif; /* home_section: features */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ PACKAGES — Admin → Packages থেকে -->
@@ -651,7 +659,7 @@ $hpFree = (bool)$ViewBag->StudentFree;
 $hpTab = 'Teacher'; // সবসময় "শিক্ষকদের জন্য" ট্যাব আগে খোলা থাকে
 if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $hpTab = $hpTab === 'Teacher' ? 'Student' : 'Teacher';
 ?>
-<?php if ($homePk['Teacher'] || $homePk['Student']): ?>
+<?php if (($homePk['Teacher'] || $homePk['Student']) && home_section_on('packages')): ?>
 <?php partial('Package/_CardStyles'); ?>
 <section class="hs-sec" id="home-packages" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Packages">
     <div class="hs-wrap">
@@ -727,6 +735,7 @@ if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $
     }
 </style>
 
+<?php if (home_section_on('why')): ?>
 <!-- ========================================= -->
 <!-- ✅ WHY CHOOSE মাষ্টার মশাই -->
 <!-- ========================================= -->
@@ -753,12 +762,13 @@ $why = [
         </div>
     </div>
 </section>
+<?php endif; /* home_section: why */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ REVIEWS / TESTIMONIALS (অ্যাডমিন Approve করা রিভিউ) -->
 <!-- ========================================= -->
 <?php $tsReviews = db()->GetApprovedReviews(12); ?>
-<?php if (!empty($tsReviews)): ?>
+<?php if (!empty($tsReviews) && home_section_on('reviews')): ?>
 <style>
     .ts-section { padding: 56px 0 50px; overflow: hidden; }
     .ts-head { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
@@ -904,6 +914,7 @@ $why = [
 </script>
 <?php endif; ?>
 
+<?php if (home_section_on('findteacher')): ?>
 <!-- ========================================= -->
 <!-- FIND YOUR TEACHER (DB Image + Clickable) -->
 <!-- ========================================= -->
@@ -928,6 +939,7 @@ $why = [
 
     </div>
 </section>
+<?php endif; /* home_section: findteacher */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ FAQ (প্রশ্ন-উত্তর Admin → Settings থেকে বদলানো যায়) -->

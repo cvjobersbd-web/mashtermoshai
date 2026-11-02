@@ -552,6 +552,45 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 
+    /** POST /Admin/SaveHomeSections — sections = JSON {key: true|false} (হোম পেজের কোন সেকশন দেখাবে) */
+    public function SaveHomeSections_POST(): void
+    {
+        $this->requireAdminJson();
+        $in = json_decode((string)input_str('sections', '{}'), true);
+        if (!is_array($in)) json_response(['success' => false, 'message' => 'ভুল ডাটা।']);
+        $off = [];
+        $vals = [];
+        foreach (array_keys(home_section_list()) as $k) {
+            $on = !array_key_exists($k, $in) || (bool)$in[$k];
+            if ($k === 'become') $vals['bt_enabled'] = $on ? '1' : '0';
+            elseif ($k === 'faq') $vals['home_faq_enabled'] = $on ? '1' : '0';
+            elseif (!$on) $off[] = $k;
+        }
+        $vals['home_sections_off'] = json_encode($off);
+        $err = null;
+        if ($this->db->SaveSiteContent($vals, $err)) {
+            $n = count(home_section_list()) - count($off) - ($vals['bt_enabled'] === '0' ? 1 : 0) - ($vals['home_faq_enabled'] === '0' ? 1 : 0);
+            json_response(['success' => true, 'message' => "সেভ হয়েছে — হোম পেজে এখন {$n}টা সেকশন চালু।"]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
+    /** POST /Admin/SaveHomeCategories — ids = কমা দিয়ে (খালি = অটোমেটিক) */
+    public function SaveHomeCategories_POST(): void
+    {
+        $this->requireAdminJson();
+        $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))), fn($x) => $x > 0)));
+        if (count($ids) > 12) json_response(['success' => false, 'message' => 'সর্বোচ্চ ১২টা ক্যাটাগরি বাছাই করা যাবে।']);
+        $valid = [];
+        foreach ($this->db->GetCategoryGroups(false) as $g) foreach ($g->Categories as $c) $valid[$c->Id] = true;
+        $ids = array_values(array_filter($ids, fn($i) => isset($valid[$i])));
+        $err = null;
+        if ($this->db->SaveSiteContent(['home_cats' => $ids ? json_encode($ids) : ''], $err)) {
+            json_response(['success' => true, 'message' => $ids ? count($ids) . 'টা ক্যাটাগরি হোম পেজে দেখাবে।' : 'অটোমেটিক — প্রত্যেক গ্রুপ থেকে মিলিয়ে ৮টা দেখাবে।', 'ids' => $ids]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
     /** POST /Admin/SaveSocialLinks — ফুটারের সোশ্যাল মিডিয়া আইকন + লিংক */
     public function SaveSocialLinks_POST(): void
     {

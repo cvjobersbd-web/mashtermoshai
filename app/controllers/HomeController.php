@@ -14,7 +14,15 @@ class HomeController extends Controller
         $homeCats = [];
         try {
             // প্রত্যেক গ্রুপ থেকে পালা করে নিয়ে ৮টা ক্যাটাগরি (যাতে বিভিন্ন ধরনের দেখায়)
-            $lists = array_values(array_filter(array_map(fn($g) => $g->Categories, $this->db->GetCategoryGroups(true))));
+            $activeGroups = $this->db->GetCategoryGroups(true);
+            // অ্যাডমিন বাছাই করে দিলে সেগুলোই (ক্রম অনুযায়ী, শুধু চালু থাকা গুলো)
+            $picked = function_exists('home_category_ids') ? home_category_ids() : [];
+            if ($picked) {
+                $byId = [];
+                foreach ($activeGroups as $g) foreach ($g->Categories as $c) $byId[$c->Id] = $c;
+                foreach ($picked as $pid) if (isset($byId[$pid])) $homeCats[] = $byId[$pid];
+            }
+            $lists = $homeCats ? [] : array_values(array_filter(array_map(fn($g) => $g->Categories, $activeGroups)));
             $seenNames = [];
             for ($i = 0; count($homeCats) < 8 && $lists; $i++) {
                 $any = false;

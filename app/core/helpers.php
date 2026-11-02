@@ -1385,7 +1385,7 @@ function admin_settings_groups(): array
         'general' => ['title' => 'Branding & Theme', 'short' => 'Branding', 'icon' => 'fa-palette', 'bg' => '#F1EAFE', 'fg' => '#6D28D9',
             'desc' => 'সাইটের নাম, নেভবার ও ফুটারের লোগো, আর পুরো সাইটের থিম কালার।'],
         'home' => ['title' => 'Home Page', 'short' => 'Home Page', 'icon' => 'fa-house', 'bg' => '#E3F6FD', 'fg' => '#028EA5',
-            'desc' => 'হোম পেজের হিরো ছবি ও স্লাইডার, টিউটর সেকশনের ছবি, Become a Tutor সেকশন আর FAQ।'],
+            'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরো ছবি ও স্লাইডার, Become a Tutor আর FAQ।'],
         'banners' => ['title' => 'Page Banners', 'short' => 'Banners', 'icon' => 'fa-panorama', 'bg' => '#FFF4D6', 'fg' => '#B7791F',
             'desc' => 'Tuition Circular, Find Tutor আর Package পেজের উপরের ব্যানার ছবি।'],
         'profile' => ['title' => 'Profile Pages', 'short' => 'Profiles', 'icon' => 'fa-id-card', 'bg' => '#E7F8EF', 'fg' => '#157347',
@@ -1397,4 +1397,58 @@ function admin_settings_groups(): array
         'social' => ['title' => 'Footer & Social Links', 'short' => 'Social Links', 'icon' => 'fa-share-nodes', 'bg' => '#EEF2FF', 'fg' => '#4F46E5',
             'desc' => 'ফুটারে দেখানো Facebook, YouTube, WhatsApp ইত্যাদি সোশ্যাল মিডিয়া লিংক।'],
     ];
+}
+
+/**
+ * হোম পেজের সেকশনগুলো (Admin → Settings → Home Page থেকে চালু/বন্ধ করা যায়)
+ * key => [নাম, ছোট ব্যাখ্যা, আইকন]। 'become' আর 'faq' এর নিজস্ব চালু/বন্ধ ঘর আছে (bt_enabled, home_faq_enabled) — সেটাই ব্যবহার হয়।
+ */
+function home_section_list(): array
+{
+    return [
+        'hero'        => ['Hero (একদম উপরের অংশ)', 'বড় শিরোনাম, Find a Tutor বাটন আর ছবি/স্লাইডার', 'fa-house-flag'],
+        'how'         => ['How It Works', 'ধাপে ধাপে কীভাবে টিউটর পাওয়া যায়', 'fa-shoe-prints'],
+        'categories'  => ['Explore Categories', 'বাছাই করা ক্যাটাগরির কার্ড', 'fa-layer-group'],
+        'tuitions'    => ['Latest Tuition Circulars', 'হোমে দেখানোর জন্য বাছাই করা টিউশন পোস্ট', 'fa-clipboard-list'],
+        'feed'        => ['Educational Feed', 'সর্বশেষ ৩টা Approve হওয়া পোস্ট', 'fa-graduation-cap'],
+        'become'      => ['Become a Tutor', 'শিক্ষক হওয়ার আহ্বান — নিচের "Become a Tutor" কার্ডেও একই সুইচ', 'fa-chalkboard-user'],
+        'features'    => ['Key Features', 'প্ল্যাটফর্মের মূল সুবিধাগুলো', 'fa-star'],
+        'packages'    => ['Our Packages', 'শিক্ষক ও শিক্ষার্থীর প্যাকেজ', 'fa-box-open'],
+        'why'         => ['Why Choose মাষ্টার মশাই', '৪টা কারণের কার্ড', 'fa-circle-check'],
+        'reviews'     => ['Reviews', 'Approve করা রিভিউ (রিভিউ না থাকলে এমনিতেই দেখায় না)', 'fa-comment-dots'],
+        'findteacher' => ['Find Your Teacher (ছবি)', 'নিচের দিকের ক্লিকযোগ্য বড় ছবি', 'fa-image'],
+        'faq'         => ['FAQ', 'প্রশ্ন-উত্তর — নিচের FAQ কার্ডেও একই সুইচ', 'fa-circle-question'],
+    ];
+}
+
+/** কোন সেকশনগুলো বন্ধ — key => true */
+function home_sections_off(): array
+{
+    static $off = null;
+    if ($off !== null) return $off;
+    $off = [];
+    try {
+        $v = db()->GetSiteContent(['home_sections_off' => '']);
+        $list = json_decode((string)($v['home_sections_off'] ?? ''), true);
+        if (is_array($list)) foreach ($list as $k) if (is_string($k)) $off[$k] = true;
+    } catch (Throwable $e) { }
+    return $off;
+}
+
+/** হোম পেজের সেকশন চালু কিনা (become / faq এর জন্য তাদের নিজস্ব সেটিং দেখা হয়) */
+function home_section_on(string $key): bool
+{
+    if ($key === 'become') return (become_tutor_content()['bt_enabled'] ?? '1') !== '0';
+    if ($key === 'faq') return function_exists('home_faq_settings') ? home_faq_settings()['enabled'] : true;
+    return !isset(home_sections_off()[$key]);
+}
+
+/** Explore Categories এ অ্যাডমিনের বাছাই করা ক্যাটাগরির id (ক্রম অনুযায়ী) — খালি = অটোমেটিক */
+function home_category_ids(): array
+{
+    try {
+        $v = db()->GetSiteContent(['home_cats' => '']);
+        $list = json_decode((string)($v['home_cats'] ?? ''), true);
+        return is_array($list) ? array_values(array_unique(array_filter(array_map('intval', $list), fn($x) => $x > 0))) : [];
+    } catch (Throwable $e) { return []; }
 }
