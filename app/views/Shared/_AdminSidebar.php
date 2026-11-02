@@ -272,6 +272,14 @@ try {
         .admin-cards-table td.td-actions::before { display: none; }
         .admin-cards-table td.td-actions .btn { min-width: 40px; min-height: 36px; }
     }
+
+    /* Settings সাব-মেনু */
+    .admin-sidebar .sg-chev { margin-left: auto; font-size: 10px !important; opacity: .6; width: auto !important; }
+    .admin-sidebar ul.sg-side { list-style: none; margin: 2px 0 6px; padding: 0 0 0 18px; border-left: 2px solid rgba(255,255,255,.08); margin-left: 30px; }
+    .admin-sidebar ul.sg-side li a { padding: 8px 12px !important; font-size: 13px !important; opacity: .8; border-radius: 8px; }
+    .admin-sidebar ul.sg-side li a i { font-size: 12px !important; width: 18px !important; }
+    .admin-sidebar ul.sg-side li a:hover { opacity: 1; }
+    .admin-sidebar ul.sg-side li a.active { opacity: 1; background: rgba(2,184,245,.18) !important; color: #fff !important; border-left: none !important; }
 </style>
 
 
@@ -283,7 +291,7 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
-        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed',
+        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
     $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
@@ -406,9 +414,17 @@ try {
             </a>
         </li>
         <li>
-            <a href="/Admin/Settings" class="<?= $currentAction === 'Settings' ? 'active' : '' ?>">
+            <a href="/Admin/Settings" class="<?= $currentAction === 'Settings' && (string)input_str('s', '') === '' ? 'active' : '' ?>" data-sg-side="">
                 <i class="fas fa-cog"></i> Settings
+                <i class="fas fa-chevron-<?= $currentAction === 'Settings' ? 'down' : 'right' ?> sg-chev"></i>
             </a>
+            <?php if ($currentAction === 'Settings' && function_exists('admin_settings_groups')): $sgSideCur = (string)input_str('s', ''); ?>
+                <ul class="sg-side">
+                    <?php foreach (admin_settings_groups() as $k => $g): ?>
+                        <li><a href="/Admin/Settings?s=<?= $k ?>" data-sg-side="<?= $k ?>" class="<?= $sgSideCur === $k ? 'active' : '' ?>"><i class="fas <?= $g['icon'] ?>"></i> <?= e($g['short']) ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
         </li>
         <li style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px; padding-top: 10px;">
             <a href="#" onclick="document.documentElement.classList.remove('a-open'); adminChangePasswordFromSidebar(); return false;" style="color: #FFB300;">

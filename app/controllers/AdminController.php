@@ -421,7 +421,7 @@ class AdminController extends Controller
     public function Settings(): void
     {
         $this->requireAdminPage();
-        $this->view(null, $this->db->GetSiteSettings());
+        $this->view(null, $this->db->GetSiteSettings(), ['Section' => (string)input_str('s', '')]);
     }
 
     public function SaveSettings_POST(): void

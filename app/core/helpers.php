@@ -1377,3 +1377,24 @@ function category_tint(string $name): array
     $p = [['#E3F6FD', '#028EA5'], ['#E7F8EF', '#157347'], ['#FFF4D6', '#B7791F'], ['#F1EAFE', '#6D28D9'], ['#FDECEE', '#C2185B'], ['#EAF1FE', '#1D63E0']];
     return $p[abs(crc32($name)) % count($p)];
 }
+
+/** Admin → Settings এর সাব-মেনু: key => title, short, desc, icon, রঙ (Settings পেজ আর সাইডবার দুই জায়গায় ব্যবহার হয়) */
+function admin_settings_groups(): array
+{
+    return [
+        'general' => ['title' => 'Branding & Theme', 'short' => 'Branding', 'icon' => 'fa-palette', 'bg' => '#F1EAFE', 'fg' => '#6D28D9',
+            'desc' => 'সাইটের নাম, নেভবার ও ফুটারের লোগো, আর পুরো সাইটের থিম কালার।'],
+        'home' => ['title' => 'Home Page', 'short' => 'Home Page', 'icon' => 'fa-house', 'bg' => '#E3F6FD', 'fg' => '#028EA5',
+            'desc' => 'হোম পেজের হিরো ছবি ও স্লাইডার, টিউটর সেকশনের ছবি, Become a Tutor সেকশন আর FAQ।'],
+        'banners' => ['title' => 'Page Banners', 'short' => 'Banners', 'icon' => 'fa-panorama', 'bg' => '#FFF4D6', 'fg' => '#B7791F',
+            'desc' => 'Tuition Circular, Find Tutor আর Package পেজের উপরের ব্যানার ছবি।'],
+        'profile' => ['title' => 'Profile Pages', 'short' => 'Profiles', 'icon' => 'fa-id-card', 'bg' => '#E7F8EF', 'fg' => '#157347',
+            'desc' => 'স্টুডেন্ট ও টিচার প্রোফাইলের বাম পাশের প্রোমো ছবি।'],
+        'tuition' => ['title' => 'Tuition Options', 'short' => 'Tuition Options', 'icon' => 'fa-list-check', 'bg' => '#E0F2FE', 'fg' => '#0369A1',
+            'desc' => 'টিউশন পোস্ট আর Find Tutor এর লোকেশন, ক্লাস ও বিষয়ের তালিকা।'],
+        'email' => ['title' => 'Email (SMTP)', 'short' => 'Email', 'icon' => 'fa-envelope', 'bg' => '#FEE2E2', 'fg' => '#B91C1C',
+            'desc' => 'Forgot Password এর ইমেইল পাঠানোর SMTP সেটআপ আর টেস্ট ইমেইল।'],
+        'social' => ['title' => 'Footer & Social Links', 'short' => 'Social Links', 'icon' => 'fa-share-nodes', 'bg' => '#EEF2FF', 'fg' => '#4F46E5',
+            'desc' => 'ফুটারে দেখানো Facebook, YouTube, WhatsApp ইত্যাদি সোশ্যাল মিডিয়া লিংক।'],
+    ];
+}

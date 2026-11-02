@@ -1,6 +1,11 @@
 <?php
 $ViewData['Title'] = 'Site Settings';
 $heroImages = $Model->GetHeroImageList();
+
+// ===== Settings এর সাব-মেনু (প্রতিটা গ্রুপ আলাদা পেজের মতো দেখায়; সব একই পেজে থাকে, তাই সেভ আগের মতোই কাজ করে) =====
+$sgGroups = admin_settings_groups();
+$sgCur = (string)($ViewBag->Section ?? '');
+if (!isset($sgGroups[$sgCur])) $sgCur = '';
 ?>
 
 <style>
@@ -563,14 +568,14 @@ $heroImages = $Model->GetHeroImageList();
 <?php partial('Shared/_AdminSidebar'); ?>
 
 <!-- ===== Main Content ===== -->
-<div class="admin-main-content">
+<div class="admin-main-content" id="sgRoot" data-sg-cur="<?= e($sgCur) ?>">
 
     <!-- ===== Page Header ===== -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h2 style="color:#08224A; margin:0;"><i class="fas fa-cog me-2"></i>Site Settings</h2>
             <p style="color:#64748B; margin:4px 0 0 0; font-size:14px;">
-                হোম পেইজ ইমেজ, লোগো, ব্র্যান্ডিং এবং কালার থিম কাস্টমাইজ করুন
+                ওয়েবসাইটের লোগো, রঙ, হোম পেজ, ব্যানার, ইমেইল — সব সেটিংস এক জায়গায়, ভাগ ভাগ করে
             </p>
         </div>
     </div>
@@ -584,10 +589,93 @@ $heroImages = $Model->GetHeroImageList();
     <?= csrf_field() ?>
     <input type="hidden" id="settingsId" value="<?= e($Model->Id) ?>" />
 
+    <!-- ===== Settings সাব-মেনু ===== -->
+    <style>
+        <?php foreach (array_keys($sgGroups) as $g): ?>#sgRoot[data-sg-cur="<?= $g ?>"] [data-sg]:not([data-sg~="<?= $g ?>"]),
+        <?php endforeach; ?>#sgRoot[data-sg-cur=""] [data-sg] { display: none !important; }
+        #sgRoot:not([data-sg-cur=""]) .sg-overview { display: none; }
+        #sgRoot[data-sg-cur=""] .sg-tabs, #sgRoot[data-sg-cur=""] .sg-intro { display: none; }
+        .sg-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 30px; }
+        .sg-tile { display: flex; gap: 14px; align-items: flex-start; background: #fff; border: 1.5px solid #E3ECF5; border-radius: 16px; padding: 18px; text-decoration: none; color: inherit;
+            box-shadow: 0 4px 16px rgba(8,34,74,.05); transition: transform .2s, box-shadow .2s, border-color .2s; }
+        .sg-tile:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(8,34,74,.1); border-color: #9FDDF5; color: inherit; }
+        .sg-tile .ic { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .sg-tile b { display: block; color: #08224A; font-size: 16px; margin-bottom: 3px; }
+        .sg-tile small { display: block; color: #64748B; font-size: 13px; line-height: 1.5; }
+        .sg-tile .ext { font-size: 11px; color: #94A3B8; margin-left: 4px; }
+        .sg-ov-h { font-size: 13px; font-weight: 800; color: #94A3B8; letter-spacing: .5px; text-transform: uppercase; margin: 6px 0 12px; grid-column: 1 / -1; }
+        .sg-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; background: #fff; border: 1px solid #E3ECF5; border-radius: 14px; padding: 6px; margin-bottom: 18px;
+            position: sticky; top: 86px; z-index: 50; box-shadow: 0 4px 16px rgba(8,34,74,.06); }
+        .sg-tabs::-webkit-scrollbar { display: none; }
+        .sg-tabs a { flex-shrink: 0; display: inline-flex; gap: 8px; align-items: center; padding: 9px 14px; border-radius: 10px; color: #475569; font-weight: 700; font-size: 13.5px; text-decoration: none; white-space: nowrap; }
+        .sg-tabs a:hover { background: #F1F5F9; color: #08224A; }
+        .sg-tabs a.on { background: #08224A; color: #fff; }
+        .sg-tabs a.all { color: #1D63E0; }
+        .sg-intro { display: flex; gap: 14px; align-items: center; background: linear-gradient(135deg, #F0F9FF, #fff); border: 1px solid #DCECF5; border-radius: 16px; padding: 16px 18px; margin-bottom: 18px; }
+        .sg-intro .ic { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+        .sg-intro h3 { margin: 0; font-size: 19px; color: #08224A; font-weight: 800; }
+        .sg-intro p { margin: 2px 0 0; color: #64748B; font-size: 13.5px; }
+        @media (max-width: 576px) { .sg-overview { grid-template-columns: 1fr; } .sg-tabs { top: 70px; } }
+    </style>
+
+    <div class="sg-overview" aria-label="Settings">
+        <div class="sg-ov-h">ওয়েবসাইট সেটিংস — যেটা বদলাতে চান সেটায় ক্লিক করুন</div>
+        <?php foreach ($sgGroups as $k => $g): ?>
+            <a class="sg-tile" href="/Admin/Settings?s=<?= $k ?>" data-sg-go="<?= $k ?>">
+                <span class="ic" style="background:<?= $g['bg'] ?>;color:<?= $g['fg'] ?>;"><i class="fas <?= $g['icon'] ?>"></i></span>
+                <span><b><?= e($g['title']) ?></b><small><?= e($g['desc']) ?></small></span>
+            </a>
+        <?php endforeach; ?>
+        <div class="sg-ov-h" style="margin-top:14px;">অন্যান্য পেজ</div>
+        <?php foreach ([['/Admin/Categories', 'fa-layer-group', '#EEF2FF', '#4F46E5', 'Categories', 'ক্যাটাগরি, ছবি আর ক্যাটাগরি পেজের লেখা'],
+                        ['/Admin/Packages', 'fa-box-open', '#FFF4D6', '#B7791F', 'Packages', 'শিক্ষক ও শিক্ষার্থীর প্যাকেজ আর দাম'],
+                        ['/Admin/PaymentMethods', 'fa-wallet', '#E7F8EF', '#157347', 'Payment Methods', 'bKash, Nagad ইত্যাদি পেমেন্টের নিয়ম'],
+                        ['/Admin/EduFeed', 'fa-graduation-cap', '#E0F2FE', '#0369A1', 'Educational Feed', 'ইউজারদের পোস্ট Approve / Reject']] as [$h, $ic, $bg, $fg, $t, $d]): ?>
+            <a class="sg-tile" href="<?= $h ?>">
+                <span class="ic" style="background:<?= $bg ?>;color:<?= $fg ?>;"><i class="fas <?= $ic ?>"></i></span>
+                <span><b><?= e($t) ?></b><small><?= e($d) ?></small></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <nav class="sg-tabs" aria-label="Settings sections">
+        <a href="/Admin/Settings" class="all" data-sg-go=""><i class="fas fa-grip"></i> সব সেটিংস</a>
+        <?php foreach ($sgGroups as $k => $g): ?><a href="/Admin/Settings?s=<?= $k ?>" data-sg-go="<?= $k ?>" class="<?= $sgCur === $k ? 'on' : '' ?>"><i class="fas <?= $g['icon'] ?>"></i> <?= e($g['short']) ?></a><?php endforeach; ?>
+    </nav>
+    <div class="sg-intro">
+        <span class="ic" id="sgIntroIc" style="background:<?= $sgGroups[$sgCur]['bg'] ?? '#E0F2FE' ?>;color:<?= $sgGroups[$sgCur]['fg'] ?? '#0369A1' ?>;"><i class="fas <?= $sgGroups[$sgCur]['icon'] ?? 'fa-cog' ?>"></i></span>
+        <div><h3 id="sgIntroT"><?= e($sgGroups[$sgCur]['title'] ?? '') ?></h3><p id="sgIntroD"><?= e($sgGroups[$sgCur]['desc'] ?? '') ?></p></div>
+    </div>
+    <script>
+    (function () {
+        var G = <?= js($sgGroups) ?>, root = document.getElementById('sgRoot');
+        function go(k, push) {
+            if (!(k in G)) k = '';
+            root.setAttribute('data-sg-cur', k);
+            document.querySelectorAll('.sg-tabs a[data-sg-go]').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-sg-go') === k && k !== ''); });
+            document.querySelectorAll('[data-sg-side]').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-sg-side') === k); });
+            if (k) {
+                var g = G[k], ic = document.getElementById('sgIntroIc');
+                ic.style.background = g.bg; ic.style.color = g.fg; ic.innerHTML = '<i class="fas ' + g.icon + '"></i>';
+                document.getElementById('sgIntroT').textContent = g.title; document.getElementById('sgIntroD').textContent = g.desc;
+            }
+            if (push) history.pushState({ sg: k }, '', '/Admin/Settings' + (k ? '?s=' + k : ''));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest('[data-sg-go], [data-sg-side]'); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+            e.preventDefault();
+            go(a.getAttribute(a.hasAttribute('data-sg-go') ? 'data-sg-go' : 'data-sg-side'), true);
+            document.documentElement.classList.remove('a-open');
+        });
+        window.addEventListener('popstate', function () { go(new URLSearchParams(location.search).get('s') || '', false); });
+    })();
+    </script>
+
     <!-- ============================================================ -->
     <!-- ===== ✅ NEW: BRANDING & LOGO SECTION ===== -->
     <!-- ============================================================ -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="general">
         <h5><i class="fas fa-fingerprint"></i> Branding &amp; Logo</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:16px;">
             সাইটের নাম এবং নেভবার/ফুটারের লোগো কাস্টমাইজ করুন। লোগোর সাইজ ও শেপও পরিবর্তন করা যাবে।
@@ -714,7 +802,7 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== Hero Images Section ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-images"></i> Hero Images</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেইজের বাম পাশের হিরো ইমেজ। একাধিক ইমেজ যোগ করলে স্লাইডার হিসেবে কাজ করবে।
@@ -763,7 +851,7 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== ✅ Tutor Section Image ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-chalkboard-user"></i> Tutor Section Image</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেইজের "Find Your Teacher" সেকশনের ইমেজ। এই ইমেজটি পুরো width জুড়ে দেখাবে।
@@ -801,7 +889,7 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== Slider Settings ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-play-circle"></i> Slider Settings</h5>
 
         <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
@@ -832,7 +920,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Become a Tutor Section (Home Page) ===== -->
     <?php $btc = become_tutor_content(); ?>
-    <div class="settings-card" id="btSettings">
+    <div class="settings-card" id="btSettings" data-sg="home">
         <h5><i class="fas fa-chalkboard-teacher"></i> Home — "Become a Tutor" Section</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেজের "Become a Tutor" সেকশনের লেখা এখান থেকে বদলান।
@@ -937,7 +1025,7 @@ $heroImages = $Model->GetHeroImageList();
         .fq-off { text-align: center; color: #7A8CA0; font-size: 13.5px; padding: 10px; }
         @media (max-width: 576px) { .fq-row { flex-wrap: wrap; } .fq-acts { flex-direction: row; width: 100%; justify-content: flex-end; } .fq-prev p { padding-left: 18px; } }
     </style>
-    <div class="settings-card" id="catSettings">
+    <div class="settings-card" id="catSettings" data-sg="home">
         <h5><i class="fas fa-layer-group"></i> Categories (ক্যাটাগরি)</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             নেভবারের <b>Categories</b> পেজের ক্যাটাগরি (Play, Class 1, IELTS, Guitar ...) — নতুন ক্যাটাগরি ছবি দিয়ে যোগ করা, গ্রুপ বানানো,
@@ -949,7 +1037,7 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
-    <div class="settings-card" id="fqSettings">
+    <div class="settings-card" id="fqSettings" data-sg="home">
         <h5><i class="fas fa-circle-question"></i> Home — FAQ (প্রশ্ন ও উত্তর)</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেজের "Frequently Asked Questions" সেকশনের প্রশ্ন আর উত্তর এখান থেকে যোগ, এডিট, মুছে ফেলা বা ▲▼ দিয়ে সাজাতে পারবেন।
@@ -1051,7 +1139,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Profile Page — Promo Image ===== -->
     <?php $ppc = profile_promo(); ?>
-    <div class="settings-card" id="ppSettings">
+    <div class="settings-card" id="ppSettings" data-sg="profile">
         <h5><i class="fas fa-image"></i> Student Profile — বাম পাশের ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             স্টুডেন্টের প্রোফাইল পেজে বাম মেনুর নিচের ছবি ("সঠিক Tutor সঠিক ভবিষ্যৎ")। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে সব প্রোফাইলে বদলে যাবে।
@@ -1086,7 +1174,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ টিউশনের অপশন: লোকেশন / ক্লাস / বিষয় ===== -->
     <?php $topt = tuition_options(); ?>
-    <div class="settings-card" id="optSettings">
+    <div class="settings-card" id="optSettings" data-sg="tuition">
         <h5><i class="fas fa-list-check"></i> টিউশনের অপশন — লোকেশন, ক্লাস ও বিষয়</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             Find Tutor আর Tuition Circular পেজের ফিল্টার আর পোস্ট লেখার ঘরে এই তালিকাগুলো দেখায়। নতুন যোগ করুন বা × দিয়ে বাদ দিন, তারপর <b>Save</b> চাপুন।
@@ -1125,7 +1213,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Tuition Circular / Find Tutor — Banner Image ===== -->
     <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
-    <div class="settings-card" id="<?= $bk ?>bSettings">
+    <div class="settings-card" id="<?= $bk ?>bSettings" data-sg="banners">
         <h5><i class="fas <?= $bicon ?>"></i> <?= $bname ?> — উপরের ব্যানার ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             <?= $bname ?> পেজের একদম উপরের বড় ছবি। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে পেজে বদলে যাবে।
@@ -1159,7 +1247,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Teacher Profile — Promo Image ===== -->
     <?php $tpc = teacher_promo(); ?>
-    <div class="settings-card" id="tpSettings">
+    <div class="settings-card" id="tpSettings" data-sg="profile">
         <h5><i class="fas fa-chalkboard-user"></i> Teacher Profile — বাম পাশের ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             শুধু টিচারদের প্রোফাইল পেজে বাম মেনুর নিচে দেখায়। ছবি না দিলে ডিজাইন করা কার্ড ("আরও বেশি শিক্ষার্থীর কাছে পৌঁছান" + Create Tuition Post) দেখাবে।
@@ -1197,7 +1285,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Email (SMTP) Settings — Forgot Password ===== -->
     <?php $ms = mail_settings(); $msHasPass = $ms['mail_pass'] !== ''; ?>
-    <div class="settings-card" id="mailSettings">
+    <div class="settings-card" id="mailSettings" data-sg="email">
         <h5><i class="fas fa-envelope"></i> Email (SMTP) Settings — Forgot Password</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:6px;">
             ইউজার "Forgot password?" দিলে তার ইমেইলে রিসেট লিংক যাবে — সেই ইমেইল পাঠানোর জন্য এখানে cPanel এর ইমেইল অ্যাকাউন্টের তথ্য দিন।
@@ -1337,7 +1425,7 @@ $heroImages = $Model->GetHeroImageList();
             .sm-acts { width: 100%; justify-content: flex-end; }
         }
     </style>
-    <div class="settings-card" id="smSettings">
+    <div class="settings-card" id="smSettings" data-sg="social">
         <h5><i class="fas fa-share-alt"></i> Footer — Social Media Links</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             নিচ থেকে যে সোশ্যাল মিডিয়াগুলো ফুটারে দেখাতে চান সেগুলোতে ক্লিক করুন, তারপর প্রতিটার পাশে আপনার পেজের লিংক দিন।
@@ -1439,7 +1527,7 @@ $heroImages = $Model->GetHeroImageList();
     </script>
 
     <!-- ===== Theme Colors ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="general">
         <h5><i class="fas fa-palette"></i> Theme Colors</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             ওয়েবসাইটের মূল রং পরিবর্তন করুন। প্রতিটি রং পরিবর্তন করলে সাথে সাথে প্রিভিউ আপডেট হবে।
@@ -1519,8 +1607,8 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
-    <!-- ===== Save Button ===== -->
-    <div class="text-end mb-5">
+    <!-- ===== Save Button (Branding/Theme আর Home এর ছবি/স্লাইডার একসাথে সেভ হয়) ===== -->
+    <div class="text-end mb-5 sg-save" data-sg="general home">
         <button type="button" class="btn-save" id="saveBtn" onclick="saveAllSettings()">
             <i class="fas fa-save"></i> Save All Settings
         </button>
@@ -1884,7 +1972,8 @@ $heroImages = $Model->GetHeroImageList();
 
             // Validation: at least one image required
             if (imageUrls.length === 0) {
-                alert('অন্তত একটি হিরো ইমেজ যোগ করুন।');
+                alert('অন্তত একটি হিরো ইমেজ যোগ করুন — "Home Page" সেকশনের "Hero Images" এ ছবি দিন, তারপর আবার Save চাপুন।');
+                var hb = document.querySelector('.sg-tabs a[data-sg-go="home"]'); if (hb) hb.click();
                 return;
             }
 
