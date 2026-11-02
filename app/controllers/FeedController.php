@@ -1,6 +1,6 @@
 <?php
 /**
- * Educational Feed — ইউজার/টিচার শিক্ষামূলক পোস্ট দেয় (লেখা, ছবি, ভিডিও, YouTube লিংক)।
+ * Educational Feed — ইউজার/টিচার শিক্ষামূলক পোস্ট দেয় (লেখা আর ছবি); ভিডিও / YouTube শুধু অ্যাডমিন।
  * নতুন পোস্ট প্রথমে Pending থাকে → Admin → Educational Feed থেকে Approve করলে ফিডে দেখায়।
  *
  *  GET  /Feed                    ফিড (?tab=mine, ?subject=, ?q=)
@@ -133,6 +133,8 @@ class FeedController extends Controller
         // ----- ফাইলগুলো আগে যাচাই, তারপর সেভ -----
         $imgs = $this->collectFiles('images');
         $video = upload_file('video');
+        // ভিডিও আর YouTube শুধু অ্যাডমিন অ্যাকাউন্ট থেকে — সাধারণ ইউজার/টিচার শুধু ছবি আর লেখা
+        if (!$isAdmin && ($video || $yt !== '' || $ytRaw !== '')) $this->fail('ভিডিও শুধু অ্যাডমিন পোস্ট করতে পারেন — আপনি ছবি আর লেখা দিয়ে পোস্ট করুন।');
         if (count($imgs) > self::MAX_IMAGES) $this->fail('সর্বোচ্চ ' . self::MAX_IMAGES . 'টা ছবি দেওয়া যাবে।');
         if (($imgs ? 1 : 0) + ($video ? 1 : 0) + ($yt !== '' ? 1 : 0) > 1) $this->fail('একটা পোস্টে ছবি, ভিডিও অথবা YouTube লিংক — যেকোনো একটা দিন।');
         foreach ($imgs as $f) {

@@ -145,22 +145,26 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
                                 <input class="efc-subj" name="subject" list="efcSubjList" maxlength="60" placeholder="বিষয় (ঐচ্ছিক) — যেমন: Mathematics, Physics" aria-label="বিষয়" />
                                 <datalist id="efcSubjList"><?php foreach (array_unique(array_merge($subjects, $opts['subjects'] ?? [])) as $s): ?><option value="<?= e($s) ?>"></option><?php endforeach; ?></datalist>
                             </div>
+                            <?php if ($isAdmin): /* ভিডিও / YouTube শুধু অ্যাডমিন অ্যাকাউন্ট থেকে */ ?>
                             <input class="efc-yt" name="youtube" id="efcYt" maxlength="200" placeholder="YouTube ভিডিওর লিংক — https://youtu.be/..." hidden aria-label="YouTube লিংক" />
+                            <?php endif; ?>
                             <div class="efc-prev" id="efcPrev"></div>
                             <div class="efc-bar" id="efcBar" hidden><span></span></div>
-                            <?php if (!$isAdmin): ?><div class="efc-note"><i class="fas fa-shield-halved"></i><span>পোস্টটি আগে অ্যাডমিনের কাছে রিভিউর জন্য যাবে — Approve হলে সবাই দেখতে পাবে। শুধু শিক্ষামূলক পোস্ট দিন।</span></div><?php endif; ?>
+                            <?php if (!$isAdmin): ?><div class="efc-note"><i class="fas fa-shield-halved"></i><span>ছবি আর লেখা পোস্ট করা যায়। পোস্টটি আগে অ্যাডমিনের কাছে রিভিউর জন্য যাবে — Approve হলে সবাই দেখতে পাবে। শুধু শিক্ষামূলক পোস্ট দিন।</span></div><?php endif; ?>
                         </div>
                         <div class="efc-tools">
                             <label title="ছবি (সর্বোচ্চ ৬টা, প্রতিটা ৫MB)"><i class="fas fa-images" style="color:#22C55E;"></i><span class="lbl">Photo</span><input type="file" id="efcImg" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden /></label>
+                            <?php if ($isAdmin): ?>
                             <label title="ভিডিও (MP4/WEBM, সর্বোচ্চ <?= $videoMb ?>MB)"><i class="fas fa-video" style="color:#EF4444;"></i><span class="lbl">Video</span><input type="file" id="efcVid" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" hidden /></label>
                             <button type="button" class="t" id="efcYtBtn" title="YouTube লিংক"><i class="fab fa-youtube" style="color:#FF0000;"></i><span class="lbl">YouTube</span></button>
+                            <?php endif; ?>
                             <span class="sp"></span>
                             <button type="submit" class="efc-send" id="efcSend"><i class="fas fa-paper-plane"></i> <?= $isAdmin ? 'Post' : 'Submit' ?></button>
                         </div>
                     </form>
                 <?php else: ?>
                     <div class="efc efc-login">
-                        <p><i class="fas fa-pen-to-square" style="color:#02B8F5;"></i> নিজের নোট, ছবি বা ভিডিও শেয়ার করতে লগইন করুন।</p>
+                        <p><i class="fas fa-pen-to-square" style="color:#02B8F5;"></i> নিজের নোট বা ছবি শেয়ার করতে লগইন করুন।</p>
                         <a href="/Account/Login?returnUrl=<?= rawurlencode('/Feed') ?>">Login</a>
                     </div>
                 <?php endif; ?>
@@ -207,7 +211,7 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
                 <div class="efs">
                     <h3><i class="fas fa-circle-info" style="color:#F5A623;"></i> কীভাবে কাজ করে</h3>
                     <ol>
-                        <li>লেখা, ছবি, ভিডিও বা YouTube লিংক দিয়ে পোস্ট করুন।</li>
+                        <li><?= $isAdmin ? 'লেখা, ছবি, ভিডিও বা YouTube লিংক দিয়ে পোস্ট করুন।' : 'লেখা আর ছবি দিয়ে পোস্ট করুন।' ?></li>
                         <li>অ্যাডমিন পোস্টটি রিভিউ করবেন।</li>
                         <li>Approve হলে ফিডে সবাই দেখবে — নোটিফিকেশনও পাবেন।</li>
                     </ol>
@@ -247,7 +251,9 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
     // ===== কম্পোজার =====
     var form = document.getElementById('efc'); if (!form) return;
     var ta = document.getElementById('efcText'), moreBox = document.getElementById('efcMore'), prev = document.getElementById('efcPrev');
-    var imgIn = document.getElementById('efcImg'), vidIn = document.getElementById('efcVid'), yt = document.getElementById('efcYt'), ytBtn = document.getElementById('efcYtBtn');
+    var imgIn = document.getElementById('efcImg'), vidIn = document.getElementById('efcVid'), ytBtn = document.getElementById('efcYtBtn');
+    // ভিডিও/YouTube শুধু অ্যাডমিনের জন্য — সাধারণ ইউজারের পেজে এগুলো থাকে না
+    var yt = document.getElementById('efcYt') || { value: '', hidden: true, focus: function () {} };
     var send = document.getElementById('efcSend'), bar = document.getElementById('efcBar');
     var VIDEO_MAX = <?= (int)$ViewBag->VideoLimit ?>, IMG_MAX = 5 * 1024 * 1024, MAX_IMGS = 6, TAB = <?= js($tab) ?>;
     var images = [], video = null, urls = [];
@@ -289,12 +295,12 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
         }
         draw();
     });
-    vidIn.addEventListener('change', function () {
+    if (vidIn) vidIn.addEventListener('change', function () {
         var f = vidIn.files[0]; vidIn.value = ''; if (!f) return;
         if (f.size > VIDEO_MAX) { EF.toast('ভিডিও ' + Math.floor(VIDEO_MAX / 1048576) + 'MB এর বেশি বড়। বড় ভিডিও YouTube-এ দিয়ে লিংক শেয়ার করুন।', true); return; }
         expand(); only('vid'); video = f; draw();
     });
-    ytBtn.addEventListener('click', function () { expand(); only('yt'); yt.hidden = false; draw(); yt.focus(); });
+    if (ytBtn) ytBtn.addEventListener('click', function () { expand(); only('yt'); yt.hidden = false; draw(); yt.focus(); });
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
