@@ -648,14 +648,14 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <?php
 $homePk = is_array($ViewBag->HomePackages) ? $ViewBag->HomePackages : ['Teacher' => [], 'Student' => []];
 $hpFree = (bool)$ViewBag->StudentFree;
-$hpTab = session_get('UserRole') === 'User' ? 'Student' : 'Teacher';
+$hpTab = 'Teacher'; // সবসময় "শিক্ষকদের জন্য" ট্যাব আগে খোলা থাকে
 if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $hpTab = $hpTab === 'Teacher' ? 'Student' : 'Teacher';
 ?>
 <?php if ($homePk['Teacher'] || $homePk['Student']): ?>
 <?php partial('Package/_CardStyles'); ?>
 <section class="hs-sec" id="home-packages" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Packages">
     <div class="hs-wrap">
-        <?php partial('Home/_SectionHead', ['title' => 'Our', 'hl' => 'Packages', 'sub' => 'শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'href' => '/Package', 'btn' => 'View More']); ?>
+        <?php partial('Home/_SectionHead', ['title' => 'Our', 'hl' => 'Packages', 'sub' => 'শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'href' => '/Package?for=' . strtolower($hpTab), 'btn' => 'View More']); ?>
         <?php if ($homePk['Teacher'] && $homePk['Student']): ?>
             <div style="text-align:center;"><div class="hp-tabs" role="tablist">
                 <button type="button" role="tab" data-hp="Teacher" class="<?= $hpTab === 'Teacher' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Teacher' ? 'true' : 'false' ?>"><i class="fas fa-chalkboard-user"></i> শিক্ষকদের জন্য</button>
@@ -667,7 +667,7 @@ if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $
                 <?php foreach (array_slice($homePk[$aud], 0, 4) as $p) partial('Package/_Card', ['p' => $p, 'cta' => $aud === 'Teacher' ? 'Subscribe করুন' : 'পোস্ট প্যাকেজ নিন', 'studentFree' => $hpFree]); ?>
             </div>
         <?php endforeach; ?>
-        <div class="hs-foot"><a class="hs-more" href="/Package">View All Packages <i class="fas fa-arrow-right"></i></a></div>
+        <div class="hs-foot"><a class="hs-more" href="/Package?for=<?= strtolower($hpTab) ?>">View All Packages <i class="fas fa-arrow-right"></i></a></div>
     </div>
 </section>
 <script>
