@@ -1034,13 +1034,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                             $frReq = 0; // কতজন নতুন করে প্রোফাইল দেখেছে (শেষবার তালিকা দেখার পর)
                             try { $frReq = db()->CountNewProfileViewers((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
                         ?>
-                            <!-- Who viewed my profile (LinkedIn এর মতো) -->
-                            <div class="notification-wrapper fr-nav-wrapper">
-                                <a href="/Profile/Views" class="notification-bell" title="Who viewed your profile" aria-label="Who viewed your profile<?= $frReq ? ' — ' . (int)$frReq . ' new' : '' ?>">
-                                    <i class="fas fa-eye"></i>
-                                    <span class="notif-badge show" id="frNavBadge" style="<?= $frReq > 0 ? '' : 'display:none' ?>"><?= $frReq > 9 ? '9+' : $frReq ?></span>
-                                </a>
-                            </div>
                         <?php endif; ?>
 
                         <!-- Notification Bell -->

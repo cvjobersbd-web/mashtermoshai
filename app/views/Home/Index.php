@@ -300,6 +300,24 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 </script>
 
 <!-- ========================================= -->
+<!-- ✅ CATEGORIES (Admin → Categories থেকে) -->
+<!-- ========================================= -->
+<?php $homeCats = is_array($ViewBag->HomeCategories) ? $ViewBag->HomeCategories : []; ?>
+<?php partial('Home/_Styles'); ?>
+<?php if ($homeCats): ?>
+<?php partial('Categories/_CardStyles'); ?>
+<section class="hs-sec hs-cats" id="home-categories" style="background:#fff;" aria-label="Categories">
+    <div class="hs-wrap">
+        <?php partial('Home/_SectionHead', ['title' => 'Explore', 'hl' => 'Categories', 'sub' => 'Play থেকে HSC, IELTS থেকে Guitar — যে বিষয়ে শিখতে চান, সেই ক্যাটাগরির অভিজ্ঞ টিউটর খুঁজুন।', 'href' => '/Categories', 'btn' => 'View More']); ?>
+        <div class="cc-grid">
+            <?php foreach ($homeCats as $c) partial('Categories/_Card', ['c' => $c]); ?>
+        </div>
+        <div class="hs-foot"><a class="hs-more" href="/Categories">View More Categories <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ========================================= -->
 <!-- ✅ FEATURED TUITIONS (Home Page) -->
 <!-- ========================================= -->
 <?php if (count($homeTuitions) > 0): ?>
@@ -393,6 +411,51 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         </div>
     </section>
 <?php endif; ?>
+
+<!-- ========================================= -->
+<!-- ✅ EDUCATIONAL FEED — সর্বশেষ Approve হওয়া পোস্ট -->
+<!-- ========================================= -->
+<?php $homeFeed = is_array($ViewBag->HomeFeed) ? $ViewBag->HomeFeed : []; ?>
+<section class="hs-sec" id="home-feed" style="background:#fff;" aria-label="Educational Feed">
+    <div class="hs-wrap">
+        <?php partial('Home/_SectionHead', ['title' => 'Educational', 'hl' => 'Feed', 'sub' => 'শিক্ষক আর শিক্ষার্থীদের শেয়ার করা নোট, ছবি, ভিডিও আর পড়াশোনার টিপস।', 'href' => '/Feed', 'btn' => 'View More']); ?>
+        <?php if ($homeFeed): ?>
+            <div class="hf-grid">
+                <?php foreach ($homeFeed as $fp):
+                    $txt = trim(preg_replace('/\s+/u', ' ', $fp->Content)); ?>
+                    <a class="hf-card" href="<?= e($fp->Url) ?>">
+                        <?php if ($fp->Images): ?>
+                            <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
+                        <?php elseif ($fp->YouTube !== ''): ?>
+                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                        <?php elseif ($fp->Video !== ''): ?>
+                            <div class="hf-media"><video src="<?= e($fp->Video) ?>#t=0.5" preload="metadata" muted playsinline></video><span class="play"><i class="fas fa-play"></i></span></div>
+                        <?php else: ?>
+                            <div class="hf-media txt"><i class="fas fa-quote-right q"></i><p><?= e(mb_substr($txt, 0, 180)) ?></p></div>
+                        <?php endif; ?>
+                        <div class="hf-body">
+                            <div class="hf-who">
+                                <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                                <div style="min-width:0;"><b><?= e($fp->AuthorName) ?><span class="hf-role<?= $fp->AuthorRole === 'Teacher' ? ' t' : '' ?>"><?= $fp->AuthorRole === 'Teacher' ? 'Teacher' : ($fp->AuthorRole === 'Admin' ? 'Admin' : 'Student') ?></span></b>
+                                    <small><?= e(time_ago($fp->ApprovedAt ?? $fp->CreatedAt)) ?></small></div>
+                            </div>
+                            <?php if ($fp->Subject !== ''): ?><span class="hf-subj"><i class="fas fa-book-open"></i><?= e($fp->Subject) ?></span><?php endif; ?>
+                            <?php if ($txt !== '' && ($fp->Images || $fp->YouTube !== '' || $fp->Video !== '')): ?><p class="hf-text"><?= e($txt) ?></p><?php endif; ?>
+                            <div class="hf-meta"><span><span><i class="far fa-thumbs-up"></i><?= (int)$fp->LikeCount ?></span><span><i class="far fa-comment"></i><?= (int)$fp->CommentCount ?></span></span><b>Read more <i class="fas fa-arrow-right" style="color:inherit;margin:0 0 0 2px;"></i></b></div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="hf-empty">
+                <span class="ic"><i class="fas fa-graduation-cap"></i></span>
+                <div><h3>আপনার জ্ঞান শেয়ার করুন</h3><p>নোট, প্রশ্নের সমাধান, শিক্ষামূলক ভিডিও বা পড়াশোনার টিপস পোস্ট করুন — অ্যাডমিন রিভিউ করার পর সবাই দেখতে পাবে।</p></div>
+                <a class="hs-more" href="/Feed">Educational Feed <i class="fas fa-arrow-right"></i></a>
+            </div>
+        <?php endif; ?>
+        <div class="hs-foot"><a class="hs-more" href="/Feed">View More Posts <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
 
 <!-- ========================================= -->
 <!-- ✅ BECOME A TUTOR (Teacher Request Form এর সাথে যুক্ত) -->
@@ -578,6 +641,67 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         </div>
     </div>
 </section>
+
+<!-- ========================================= -->
+<!-- ✅ PACKAGES — Admin → Packages থেকে -->
+<!-- ========================================= -->
+<?php
+$homePk = is_array($ViewBag->HomePackages) ? $ViewBag->HomePackages : ['Teacher' => [], 'Student' => []];
+$hpFree = (bool)$ViewBag->StudentFree;
+$hpTab = session_get('UserRole') === 'User' ? 'Student' : 'Teacher';
+if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $hpTab = $hpTab === 'Teacher' ? 'Student' : 'Teacher';
+?>
+<?php if ($homePk['Teacher'] || $homePk['Student']): ?>
+<section class="hs-sec" id="home-packages" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Packages">
+    <div class="hs-wrap">
+        <?php partial('Home/_SectionHead', ['title' => 'Our', 'hl' => 'Packages', 'sub' => 'শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'href' => '/Package', 'btn' => 'View More']); ?>
+        <?php if ($homePk['Teacher'] && $homePk['Student']): ?>
+            <div style="text-align:center;"><div class="hp-tabs" role="tablist">
+                <button type="button" role="tab" data-hp="Teacher" class="<?= $hpTab === 'Teacher' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Teacher' ? 'true' : 'false' ?>"><i class="fas fa-chalkboard-user"></i> শিক্ষকদের জন্য</button>
+                <button type="button" role="tab" data-hp="Student" class="<?= $hpTab === 'Student' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Student' ? 'true' : 'false' ?>"><i class="fas fa-user-graduate"></i> শিক্ষার্থীদের জন্য</button>
+            </div></div>
+        <?php endif; ?>
+        <?php foreach (['Teacher', 'Student'] as $aud): if (!$homePk[$aud]) continue; ?>
+            <div class="hp-grid" data-hp-grid="<?= $aud ?>"<?= $aud === $hpTab ? '' : ' hidden' ?>>
+                <?php foreach (array_slice($homePk[$aud], 0, 4) as $p): $free = $hpFree && $aud === 'Student'; ?>
+                    <div class="hp-card<?= $p->IsFeatured ? ' ft' : '' ?>">
+                        <?php if (!is_blank($p->Badge)): ?><span class="hp-badge"><?= e($p->Badge) ?></span><?php endif; ?>
+                        <div class="hp-name"><?= e($p->Name) ?></div>
+                        <?php if (trim($p->Name) !== $p->DurationLabel): ?><div class="hp-dur"><?= e($p->DurationLabel) ?></div><?php endif; ?>
+                        <div class="hp-price">
+                            <?php if ($free): ?><b style="color:#15803D;">ফ্রি</b><s><?= e(taka($p->Price)) ?></s>
+                            <?php else: ?><b><?= e(taka($p->Price)) ?></b><?php if ($p->RegularPrice): ?><s><?= e(taka($p->RegularPrice)) ?></s><span class="off"><?= (int)$p->Discount ?>% ছাড়</span><?php endif; ?><?php endif; ?>
+                        </div>
+                        <?php if ($p->FeatureList): ?>
+                            <ul class="hp-feat">
+                                <?php foreach (array_slice($p->FeatureList, 0, 4) as $f): ?><li><i class="fas fa-check"></i><span><?= e($f) ?></span></li><?php endforeach; ?>
+                                <?php if (count($p->FeatureList) > 4): ?><li class="more"><i class="fas fa-plus" style="color:inherit;"></i><span>আরো <?= count($p->FeatureList) - 4 ?>টি সুবিধা</span></li><?php endif; ?>
+                            </ul>
+                        <?php else: ?><div style="height:18px;"></div><?php endif; ?>
+                        <?php if ($free): ?><a class="hp-btn" href="/Tuition/Circular">ফ্রিতে পোস্ট করুন <i class="fas fa-arrow-right"></i></a>
+                        <?php else: ?><a class="hp-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>"><?= $aud === 'Teacher' ? 'Subscribe Now' : 'Buy Now' ?> <i class="fas fa-arrow-right"></i></a><?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endforeach; ?>
+        <div class="hs-foot"><a class="hs-more" href="/Package">View All Packages <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+<script>
+(function () {
+    var tabs = document.querySelectorAll('[data-hp]');
+    tabs.forEach(function (b) {
+        b.addEventListener('click', function () {
+            var a = b.getAttribute('data-hp');
+            tabs.forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+            document.querySelectorAll('[data-hp-grid]').forEach(function (g) { g.hidden = g.getAttribute('data-hp-grid') !== a; });
+            var m = document.querySelector('#home-packages .hs-head .hs-more'), f = document.querySelector('#home-packages .hs-foot .hs-more');
+            [m, f].forEach(function (l) { if (l) l.href = '/Package?for=' + a.toLowerCase(); });
+        });
+    });
+})();
+</script>
+<?php endif; ?>
 
 <!-- ========================================= -->
 <!-- ✅ WHY CHOOSE + FAQ — স্টাইল -->
