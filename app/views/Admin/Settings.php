@@ -1390,7 +1390,7 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
     </div>
 
     <!-- ===== ✅ Tuition Circular / Find Tutor — Banner Image ===== -->
-    <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
+    <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()], ['hd', 'helpdesk', 'Help Desk', 'fa-headset', helpdesk_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
     <div class="settings-card" id="<?= $bk ?>bSettings" data-sg="banners">
         <h5><i class="fas <?= $bicon ?>"></i> <?= $bname ?> — উপরের ব্যানার ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
@@ -1411,7 +1411,9 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
             <input type="file" id="<?= $bk ?>bFile" data-banner="<?= $bk ?>" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
         </div>
         <input type="text" class="form-control mb-1" id="<?= $bk ?>_banner" value="<?= e($bv[$bk . '_banner']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." oninput="var p = document.getElementById('<?= $bk ?>bPreview'); p.src = this.value; p.style.opacity = 1;" />
-        <?php if ($bk === 'pk'): ?>
+        <?php if ($bk === 'hd'): ?>
+        <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. এই ব্যানারের <strong>ভেতরেই</strong> "Help Desk" লেখা আর ইলাস্ট্রেশন থাকে (যেমন <strong>1600×420 px</strong>, হালকা নীল ব্যাকগ্রাউন্ড)। ব্যানার বন্ধ করলে পেজে লেখার হেডার দেখাবে।</span>
+        <?php elseif ($bk === 'pk'): ?>
         <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. ছবির <strong>ডান দিকে</strong> ইলাস্ট্রেশন রাখুন — বাম দিকে “মাষ্টার মশাই প্যাকেজ” লেখা আর ট্যাব বসে (যেমন <strong>1600×420 px</strong>)।</span>
         <?php else: ?>
         <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. চওড়া ছবি ভালো দেখায় (যেমন <strong>1500×280 px</strong>)।</span>

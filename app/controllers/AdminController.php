@@ -716,6 +716,7 @@ class AdminController extends Controller
         [$k, $defaults, $page] = match ($which) {
             'findtutor' => ['ft_', findtutor_banner_defaults(), 'Find Tutor'],
             'package' => ['pk_', package_banner_defaults(), 'Package'],
+            'helpdesk' => ['hd_', helpdesk_banner_defaults(), 'Help Desk'],
             default => ['tc_', circular_banner_defaults(), 'Tuition Circular'],
         };
         if (input_bool('reset')) {

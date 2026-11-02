@@ -623,6 +623,21 @@ function package_banner(): array
     }
     return $c;
 }
+/** Help Desk পেজের উপরের ব্যানার (ছবির ভেতরেই "Help Desk" লেখা আর ইলাস্ট্রেশন থাকে; বন্ধ করলে লেখার হেডার দেখায়) */
+function helpdesk_banner_defaults(): array
+{
+    return [
+        'hd_banner'         => 'https://i.ibb.co.com/MxqKZ182/Master-Moshai-Help-Desk-Banner.png',
+        'hd_banner_enabled' => '1',
+    ];
+}
+function helpdesk_banner(): array
+{
+    static $c = null;
+    if ($c === null) { try { $c = db()->GetSiteContent(helpdesk_banner_defaults()); } catch (Throwable $e) { $c = helpdesk_banner_defaults(); } }
+    return $c;
+}
+
 function findtutor_banner_defaults(): array
 {
     return [
@@ -1387,7 +1402,7 @@ function admin_settings_groups(): array
         'home' => ['title' => 'Home Page', 'short' => 'Home Page', 'icon' => 'fa-house', 'bg' => '#E3F6FD', 'fg' => '#028EA5',
             'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরো ছবি ও স্লাইডার, Become a Tutor আর FAQ।'],
         'banners' => ['title' => 'Page Banners', 'short' => 'Banners', 'icon' => 'fa-panorama', 'bg' => '#FFF4D6', 'fg' => '#B7791F',
-            'desc' => 'Tuition Circular, Find Tutor আর Package পেজের উপরের ব্যানার ছবি।'],
+            'desc' => 'Tuition Circular, Find Tutor, Package আর Help Desk পেজের উপরের ব্যানার ছবি।'],
         'profile' => ['title' => 'Profile Pages', 'short' => 'Profiles', 'icon' => 'fa-id-card', 'bg' => '#E7F8EF', 'fg' => '#157347',
             'desc' => 'স্টুডেন্ট ও টিচার প্রোফাইলের বাম পাশের প্রোমো ছবি।'],
         'tuition' => ['title' => 'Tuition Options', 'short' => 'Tuition Options', 'icon' => 'fa-list-check', 'bg' => '#E0F2FE', 'fg' => '#0369A1',
