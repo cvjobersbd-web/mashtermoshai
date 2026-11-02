@@ -875,7 +875,7 @@ $userProfileImg = session_get('ProfileImageLink');
     .hd-hero-text p { color: #334155; font-size: 16px; line-height: 1.6; margin: 0; max-width: 520px; }
 
     .hd-ask { position: relative; background: #fff; border-radius: 18px; padding: 26px 24px 22px; text-align: center; box-shadow: 0 10px 30px rgba(8,34,74,.07); border: 1px solid #E3EEF7; margin-bottom: 16px; }
-    .hd-ask h2 { margin: 0 0 18px; font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; color: #08224A; font-family: var(--font-heading); }
+    .hd-ask h2 { margin: 0 0 4px; font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; color: #08224A; font-family: var(--font-heading); }
     .hd-ask-form { display: flex; gap: 10px; max-width: 660px; margin: 0 auto; }
     .hd-ask-in { flex: 1; position: relative; margin: 0; }
     .hd-ask-in i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748B; font-size: 17px; }
@@ -883,7 +883,7 @@ $userProfileImg = session_get('ProfileImageLink');
     .hd-ask-in input:focus { border-color: #02B8F5; box-shadow: 0 0 0 3px rgba(2,184,245,.12); }
     .hd-ask-form button { height: 48px; padding: 0 34px; border: none; border-radius: 10px; background: #02B8F5; color: #fff; font-weight: 800; font-size: 16px; cursor: pointer; font-family: inherit; box-shadow: 0 6px 16px rgba(2,184,245,.28); transition: background .2s; }
     .hd-ask-form button:hover { background: #0099D6; }
-    .hd-pop { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: #334155; }
+    .hd-pop { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: #334155; }
     .hd-pop span { font-weight: 600; margin-right: 4px; }
     .hd-pop a { background: #EEF4F9; color: #334155; padding: 6px 14px; border-radius: 999px; text-decoration: none; font-size: 12.5px; font-weight: 600; transition: background .2s, color .2s; }
     .hd-pop a:hover { background: #E0F2FE; color: #0369A1; }
@@ -962,12 +962,6 @@ $hdTopics = [['Account & Profile', 'account'], ['Tuition Support', 'tuition'], [
         <!-- ===== কিভাবে সাহায্য করতে পারি? ===== -->
         <div class="hd-ask">
             <h2>কিভাবে সাহায্য করতে পারি?</h2>
-            <form method="get" action="/Helpdesk" class="hd-ask-form" role="search">
-                <input type="hidden" name="filter" value="<?= e($currentFilter) ?>" />
-                <label class="hd-ask-in"><i class="fas fa-magnifying-glass"></i>
-                    <input type="search" name="search" value="<?= e($searchQuery) ?>" placeholder="সমস্যা বা প্রশ্ন লিখে সার্চ করুন..." aria-label="Helpdesk সার্চ" /></label>
-                <button type="submit">সার্চ</button>
-            </form>
             <div class="hd-pop"><span>জনপ্রিয়:</span>
                 <?php foreach ($hdTopics as [$lbl, $kw]): ?><a href="/Helpdesk?search=<?= rawurlencode($kw) ?>"><?= e($lbl) ?></a><?php endforeach; ?>
             </div>
