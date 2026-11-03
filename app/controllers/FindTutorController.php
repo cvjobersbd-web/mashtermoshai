@@ -98,14 +98,18 @@ class FindTutorController extends Controller
                 } catch (Throwable $e) {}
 
                 // ===== নির্দিষ্ট টিচারকে নোটিফাই (TutorId = TCH-{1000+requestId}) =====
+                $studentUid = current_user_id() !== null && current_role() !== 'Admin' ? (int)current_user_id() : null;
+                try { $this->db->SetTutorRequestUsers((int)$req->Id, $studentUid, null); } catch (Throwable $e) { }
                 try {
                     if (!is_blank($req->TutorId) && str_starts_with($req->TutorId, 'TCH-')) {
                         $parts = explode('-', $req->TutorId);
                         if (count($parts) === 2 && ctype_digit($parts[1])) {
                             $tr = $this->db->GetTeacherRequestById((int)$parts[1] - 1000);
+                            // কে পাঠাল আর কোন টিচারের কাছে গেল — টিচার Accept করলে দুজনের চ্যাট খোলে
+                            if ($tr) $this->db->SetTutorRequestUsers((int)$req->Id, $studentUid !== (int)$tr->UserId ? $studentUid : null, (int)$tr->UserId);
                             if ($tr && $this->db->GetUserById($tr->UserId)) {
                                 $this->db->CreateNotification($tr->UserId, '📩 New Tutor Request!',
-                                    "{$req->StudentName} ({$req->PhoneNumber}) wants to contact you for {$req->RequiredSubject} tuition.",
+                                    "{$req->StudentName} ({$req->PhoneNumber}) wants to contact you for {$req->RequiredSubject} tuition. Dashboard থেকে Accept বা Reject করুন।",
                                     'info', '/Teacher/TeacherDashboard?section=direct-requests', 'fa-envelope-open-text');
                             }
                         }

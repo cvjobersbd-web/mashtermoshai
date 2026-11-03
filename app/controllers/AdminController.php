@@ -348,7 +348,7 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $status = input_str('status');
         if (is_blank($status)) json_response(['success' => false, 'message' => 'Status is required.']);
-        if (!in_array($status, ['Pending', 'Contacted', 'Completed', 'Cancelled'], true)) json_response(['success' => false, 'message' => 'Invalid status value.']);
+        if (!in_array($status, ['Pending', 'Contacted', 'Completed', 'Cancelled', 'Accepted', 'Rejected'], true)) json_response(['success' => false, 'message' => 'Invalid status value.']);
         if ($this->db->UpdateTutorRequestStatus(input_int('id', 0), $status, input_str('adminNote'))) {
             json_response(['success' => true, 'message' => 'Status updated successfully.']);
         }

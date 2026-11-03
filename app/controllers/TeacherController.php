@@ -97,10 +97,30 @@ class TeacherController extends Controller
             'RejectedApplications' => $count('Rejected'),
             'Stats' => $this->db->GetTeacherDashboardStats($userId),
             'PostStats' => $this->db->GetTeacherPostStats($userId),
-            'TutorRequests' => $this->db->GetTeacherDirectRequests($user->FullName),
+            'TutorRequests' => $this->db->GetTeacherRequestsFor($userId, (string)$user->FullName),
             'CircularApplications' => $this->db->GetCircularApplicationsByTeacher($userId),
             'MyReview' => $this->db->GetReviewByUser($userId),
         ]);
         $this->view(null, $model);
+    }
+
+    /** POST /Teacher/UpdateDirectRequest — টিচার নিজের কাছে আসা রিকোয়েস্ট Accept / Reject করে (Accept = স্টুডেন্টের সাথে চ্যাট খোলে) */
+    public function UpdateDirectRequest_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null || current_role() !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু টিচার এটা করতে পারবেন।']);
+        $status = (string)input_str('status', '');
+        if (!in_array($status, ['Accepted', 'Rejected', 'Pending'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+        $user = $this->db->GetUserById((int)$me);
+        $r = $this->db->TeacherDecideRequest(input_int('id', 0), (int)$me, (string)($user->FullName ?? ''), $status);
+        if (!$r) json_response(['success' => false, 'message' => 'রিকোয়েস্টটি পাওয়া যায়নি।']);
+        $sid = (int)($r->StudentUserId ?? 0);
+        $tname = (string)($user->FullName ?? 'Teacher');
+        if ($sid > 0 && $status === 'Accepted') {
+            $this->db->CreateNotification($sid, 'Request Accepted 🎉', "$tname আপনার রিকোয়েস্ট গ্রহণ করেছেন। এখন Messages থেকে সরাসরি চ্যাট করতে পারবেন।", 'success', '/Chat?c=r' . (int)$r->Id, 'fa-comments');
+        } elseif ($sid > 0 && $status === 'Rejected') {
+            $this->db->CreateNotification($sid, 'Request Not Accepted', "$tname এবার আপনার রিকোয়েস্টটি গ্রহণ করতে পারেননি। Find Tutor থেকে অন্য টিচার খুঁজে দেখুন।", 'warning', '/FindTutor', 'fa-times-circle');
+        }
+        json_response(['success' => true, 'status' => $status, 'chat' => $status === 'Accepted' && $sid > 0 ? '/Chat?c=r' . (int)$r->Id : null]);
     }
 }

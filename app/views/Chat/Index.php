@@ -115,7 +115,7 @@ $role = current_role();
                         </div>
                     <?php else: ?>
                         <?php foreach ($threads as $t): ?>
-                            <a class="ch-t<?= $cur && $cur->AppId === $t->AppId ? ' on' : '' ?><?= $t->Unread ? ' unread' : '' ?>" href="/Chat?c=<?= (int)$t->AppId ?>" data-id="<?= (int)$t->AppId ?>">
+                            <a class="ch-t<?= $cur && $cur->Key === $t->Key ? ' on' : '' ?><?= $t->Unread ? ' unread' : '' ?>" href="/Chat?c=<?= e($t->Key) ?>" data-id="<?= e($t->Key) ?>">
                                 <span class="ch-av"><?= e($t->Initials) ?><?php if ($t->OtherPhoto !== ''): ?><img src="<?= e($t->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
                                 <span class="ch-tm">
                                     <span class="ch-tn"><b><?= e($t->OtherName) ?></b> <span class="ch-tr"><?= e($t->OtherRole) ?></span><small><?= e(time_ago($t->LastAt)) ?></small></span>
@@ -173,7 +173,7 @@ $role = current_role();
 (function () {
     var token = function () { var i = document.querySelector('input[name="__RequestVerificationToken"]'); return i ? i.value : ''; };
     var threadsBox = document.getElementById('chThreads');
-    var CUR = <?= js($cur ? $cur->AppId : 0) ?>;
+    var CUR = <?= js($cur ? $cur->Key : '') ?>;
 
     // ===== তালিকা রিফ্রেশ (নতুন মেসেজ / নতুন চ্যাট) =====
     function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
@@ -183,7 +183,7 @@ $role = current_role();
             var cls = 'ch-t' + (t.id === CUR ? ' on' : '') + (t.unread && t.id !== CUR ? ' unread' : '');
             var av = '<span class="ch-av">' + esc(t.initials) + (t.photo ? '<img src="' + esc(t.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span>';
             var last = t.last ? (t.lastMine ? 'আপনি: ' : '') + esc(t.last) : esc(t.topic || 'চ্যাট শুরু করুন');
-            return '<a class="' + cls + '" href="/Chat?c=' + t.id + '" data-id="' + t.id + '">' + av + '<span class="ch-tm"><span class="ch-tn"><b>' + esc(t.name) + '</b> <span class="ch-tr">' + esc(t.role)
+            return '<a class="' + cls + '" href="/Chat?c=' + encodeURIComponent(t.id) + '" data-id="' + esc(t.id) + '">' + av + '<span class="ch-tm"><span class="ch-tn"><b>' + esc(t.name) + '</b> <span class="ch-tr">' + esc(t.role)
                 + '</span><small>' + esc(t.ago) + '</small></span><span class="ch-tl">' + last + '</span></span><span class="dot">' + (t.unread || 0) + '</span></a>';
         }).join('');
     }
@@ -254,7 +254,7 @@ $role = current_role();
         btn.addEventListener('click', async function () {
             btn.disabled = true; btn.textContent = 'লোড হচ্ছে...';
             try {
-                var r = await (await fetch('/Chat/Messages?c=' + CUR + '&before=' + firstId)).json();
+                var r = await (await fetch('/Chat/Messages?c=' + encodeURIComponent(CUR) + '&before=' + firstId)).json();
                 if (!r.success) { if (r.closed) setClosed(); return; }
                 var h = box.scrollHeight, frag = document.createDocumentFragment(), d0 = '';
                 r.messages.forEach(function (m) {
@@ -276,7 +276,7 @@ $role = current_role();
         if (closed || busy || document.hidden) return;
         busy = true;
         try {
-            var r = await (await fetch('/Chat/Messages?c=' + CUR + '&after=' + lastId + '&read=1', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            var r = await (await fetch('/Chat/Messages?c=' + encodeURIComponent(CUR) + '&after=' + lastId + '&read=1', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
             if (!r.success) { if (r.closed) setClosed(); return; }
             seenUpTo = r.seenUpTo || seenUpTo; append(r.messages);
         } catch (e) { } finally { busy = false; }
