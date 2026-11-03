@@ -34,14 +34,11 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     .hx-p { margin: 22px 0 0; max-width: 580px; font-size: clamp(15px, 1.05vw, 18px); line-height: 1.6; color: #4B5563; }
     .hx-search { margin-top: 34px; max-width: 600px; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 10px;
         box-shadow: 0 8px 28px rgba(15,40,80,.08); }
-    .hx-search .fld { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 1px solid #E5E7EB; border-radius: 8px; padding: 0 14px; height: 46px; transition: border-color .2s, box-shadow .2s; }
-    .hx-search .fld:focus-within { border-color: #00CFFF; box-shadow: 0 0 0 3px rgba(0,207,255,.15); }
-    .hx-search i { color: #9CA3AF; font-size: 15px; }
-    .hx-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 15px; color: #1F2937; font-family: inherit; }
-    .hx-search input::placeholder { color: #6B7280; }
-    .hx-search button { flex-shrink: 0; border: none; border-radius: 8px; background: #00CFFF; color: #fff; font-weight: 600; font-size: 15px; padding: 0 24px; height: 46px; cursor: pointer;
+    .hx-search .fld { position: relative; flex: 1; min-width: 0; display: block; border: 1px solid #E5E7EB; border-radius: 8px; height: 46px; text-decoration: none; transition: border-color .2s; }
+    .hx-search .fld:hover { border-color: #00CFFF; }
+    .hx-search .hx-btn { display: inline-flex; align-items: center; text-decoration: none; flex-shrink: 0; border: none; border-radius: 8px; background: #00CFFF; color: #fff; font-weight: 600; font-size: 15px; padding: 0 24px; height: 46px; cursor: pointer;
         font-family: inherit; transition: background .2s; white-space: nowrap; }
-    .hx-search button:hover { background: #00B5E0; }
+    .hx-search .hx-btn:hover { background: #00B5E0; color: #fff; }
     .hx-art { position: relative; display: flex; align-items: center; justify-content: center; }
     /* ছবির সাদা ব্যাকগ্রাউন্ড হিরোর রঙের সাথে মিশে যায় */
     .hx-art img { display: block; width: 100%; max-width: 560px; height: auto; object-fit: contain; mix-blend-mode: multiply; }
@@ -62,17 +59,15 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         .hx h1 { font-size: 28px; }
         .hx-p { margin-top: 14px; font-size: 15px; }
         .hx-search { margin-top: 22px; padding: 8px; gap: 8px; }
-        .hx-search .fld { padding: 0 10px; height: 44px; } .hx-search input { font-size: 14.5px; }
-        .hx-search button { font-size: 14.5px; padding: 0 16px; height: 44px; }
+        .hx-search .fld { height: 44px; }
+        .hx-search .hx-btn { font-size: 14.5px; padding: 0 16px; height: 44px; }
     }
-    /* ✅ সার্চ বক্সে চলমান লেখা (ডান থেকে বাঁয়ে) — লিখতে শুরু করলে/ক্লিক করলে লুকায় */
-    .hx-mq-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-self: stretch; align-items: center; }
-    .hx-mq { position: absolute; inset: 0; overflow: hidden; pointer-events: none; display: flex; align-items: center; color: #6B7280; font-size: 15px; transition: opacity .2s;
+    /* ✅ বক্সে চলমান লেখা (ডান থেকে বাঁয়ে) — ক্লিক করলে Find Tutor পেজ */
+    .hx-mq { position: absolute; inset: 0 12px; overflow: hidden; pointer-events: none; display: flex; align-items: center; color: #6B7280; font-size: 15px; transition: opacity .2s;
         -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
     .hx-mq-track { display: inline-flex; white-space: nowrap; animation: hxMarquee 12s linear infinite; will-change: transform; }
     .hx-mq-track span { padding-right: 120px; }
     @keyframes hxMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-    .hx-mq-wrap input:focus + .hx-mq, .hx-mq-wrap input:not(:placeholder-shown) + .hx-mq { opacity: 0; }
     @media (prefers-reduced-motion: reduce) { .hx-mq-track { animation: none; } }
     @media (max-width: 640px) { .hx-mq { font-size: 14.5px; } .hx-mq-track span { padding-right: 60px; } }
 </style>
@@ -81,12 +76,12 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         <div class="hx-text">
             <h1>Find the Right Tutor<br>in <span class="bd">Bangladesh</span></h1>
             <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.</p>
-            <form class="hx-search" action="/FindTutor" method="get" role="search">
-                <label class="fld"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-                <span class="hx-mq-wrap"><input type="search" name="q" maxlength="60" placeholder=" " aria-label="Your Right Tutor, Just a Click Away — search by subject, class or location" />
-                <span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span>Your Right Tutor, Just a Click Away.</span><span>Your Right Tutor, Just a Click Away.</span></span></span></span></label>
-                <button type="submit">Find a Tutor</button>
-            </form>
+            <div class="hx-search">
+                <a class="fld" href="/FindTutor" aria-label="Your Right Tutor, Just a Click Away.">
+                    <span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span>Your Right Tutor, Just a Click Away.</span><span>Your Right Tutor, Just a Click Away.</span></span></span>
+                </a>
+                <a class="hx-btn" href="/FindTutor">Find a Tutor</a>
+            </div>
         </div>
 
         <div class="hx-art<?= $heroSlider ? ' slider' : '' ?>">
