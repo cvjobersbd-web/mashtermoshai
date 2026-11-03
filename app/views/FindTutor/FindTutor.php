@@ -2057,7 +2057,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 <!-- ===== সার্চ + সর্ট ===== -->
                 <div class="ft2-card ft2-search">
                     <label class="ft2-search-in"><i class="fas fa-magnifying-glass"></i>
-                        <input type="search" id="ftSearch" placeholder="বিষয়, ক্লাস, বা টিউটরের নাম দিয়ে খুঁজুন..." autocomplete="off" />
+                        <input type="search" id="ftSearch" placeholder="বিষয়, ক্লাস, বা টিউটরের নাম দিয়ে খুঁজুন..." autocomplete="off" value="<?= e(mb_substr(trim((string)input_str('q', '')), 0, 60)) ?>" />
                     </label>
                     <button type="button" class="ft2-fjump" onclick="document.querySelector('.ft2-qf').scrollIntoView({ behavior: 'smooth', block: 'start' })"><i class="fas fa-filter"></i> Filters</button>
                     <label class="ft2-sort">Sort by:
@@ -3823,7 +3823,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                         </div>`;
                     }
 
-                    // ✅ পুরো প্রোফাইল + Add Friend (+ টিউটর Save)
+                    // ✅ পুরো প্রোফাইল (+ টিউটর Save)
                     if (u.canSave) html += `
                                         <button type="button" data-save-type="tutor" data-save-id="${encodeURIComponent(u.id)}" class="${u.isSaved ? 'on' : ''}"
                                             style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:16px; padding:11px; border-radius:12px; border:1px solid #DCE6F0; background:#fff; color:#08224A; font-weight:700; cursor:pointer;">
@@ -3831,7 +3831,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                         </button>`;
                     html += `
                                         <a href="/Profile/Show/${encodeURIComponent(u.id)}" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; padding:12px; border-radius:12px; background:#02B8F5; color:#fff; font-weight:700; text-decoration:none;">
-                                            <i class="fas fa-user-plus"></i> Full Profile &amp; Add Friend
+                                            <i class="fas fa-user"></i> View Full Profile
                                         </a>`;
 
                     modalBody.innerHTML = html;
@@ -3855,6 +3855,11 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
             document.addEventListener('DOMContentLoaded', function () {
                 applySearch();
+                // হোম পেজের সার্চ (/FindTutor?q=...) থেকে এলে সরাসরি ফলাফলে
+                if (document.getElementById('ftSearch').value.trim()) {
+                    var lh = document.getElementById('countBadge'); lh = lh && lh.closest('.ft2-list-h');
+                    if (lh) setTimeout(function () { lh.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
+                }
 
                 var tidInput = document.getElementById('tidInput');
                 if (tidInput) {

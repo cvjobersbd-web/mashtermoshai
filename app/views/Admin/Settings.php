@@ -1,6 +1,11 @@
 <?php
 $ViewData['Title'] = 'Site Settings';
 $heroImages = $Model->GetHeroImageList();
+
+// ===== Settings এর সাব-মেনু (প্রতিটা গ্রুপ আলাদা পেজের মতো দেখায়; সব একই পেজে থাকে, তাই সেভ আগের মতোই কাজ করে) =====
+$sgGroups = admin_settings_groups();
+$sgCur = (string)($ViewBag->Section ?? '');
+if (!isset($sgGroups[$sgCur])) $sgCur = '';
 ?>
 
 <style>
@@ -563,14 +568,14 @@ $heroImages = $Model->GetHeroImageList();
 <?php partial('Shared/_AdminSidebar'); ?>
 
 <!-- ===== Main Content ===== -->
-<div class="admin-main-content">
+<div class="admin-main-content" id="sgRoot" data-sg-cur="<?= e($sgCur) ?>">
 
     <!-- ===== Page Header ===== -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h2 style="color:#08224A; margin:0;"><i class="fas fa-cog me-2"></i>Site Settings</h2>
             <p style="color:#64748B; margin:4px 0 0 0; font-size:14px;">
-                হোম পেইজ ইমেজ, লোগো, ব্র্যান্ডিং এবং কালার থিম কাস্টমাইজ করুন
+                ওয়েবসাইটের লোগো, রঙ, হোম পেজ, ব্যানার, ইমেইল — সব সেটিংস এক জায়গায়, ভাগ ভাগ করে
             </p>
         </div>
     </div>
@@ -584,10 +589,94 @@ $heroImages = $Model->GetHeroImageList();
     <?= csrf_field() ?>
     <input type="hidden" id="settingsId" value="<?= e($Model->Id) ?>" />
 
+    <!-- ===== Settings সাব-মেনু ===== -->
+    <style>
+        <?php foreach (array_keys($sgGroups) as $g): ?>#sgRoot[data-sg-cur="<?= $g ?>"] [data-sg]:not([data-sg~="<?= $g ?>"]),
+        <?php endforeach; ?>#sgRoot[data-sg-cur=""] [data-sg] { display: none !important; }
+        #sgRoot:not([data-sg-cur=""]) .sg-overview { display: none; }
+        #sgRoot[data-sg-cur=""] .sg-tabs, #sgRoot[data-sg-cur=""] .sg-intro { display: none; }
+        .sg-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 30px; }
+        .sg-tile { display: flex; gap: 14px; align-items: flex-start; background: #fff; border: 1.5px solid #E3ECF5; border-radius: 16px; padding: 18px; text-decoration: none; color: inherit;
+            box-shadow: 0 4px 16px rgba(8,34,74,.05); transition: transform .2s, box-shadow .2s, border-color .2s; }
+        .sg-tile:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(8,34,74,.1); border-color: #9FDDF5; color: inherit; }
+        .sg-tile .ic { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .sg-tile b { display: block; color: #08224A; font-size: 16px; margin-bottom: 3px; }
+        .sg-tile small { display: block; color: #64748B; font-size: 13px; line-height: 1.5; }
+        .sg-tile .ext { font-size: 11px; color: #94A3B8; margin-left: 4px; }
+        .sg-ov-h { font-size: 13px; font-weight: 800; color: #94A3B8; letter-spacing: .5px; text-transform: uppercase; margin: 6px 0 12px; grid-column: 1 / -1; }
+        .sg-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; background: #fff; border: 1px solid #E3ECF5; border-radius: 14px; padding: 6px; margin-bottom: 18px;
+            position: sticky; top: 86px; z-index: 50; box-shadow: 0 4px 16px rgba(8,34,74,.06); }
+        .sg-tabs::-webkit-scrollbar { display: none; }
+        .sg-tabs a { flex-shrink: 0; display: inline-flex; gap: 8px; align-items: center; padding: 9px 14px; border-radius: 10px; color: #475569; font-weight: 700; font-size: 13.5px; text-decoration: none; white-space: nowrap; }
+        .sg-tabs a:hover { background: #F1F5F9; color: #08224A; }
+        .sg-tabs a.on { background: #08224A; color: #fff; }
+        .sg-tabs a.all { color: #1D63E0; }
+        .sg-intro { display: flex; gap: 14px; align-items: center; background: linear-gradient(135deg, #F0F9FF, #fff); border: 1px solid #DCECF5; border-radius: 16px; padding: 16px 18px; margin-bottom: 18px; }
+        .sg-intro .ic { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+        .sg-intro h3 { margin: 0; font-size: 19px; color: #08224A; font-weight: 800; }
+        .sg-intro p { margin: 2px 0 0; color: #64748B; font-size: 13.5px; }
+        @media (max-width: 576px) { .sg-overview { grid-template-columns: 1fr; } .sg-tabs { top: 70px; } }
+    </style>
+
+    <div class="sg-overview" aria-label="Settings">
+        <div class="sg-ov-h">ওয়েবসাইট সেটিংস — যেটা বদলাতে চান সেটায় ক্লিক করুন</div>
+        <?php foreach ($sgGroups as $k => $g): ?>
+            <a class="sg-tile" href="/Admin/Settings?s=<?= $k ?>" data-sg-go="<?= $k ?>">
+                <span class="ic" style="background:<?= $g['bg'] ?>;color:<?= $g['fg'] ?>;"><i class="fas <?= $g['icon'] ?>"></i></span>
+                <span><b><?= e($g['title']) ?></b><small><?= e($g['desc']) ?></small></span>
+            </a>
+        <?php endforeach; ?>
+        <div class="sg-ov-h" style="margin-top:14px;">অন্যান্য পেজ</div>
+        <?php foreach ([['/Admin/Categories', 'fa-layer-group', '#EEF2FF', '#4F46E5', 'Categories', 'ক্যাটাগরি, ছবি আর ক্যাটাগরি পেজের লেখা'],
+                        ['/Admin/Packages', 'fa-box-open', '#FFF4D6', '#B7791F', 'Packages', 'শিক্ষক ও শিক্ষার্থীর প্যাকেজ আর দাম'],
+                        ['/Admin/PaymentMethods', 'fa-wallet', '#E7F8EF', '#157347', 'Payment Methods', 'bKash, Nagad ইত্যাদি পেমেন্টের নিয়ম'],
+                        ['/Admin/EduFeed', 'fa-graduation-cap', '#E0F2FE', '#0369A1', 'Educational Feed', 'ইউজারদের পোস্ট Approve / Reject']] as [$h, $ic, $bg, $fg, $t, $d]): ?>
+            <?php if (!admin_can(admin_action_rule(basename($h)))) continue; ?>
+            <a class="sg-tile" href="<?= $h ?>">
+                <span class="ic" style="background:<?= $bg ?>;color:<?= $fg ?>;"><i class="fas <?= $ic ?>"></i></span>
+                <span><b><?= e($t) ?></b><small><?= e($d) ?></small></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <nav class="sg-tabs" aria-label="Settings sections">
+        <a href="/Admin/Settings" class="all" data-sg-go=""><i class="fas fa-grip"></i> সব সেটিংস</a>
+        <?php foreach ($sgGroups as $k => $g): ?><a href="/Admin/Settings?s=<?= $k ?>" data-sg-go="<?= $k ?>" class="<?= $sgCur === $k ? 'on' : '' ?>"><i class="fas <?= $g['icon'] ?>"></i> <?= e($g['short']) ?></a><?php endforeach; ?>
+    </nav>
+    <div class="sg-intro">
+        <span class="ic" id="sgIntroIc" style="background:<?= $sgGroups[$sgCur]['bg'] ?? '#E0F2FE' ?>;color:<?= $sgGroups[$sgCur]['fg'] ?? '#0369A1' ?>;"><i class="fas <?= $sgGroups[$sgCur]['icon'] ?? 'fa-cog' ?>"></i></span>
+        <div><h3 id="sgIntroT"><?= e($sgGroups[$sgCur]['title'] ?? '') ?></h3><p id="sgIntroD"><?= e($sgGroups[$sgCur]['desc'] ?? '') ?></p></div>
+    </div>
+    <script>
+    (function () {
+        var G = <?= js($sgGroups) ?>, root = document.getElementById('sgRoot');
+        function go(k, push) {
+            if (!(k in G)) k = '';
+            root.setAttribute('data-sg-cur', k);
+            document.querySelectorAll('.sg-tabs a[data-sg-go]').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-sg-go') === k && k !== ''); });
+            document.querySelectorAll('[data-sg-side]').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-sg-side') === k); });
+            if (k) {
+                var g = G[k], ic = document.getElementById('sgIntroIc');
+                ic.style.background = g.bg; ic.style.color = g.fg; ic.innerHTML = '<i class="fas ' + g.icon + '"></i>';
+                document.getElementById('sgIntroT').textContent = g.title; document.getElementById('sgIntroD').textContent = g.desc;
+            }
+            if (push) history.pushState({ sg: k }, '', '/Admin/Settings' + (k ? '?s=' + k : ''));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest('[data-sg-go], [data-sg-side]'); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+            e.preventDefault();
+            go(a.getAttribute(a.hasAttribute('data-sg-go') ? 'data-sg-go' : 'data-sg-side'), true);
+            document.documentElement.classList.remove('a-open');
+        });
+        window.addEventListener('popstate', function () { go(new URLSearchParams(location.search).get('s') || '', false); });
+    })();
+    </script>
+
     <!-- ============================================================ -->
     <!-- ===== ✅ NEW: BRANDING & LOGO SECTION ===== -->
     <!-- ============================================================ -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="general">
         <h5><i class="fas fa-fingerprint"></i> Branding &amp; Logo</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:16px;">
             সাইটের নাম এবং নেভবার/ফুটারের লোগো কাস্টমাইজ করুন। লোগোর সাইজ ও শেপও পরিবর্তন করা যাবে।
@@ -713,8 +802,186 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+    <!-- ===== ✅ HOME — সেকশন চালু / বন্ধ ===== -->
+    <!-- ============================================================ -->
+    <?php
+        $hsOff = function_exists('home_sections_off') ? home_sections_off() : [];
+        $hsList = function_exists('home_section_list') ? home_section_list() : [];
+        $hcGroups = []; try { $hcGroups = db()->GetCategoryGroups(false); } catch (Throwable $e) { }
+        $hcPicked = function_exists('home_category_ids') ? home_category_ids() : [];
+        $hcAll = [];
+        foreach ($hcGroups as $g) foreach ($g->Categories as $c) $hcAll[] = ['id' => $c->Id, 'name' => $c->Name, 'group' => $g->Name, 'icon' => $c->Icon, 'img' => $c->ImageUrl, 'on' => $c->IsActive && $g->IsActive];
+    ?>
+    <style>
+        .hs-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+        .hs-row { display: flex; align-items: center; gap: 12px; border: 1.5px solid #E3ECF5; border-radius: 12px; padding: 11px 14px; background: #fff; cursor: pointer; margin: 0; transition: border-color .2s, background .2s; }
+        .hs-row:hover { border-color: #9FDDF5; }
+        .hs-row.off { background: #F8FAFC; }
+        .hs-row.off .hs-t, .hs-row.off .hs-ic { opacity: .5; }
+        .hs-ic { width: 36px; height: 36px; border-radius: 10px; background: #E3F6FD; color: #028EA5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hs-t { flex: 1; min-width: 0; } .hs-t b { display: block; color: #08224A; font-size: 14.5px; } .hs-t small { display: block; color: #64748B; font-size: 12.5px; line-height: 1.4; }
+        .hs-sw { appearance: none; -webkit-appearance: none; width: 42px; height: 23px; border-radius: 20px; background: #CBD5E1; position: relative; cursor: pointer; transition: background .2s; margin: 0; flex-shrink: 0; }
+        .hs-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        .hs-sw:checked { background: #22C55E; } .hs-sw:checked::after { transform: translateX(19px); }
+        .hc-modes { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .hc-modes label { display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid #E3ECF5; border-radius: 12px; padding: 12px 14px; cursor: pointer; margin: 0; flex: 1 1 260px; }
+        .hc-modes label:has(input:checked) { border-color: #02B8F5; background: #F0FAFF; }
+        .hc-modes input { margin-top: 4px; }
+        .hc-modes b { display: block; color: #08224A; font-size: 14.5px; } .hc-modes small { color: #64748B; font-size: 12.5px; }
+        .hc-pane { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+        .hc-pane[hidden] { display: none; }
+        .hc-box { border: 1.5px solid #E3ECF5; border-radius: 12px; padding: 12px; min-width: 0; }
+        .hc-box h6 { margin: 0 0 10px; font-size: 13.5px; font-weight: 800; color: #08224A; display: flex; justify-content: space-between; align-items: center; }
+        .hc-sel { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow: auto; }
+        .hc-item { display: flex; align-items: center; gap: 9px; border: 1px solid #E3ECF5; border-radius: 10px; padding: 7px 9px; background: #fff; }
+        .hc-item .n { width: 22px; height: 22px; border-radius: 6px; background: #08224A; color: #fff; font-size: 11.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hc-item .t { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: #1E293B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hc-item .t small { color: #94A3B8; font-weight: 500; }
+        .hc-item button { border: 1px solid #DCECF5; background: #fff; border-radius: 6px; width: 26px; height: 24px; font-size: 11px; color: #475569; cursor: pointer; padding: 0; }
+        .hc-item button:disabled { opacity: .35; cursor: default; }
+        .hc-item button.x { color: #DC2626; }
+        .hc-empty { color: #94A3B8; font-size: 13px; text-align: center; padding: 18px 8px; }
+        .hc-all { max-height: 360px; overflow: auto; }
+        .hc-all .g { font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin: 10px 0 4px; }
+        .hc-all label { display: flex; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; cursor: pointer; margin: 0; font-size: 13.5px; color: #1E293B; }
+        .hc-all label:hover { background: #F1F5F9; }
+        .hc-all label.dis { opacity: .5; }
+        @media (max-width: 768px) { .hc-pane { grid-template-columns: 1fr; } .hs-rows { grid-template-columns: 1fr; } }
+    </style>
+    <div class="settings-card" id="hsSettings" data-sg="home">
+        <h5><i class="fas fa-toggle-on"></i> Home — সেকশন চালু / বন্ধ</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের কোন সেকশন দেখাবে আর কোনটা লুকানো থাকবে — সুইচ দিয়ে ঠিক করুন, তারপর Save চাপুন। বন্ধ করা সেকশনের লেখা/ছবি মুছে যায় না, পরে আবার চালু করা যায়।
+        </p>
+        <div class="hs-rows" id="hsRows">
+            <?php foreach ($hsList as $k => [$label, $desc, $icon]): $on = home_section_on($k); ?>
+                <label class="hs-row<?= $on ? '' : ' off' ?>">
+                    <span class="hs-ic"><i class="fas <?= e($icon) ?>"></i></span>
+                    <span class="hs-t"><b><?= e($label) ?></b><small><?= e($desc) ?></small></span>
+                    <input type="checkbox" class="hs-sw" data-hs="<?= e($k) ?>"<?= $on ? ' checked' : '' ?> aria-label="<?= e($label) ?>" />
+                </label>
+            <?php endforeach; ?>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <a href="/" target="_blank" class="upload-btn" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> হোম পেজ দেখুন</a>
+            <button type="button" class="btn-save" id="hsSave"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+
+    <!-- ===== ✅ HOME — Explore Categories এ কোন ক্যাটাগরি ===== -->
+    <div class="settings-card" id="hcSettings" data-sg="home">
+        <h5><i class="fas fa-layer-group"></i> Home — Explore Categories</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের "Explore Categories" সেকশনে কোন ক্যাটাগরিগুলো দেখাবে। নিজে বাছাই করলে যে ক্রমে সাজাবেন সেভাবেই দেখাবে (সর্বোচ্চ ১২টা)।
+        </p>
+        <div class="hc-modes">
+            <label><input type="radio" name="hcMode" value="auto"<?= $hcPicked ? '' : ' checked' ?> /><span><b>অটোমেটিক</b><small>প্রত্যেক গ্রুপ থেকে মিলিয়ে ৮টা ক্যাটাগরি নিজে থেকে দেখাবে</small></span></label>
+            <label><input type="radio" name="hcMode" value="manual"<?= $hcPicked ? ' checked' : '' ?> /><span><b>নিজে বাছাই করব</b><small>নিচের তালিকা থেকে টিক দিন, ▲▼ দিয়ে ক্রম ঠিক করুন</small></span></label>
+        </div>
+        <div class="hc-pane" id="hcPane"<?= $hcPicked ? '' : ' hidden' ?>>
+            <div class="hc-box">
+                <h6><span><i class="fas fa-list-ol"></i> হোম পেজে যা দেখাবে</span><span id="hcCount" style="color:#64748B;font-weight:700;"></span></h6>
+                <div class="hc-sel" id="hcSel"></div>
+            </div>
+            <div class="hc-box">
+                <h6><span><i class="fas fa-layer-group"></i> সব ক্যাটাগরি</span></h6>
+                <input type="search" id="hcSearch" class="form-control" placeholder="খুঁজুন — যেমন: IELTS, Guitar, Class 5" style="margin-bottom:6px;" />
+                <div class="hc-all" id="hcAll">
+                    <?php $lastG = null; foreach ($hcAll as $c): ?>
+                        <?php if ($c['group'] !== $lastG): $lastG = $c['group']; ?><div class="g"><?= e($c['group']) ?></div><?php endif; ?>
+                        <label class="<?= $c['on'] ? '' : 'dis' ?>" data-name="<?= e(mb_strtolower($c['name'] . ' ' . $c['group'])) ?>"><input type="checkbox" value="<?= (int)$c['id'] ?>" /> <?= e($c['name']) ?><?= $c['on'] ? '' : ' <small>(বন্ধ)</small>' ?></label>
+                    <?php endforeach; ?>
+                    <?php if (!$hcAll): ?><div class="hc-empty">কোনো ক্যাটাগরি নেই — <a href="/Admin/Categories">Admin → Categories</a> থেকে যোগ করুন।</div><?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <a href="/Admin/Categories" class="upload-btn" style="text-decoration:none;"><i class="fas fa-pen-to-square"></i> ক্যাটাগরি এডিট</a>
+            <button type="button" class="btn-save" id="hcSave"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+    <script>
+    (function () {
+        function tok() { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; }
+        async function post(url, data) {
+            var fd = new FormData(); Object.keys(data).forEach(function (k) { fd.append(k, data[k]); }); fd.append('__RequestVerificationToken', tok());
+            try { var r = await fetch(url, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }); return await r.json(); }
+            catch (e) { return { success: false, message: 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।' }; }
+        }
+        // ----- সেকশন চালু/বন্ধ -----
+        document.querySelectorAll('#hsRows .hs-sw').forEach(function (sw) {
+            sw.addEventListener('change', function () { sw.closest('.hs-row').classList.toggle('off', !sw.checked); });
+        });
+        document.getElementById('hsSave').addEventListener('click', async function () {
+            var b = this, data = {};
+            document.querySelectorAll('#hsRows .hs-sw').forEach(function (sw) { data[sw.getAttribute('data-hs')] = sw.checked; });
+            b.disabled = true;
+            var r = await post('/Admin/SaveHomeSections', { sections: JSON.stringify(data) });
+            b.disabled = false;
+            alert((r.success ? '✅ ' : '❌ ') + (r.message || ''));
+            if (r.success) {
+                // একই সুইচ অন্য কার্ডেও আছে — মিলিয়ে দিই
+                var fq = document.getElementById('fqEnabled'); if (fq) { fq.checked = data.faq; if (typeof fqPreview === 'function') fqPreview(); }
+                var bt = document.querySelector('#btSettings input[type="checkbox"][id*="nabled"], #btSettings input[name="bt_enabled"]'); if (bt) bt.checked = data.become;
+            }
+        });
+
+        // FAQ / Become a Tutor কার্ডের নিজস্ব সুইচ বদলালে এখানেও মিলিয়ে দিই
+        document.addEventListener('change', function (e) {
+            var map = { fqEnabled: 'faq', bt_enabled: 'become' }, k = map[e.target.id]; if (!k) return;
+            var sw = document.querySelector('#hsRows .hs-sw[data-hs="' + k + '"]'); if (sw) { sw.checked = e.target.checked; sw.closest('.hs-row').classList.toggle('off', !sw.checked); }
+        });
+        // ----- Explore Categories -----
+        var ALL = <?= js(array_column($hcAll, null, 'id')) ?>, sel = <?= js($hcPicked) ?>, MAX = 12;
+        sel = sel.filter(function (id) { return ALL[id]; });
+        var selBox = document.getElementById('hcSel'), all = document.getElementById('hcAll'), pane = document.getElementById('hcPane');
+        function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function draw() {
+            selBox.innerHTML = sel.length ? sel.map(function (id, i) {
+                var c = ALL[id];
+                return '<div class="hc-item" data-id="' + id + '"><span class="n">' + (i + 1) + '</span><span class="t">' + esc(c.name) + ' <small>· ' + esc(c.group) + (c.on ? '' : ' · বন্ধ') + '</small></span>'
+                    + '<button type="button" data-mv="-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="উপরে"><i class="fas fa-chevron-up"></i></button>'
+                    + '<button type="button" data-mv="1"' + (i === sel.length - 1 ? ' disabled' : '') + ' aria-label="নিচে"><i class="fas fa-chevron-down"></i></button>'
+                    + '<button type="button" class="x" data-rm aria-label="সরান"><i class="fas fa-xmark"></i></button></div>';
+            }).join('') : '<div class="hc-empty">ডান পাশের তালিকা থেকে ক্যাটাগরিতে টিক দিন।</div>';
+            document.getElementById('hcCount').textContent = sel.length + ' / ' + MAX;
+            all.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = sel.indexOf(+cb.value) !== -1; });
+        }
+        all.addEventListener('change', function (e) {
+            var cb = e.target; if (cb.type !== 'checkbox') return;
+            var id = +cb.value, i = sel.indexOf(id);
+            if (cb.checked && i === -1) { if (sel.length >= MAX) { cb.checked = false; alert('সর্বোচ্চ ' + MAX + 'টা ক্যাটাগরি বাছাই করা যাবে।'); return; } sel.push(id); }
+            if (!cb.checked && i !== -1) sel.splice(i, 1);
+            draw();
+        });
+        selBox.addEventListener('click', function (e) {
+            var b = e.target.closest('button'); if (!b) return;
+            var id = +b.closest('[data-id]').getAttribute('data-id'), i = sel.indexOf(id);
+            if (b.hasAttribute('data-rm')) sel.splice(i, 1);
+            else { var j = i + +b.getAttribute('data-mv'); if (j < 0 || j >= sel.length) return; sel.splice(j, 0, sel.splice(i, 1)[0]); }
+            draw();
+        });
+        document.getElementById('hcSearch').addEventListener('input', function () {
+            var q = this.value.trim().toLowerCase();
+            all.querySelectorAll('label[data-name]').forEach(function (l) { l.style.display = !q || l.getAttribute('data-name').indexOf(q) !== -1 ? '' : 'none'; });
+        });
+        document.querySelectorAll('input[name="hcMode"]').forEach(function (r) { r.addEventListener('change', function () { pane.hidden = document.querySelector('input[name="hcMode"]:checked').value !== 'manual'; }); });
+        document.getElementById('hcSave').addEventListener('click', async function () {
+            var manual = document.querySelector('input[name="hcMode"]:checked').value === 'manual';
+            if (manual && !sel.length) { alert('অন্তত ১টা ক্যাটাগরিতে টিক দিন, অথবা "অটোমেটিক" বেছে নিন।'); return; }
+            var b = this; b.disabled = true;
+            var r = await post('/Admin/SaveHomeCategories', { ids: manual ? sel.join(',') : '' });
+            b.disabled = false;
+            alert((r.success ? '✅ ' : '❌ ') + (r.message || ''));
+            if (r.success && !manual) { sel = []; draw(); }
+        });
+        draw();
+    })();
+    </script>
+
+    <!-- ============================================================ -->
     <!-- ===== Hero Images Section ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-images"></i> Hero Images</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেইজের বাম পাশের হিরো ইমেজ। একাধিক ইমেজ যোগ করলে স্লাইডার হিসেবে কাজ করবে।
@@ -763,7 +1030,7 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== ✅ Tutor Section Image ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-chalkboard-user"></i> Tutor Section Image</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেইজের "Find Your Teacher" সেকশনের ইমেজ। এই ইমেজটি পুরো width জুড়ে দেখাবে।
@@ -801,7 +1068,7 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== Slider Settings ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="home">
         <h5><i class="fas fa-play-circle"></i> Slider Settings</h5>
 
         <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
@@ -832,7 +1099,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Become a Tutor Section (Home Page) ===== -->
     <?php $btc = become_tutor_content(); ?>
-    <div class="settings-card" id="btSettings">
+    <div class="settings-card" id="btSettings" data-sg="home">
         <h5><i class="fas fa-chalkboard-teacher"></i> Home — "Become a Tutor" Section</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেজের "Become a Tutor" সেকশনের লেখা এখান থেকে বদলান।
@@ -937,7 +1204,19 @@ $heroImages = $Model->GetHeroImageList();
         .fq-off { text-align: center; color: #7A8CA0; font-size: 13.5px; padding: 10px; }
         @media (max-width: 576px) { .fq-row { flex-wrap: wrap; } .fq-acts { flex-direction: row; width: 100%; justify-content: flex-end; } .fq-prev p { padding-left: 18px; } }
     </style>
-    <div class="settings-card" id="fqSettings">
+    <div class="settings-card" id="catSettings" data-sg="home">
+        <h5><i class="fas fa-layer-group"></i> Categories (ক্যাটাগরি)</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            নেভবারের <b>Categories</b> পেজের ক্যাটাগরি (Play, Class 1, IELTS, Guitar ...) — নতুন ক্যাটাগরি ছবি দিয়ে যোগ করা, গ্রুপ বানানো,
+            আর প্রত্যেক ক্যাটাগরির “About This Category”, “Why Choose”, ব্যানার ইত্যাদি এডিট করা যায়।
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/Admin/Categories" class="btn btn-primary"><i class="fas fa-pen-to-square me-1"></i> Categories ম্যানেজ করুন</a>
+            <a href="/Categories" target="_blank" class="btn btn-outline-secondary"><i class="fas fa-external-link-alt me-1"></i> সাইটে দেখুন</a>
+        </div>
+    </div>
+
+    <div class="settings-card" id="fqSettings" data-sg="home">
         <h5><i class="fas fa-circle-question"></i> Home — FAQ (প্রশ্ন ও উত্তর)</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             হোম পেজের "Frequently Asked Questions" সেকশনের প্রশ্ন আর উত্তর এখান থেকে যোগ, এডিট, মুছে ফেলা বা ▲▼ দিয়ে সাজাতে পারবেন।
@@ -1039,7 +1318,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Profile Page — Promo Image ===== -->
     <?php $ppc = profile_promo(); ?>
-    <div class="settings-card" id="ppSettings">
+    <div class="settings-card" id="ppSettings" data-sg="profile">
         <h5><i class="fas fa-image"></i> Student Profile — বাম পাশের ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             স্টুডেন্টের প্রোফাইল পেজে বাম মেনুর নিচের ছবি ("সঠিক Tutor সঠিক ভবিষ্যৎ")। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে সব প্রোফাইলে বদলে যাবে।
@@ -1074,7 +1353,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ টিউশনের অপশন: লোকেশন / ক্লাস / বিষয় ===== -->
     <?php $topt = tuition_options(); ?>
-    <div class="settings-card" id="optSettings">
+    <div class="settings-card" id="optSettings" data-sg="tuition">
         <h5><i class="fas fa-list-check"></i> টিউশনের অপশন — লোকেশন, ক্লাস ও বিষয়</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             Find Tutor আর Tuition Circular পেজের ফিল্টার আর পোস্ট লেখার ঘরে এই তালিকাগুলো দেখায়। নতুন যোগ করুন বা × দিয়ে বাদ দিন, তারপর <b>Save</b> চাপুন।
@@ -1112,8 +1391,8 @@ $heroImages = $Model->GetHeroImageList();
     </div>
 
     <!-- ===== ✅ Tuition Circular / Find Tutor — Banner Image ===== -->
-    <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
-    <div class="settings-card" id="<?= $bk ?>bSettings">
+    <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()], ['hd', 'helpdesk', 'Help Desk', 'fa-headset', helpdesk_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
+    <div class="settings-card" id="<?= $bk ?>bSettings" data-sg="banners">
         <h5><i class="fas <?= $bicon ?>"></i> <?= $bname ?> — উপরের ব্যানার ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             <?= $bname ?> পেজের একদম উপরের বড় ছবি। নতুন ছবি আপলোড করুন বা লিংক দিন — সাথে সাথে পেজে বদলে যাবে।
@@ -1133,7 +1412,9 @@ $heroImages = $Model->GetHeroImageList();
             <input type="file" id="<?= $bk ?>bFile" data-banner="<?= $bk ?>" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
         </div>
         <input type="text" class="form-control mb-1" id="<?= $bk ?>_banner" value="<?= e($bv[$bk . '_banner']) ?>" placeholder="অথবা ছবির লিংক দিন — https://..." oninput="var p = document.getElementById('<?= $bk ?>bPreview'); p.src = this.value; p.style.opacity = 1;" />
-        <?php if ($bk === 'pk'): ?>
+        <?php if ($bk === 'hd'): ?>
+        <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. এই ব্যানারের <strong>ভেতরেই</strong> "Help Desk" লেখা আর ইলাস্ট্রেশন থাকে (যেমন <strong>1600×420 px</strong>, হালকা নীল ব্যাকগ্রাউন্ড)। ব্যানার বন্ধ করলে পেজে লেখার হেডার দেখাবে।</span>
+        <?php elseif ($bk === 'pk'): ?>
         <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. ছবির <strong>ডান দিকে</strong> ইলাস্ট্রেশন রাখুন — বাম দিকে “মাষ্টার মশাই প্যাকেজ” লেখা আর ট্যাব বসে (যেমন <strong>1600×420 px</strong>)।</span>
         <?php else: ?>
         <span class="info-note"><i class="fas fa-info-circle"></i> Max 5MB. চওড়া ছবি ভালো দেখায় (যেমন <strong>1500×280 px</strong>)।</span>
@@ -1147,7 +1428,7 @@ $heroImages = $Model->GetHeroImageList();
 
     <!-- ===== ✅ Teacher Profile — Promo Image ===== -->
     <?php $tpc = teacher_promo(); ?>
-    <div class="settings-card" id="tpSettings">
+    <div class="settings-card" id="tpSettings" data-sg="profile">
         <h5><i class="fas fa-chalkboard-user"></i> Teacher Profile — বাম পাশের ছবি</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             শুধু টিচারদের প্রোফাইল পেজে বাম মেনুর নিচে দেখায়। ছবি না দিলে ডিজাইন করা কার্ড ("আরও বেশি শিক্ষার্থীর কাছে পৌঁছান" + Create Tuition Post) দেখাবে।
@@ -1183,9 +1464,10 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
+<?php if (admin_is_super()): /* SMTP সেটিং — শুধু Super Admin */ ?>
     <!-- ===== ✅ Email (SMTP) Settings — Forgot Password ===== -->
     <?php $ms = mail_settings(); $msHasPass = $ms['mail_pass'] !== ''; ?>
-    <div class="settings-card" id="mailSettings">
+    <div class="settings-card" id="mailSettings" data-sg="email">
         <h5><i class="fas fa-envelope"></i> Email (SMTP) Settings — Forgot Password</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:6px;">
             ইউজার "Forgot password?" দিলে তার ইমেইলে রিসেট লিংক যাবে — সেই ইমেইল পাঠানোর জন্য এখানে cPanel এর ইমেইল অ্যাকাউন্টের তথ্য দিন।
@@ -1288,6 +1570,7 @@ $heroImages = $Model->GetHeroImageList();
             });
         }
     </script>
+<?php endif; ?>
 
     <!-- ===== ✅ Footer Social Media ===== -->
     <?php $smLinks = social_links(); $smPl = social_platforms(); ?>
@@ -1325,7 +1608,7 @@ $heroImages = $Model->GetHeroImageList();
             .sm-acts { width: 100%; justify-content: flex-end; }
         }
     </style>
-    <div class="settings-card" id="smSettings">
+    <div class="settings-card" id="smSettings" data-sg="social">
         <h5><i class="fas fa-share-alt"></i> Footer — Social Media Links</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             নিচ থেকে যে সোশ্যাল মিডিয়াগুলো ফুটারে দেখাতে চান সেগুলোতে ক্লিক করুন, তারপর প্রতিটার পাশে আপনার পেজের লিংক দিন।
@@ -1427,7 +1710,7 @@ $heroImages = $Model->GetHeroImageList();
     </script>
 
     <!-- ===== Theme Colors ===== -->
-    <div class="settings-card">
+    <div class="settings-card" data-sg="general">
         <h5><i class="fas fa-palette"></i> Theme Colors</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
             ওয়েবসাইটের মূল রং পরিবর্তন করুন। প্রতিটি রং পরিবর্তন করলে সাথে সাথে প্রিভিউ আপডেট হবে।
@@ -1507,8 +1790,8 @@ $heroImages = $Model->GetHeroImageList();
         </div>
     </div>
 
-    <!-- ===== Save Button ===== -->
-    <div class="text-end mb-5">
+    <!-- ===== Save Button (Branding/Theme আর Home এর ছবি/স্লাইডার একসাথে সেভ হয়) ===== -->
+    <div class="text-end mb-5 sg-save" data-sg="general home">
         <button type="button" class="btn-save" id="saveBtn" onclick="saveAllSettings()">
             <i class="fas fa-save"></i> Save All Settings
         </button>
@@ -1872,7 +2155,8 @@ $heroImages = $Model->GetHeroImageList();
 
             // Validation: at least one image required
             if (imageUrls.length === 0) {
-                alert('অন্তত একটি হিরো ইমেজ যোগ করুন।');
+                alert('অন্তত একটি হিরো ইমেজ যোগ করুন — "Home Page" সেকশনের "Hero Images" এ ছবি দিন, তারপর আবার Save চাপুন।');
+                var hb = document.querySelector('.sg-tabs a[data-sg-go="home"]'); if (hb) hb.click();
                 return;
             }
 

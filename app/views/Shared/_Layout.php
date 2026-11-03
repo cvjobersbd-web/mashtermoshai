@@ -216,6 +216,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 flex-shrink: 0;
             }
 
+            .profile-dropdown .nav-av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.7); flex-shrink: 0; }
+            .profile-dropdown .nav-av[hidden], .profile-dropdown .dropdown-toggle i[hidden] { display: none !important; }
             .profile-dropdown .dropdown-toggle {
                 white-space: nowrap;
             }
@@ -362,7 +364,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 pointer-events: auto;
             }
 
-            /* ===== Friends icon (নেভবার) ===== */
+            /* ===== Profile Views icon (নেভবার) ===== */
             .fr-nav-wrapper { margin-right: 4px; }
             .fr-nav-wrapper .notification-bell { text-decoration: none; font-size: 19px; }
             .fr-nav-wrapper .notif-badge { background: #FFB300 !important; color: #08224A !important; }
@@ -760,10 +762,24 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 transition: background .2s ease, opacity .2s ease, box-shadow .2s ease;
             }
             .nav-desktop-link i { font-size: 12px; }
-            /* ছোট ডেস্কটপে (১২৮০–১৪৪০px) ৬টা মেনু এক লাইনে ধরাতে একটু চাপা */
-            @media (max-width: 1440px) {
-                .nav-desktop-link { padding: 9px 10px; gap: 6px; font-size: 13.5px; }
-                .nav-desktop-link.active::after { left: 10px; right: 10px; }
+            /* ৮টা মেনু সব স্ক্রিনে এক লাইনে — স্ক্রিন ছোট হলে বাটন ধাপে ধাপে ছোট হয় (কোনো "More" মেনু নেই) */
+            @media (max-width: 1799px) {
+                .nav-desktop-link { padding: 9px 8px; gap: 6px; font-size: 13.5px; }
+                .nav-desktop-link.active::after { left: 8px; right: 8px; }
+            }
+            @media (max-width: 1535px) {
+                .nav-desktop-link { padding: 8px 6px; gap: 5px; font-size: 13px; }
+                .nav-desktop-link i { font-size: 11px; }
+                .nav-desktop-link.active::after { left: 6px; right: 6px; }
+            }
+            @media (max-width: 1439px) {
+                .nav-desktop-link { padding: 8px 5px; font-size: 12.5px; letter-spacing: -.1px; }
+                .nav-desktop-link i { display: none; }
+                .nav-desktop-link.active::after { left: 5px; right: 5px; }
+            }
+            @media (min-width: 1366px) and (max-width: 1439px) {
+                .nav-desktop-link { padding: 8px 7px; font-size: 13.5px; letter-spacing: 0; }
+                .nav-desktop-link.active::after { left: 7px; right: 7px; }
             }
             .nav-desktop-link:hover { opacity: 1; }
             .nav-desktop-link.active { opacity: 1; font-weight: 700; background: none; }
@@ -771,6 +787,38 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 3px; border-radius: 3px;
                 background: var(--primary-color, #02B8F5);
             }
+
+            /* ===== ✅ হালকা নেভবার (হিরোর সাথে মিশে যায়) — ড্রয়ার/ফুটার আগের মতো গাঢ় ===== */
+            .site-header {
+                --navbar-bg: #F4F9FE; --nav-text: #0B1F44;
+                background: rgba(244,249,254,.96); box-shadow: inset 0 -1px 0 #E3ECF6;
+                transition: background .25s ease, box-shadow .25s ease;
+                -webkit-backdrop-filter: saturate(160%) blur(10px); backdrop-filter: saturate(160%) blur(10px);
+            }
+            .site-header.is-home { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+            .site-header.scrolled, .site-header.is-home.scrolled {
+                background: rgba(255,255,255,.94); box-shadow: inset 0 -1px 0 #E3ECF6, 0 6px 24px rgba(11,31,68,.07);
+                -webkit-backdrop-filter: saturate(160%) blur(12px); backdrop-filter: saturate(160%) blur(12px);
+            }
+            .site-header .brand-sep { width: 1.5px; height: 34px; background: #94A3B8; opacity: .55; margin: 0 16px 0 14px; flex-shrink: 0; }
+            .site-header .brand-word { font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: #0B1F44; letter-spacing: .1px; white-space: nowrap; }
+            @media (max-width: 1599px) and (min-width: 1280px) { .site-header .brand-sep, .site-header .brand-word { display: none; } }
+            @media (max-width: 420px) { .site-header .brand-sep { margin: 0 10px; height: 28px; } .site-header .brand-word { font-size: 16px; } }
+            @media (max-width: 359px) { .site-header .brand-sep, .site-header .brand-word { display: none; } }
+            .site-header .nav-desktop-link { color: #0B1F44 !important; opacity: 1; font-weight: 600; border-radius: 9px; }
+            .site-header .nav-desktop-link i { color: #0B1F44; }
+            .site-header .nav-desktop-link:hover { background: rgba(22,119,229,.08); color: #1677E5 !important; }
+            .site-header .nav-desktop-link:hover i { color: #1677E5; }
+            .site-header .nav-desktop-link.active, .site-header .nav-desktop-link.active:hover {
+                background: #1677E5; color: #fff !important; font-weight: 700; box-shadow: 0 6px 16px rgba(22,119,229,.28);
+            }
+            .site-header .nav-desktop-link.active i { color: #fff; }
+            .site-header .nav-desktop-link.active::after { display: none; }
+            .site-header .notification-bell { color: #0B1F44; }
+            .site-header .notification-bell:hover { color: #1677E5; }
+            .site-header .profile-dropdown .nav-av { border-color: #CFE0F2; }
+            .site-header .m-burger { background: rgba(11,31,68,.06); }
+            .site-header .m-burger:hover { background: rgba(11,31,68,.11); }
             .footer-brand-logo-box img { height: 76px; max-width: 260px; }
             @media (max-width: 640px) { .footer-brand-logo-box img { height: 64px; } }
 
@@ -958,7 +1006,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <!-- ========================================= -->
     <!-- NAVBAR -->
     <!-- ========================================= -->
-    <header class="sticky-top border-b border-black/5" style="background-color:var(--navbar-bg); z-index:1050;">
+    <header class="sticky-top site-header<?= $__isHome ? ' is-home' : '' ?>" id="siteHeader" style="z-index:1050;">
         <nav class="max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8">
             <div class="h-20 flex items-center justify-between gap-4">
 
@@ -967,6 +1015,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/" class="flex items-center" aria-label="<?= e($safeSiteName) ?> — Home" title="<?= e($safeSiteName) ?>">
                         <!-- Logo Box -->
                         <span class="brand-logo-box"><img src="<?= e($navbarLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
+                        <span class="brand-sep" aria-hidden="true"></span>
+                        <span class="brand-word">Mashtermoshai</span>
 
                     </a>
                 </div>
@@ -984,8 +1034,14 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/" class="nav-desktop-link<?= $navOn('/') ? ' active' : '' ?>"<?= $navOn('/') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-house"></i>Home
                     </a>
+                    <a href="/Feed" class="nav-desktop-link<?= $navOn('/Feed') ? ' active' : '' ?>"<?= $navOn('/Feed') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-graduation-cap"></i>Educational Feed
+                    </a>
                     <a href="/FindTutor" class="nav-desktop-link<?= $navOn('/FindTutor') ? ' active' : '' ?>"<?= $navOn('/FindTutor') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-chalkboard-user"></i>Find Tutor
+                    </a>
+                    <a href="/Categories" class="nav-desktop-link<?= $navOn('/Categories') ? ' active' : '' ?>"<?= $navOn('/Categories') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-layer-group"></i>Categories
                     </a>
                     <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-clipboard-list"></i>Tuition Circular
@@ -1011,16 +1067,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     ?>
 
                         <?php if (!$isAdmin):
-                            $frReq = 0;
-                            try { $frReq = db()->CountIncomingFriendRequests((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
+                            $frReq = 0; // কতজন নতুন করে প্রোফাইল দেখেছে (শেষবার তালিকা দেখার পর)
+                            try { $frReq = db()->CountNewProfileViewers((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
                         ?>
-                            <!-- Friends -->
-                            <div class="notification-wrapper fr-nav-wrapper">
-                                <a href="/Friends" class="notification-bell" title="Friends" aria-label="Friends">
-                                    <i class="fas fa-user-group"></i>
-                                    <span class="notif-badge show" id="frNavBadge" style="<?= $frReq > 0 ? '' : 'display:none' ?>"><?= $frReq > 9 ? '9+' : $frReq ?></span>
-                                </a>
-                            </div>
                         <?php endif; ?>
 
                         <!-- Notification Bell -->
@@ -1055,7 +1104,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                         <div class="profile-dropdown dropdown hidden xl:block" id="profileDropdown">
                             <button class="dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle"></i>
+                                <?php $navImg = (string)(session_get('ProfileImageLink') ?? ''); ?>
+                                <img class="nav-av" data-nav-avatar src="<?= e($navImg) ?>" alt=""<?= $navImg === '' ? ' hidden' : '' ?> onerror="this.hidden = true; this.nextElementSibling.hidden = false;" onload="this.nextElementSibling.hidden = true;" />
+                                <i class="fas fa-user-circle"<?= $navImg !== '' ? ' hidden' : '' ?>></i>
                                 <span><?= e($userFullName) ?></span>
                                 <span class="caret"><i class="fas fa-chevron-down"></i></span>
                             </button>
@@ -1065,26 +1116,26 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     <small><?= e(session_get('UserName')) ?></small>
                                 </li>
                                 <li><hr class="dropdown-divider" /></li>
-                                <li>
-                                    <a class="dropdown-item" href="<?= $isAdmin ? '/Profile' : '/Profile/Show' ?>">
-                                        <i class="fas fa-id-card"></i> My Profile
-                                    </a>
-                                </li>
-                                <?php if (!$isAdmin): ?>
+                                <?php if (!$isAdmin): /* অ্যাডমিনের জন্য শুধু Admin Panel */ ?>
+                                    <li>
+                                        <a class="dropdown-item" href="/Profile/Show">
+                                            <i class="fas fa-id-card"></i> My Profile
+                                        </a>
+                                    </li>
                                     <li>
                                         <a class="dropdown-item" href="/Payment/My">
                                             <i class="fas fa-receipt"></i> আমার পেমেন্ট
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="/Friends">
-                                            <i class="fas fa-user-group"></i> Friends
+                                        <a class="dropdown-item" href="/Profile/Views">
+                                            <i class="fas fa-eye"></i> Profile Views
                                             <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> new</span><?php endif; ?>
                                         </a>
                                     </li>
                                 <?php endif; ?>
 
-                                <?php if ($userRole === 'User' || $userRole === 'Admin'): ?>
+                                <?php if ($userRole === 'User'): ?>
                                     <li>
                                         <a class="dropdown-item" href="/User/Dashboard">
                                             <i class="fas fa-chart-pie"></i> Student Dashboard
@@ -1106,11 +1157,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         <a class="dropdown-item" href="/Admin/Dashboard">
                                             <i class="fas fa-shield-alt"></i> Admin Panel
                                             <span class="badge-role admin">Admin</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="/Admin/Settings">
-                                            <i class="fas fa-cog"></i> Site Settings
                                         </a>
                                     </li>
                                 <?php endif; ?>
@@ -1188,35 +1234,33 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <div class="m-label">Menu</div>
             <nav class="m-nav">
                 <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span>Home</span></a>
+                <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span>Educational Feed</span></a>
                 <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor</span></a>
+                <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
                 <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                 <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span>Helpdesk</span></a>
                 <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
             </nav>
 
-            <?php if ($mLoggedIn): ?>
+            <?php if ($mLoggedIn && $mRole !== 'Admin'): ?>
                 <div class="m-label">My Account</div>
                 <nav class="m-nav">
-                    <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
-                    <?php if ($mRole !== 'Admin'): ?>
-                        <a href="/Friends" class="<?= $mActive('/Friends') ?>"><i class="fas fa-user-group"></i><span>Friends</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
-                    <?php endif; ?>
-                    <?php if ($mRole === 'User' || $mRole === 'Admin'): ?>
+                    <a href="/Profile/Show" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
+                    <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                    <?php if ($mRole === 'User'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
                     <?php endif; ?>
                     <?php if ($mRole === 'Teacher'): ?>
                         <a href="/Teacher/TeacherDashboard" class="<?= $mActive('/Teacher') ?>"><i class="fas fa-chalkboard-teacher"></i><span>Teacher Dashboard</span></a>
                     <?php endif; ?>
                 </nav>
-
-                <?php if ($mRole === 'Admin'): ?>
-                    <div class="m-label">Admin Panel</div>
-                    <nav class="m-nav">
-                        <a href="/Admin/Dashboard" class="<?= $mActive('/Admin/Dashboard') ?>"><i class="fas fa-shield-alt"></i><span>Admin Dashboard</span></a>
-                        <a href="/Admin/Settings" class="<?= $mActive('/Admin/Settings') ?>"><i class="fas fa-cog"></i><span>Site Settings</span></a>
-                    </nav>
-                <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($mLoggedIn && $mRole === 'Admin'): ?>
+                <div class="m-label">Admin</div>
+                <nav class="m-nav">
+                    <a href="/Admin/Dashboard" class="<?= $mActive('/Admin') ?>"><i class="fas fa-shield-alt"></i><span>Admin Panel</span></a>
+                </nav>
             <?php endif; ?>
         </div>
 
@@ -1668,5 +1712,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         })();
     </script>
 
+<script>
+    /* হালকা নেভবার: স্ক্রল করলে সাদা ব্যাকগ্রাউন্ড + হালকা ছায়া */
+    (function () {
+        var h = document.getElementById('siteHeader'); if (!h) return;
+        var on = function () { h.classList.toggle('scrolled', (window.scrollY || document.documentElement.scrollTop) > 8); };
+        on(); window.addEventListener('scroll', on, { passive: true });
+    })();
+</script>
 </body>
 </html>

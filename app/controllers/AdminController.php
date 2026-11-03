@@ -3,16 +3,69 @@ class AdminController extends Controller
 {
     private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    /** পেজ অ্যাকশনের জন্য: Admin না হলে Login এ পাঠায় */
+    /** পেজ অ্যাকশনের জন্য: Admin না হলে Login এ পাঠায়; অনুমতি না থাকলে "অনুমতি নেই" পেজ */
     private function requireAdminPage(): void
     {
         if (!is_admin()) $this->redirectToAction('Login', 'Account');
+        $rule = admin_action_rule($this->actionName());
+        if (!admin_can($rule)) {
+            http_response_code(403);
+            $this->view('Admin/NoAccess', null, ['Rule' => $rule]);
+        }
     }
 
-    /** JSON অ্যাকশনের জন্য */
+    /** JSON অ্যাকশনের জন্য — অনুমতি যাচাই + POST হলে Activity Log এ লেখা */
     private function requireAdminJson(): void
     {
         if (!is_admin()) json_response(['success' => false, 'message' => 'Unauthorized']);
+        $action = $this->actionName();
+        $rule = admin_action_rule($action);
+        if (!admin_can($rule)) {
+            json_response(['success' => false, 'message' => $rule === 'super' ? 'এই কাজটা শুধু Super Admin করতে পারেন।' : 'এই কাজের অনুমতি আপনার নেই — Super Admin এর সাথে যোগাযোগ করুন।']);
+        }
+        if (is_post() && !isset($this->logged)) { $this->logged = true; $this->logActivity($action); }
+    }
+
+    private bool $logged;
+
+    private function actionName(): string { return (string)($GLOBALS['__route']['action'] ?? ''); }
+
+    /** Activity Log: কাজের নাম (বাংলায়) + কোন id / কী */
+    private function logActivity(string $action): void
+    {
+        $labels = [
+            'ApprovePayment' => 'পেমেন্ট Approve', 'RejectPayment' => 'পেমেন্ট Reject', 'DeletePayment' => 'পেমেন্ট মুছেছেন',
+            'ProcessTeacherRequest' => 'টিচার আবেদন প্রসেস', 'DeleteTeacherAccount' => 'টিচার অ্যাকাউন্ট মুছেছেন',
+            'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
+            'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
+            'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ',
+            'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
+            'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
+            'AddNotice' => 'নোটিশ যোগ', 'EditNotice' => 'নোটিশ এডিট', 'DeleteNotice' => 'নোটিশ মুছেছেন',
+            'DeleteTuitionPost' => 'টিউশন পোস্ট মুছেছেন', 'UpdateApplicationStatus' => 'টিউশন অ্যাপ্লিকেশন স্ট্যাটাস',
+            'SaveAdmin' => 'অ্যাডমিন যোগ/এডিট', 'AdminSetActive' => 'অ্যাডমিন চালু/বন্ধ', 'RemoveAdmin' => 'অ্যাডমিন সরিয়েছেন', 'ResetAdminPassword' => 'অ্যাডমিনের পাসওয়ার্ড রিসেট', 'UploadAdminPhoto' => 'অ্যাডমিনের প্রোফাইল ছবি', 'RemoveAdminPhoto' => 'অ্যাডমিনের প্রোফাইল ছবি সরানো',
+        ];
+        if ((str_starts_with($action, 'Upload') && $action !== 'UploadAdminPhoto') || in_array($action, ['CategoryDefaultText', 'SendTestEmail'], true)) return; // শুধু ছবি আপলোড/প্রিভিউ — লগ নয়
+        $bits = [];
+        foreach (['id', 'userId', 'postId', 'paymentId', 'status', 'which', 'name', 'email'] as $k) {
+            $v = $_POST[$k] ?? null;
+            if (is_string($v) && $v !== '' && mb_strlen($v) <= 80) $bits[] = $k . ': ' . $v;
+        }
+        $label = $labels[$action] ?? $action; $detail = implode(' · ', $bits); $db = $this->db; $uid = (int)current_user_id();
+        // শুধু সফল হলে লেখা হয় (ব্যর্থ চেষ্টা লগে আসে না)
+        $GLOBALS['__on_json_success'] = function () use ($db, $uid, $label, $detail) { $db->LogAdminActivity($uid, $label, $detail); };
+    }
+
+    /** সাধারণ অ্যাডমিন অন্য অ্যাডমিনের অ্যাকাউন্টে হাত দিতে পারবে না (শুধু Super Admin) */
+    private function guardAdminTarget(int $userId): void
+    {
+        $u = $userId > 0 ? $this->db->GetUserById($userId) : null;
+        if ($u && $u->Role === 'Admin' && !admin_is_super()) json_response(['success' => false, 'message' => 'অন্য অ্যাডমিনের অ্যাকাউন্ট শুধু Super Admin বদলাতে পারেন।']);
+        if ($u && $u->Role === 'Admin' && (int)$u->Id === (int)current_user_id() && in_array($this->actionName(), ['ToggleUserStatus', 'SuspendUser', 'DeleteUser'], true)) {
+            json_response(['success' => false, 'message' => 'নিজের অ্যাকাউন্টে এটা করা যাবে না।']);
+        }
     }
 
     // ============================================================
@@ -103,6 +156,7 @@ class AdminController extends Controller
     public function SuspendUser_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0) ?? 0;
         $user = $this->db->GetUserById($id);
         if (!$user) json_response(['success' => false, 'message' => 'User not found.']);
@@ -140,6 +194,7 @@ class AdminController extends Controller
     public function UnsuspendUser_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0) ?? 0;
         if (!$this->db->LiftSuspension($id, current_user_id())) json_response(['success' => false, 'message' => 'এই ইউজার এখন Suspend অবস্থায় নেই।']);
         $this->db->CreateNotification($id, 'Suspension Lifted', 'আপনার অ্যাকাউন্টের Suspend তুলে নেওয়া হয়েছে। আবার স্বাগতম!', 'success', null, 'fa-user-check');
@@ -149,6 +204,7 @@ class AdminController extends Controller
     public function DeleteUser_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
         if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot delete your own account']);
         try {
@@ -161,6 +217,7 @@ class AdminController extends Controller
     public function ToggleUserStatus_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
         $isActive = input_bool('isActive');
         if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot disable your own account']);
@@ -179,9 +236,12 @@ class AdminController extends Controller
     public function UpdatePassword_POST(): void
     {
         $this->requireAdminJson();
+        $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
         $pw = (string)input_str('newPassword', '');
         if (trim($pw) === '' || strlen($pw) < 6) json_response(['success' => false, 'message' => 'Password must be at least 6 characters']);
+        $tu = $this->db->GetUserById((int)$id);
+        if ($tu && $tu->Role === 'Admin' && ($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp]);
         if ($this->db->UpdatePassword($id, $pw)) {
             $this->db->CreateNotification($id, '🔑 Password Changed', 'Your account password was changed by an administrator.', 'warning', null, 'fa-key');
             json_response(['success' => true, 'message' => 'Password updated successfully']);
@@ -421,7 +481,7 @@ class AdminController extends Controller
     public function Settings(): void
     {
         $this->requireAdminPage();
-        $this->view(null, $this->db->GetSiteSettings());
+        $this->view(null, $this->db->GetSiteSettings(), ['Section' => (string)input_str('s', '')]);
     }
 
     public function SaveSettings_POST(): void
@@ -552,6 +612,45 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => "Failed: $err"]);
     }
 
+    /** POST /Admin/SaveHomeSections — sections = JSON {key: true|false} (হোম পেজের কোন সেকশন দেখাবে) */
+    public function SaveHomeSections_POST(): void
+    {
+        $this->requireAdminJson();
+        $in = json_decode((string)input_str('sections', '{}'), true);
+        if (!is_array($in)) json_response(['success' => false, 'message' => 'ভুল ডাটা।']);
+        $off = [];
+        $vals = [];
+        foreach (array_keys(home_section_list()) as $k) {
+            $on = !array_key_exists($k, $in) || (bool)$in[$k];
+            if ($k === 'become') $vals['bt_enabled'] = $on ? '1' : '0';
+            elseif ($k === 'faq') $vals['home_faq_enabled'] = $on ? '1' : '0';
+            elseif (!$on) $off[] = $k;
+        }
+        $vals['home_sections_off'] = json_encode($off);
+        $err = null;
+        if ($this->db->SaveSiteContent($vals, $err)) {
+            $n = count(home_section_list()) - count($off) - ($vals['bt_enabled'] === '0' ? 1 : 0) - ($vals['home_faq_enabled'] === '0' ? 1 : 0);
+            json_response(['success' => true, 'message' => "সেভ হয়েছে — হোম পেজে এখন {$n}টা সেকশন চালু।"]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
+    /** POST /Admin/SaveHomeCategories — ids = কমা দিয়ে (খালি = অটোমেটিক) */
+    public function SaveHomeCategories_POST(): void
+    {
+        $this->requireAdminJson();
+        $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))), fn($x) => $x > 0)));
+        if (count($ids) > 12) json_response(['success' => false, 'message' => 'সর্বোচ্চ ১২টা ক্যাটাগরি বাছাই করা যাবে।']);
+        $valid = [];
+        foreach ($this->db->GetCategoryGroups(false) as $g) foreach ($g->Categories as $c) $valid[$c->Id] = true;
+        $ids = array_values(array_filter($ids, fn($i) => isset($valid[$i])));
+        $err = null;
+        if ($this->db->SaveSiteContent(['home_cats' => $ids ? json_encode($ids) : ''], $err)) {
+            json_response(['success' => true, 'message' => $ids ? count($ids) . 'টা ক্যাটাগরি হোম পেজে দেখাবে।' : 'অটোমেটিক — প্রত্যেক গ্রুপ থেকে মিলিয়ে ৮টা দেখাবে।', 'ids' => $ids]);
+        }
+        json_response(['success' => false, 'message' => "Failed: $err"]);
+    }
+
     /** POST /Admin/SaveSocialLinks — ফুটারের সোশ্যাল মিডিয়া আইকন + লিংক */
     public function SaveSocialLinks_POST(): void
     {
@@ -677,6 +776,7 @@ class AdminController extends Controller
         [$k, $defaults, $page] = match ($which) {
             'findtutor' => ['ft_', findtutor_banner_defaults(), 'Find Tutor'],
             'package' => ['pk_', package_banner_defaults(), 'Package'],
+            'helpdesk' => ['hd_', helpdesk_banner_defaults(), 'Help Desk'],
             default => ['tc_', circular_banner_defaults(), 'Tuition Circular'],
         };
         if (input_bool('reset')) {
@@ -843,6 +943,325 @@ class AdminController extends Controller
         $ids = array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))));
         $this->db->ReorderPackages($aud, $ids);
         json_response(['success' => true]);
+    }
+
+    // ============================================================
+    // ===== ADMINS (শুধু Super Admin) — অ্যাডমিন যোগ, অনুমতি, চালু/বন্ধ, Activity Log =====
+    // ============================================================
+    /** GET /Admin/Admins */
+    public function Admins(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetAdminList());
+    }
+
+    /** POST /Admin/SaveAdmin — id (0 = নতুন), fullName, email, password, isSuper, perms (কমা দিয়ে) */
+    public function SaveAdmin_POST(): void
+    {
+        $this->requireAdminJson();
+        $me = (int)current_user_id();
+        $id = (int)input_int('id', 0);
+        $super = input_bool('isSuper');
+        $perms = array_values(array_intersect(array_filter(explode(',', (string)input_str('perms', ''))), array_keys(admin_permissions())));
+        if (!$super && !$perms) json_response(['success' => false, 'message' => 'সাধারণ অ্যাডমিনের জন্য অন্তত একটা অংশে টিক দিন, অথবা Super Admin বানান।']);
+        if ($id > 0) {
+            $a = $this->db->GetAdminAccess($id);
+            if ($a === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+            if ($a['super'] && !$super && $this->db->CountActiveSuperAdmins($id) === 0) json_response(['success' => false, 'message' => 'অন্তত একজন Super Admin থাকতেই হবে।']);
+            if ($id === $me && !$super) json_response(['success' => false, 'message' => 'নিজেকে Super Admin থেকে নামানো যাবে না — অন্য Super Admin কে দিয়ে করান।']);
+            $this->db->SetAdminAccess($id, $super, $perms, $me);
+            json_response(['success' => true, 'message' => 'অনুমতি সেভ হয়েছে।']);
+        }
+        $name = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('fullName', '')))), 0, 80);
+        $email = strtolower(trim((string)input_str('email', '')));
+        $pw = (string)input_str('password', '');
+        if ($name === '') json_response(['success' => false, 'message' => 'নাম লিখুন।', 'field' => 'fullName']);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 120) json_response(['success' => false, 'message' => 'সঠিক ইমেইল দিন।', 'field' => 'email']);
+        if (($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp, 'field' => 'password']);
+        $ex = $this->db->one("SELECT `Id`, `Role` FROM `Users` WHERE LOWER(`Email`) = LOWER(:e) ORDER BY `Id` LIMIT 1", ['e' => $email]);
+        if ($ex && $ex->Role === 'Admin') json_response(['success' => false, 'message' => 'এই ইমেইলে আগে থেকেই একজন অ্যাডমিন আছেন।', 'field' => 'email']);
+        try {
+            [$newId, $was] = $this->db->CreateOrPromoteAdmin($name, $email, $pw);
+            $this->db->SetAdminAccess($newId, $super, $perms, $me);
+        } catch (Throwable $e) {
+            error_log('[SaveAdmin] ' . $e->getMessage());
+            json_response(['success' => false, 'message' => 'অ্যাডমিন বানানো যায়নি। আবার চেষ্টা করুন।']);
+        }
+        $u = $this->db->GetUserById($newId);
+        json_response(['success' => true, 'message' => ($was ? 'আগের অ্যাকাউন্টটাকে ' : 'নতুন ') . ($super ? 'Super Admin' : 'Admin') . ' বানানো হয়েছে। লগইন: ' . $email . ' (অথবা username: ' . ($u->UserName ?? '') . ')']);
+    }
+
+    /** POST /Admin/AdminSetActive — id, on */
+    public function AdminSetActive_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0); $on = input_bool('on');
+        $a = $this->db->GetAdminAccess($id);
+        if ($a === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        if ($id === (int)current_user_id()) json_response(['success' => false, 'message' => 'নিজেকে বন্ধ করা যাবে না।']);
+        if (!$on && $a['super'] && $this->db->CountActiveSuperAdmins($id) === 0) json_response(['success' => false, 'message' => 'শেষ Super Admin কে বন্ধ করা যাবে না।']);
+        $this->db->SetUserActive($id, $on);
+        json_response(['success' => true, 'message' => $on ? 'অ্যাডমিন আবার চালু হয়েছে।' : 'অ্যাডমিন বন্ধ — সাথে সাথে লগআউট হয়ে গেছে, আর লগইন করতে পারবে না।']);
+    }
+
+    /** POST /Admin/RemoveAdmin — id (অ্যাকাউন্ট থাকে, শুধু অ্যাডমিন ক্ষমতা যায়) */
+    public function RemoveAdmin_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $a = $this->db->GetAdminAccess($id);
+        if ($a === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        if ($id === (int)current_user_id()) json_response(['success' => false, 'message' => 'নিজেকে সরানো যাবে না — অন্য Super Admin কে দিয়ে করান।']);
+        if ($a['super'] && $this->db->CountActiveSuperAdmins($id) === 0) json_response(['success' => false, 'message' => 'শেষ Super Admin কে সরানো যাবে না।']);
+        $this->db->RemoveAdmin($id);
+        json_response(['success' => true, 'message' => 'অ্যাডমিন থেকে সরানো হয়েছে (অ্যাকাউন্টটা এখন সাধারণ ইউজার)।']);
+    }
+
+    /** POST /Admin/ResetAdminPassword — id, password */
+    public function ResetAdminPassword_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0); $pw = (string)input_str('password', '');
+        if ($this->db->GetAdminAccess($id) === null) json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        if (($pp = admin_password_problem($pw)) !== '') json_response(['success' => false, 'message' => $pp]);
+        $this->db->UpdatePassword($id, $pw);
+        json_response(['success' => true, 'message' => 'পাসওয়ার্ড বদলানো হয়েছে।']);
+    }
+
+    /** POST /Admin/UploadAdminPhoto — id, photo (ফাইল) — অ্যাডমিনের প্রোফাইল ছবি (Super Admin) */
+    public function UploadAdminPhoto_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $u = $this->db->GetUserById($id);
+        if (!$u || $u->Role !== 'Admin') json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        $file = upload_file('photo');
+        if (!$file) json_response(['success' => false, 'message' => 'একটা ছবি বেছে নিন।']);
+        $ext = strtolower('.' . pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, self::IMAGE_EXTS, true)) json_response(['success' => false, 'message' => 'শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।']);
+        if ($file['size'] > 5 * 1024 * 1024) json_response(['success' => false, 'message' => 'ছবি ৫MB এর কম হতে হবে।']);
+        if (@getimagesize($file['tmp_name']) === false) json_response(['success' => false, 'message' => 'ফাইলটি সঠিক ছবি নয়।']);
+        try { $url = save_upload($file, 'profiles', 'admin_' . $id . '_' . ticks(), $ext); }
+        catch (Throwable $e) { json_response(['success' => false, 'message' => 'ছবি সেভ করা যায়নি।']); }
+        $old = (string)($u->ProfileImageLink ?? '');
+        $this->db->exec('UPDATE `Users` SET `ProfileImageLink` = :p WHERE `Id` = :i', ['p' => $url, 'i' => $id]);
+        if ($old !== '' && str_starts_with($old, '/uploads/profiles/admin_')) delete_upload($old);
+        if ($id === (int)current_user_id()) session_set('ProfileImageLink', $url);
+        json_response(['success' => true, 'message' => 'প্রোফাইল ছবি আপডেট হয়েছে।', 'url' => $url]);
+    }
+
+    /** POST /Admin/RemoveAdminPhoto — id */
+    public function RemoveAdminPhoto_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $u = $this->db->GetUserById($id);
+        if (!$u || $u->Role !== 'Admin') json_response(['success' => false, 'message' => 'অ্যাডমিন পাওয়া যায়নি।']);
+        $old = (string)($u->ProfileImageLink ?? '');
+        $this->db->exec('UPDATE `Users` SET `ProfileImageLink` = NULL WHERE `Id` = :i', ['i' => $id]);
+        if ($old !== '' && str_starts_with($old, '/uploads/profiles/admin_')) delete_upload($old);
+        if ($id === (int)current_user_id()) session_set('ProfileImageLink', '');
+        json_response(['success' => true, 'message' => 'প্রোফাইল ছবি সরানো হয়েছে।']);
+    }
+
+    /** GET /Admin/ActivityLog?admin=&date=&page= */
+    public function ActivityLog(): void
+    {
+        $this->requireAdminPage();
+        $admin = (int)input_int('admin', 0); $date = (string)input_str('date', ''); $page = max(1, (int)input_int('page', 1)); $per = 50;
+        $rows = $this->db->GetAdminActivity($admin, $per + 1, ($page - 1) * $per, $date);
+        $this->view(null, array_slice($rows, 0, $per), ['Admins' => $this->db->GetAdminList(), 'Admin' => $admin, 'Date' => $date, 'Page' => $page, 'HasMore' => count($rows) > $per]);
+    }
+
+    // ============================================================
+    // ===== EDUCATIONAL FEED (পোস্ট রিভিউ — Approve / Reject) =====
+    // ============================================================
+    /** GET /Admin/EduFeed?status=Pending|Approved|Rejected|all&page= */
+    public function EduFeed(): void
+    {
+        $this->requireAdminPage();
+        $status = (string)input_str('status', 'Pending');
+        if (!in_array($status, ['Pending', 'Approved', 'Rejected', 'all'], true)) $status = 'Pending';
+        $page = max(1, (int)input_int('page', 1));
+        $per = 20;
+        $counts = $this->db->CountEduPostsByStatus();
+        $this->view(null, $this->db->GetEduPostsAdmin($status, $per, ($page - 1) * $per), [
+            'Status' => $status, 'Counts' => $counts, 'Page' => $page, 'Pages' => max(1, (int)ceil(($counts[$status] ?? 0) / $per)),
+        ]);
+    }
+
+    /** POST /Admin/EduFeedStatus — id, status (Approved|Rejected|Pending), reason */
+    public function EduFeedStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        $p = $this->db->GetEduPost((int)input_int('id', 0));
+        if (!$p) json_response(['success' => false, 'message' => 'পোস্টটি পাওয়া যায়নি (মুছে ফেলা হয়ে থাকতে পারে)।']);
+        $status = (string)input_str('status', '');
+        if (!in_array($status, ['Approved', 'Rejected', 'Pending'], true)) json_response(['success' => false, 'message' => 'ভুল স্ট্যাটাস।']);
+        $reason = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('reason', '')))), 0, 300);
+        $this->db->SetEduPostStatus($p->Id, $status, $reason, (int)current_user_id());
+        if ($status !== $p->Status && $p->UserId !== (int)current_user_id()) {
+            if ($status === 'Approved') {
+                $this->db->CreateNotification($p->UserId, 'পোস্ট Approve হয়েছে 🎉', 'আপনার Educational Feed পোস্টটি Approve হয়েছে — এখন সবাই দেখতে পাচ্ছে।', 'success', $p->Url, 'fa-circle-check');
+            } elseif ($status === 'Rejected') {
+                $this->db->CreateNotification($p->UserId, 'পোস্ট Approve হয়নি', 'আপনার Educational Feed পোস্টটি Approve করা হয়নি।' . ($reason !== '' ? ' কারণ: ' . $reason : ''), 'warning', '/Feed?tab=mine', 'fa-circle-xmark');
+            }
+        }
+        $msg = ['Approved' => 'পোস্ট Approve হয়েছে — ফিডে দেখাচ্ছে।', 'Rejected' => 'পোস্ট Reject করা হয়েছে।', 'Pending' => 'পোস্ট আবার Pending-এ রাখা হয়েছে।'][$status];
+        json_response(['success' => true, 'message' => $msg, 'counts' => $this->db->CountEduPostsByStatus()]);
+    }
+
+    // ============================================================
+    // ===== CATEGORIES (Categories পেজের ক্যাটাগরি + গ্রুপ) =====
+    // ============================================================
+    /** GET /Admin/Categories */
+    public function Categories(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetCategoryGroups(false));
+    }
+
+    /** GET /Admin/EditCategory/{id} — id না দিলে নতুন (?group=গ্রুপের id) */
+    public function EditCategory(): void
+    {
+        $this->requireAdminPage();
+        $groups = $this->db->GetCategoryGroups(false);
+        if (!$groups) redirect('/Admin/Categories');
+        $id = (int)input_str('id', '0');
+        if ($id > 0) {
+            $c = $this->db->GetCategory($id);
+            if (!$c) not_found();
+        } else {
+            $gid = (int)input_int('group', 0);
+            $g = null;
+            foreach ($groups as $x) if ($x->Id === $gid) $g = $x;
+            $g = $g ?? $groups[0];
+            $c = obj(['Id' => 0, 'GroupId' => $g->Id, 'GroupName' => $g->Name, 'Name' => '', 'Slug' => '', 'Icon' => 'fa-book-open', 'ImageUrl' => '',
+                'BannerUrl' => '', 'Highlights' => '', 'About' => '', 'WhyChoose' => '', 'MatchType' => 'subject', 'Keywords' => '', 'IsActive' => true, 'Url' => '']);
+        }
+        $this->view(null, $c, ['Groups' => $groups]);
+    }
+
+    /** POST /Admin/SaveCategory — নতুন বা এডিট */
+    public function SaveCategory_POST(): void
+    {
+        $this->requireAdminJson();
+        $line = fn($v, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$v))), 0, $max);
+        $text = fn($v, $max) => mb_substr(trim(preg_replace('/[ \t]+/u', ' ', str_replace(["\r\n", "\r"], "\n", strip_tags((string)$v)))), 0, $max);
+        $id = (int)input_int('id', 0);
+        if ($id > 0 && !$this->db->GetCategory($id)) json_response(['success' => false, 'message' => 'ক্যাটাগরি পাওয়া যায়নি।']);
+        $gid = (int)input_int('groupId', 0);
+        $group = null;
+        foreach ($this->db->GetCategoryGroups(false) as $g) if ($g->Id === $gid) $group = $g;
+        if (!$group) json_response(['success' => false, 'message' => 'গ্রুপ বেছে নিন।', 'field' => 'groupId']);
+        $name = $line(input_str('name', ''), 60);
+        if ($name === '') json_response(['success' => false, 'message' => 'ক্যাটাগরির নাম লিখুন।', 'field' => 'name']);
+        $icon = strtolower(trim((string)input_str('icon', '')));
+        if ($icon !== '' && !preg_match('/^fa-[a-z0-9-]{1,40}$/', $icon)) json_response(['success' => false, 'message' => 'আইকন "fa-" দিয়ে শুরু হতে হবে (যেমন fa-book-open)।', 'field' => 'icon']);
+        $img = self::safeImageUrl((string)input_str('imageUrl', '')) ?? '';
+        $banner = self::safeImageUrl((string)input_str('bannerUrl', '')) ?? '';
+        $hl = array_slice(array_values(array_filter(array_map(fn($x) => $line($x, 120), explode("\n", str_replace("\r", '', (string)input_str('highlights', '')))), fn($x) => $x !== '')), 0, 8);
+        $kw = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => $line($x, 40), explode(',', (string)input_str('keywords', ''))), fn($x) => $x !== ''))), 0, 20);
+        $about = $text(input_str('about', ''), 6000);
+        $why = $text(input_str('whyChoose', ''), 4000);
+        $match = input_str('matchType', '') === 'class' ? 'class' : 'subject';
+        // ডিফল্ট লেখার সাথে হুবহু মিললে খালি রাখি — তাহলে নাম বদলালে ডিফল্ট লেখাও নিজে থেকে বদলাবে
+        $def = category_default_texts($name, $group->Name);
+        if ($about === trim($def['About'])) $about = '';
+        if ($why === trim($def['WhyChoose'])) $why = '';
+        if (implode("\n", $hl) === trim($def['Highlights'])) $hl = [];
+        try {
+            $newId = $this->db->SaveCategory($id, [
+                'GroupId' => $gid, 'Name' => $name, 'Slug' => $line(input_str('slug', ''), 120), 'Icon' => $icon, 'ImageUrl' => $img, 'BannerUrl' => $banner,
+                'Highlights' => implode("\n", $hl), 'About' => $about, 'WhyChoose' => $why, 'MatchType' => $match, 'Keywords' => implode(', ', $kw),
+                'IsActive' => input_bool('isActive'),
+            ]);
+        } catch (Throwable $e) {
+            error_log('[SaveCategory] ' . $e->getMessage());
+            json_response(['success' => false, 'message' => 'সেভ করা যায়নি। আবার চেষ্টা করুন।']);
+        }
+        $c = $this->db->GetCategory($newId);
+        json_response(['success' => true, 'message' => $id > 0 ? 'ক্যাটাগরি আপডেট হয়েছে!' : 'নতুন ক্যাটাগরি যোগ হয়েছে!', 'id' => $newId, 'slug' => $c->Slug, 'url' => $c->Url]);
+    }
+
+    /** POST /Admin/DeleteCategory — id */
+    public function DeleteCategory_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetCategory($id)) json_response(['success' => false, 'message' => 'ক্যাটাগরি পাওয়া যায়নি।']);
+        $this->db->DeleteCategory($id);
+        json_response(['success' => true, 'message' => 'ক্যাটাগরি মুছে ফেলা হয়েছে।']);
+    }
+
+    /** POST /Admin/ToggleCategory — id, on */
+    public function ToggleCategory_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetCategory($id)) json_response(['success' => false, 'message' => 'ক্যাটাগরি পাওয়া যায়নি।']);
+        $this->db->SetCategoryActive($id, input_bool('on'));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/ReorderCategories — groupId + ids (কমা দিয়ে) */
+    public function ReorderCategories_POST(): void
+    {
+        $this->requireAdminJson();
+        $ids = array_filter(array_map('intval', explode(',', (string)input_str('ids', ''))));
+        $this->db->ReorderCategories((int)input_int('groupId', 0), $ids);
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/SaveCategoryGroup — id (0 = নতুন), name, isActive */
+    public function SaveCategoryGroup_POST(): void
+    {
+        $this->requireAdminJson();
+        $name = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('name', '')))), 0, 60);
+        if ($name === '') json_response(['success' => false, 'message' => 'গ্রুপের নাম লিখুন।']);
+        $id = (int)input_int('id', 0);
+        $exists = false;
+        foreach ($this->db->GetCategoryGroups(false) as $g) {
+            if ($g->Id === $id) $exists = true;
+            if ($g->Id !== $id && mb_strtolower($g->Name) === mb_strtolower($name)) json_response(['success' => false, 'message' => 'এই নামে একটা গ্রুপ আগেই আছে।']);
+        }
+        if ($id > 0 && !$exists) json_response(['success' => false, 'message' => 'গ্রুপ পাওয়া যায়নি।']);
+        $newId = $this->db->SaveCategoryGroup($id, $name, input_bool('isActive'));
+        json_response(['success' => true, 'message' => $id > 0 ? 'গ্রুপ আপডেট হয়েছে।' : 'নতুন গ্রুপ যোগ হয়েছে।', 'id' => $newId]);
+    }
+
+    /** POST /Admin/DeleteCategoryGroup — id (ভেতরের সব ক্যাটাগরিও মুছে যায়) */
+    public function DeleteCategoryGroup_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->DeleteCategoryGroup((int)input_int('id', 0));
+        json_response(['success' => true, 'message' => 'গ্রুপ মুছে ফেলা হয়েছে।']);
+    }
+
+    /** POST /Admin/ReorderCategoryGroups — ids (কমা দিয়ে) */
+    public function ReorderCategoryGroups_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->ReorderCategoryGroups(array_filter(array_map('intval', explode(',', (string)input_str('ids', '')))));
+        json_response(['success' => true]);
+    }
+
+    /** POST /Admin/CategoryDefaultText — name, groupId → ডিফল্ট লেখা (Edit পেজের "ডিফল্ট লেখা বসান") */
+    public function CategoryDefaultText_POST(): void
+    {
+        $this->requireAdminJson();
+        $gname = '';
+        foreach ($this->db->GetCategoryGroups(false) as $g) if ($g->Id === (int)input_int('groupId', 0)) $gname = $g->Name;
+        $name = mb_substr(trim(strip_tags((string)input_str('name', ''))), 0, 60) ?: 'This Category';
+        $d = category_default_texts($name, $gname);
+        json_response(['success' => true, 'highlights' => $d['Highlights'], 'about' => $d['About'], 'whyChoose' => $d['WhyChoose']]);
+    }
+
+    /** POST /Admin/UploadCategoryImage — categoryImage (ফাইল) */
+    public function UploadCategoryImage_POST(): void
+    {
+        $this->uploadImage('categoryImage', 'categories', 'cat_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'ছবি ৫MB এর কম হতে হবে।', 'শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।', 'ছবি আপলোড হয়েছে!');
     }
 
     // ============================================================

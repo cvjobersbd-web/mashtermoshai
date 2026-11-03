@@ -857,22 +857,133 @@ $userProfileImg = session_get('ProfileImageLink');
             font-size: 14px;
         }
     }
+
+    /* ============================================================
+       ✅ নতুন ডিজাইন — ব্যানার, ৪টা কার্ড, কমিউনিটি পোস্ট
+       ============================================================ */
+    .hd-page { background: radial-gradient(1200px 420px at 50% 0, #DDF1FC 0%, rgba(221,241,252,0) 70%), linear-gradient(180deg, #EAF6FD 0%, #F5FBFF 420px); padding: 18px 20px 70px; }
+    .hd-container { max-width: 1000px; }
+    .hd-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .hd-banner { position: relative; margin: 0 0 6px; }
+    .hd-banner img { display: block; width: 100%; height: auto; }
+    .hd-banner .hd-fallback { display: none; }
+    .hd-banner.failed img { display: none; }
+    .hd-banner.failed .hd-fallback { display: block; }
+    .hd-hero-text { padding: 20px 4px 26px; }
+    .hd-pill { display: inline-flex; align-items: center; gap: 8px; background: #E0F2FE; border: 1px solid #9FDDF5; color: #08224A; font-weight: 700; font-size: 14px; padding: 6px 14px; border-radius: 999px; }
+    .hd-h1 { font-family: var(--font-heading); font-size: clamp(28px, 4vw, 40px); font-weight: 800; color: #08224A; margin: 14px 0 8px; line-height: 1.2; }
+    .hd-hero-text p { color: #334155; font-size: 16px; line-height: 1.6; margin: 0; max-width: 520px; }
+
+    .hd-ask { position: relative; background: #fff; border-radius: 18px; padding: 26px 24px 22px; text-align: center; box-shadow: 0 10px 30px rgba(8,34,74,.07); border: 1px solid #E3EEF7; margin-bottom: 16px; }
+    .hd-ask h2 { margin: 0 0 4px; font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; color: #08224A; font-family: var(--font-heading); }
+    .hd-ask-form { display: flex; gap: 10px; max-width: 660px; margin: 0 auto; }
+    .hd-ask-in { flex: 1; position: relative; margin: 0; }
+    .hd-ask-in i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748B; font-size: 17px; }
+    .hd-ask-in input { width: 100%; height: 48px; border: 1.5px solid #D6E4F0; border-radius: 10px; padding: 0 14px 0 46px; font-size: 15px; outline: none; font-family: inherit; color: #08224A; background: #fff; }
+    .hd-ask-in input:focus { border-color: #02B8F5; box-shadow: 0 0 0 3px rgba(2,184,245,.12); }
+    .hd-ask-form button { height: 48px; padding: 0 34px; border: none; border-radius: 10px; background: #02B8F5; color: #fff; font-weight: 800; font-size: 16px; cursor: pointer; font-family: inherit; box-shadow: 0 6px 16px rgba(2,184,245,.28); transition: background .2s; }
+    .hd-ask-form button:hover { background: #0099D6; }
+    .hd-pop { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: #334155; }
+    .hd-pop span { font-weight: 600; margin-right: 4px; }
+    .hd-pop a { background: #EEF4F9; color: #334155; padding: 6px 14px; border-radius: 999px; text-decoration: none; font-size: 12.5px; font-weight: 600; transition: background .2s, color .2s; }
+    .hd-pop a:hover { background: #E0F2FE; color: #0369A1; }
+
+    .hd-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .hd-qc { position: relative; display: block; border-radius: 16px; padding: 18px 40px 18px 22px; text-decoration: none; color: inherit; border: 2px solid #fff;
+        box-shadow: 0 6px 18px rgba(8,34,74,.06); transition: transform .2s, box-shadow .2s; min-height: 112px; }
+    .hd-qc:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(8,34,74,.1); color: inherit; }
+    .hd-qc .ic { display: block; font-size: 26px; margin-bottom: 8px; }
+    .hd-qc .tx b { display: block; font-size: 16px; font-weight: 800; color: #08224A; line-height: 1.3; }
+    .hd-qc .tx small { display: block; font-size: 13px; color: #334155; margin-top: 4px; line-height: 1.4; }
+    .hd-qc .go { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: #08224A; font-size: 14px; transition: transform .2s; }
+    .hd-qc:hover .go { transform: translate(4px, -50%); }
+    .hd-qc.c1 { background: linear-gradient(135deg, #E7F5FD, #DDF0FB); } .hd-qc.c1 .ic { color: #1D7FE5; }
+    .hd-qc.c2 { background: linear-gradient(135deg, #FFF6EA, #FDEFDD); } .hd-qc.c2 .ic { color: #F59E0B; }
+    .hd-qc.c3 { background: linear-gradient(135deg, #E9FAF3, #DDF5EA); } .hd-qc.c3 .ic { color: #10B981; }
+    .hd-qc.c4 { background: linear-gradient(135deg, #F4EEFF, #ECE4FD); } .hd-qc.c4 .ic { color: #7C3AED; }
+
+    .hd-create-card { border-radius: 18px; padding: 22px 30px 20px; box-shadow: 0 10px 30px rgba(8,34,74,.07); border: 1px solid #E3EEF7; scroll-margin-top: 100px; }
+    .hd-create-head { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+    .hd-create-ic { position: relative; width: 50px; height: 46px; flex-shrink: 0; }
+    .hd-create-ic i { position: absolute; left: 0; top: 0; font-size: 38px; color: #1D9BF0; }
+    .hd-create-ic i.sm { left: 22px; top: 18px; font-size: 24px; color: #7DD3FC; }
+    .hd-create-head h2 { margin: 0; font-size: clamp(20px, 2.4vw, 25px); font-weight: 800; color: #08224A; font-family: var(--font-heading); }
+    .hd-create-head p { margin: 2px 0 0; color: #334155; font-size: 14.5px; }
+    .hd-create-card .hd-input { background: #F8FBFE; border-color: #DCE7F2; }
+    .hd-create-card.flash { animation: hdFlash 1.2s ease; }
+    @keyframes hdFlash { 0%, 100% { box-shadow: 0 10px 30px rgba(8,34,74,.07); } 30% { box-shadow: 0 0 0 4px rgba(2,184,245,.35), 0 10px 30px rgba(8,34,74,.07); } }
+    .hd-tabs-row { margin-top: 26px; scroll-margin-top: 90px; }
+    .hd-searching { font-size: 14px; color: #475569; } .hd-searching a { color: #0369A1; font-weight: 700; }
+
+    @media (max-width: 900px) { .hd-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) {
+        .hd-page { padding: 10px 12px 50px; }
+        .hd-ask { padding: 20px 14px 18px; }
+        .hd-ask-form button { padding: 0 18px; }
+        .hd-cards { gap: 10px; }
+        .hd-qc { padding: 14px 30px 14px 14px; min-height: 0; }
+        .hd-qc .go { right: 12px; }
+        .hd-qc .tx b { font-size: 14.5px; } .hd-qc .tx small { font-size: 12px; }
+        .hd-create-card { padding: 18px 14px 16px; }
+        .hd-tabs-row .hd-tabs { width: 100%; overflow: visible; }
+        .hd-tabs-row .hd-tab { flex: 1 1 0; justify-content: center; padding: 9px 4px; font-size: 12.5px; gap: 5px; white-space: nowrap; min-width: 0; }
+    }
 </style>
 
+<?php
+$hdb = function_exists('helpdesk_banner') ? helpdesk_banner() : ['hd_banner' => '', 'hd_banner_enabled' => '0'];
+$hdBannerOn = ($hdb['hd_banner_enabled'] ?? '1') !== '0' && !is_blank($hdb['hd_banner'] ?? '');
+$hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
+?>
 <div class="hd-page">
     <div class="hd-container">
 
-        <!-- ===== Page Header ===== -->
-        <div class="hd-page-header">
-            <h1>
-                <i class="fas fa-headset"></i>
-                Help Desk
-            </h1>
-            <p>আপনার সমস্যা বা প্রশ্ন শেয়ার করুন — Admin টিম সাহায্য করবে</p>
+        <!-- ===== ব্যানার (Admin → Settings → Banners থেকে বদলানো যায়) ===== -->
+        <?php if ($hdBannerOn): ?>
+            <div class="hd-banner">
+                <h1 class="hd-sr">মাষ্টার মশাই – Help Desk</h1>
+                <img src="<?= e($hdb['hd_banner']) ?>" alt="মাষ্টার মশাই – Help Desk: আপনার সমস্যা বা প্রশ্নের দ্রুত সমাধান পান" fetchpriority="high"
+                     onerror="this.closest('.hd-banner').classList.add('failed')" />
+                <div class="hd-hero-text hd-fallback">
+                    <span class="hd-pill"><i class="far fa-message"></i> Help Desk</span>
+                    <div class="hd-h1">মাষ্টার মশাই – Help Desk</div>
+                    <p>আপনার সমস্যা বা প্রশ্নের দ্রুত সমাধান পান — আমাদের সাপোর্ট টিম ও কমিউনিটির সহায়তায়।</p>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="hd-hero-text">
+                <span class="hd-pill"><i class="far fa-message"></i> Help Desk</span>
+                <h1 class="hd-h1">মাষ্টার মশাই – Help Desk</h1>
+                <p>আপনার সমস্যা বা প্রশ্নের দ্রুত সমাধান পান — আমাদের সাপোর্ট টিম ও কমিউনিটির সহায়তায়।</p>
+            </div>
+        <?php endif; ?>
+
+        <!-- ===== ৪টা কার্ড ===== -->
+        <div class="hd-cards">
+            <a class="hd-qc c1" href="<?= $hdFaqOn ? '/#faq' : '/Helpdesk?filter=admin' ?>">
+                <span class="ic"><i class="fas fa-book-open"></i></span>
+                <span class="tx"><b>FAQ</b><small>সাধারণ প্রশ্ন ও উত্তর</small></span><i class="fas fa-arrow-right go"></i>
+            </a>
+            <a class="hd-qc c2" href="#hdCreate" data-topic="সমস্যা: ">
+                <span class="ic"><i class="fas fa-triangle-exclamation"></i></span>
+                <span class="tx"><b>Report a Problem</b><small>কোনো সমস্যা জানাতে</small></span><i class="fas fa-arrow-right go"></i>
+            </a>
+            <a class="hd-qc c3" href="#hdCreate" data-topic="Account & Profile: ">
+                <span class="ic"><i class="far fa-user"></i></span>
+                <span class="tx"><b>Account &amp; Profile</b><small>অ্যাকাউন্ট ও প্রোফাইল সংক্রান্ত</small></span><i class="fas fa-arrow-right go"></i>
+            </a>
+            <a class="hd-qc c4" href="#hdCreate" data-topic="Tuition / Tutor: ">
+                <span class="ic"><i class="fas fa-graduation-cap"></i></span>
+                <span class="tx"><b>Tuition / Tutor Support</b><small>টিউশন ও টিউটর সংক্রান্ত সহায়তা</small></span><i class="fas fa-arrow-right go"></i>
+            </a>
         </div>
 
-        <!-- ===== Create Post Card ===== -->
-        <div class="hd-create-card">
+        <!-- ===== কমিউনিটিতে প্রশ্ন করুন (Create Post) ===== -->
+        <div class="hd-create-card" id="hdCreate">
+            <div class="hd-create-head">
+                <span class="hd-create-ic" aria-hidden="true"><i class="fas fa-comment-dots"></i><i class="fas fa-comment sm"></i></span>
+                <div><h2>কমিউনিটিতে প্রশ্ন করুন</h2><p>আপনার প্রশ্ন, মতামত বা সমস্যাটি শেয়ার করুন — অ্যাডমিন ও অন্যরা সাহায্য করবে।</p></div>
+            </div>
             <div class="hd-create-top">
                 <div class="hd-avatar">
                     <?php if (!is_blank($userProfileImg)): ?>
@@ -898,7 +1009,7 @@ $userProfileImg = session_get('ProfileImageLink');
 
             <div class="hd-create-actions">
                 <label class="hd-upload-btn" for="mediaInput">
-                    <i class="fas fa-photo-video"></i> Photo/Video
+                    <i class="fas fa-photo-film"></i> Photo/Video
                 </label>
                 <input type="file" id="mediaInput" accept="image/*,video/*" style="display:none;" />
 
@@ -908,31 +1019,25 @@ $userProfileImg = session_get('ProfileImageLink');
             </div>
         </div>
 
-        <!-- ===== Filter Tabs + Search ===== -->
-        <div class="hd-tabs-row">
+        <!-- ===== Filter Tabs ===== -->
+        <div class="hd-tabs-row" id="hdPosts">
             <div class="hd-tabs">
-                <a href="/Helpdesk?filter=all"
+                <a href="/Helpdesk?filter=all#hdPosts"
                    class="hd-tab <?= $currentFilter === 'all' ? 'active' : '' ?>">
                     <i class="fas fa-list"></i> All Posts
                 </a>
-                <a href="/Helpdesk?filter=mine"
+                <a href="/Helpdesk?filter=mine#hdPosts"
                    class="hd-tab <?= $currentFilter === 'mine' ? 'active' : '' ?>">
                     <i class="fas fa-user"></i> My Posts
                 </a>
-                <a href="/Helpdesk?filter=admin"
+                <a href="/Helpdesk?filter=admin#hdPosts"
                    class="hd-tab <?= $currentFilter === 'admin' ? 'active' : '' ?>">
                     <i class="fas fa-user-shield"></i> Admin Posts
                 </a>
             </div>
-
-            <form method="get" action="/Helpdesk" class="hd-search">
-                <input type="hidden" name="filter" value="<?= e($currentFilter) ?>" />
-                <input type="text" name="search" value="<?= e($searchQuery) ?>"
-                       placeholder="Search posts..." />
-                <button type="submit" title="Search">
-                    <i class="fas fa-search"></i>
-                </button>
-            </form>
+            <?php if ($searchQuery !== ''): ?>
+                <div class="hd-searching"><i class="fas fa-magnifying-glass"></i> “<?= e($searchQuery) ?>” এর ফলাফল · <a href="/Helpdesk?filter=<?= e($currentFilter) ?>#hdPosts">সব দেখুন</a></div>
+            <?php endif; ?>
         </div>
 
         <!-- ===== Alerts ===== -->
@@ -1202,6 +1307,18 @@ $userProfileImg = session_get('ProfileImageLink');
         // ============================================================
         // ===== CREATE POST =====
         // ============================================================
+        // ৪টা কার্ডের ৩টা: প্রশ্নের বক্সে বিষয় বসিয়ে সেখানে নিয়ে যায়
+        document.querySelectorAll('.hd-qc[data-topic]').forEach(function (a) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                var card = document.getElementById('hdCreate'), t = document.getElementById('postTitle'), topic = a.getAttribute('data-topic');
+                if (!t.value.trim() || /^(সমস্যা|Account & Profile|Tuition \/ Tutor): /.test(t.value)) t.value = topic;
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+                setTimeout(function () { t.focus({ preventScroll: true }); t.setSelectionRange(t.value.length, t.value.length); }, 450);
+            });
+        });
+
         async function createPost() {
             const title = document.getElementById('postTitle').value.trim();
             const content = document.getElementById('postContent').value.trim();

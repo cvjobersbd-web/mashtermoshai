@@ -2,7 +2,7 @@
 /**
  * স্টুডেন্ট / টিচারের প্রোফাইল (লার্নিং প্রোফাইল ডিজাইন)
  * বাম: মেনু · মাঝে: স্ট্যাট কার্ড + পোস্ট · ডান: About Me + My Tutors
- * সেকশন: overview | profile | tutors | friends | circulars | saved | goals | activities | settings
+ * সেকশন: overview | profile | tutors | views | circulars | saved | goals | activities | settings
  */
 $u = $Model->User;
 $rel = $Model->Relation;
@@ -15,7 +15,6 @@ $img = is_blank($u->ProfileImageLink) ? null : $u->ProfileImageLink;
 $ti = $Model->TeacherInfo;
 $canPrivate = $Model->CanSeePrivate;
 $tab = $Model->Tab;
-$friends = $Model->Friends;
 $intro = $Model->Intro;
 $streak = $Model->Streak;
 $goals = $Model->Goals;
@@ -37,11 +36,11 @@ $nav = [
     ['overview', 'Overview', 'fa-house', false],
     ['profile', $isOwner ? 'My Profile' : 'Profile', 'fa-user', false],
     ['tutors', $peopleLabel, $isTeacher ? 'fa-user-graduate' : 'fa-chalkboard-user', true],
-    ['friends', 'Friends', 'fa-user-group', false],
     ['circulars', 'My Circulars', 'fa-file-lines', true],
     ['saved', 'Saved Items', 'fa-bookmark', true],
     ['goals', $isOwner ? 'My Goals' : 'Goals', 'fa-bullseye', false],
     ['activities', $isOwner ? 'My Activities' : 'Activities', 'fa-chart-simple', false],
+    ['views', 'Profile Views', 'fa-eye', true],
     ['settings', 'Settings', 'fa-gear', true],
 ];
 $nav = array_values(array_filter($nav, fn($n) => (!$n[3] || $isOwner) && !($n[0] === 'circulars' && $isTeacher)));
@@ -119,7 +118,6 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                     <?php if ($isOwner): ?>
                         <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
                     <?php elseif (!$isAdminViewer): ?>
-                        <div class="fr-actions" data-uid="<?= (int)$u->Id ?>" data-rel="<?= e($rel) ?>"><?= friend_actions_html((int)$u->Id, $rel) ?></div>
                         <?php if ($isTeacher): ?>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
                                 <i class="<?= $Model->TutorSaved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $Model->TutorSaved ? 'Saved' : 'Save' ?></span>
@@ -142,9 +140,9 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                 <span class="pf-become-tag"><?= $bts === 'Pending' ? '<i class="fas fa-hourglass-half"></i>' : ($bts === 'Rejected' ? 'Retry' : 'Apply') ?></span>
                             </a>
                         <?php endif; ?>
-                        <a href="?tab=<?= $k ?>" data-tab="<?= $k ?>" class="<?= $tab === $k ? 'active' : '' ?>"><i class="fas <?= $icon ?>"></i> <?= e($label) ?>
+                        <a href="<?= $k === 'views' ? '/Profile/Views' : '?tab=' . $k ?>"<?= $k === 'views' ? '' : ' data-tab="' . $k . '"' ?> class="<?= $tab === $k ? 'active' : '' ?>"><i class="fas <?= $icon ?>"></i> <?= e($label) ?>
                             <?php if ($k === 'saved' && $Model->SavedItems): ?><span class="pf-n" data-saved-count><?= count($saved) ?></span><?php endif; ?>
-                            <?php if ($k === 'friends' && $Model->FriendCount): ?><span class="pf-n"><?= (int)$Model->FriendCount ?></span><?php endif; ?>
+                            <?php if ($k === 'views' && !empty($Model->ProfileViews['stats']['views90'])): ?><span class="pf-n"><?= (int)$Model->ProfileViews['stats']['views90'] ?></span><?php endif; ?>
                         </a>
                         <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
@@ -161,6 +159,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             <div class="pf-main">
                 <!-- ======================= OVERVIEW ======================= -->
                 <section class="pf-sec <?= $tab === 'overview' ? 'active' : '' ?>" id="sec-overview">
+                    <?php if ($isOwner && $Model->ProfileViews) partial('Profile/_ViewsCard', ['pv' => $Model->ProfileViews]); ?>
                     <div class="pf-stats">
                         <!-- Learning streak -->
                         <a href="?tab=activities" data-tab="activities" class="pf-card st fire-card">
@@ -216,18 +215,14 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                 <span class="st-arrow"><i class="fas fa-chevron-right"></i></span>
                             </a>
                         <?php else: ?>
-                            <a href="?tab=friends" data-tab="friends" class="pf-card st">
-                                <span class="st-ico st-friend"><i class="fas fa-user-group"></i></span>
+                            <div class="pf-card st">
+                                <span class="st-ico st-friend"><i class="fas fa-calendar-check"></i></span>
                                 <div class="st-body">
-                                    <div class="st-t">Friends</div>
-                                    <div class="st-v"><b><?= (int)$Model->FriendCount ?></b><span><?= $Model->MutualCount ? (int)$Model->MutualCount . ' mutual' : 'friends' ?></span></div>
-                                    <div class="st-faces">
-                                        <?php foreach (array_slice($friends, 0, 4) as $f): ?>
-                                            <span class="fc" title="<?= e($f->FullName) ?>"><?= e($f->Initials) ?><?php if ($f->Image): ?><img src="<?= e($f->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
+                                    <div class="st-t">Member Since</div>
+                                    <div class="st-v"><b><?= e(fmt_date($u->CreatedAt, 'M Y', '—')) ?></b></div>
+                                    <div class="st-empty"><?= e($isTeacher ? 'Tutor' : 'Student') ?> at মাষ্টার মশাই</div>
                                 </div>
-                            </a>
+                            </div>
                             <div class="pf-card st">
                                 <span class="st-ico st-post"><i class="fas fa-pen-to-square"></i></span>
                                 <div class="st-body">
@@ -264,7 +259,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                             <div class="pf-card pf-empty" id="psEmpty" <?= $Model->Posts ? 'hidden' : '' ?>>
                                 <div class="ei"><i class="far fa-newspaper"></i></div>
                                 <h5><?= $isOwner ? 'আপনার learning journey শুরু করুন' : 'দেখানোর মতো কোনো পোস্ট নেই' ?></h5>
-                                <p><?= $isOwner ? 'আজ কী পড়লেন, কী শিখলেন — Study Update দিয়ে শেয়ার করুন।' : ($rel === 'friends' ? e($firstName) . ' এখনো কিছু পোস্ট করেননি।' : 'ফ্রেন্ড হলে শুধু-ফ্রেন্ডদের পোস্টও দেখতে পাবেন।') ?></p>
+                                <p><?= $isOwner ? 'আজ কী পড়লেন, কী শিখলেন — Study Update দিয়ে শেয়ার করুন।' : e($firstName) . ' এখনো কিছু পোস্ট করেননি।' ?></p>
                             </div>
                             <?php if ($Model->HasMore): ?>
                                 <button type="button" class="pc-loadmore" id="psMore"><i class="fas fa-angles-down"></i> আরো পোস্ট দেখুন</button>
@@ -312,23 +307,6 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                            <?php else: ?>
-                                <div class="pf-card rc">
-                                    <div class="rc-h"><h4>Friends</h4><?php if ($friends): ?><a href="?tab=friends" data-tab="friends">View all</a><?php endif; ?></div>
-                                    <?php if (!$friends): ?>
-                                        <p class="rc-empty">এখনো কোনো ফ্রেন্ড নেই।</p>
-                                    <?php else: ?>
-                                        <div class="tu-list">
-                                            <?php foreach (array_slice($friends, 0, 3) as $f): ?>
-                                                <div class="tu-item">
-                                                    <a class="tu-av" href="/Profile/Show/<?= $f->Id ?>"><?= e($f->Initials) ?><?php if ($f->Image): ?><img src="<?= e($f->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
-                                                    <div class="tu-who"><a href="/Profile/Show/<?= $f->Id ?>"><?= e($f->FullName) ?></a><small><?= e($f->RoleLabel) ?></small></div>
-                                                    <a class="tu-view" href="/Profile/Show/<?= $f->Id ?>">View</a>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
                             <?php endif; ?>
                         </aside>
                     </div>
@@ -336,7 +314,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
 
                 <!-- ======================= PROFILE (About) ======================= -->
                 <section class="pf-sec <?= $tab === 'profile' ? 'active' : '' ?>" id="sec-profile">
-                    <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখে।' : 'ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখতে পারেন।' ?></p></div>
+                    <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু আপনি দেখতে পান।' : 'ফোন, ইমেইল ও ঠিকানা গোপন রাখা হয়।' ?></p></div>
                         <?php if ($isOwner): ?><a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
                     <?php partial('Profile/_ShowAbout', ['u' => $u, 'isOwner' => $isOwner, 'isTeacher' => $isTeacher, 'ti' => $ti, 'canPrivate' => $canPrivate, 'Model' => $Model]); ?>
                 </section>
@@ -365,29 +343,6 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                 </section>
                 <?php endif; ?>
 
-                <!-- ======================= FRIENDS ======================= -->
-                <section class="pf-sec <?= $tab === 'friends' ? 'active' : '' ?>" id="sec-friends">
-                    <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Friends' : e($firstName) . "'s Friends" ?></h2><p><?= (int)$Model->FriendCount ?> friend<?= $Model->FriendCount === 1 ? '' : 's' ?></p></div>
-                        <?php if ($isOwner): ?><a href="/Friends?tab=find" class="pf-btn"><i class="fas fa-user-plus"></i> Find People</a><?php endif; ?></div>
-                    <?php if ($friends): ?>
-                        <div class="pf-card fr-wrap-h">
-                            <label style="position:relative;display:block;flex:1;max-width:420px;margin:0;">
-                                <i class="fas fa-magnifying-glass" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#94A3B8;"></i>
-                                <input type="search" id="psFriendFilter" placeholder="ফ্রেন্ডদের মধ্যে খুঁজুন..." autocomplete="off"
-                                       style="width:100%;height:42px;border:1.5px solid #E8EEF5;border-radius:10px;padding:0 14px 0 40px;font-size:14.5px;outline:none;" />
-                            </label>
-                        </div>
-                    <?php endif; ?>
-                    <div class="fr-grid" id="psFriendsGrid">
-                        <?php if (!$friends): ?>
-                            <?php partial('Friends/_Empty', ['icon' => 'fa-user-group', 'title' => 'কোনো ফ্রেন্ড নেই',
-                                'text' => $isOwner ? 'স্টুডেন্ট বা টিচার খুঁজে ফ্রেন্ড রিকোয়েস্ট পাঠান।' : $firstName . ' এর এখনো কোনো ফ্রেন্ড নেই।',
-                                'btnText' => $isOwner ? 'Find People' : null, 'btnHref' => '/Friends?tab=find']); ?>
-                        <?php else: ?>
-                            <?php foreach ($friends as $f) partial('Friends/_PersonCard', ['p' => $f]); ?>
-                        <?php endif; ?>
-                    </div>
-                </section>
 
                 <?php if ($isOwner && !$isTeacher): ?>
                 <!-- ======================= MY CIRCULARS ======================= -->
@@ -511,7 +466,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                 <a href="?tab=profile#ab-address" data-ab-go="address" data-ab-open="1"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="?tab=profile#ab-links" data-ab-go="links" data-ab-open="1"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
                                 <?php if (!$isTeacher): ?><a href="?tab=profile#ab-tutor" data-ab-go="tutor"><i class="fas fa-chalkboard-user"></i> Become a Tutor <i class="fas fa-chevron-right chev"></i></a><?php endif; ?>
-                                <a href="/Friends"><i class="fas fa-user-group"></i> Friends & Requests <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="/Profile/Views"><i class="fas fa-eye"></i> Who viewed my profile <i class="fas fa-chevron-right chev"></i></a>
                             </div>
                         </div>
                         <div class="pf-card set-card" id="ab-password">

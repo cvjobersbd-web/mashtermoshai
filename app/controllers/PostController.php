@@ -13,7 +13,7 @@
  *  GET  /Post/Sharers?id=     → কে কে শেয়ার করেছে (JSON)
  *  GET  /Post/MentionSuggest?postId=&q= → কমেন্টে @ লিখলে নামের তালিকা (JSON)
  *
- * প্রাইভেসি: Public = সবাই, Friends = শুধু ফ্রেন্ড, OnlyMe = শুধু নিজে। অ্যাডমিন সব দেখতে ও মুছতে পারে।
+ * প্রাইভেসি: Public = সবাই, OnlyMe = শুধু নিজে (ফ্রেন্ড সিস্টেম বন্ধ)। অ্যাডমিন সব দেখতে ও মুছতে পারে।
  */
 class PostController extends Controller
 {

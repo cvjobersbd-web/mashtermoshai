@@ -9,6 +9,8 @@ abstract class Controller
     public function __construct()
     {
         $this->db = db();
+        // অ্যাডমিনকে বন্ধ করা / অ্যাডমিন থেকে সরানো হলে সাথে সাথে লগআউট
+        if (function_exists('validate_admin_session')) validate_admin_session();
     }
 
     /** View রেন্ডার করে। $view না দিলে বর্তমান Controller/Action ব্যবহার হয় */

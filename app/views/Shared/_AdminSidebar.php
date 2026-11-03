@@ -17,6 +17,8 @@ try {
 
 $pendingReviews = 0;
 try { $pendingReviews = db()->CountReviews('Pending'); } catch (Throwable $e) { }
+$pendingEduPosts = 0;
+try { $pendingEduPosts = (int)(db()->CountEduPostsByStatus()['Pending'] ?? 0); } catch (Throwable $e) { }
 $pendingPayments = 0;
 try { $pendingPayments = db()->CountPendingPayments(); } catch (Throwable $e) { }
 
@@ -270,6 +272,30 @@ try {
         .admin-cards-table td.td-actions::before { display: none; }
         .admin-cards-table td.td-actions .btn { min-width: 40px; min-height: 36px; }
     }
+
+    /* Settings সাব-মেনু */
+    .admin-sidebar .sg-parent { position: relative; }
+    .admin-sidebar .sg-parent > a { padding-right: 52px !important; }
+    .admin-sidebar .sg-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 8px; border: none;
+        background: transparent; color: rgba(255,255,255,.75); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: background .2s, color .2s; z-index: 2; }
+    .admin-sidebar .sg-toggle:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .admin-sidebar .sg-toggle i { transition: transform .25s; transform: rotate(-90deg); }
+    .admin-sidebar .sg-toggle.open i { transform: rotate(0deg); }
+    .admin-sidebar ul.sg-side { overflow: hidden; transition: height .35s cubic-bezier(.22,1,.36,1), margin .35s ease, border-color .35s ease; }
+    .admin-sidebar ul.sg-side li { opacity: 0; transform: translateX(-8px); transition: opacity .25s ease, transform .3s cubic-bezier(.22,1,.36,1); }
+    .admin-sidebar ul.sg-side.open li { opacity: 1; transform: none; }
+    .admin-sidebar ul.sg-side.open li:nth-child(2) { transition-delay: .03s; } .admin-sidebar ul.sg-side.open li:nth-child(3) { transition-delay: .06s; }
+    .admin-sidebar ul.sg-side.open li:nth-child(4) { transition-delay: .09s; } .admin-sidebar ul.sg-side.open li:nth-child(5) { transition-delay: .12s; }
+    .admin-sidebar ul.sg-side.open li:nth-child(6) { transition-delay: .15s; } .admin-sidebar ul.sg-side.open li:nth-child(7) { transition-delay: .18s; }
+    .admin-sidebar ul.sg-side:not(.open) { margin-top: 0; margin-bottom: 0; border-left-color: transparent; }
+    .admin-sidebar ul.sg-side { list-style: none; margin: 2px 0 6px; padding: 0 0 0 18px; border-left: 2px solid rgba(255,255,255,.08); margin-left: 30px; }
+    .admin-sidebar ul.sg-side li a { padding: 8px 12px !important; font-size: 13px !important; opacity: .8; border-radius: 8px; }
+    .admin-sidebar ul.sg-side li a i { font-size: 12px !important; width: 18px !important; }
+    .admin-sidebar ul.sg-side li a:hover { opacity: 1; }
+    .admin-sidebar ul.sg-side li a.active { opacity: 1; background: rgba(2,184,245,.18) !important; color: #fff !important; border-left: none !important; }
+
+    .adm-level { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: #CFE8F5; }
+    .adm-level.super { background: linear-gradient(135deg, #F5A623, #FFB300); color: #3B2600; }
 </style>
 
 
@@ -281,9 +307,10 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
+        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
-    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments;
+    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
 ?>
 <div class="admin-mbar">
     <button class="admin-mbar-btn" id="adminSidebarToggle" type="button" aria-label="Open admin menu" aria-controls="adminSidebar" aria-expanded="false">
@@ -302,16 +329,20 @@ try {
         <div>
             <h4><i class="fas fa-shield-alt me-2"></i>Admin Panel</h4>
             <small><?= e(site_settings()->GetSafeSiteName()) ?></small>
+            <span class="adm-level <?= admin_is_super() ? 'super' : '' ?>"><i class="fas <?= admin_is_super() ? 'fa-crown' : 'fa-user-shield' ?>"></i> <?= admin_is_super() ? 'Super Admin' : 'Admin' ?></span>
         </div>
         <button type="button" class="admin-sidebar-close" id="adminSidebarClose" aria-label="Close admin menu"><i class="fas fa-times"></i></button>
     </div>
 
     <ul class="admin-sidebar-menu">
+        <?php if (admin_can(admin_action_rule('Dashboard'))): ?>
         <li>
             <a href="/Admin/Dashboard" class="<?= $currentAction === 'Dashboard' ? 'active' : '' ?>">
                 <i class="fas fa-chart-pie"></i> Dashboard
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TeacherRequests'))): ?>
         <li>
             <a href="/Admin/TeacherRequests" class="<?= $currentAction === 'TeacherRequests' ? 'active' : '' ?>">
                 <i class="fas fa-user-graduate"></i> Teacher Requests
@@ -320,26 +351,34 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
 
         <!-- ✅ Teacher Overview -->
+        <?php if (admin_can(admin_action_rule('TeacherOverview'))): ?>
         <li>
             <a href="/Admin/TeacherOverview" class="<?= $currentAction === 'TeacherOverview' ? 'active' : '' ?>">
                 <i class="fas fa-chart-line"></i> Teacher Overview
             </a>
         </li>
+        <?php endif; ?>
 
         <!-- ✅ নতুন যুক্ত করা হলো: User Overview -->
+        <?php if (admin_can(admin_action_rule('UserOverview'))): ?>
         <li>
             <a href="/Admin/UserOverview" class="<?= $currentAction === 'UserOverview' ? 'active' : '' ?>">
                 <i class="fas fa-users-viewfinder"></i> User Overview
             </a>
         </li>
+        <?php endif; ?>
 
+        <?php if (admin_can(admin_action_rule('TuitionPosts'))): ?>
         <li>
             <a href="/Admin/TuitionPosts" class="<?= $currentAction === 'TuitionPosts' || $currentAction === 'AddTuitionPost' || $currentAction === 'EditTuitionPost' ? 'active' : '' ?>">
                 <i class="fas fa-clipboard-list"></i> Tuition Posts
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TuitionApplications'))): ?>
         <li>
             <a href="/Admin/TuitionApplications" class="<?= $currentAction === 'TuitionApplications' ? 'active' : '' ?>">
                 <i class="fas fa-user-check"></i> Tuition Applications
@@ -348,21 +387,37 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TutorRequests'))): ?>
         <li>
             <a href="/Admin/TutorRequests" class="<?= $currentAction === 'TutorRequests' ? 'active' : '' ?>">
                 <i class="fas fa-envelope-open-text"></i> Tutor Requests
             </a>
         </li>
+        <?php endif; ?>
         <li>
             <a href="/Helpdesk" class="<?= $currentControllerSidebar === 'Helpdesk' ? 'active' : '' ?>">
                 <i class="fas fa-headset"></i> Helpdesk
             </a>
         </li>
+        <?php if (admin_can(admin_action_rule('ManageNotices'))): ?>
         <li>
             <a href="/Admin/ManageNotices" class="<?= $currentAction === 'ManageNotices' || $currentAction === 'AddNotice' || $currentAction === 'EditNotice' ? 'active' : '' ?>">
                 <i class="fas fa-newspaper"></i> News &amp; Announcements
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('EduFeed'))): ?>
+        <li>
+            <a href="/Admin/EduFeed" class="<?= $currentAction === 'EduFeed' ? 'active' : '' ?>">
+                <i class="fas fa-graduation-cap"></i> Educational Feed
+                <?php if ($pendingEduPosts > 0): ?>
+                    <span class="badge-sidebar warning"><?= e($pendingEduPosts) ?></span>
+                <?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Reviews'))): ?>
         <li>
             <a href="/Admin/Reviews" class="<?= $currentAction === 'Reviews' ? 'active' : '' ?>">
                 <i class="fas fa-star"></i> Reviews
@@ -371,6 +426,8 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Payments'))): ?>
         <li>
             <a href="/Admin/Payments" class="<?= $currentAction === 'Payments' ? 'active' : '' ?>">
                 <i class="fas fa-money-bill-wave"></i> Payments
@@ -379,21 +436,81 @@ try {
                 <?php endif; ?>
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('PaymentMethods'))): ?>
         <li>
             <a href="/Admin/PaymentMethods" class="<?= $currentAction === 'PaymentMethods' ? 'active' : '' ?>">
                 <i class="fas fa-wallet"></i> Payment Methods
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Packages'))): ?>
         <li>
             <a href="/Admin/Packages" class="<?= $currentAction === 'Packages' ? 'active' : '' ?>">
                 <i class="fas fa-box-open"></i> Packages
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Categories'))): ?>
         <li>
-            <a href="/Admin/Settings" class="<?= $currentAction === 'Settings' ? 'active' : '' ?>">
-                <i class="fas fa-cog"></i> Settings
+            <a href="/Admin/Categories" class="<?= $currentAction === 'Categories' || $currentAction === 'EditCategory' ? 'active' : '' ?>">
+                <i class="fas fa-layer-group"></i> Categories
             </a>
         </li>
+        <?php endif; ?>
+        <?php if (admin_is_super()): ?>
+        <li>
+            <a href="/Admin/Admins" class="<?= $currentAction === 'Admins' ? 'active' : '' ?>">
+                <i class="fas fa-user-shield"></i> Admins
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/ActivityLog" class="<?= $currentAction === 'ActivityLog' ? 'active' : '' ?>">
+                <i class="fas fa-clock-rotate-left"></i> Activity Log
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Settings'))): ?>
+        <li>
+            <?php $sgOpen = $currentAction === 'Settings'; $sgSideCur = $sgOpen ? (string)input_str('s', '') : '-'; ?>
+            <div class="sg-parent">
+                <a href="/Admin/Settings" class="<?= $sgOpen && $sgSideCur === '' ? 'active' : '' ?><?= $sgOpen ? ' sg-here' : '' ?>" data-sg-side="">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <button type="button" class="sg-toggle<?= $sgOpen ? ' open' : '' ?>" id="sgToggle" aria-expanded="<?= $sgOpen ? 'true' : 'false' ?>" aria-controls="sgSide" title="সাব-মেনু খুলুন / বন্ধ করুন">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <?php if (function_exists('admin_settings_groups')): ?>
+                <ul class="sg-side<?= $sgOpen ? ' open' : '' ?>" id="sgSide"<?= $sgOpen ? '' : ' style="height:0" aria-hidden="true"' ?>>
+                    <?php foreach (admin_settings_groups() as $k => $g): ?>
+                        <li><a href="/Admin/Settings?s=<?= $k ?>" data-sg-side="<?= $k ?>" class="<?= $sgSideCur === $k ? 'active' : '' ?>"><i class="fas <?= $g['icon'] ?>"></i> <?= e($g['short']) ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <script>
+            (function () {
+                var b = document.getElementById('sgToggle'), ul = document.getElementById('sgSide'); if (!b || !ul) return;
+                var busy = false;
+                b.addEventListener('click', function (e) {
+                    e.preventDefault(); e.stopPropagation();
+                    var open = !ul.classList.contains('open');
+                    b.classList.toggle('open', open); b.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    ul.setAttribute('aria-hidden', open ? 'false' : 'true');
+                    // উচ্চতা মেপে ধীরে ধীরে খোলা/বন্ধ (smooth slide)
+                    var from = ul.getBoundingClientRect().height;
+                    ul.classList.toggle('open', open);
+                    var to = open ? ul.scrollHeight : 0;
+                    ul.style.height = from + 'px';
+                    ul.offsetHeight; // reflow
+                    ul.style.height = to + 'px';
+                    clearTimeout(ul._t);
+                    ul._t = setTimeout(function () { if (ul.classList.contains('open')) ul.style.height = 'auto'; }, 360);
+                });
+            })();
+            </script>
+        </li>
+        <?php endif; ?>
         <li style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px; padding-top: 10px;">
             <a href="#" onclick="document.documentElement.classList.remove('a-open'); adminChangePasswordFromSidebar(); return false;" style="color: #FFB300;">
                 <i class="fas fa-key"></i> Change Password

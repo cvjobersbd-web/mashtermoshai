@@ -2,7 +2,7 @@
 /**
  * টিচারের প্রোফাইল (শুধু টিচারদের জন্য)।
  * বাম: মেনু + প্রোমো · মাঝে: স্ট্যাট কার্ড + পোস্ট (Study Material / Class Update / Notice ...) · ডান: My Subjects, Upcoming Classes, Recent Students
- * সেকশন: overview | profile | subjects | students | schedule | tuitionposts | saved | earnings | reviews | certificates | friends | settings
+ * সেকশন: overview | profile | subjects | students | schedule | tuitionposts | saved | earnings | reviews | certificates | views | settings
  */
 $u = $Model->User;
 $rel = $Model->Relation;
@@ -15,7 +15,6 @@ $img = is_blank($u->ProfileImageLink) ? null : $u->ProfileImageLink;
 $ti = $Model->TeacherInfo;
 $canPrivate = $Model->CanSeePrivate;
 $tab = $Model->Tab;
-$friends = $Model->Friends;
 $intro = $Model->Intro;
 $tIntro = $Model->TIntro;
 $prefs = db()->GetTeachPrefs((int)$u->Id);
@@ -46,10 +45,10 @@ $nav = $isOwner ? [
     ['overview', 'Dashboard', 'fa-house'], ['profile', 'My Profile', 'fa-user'], ['subjects', 'My Subjects', 'fa-book-open'],
     ['students', 'My Students', 'fa-user-graduate'], ['schedule', 'My Schedule', 'fa-calendar-days'], ['tuitionposts', 'My Tuition Posts', 'fa-file-lines'],
     ['saved', 'Saved Items', 'fa-bookmark'], ['earnings', 'My Earnings', 'fa-wallet'], ['reviews', 'My Reviews', 'fa-star'],
-    ['certificates', 'My Certificates', 'fa-award'], ['friends', 'Friends', 'fa-user-group'], ['settings', 'Settings', 'fa-gear'],
+    ['certificates', 'My Certificates', 'fa-award'], ['views', 'Profile Views', 'fa-eye'], ['settings', 'Settings', 'fa-gear'],
 ] : [
     ['overview', 'Overview', 'fa-house'], ['profile', 'Profile', 'fa-user'], ['subjects', 'Subjects', 'fa-book-open'],
-    ['reviews', 'Reviews', 'fa-star'], ['certificates', 'Certificates', 'fa-award'], ['friends', 'Friends', 'fa-user-group'],
+    ['reviews', 'Reviews', 'fa-star'], ['certificates', 'Certificates', 'fa-award'],
 ];
 
 $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -315,7 +314,6 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <?php if ($isOwner): ?>
                             <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
                         <?php elseif (!$isAdminViewer): ?>
-                            <div class="fr-actions" data-uid="<?= (int)$u->Id ?>" data-rel="<?= e($rel) ?>"><?= friend_actions_html((int)$u->Id, $rel) ?></div>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
                                 <i class="<?= $Model->TutorSaved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $Model->TutorSaved ? 'Saved' : 'Save' ?></span>
                             </button>
@@ -330,11 +328,11 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
             <div class="pf-nav-col">
                 <nav class="pf-card pf-nav" aria-label="Profile sections">
                     <?php foreach ($nav as [$k, $label, $icon]): ?>
-                        <a href="?tab=<?= $k ?>" data-tab="<?= $k ?>" class="<?= $tab === $k ? 'active' : '' ?>"><i class="fas <?= $icon ?>"></i> <?= e($label) ?>
+                        <a href="<?= $k === 'views' ? '/Profile/Views' : '?tab=' . $k ?>"<?= $k === 'views' ? '' : ' data-tab="' . $k . '"' ?> class="<?= $tab === $k ? 'active' : '' ?>"><i class="fas <?= $icon ?>"></i> <?= e($label) ?>
                             <?php if ($k === 'saved' && $saved): ?><span class="pf-n" data-saved-count><?= count($saved) ?></span><?php endif; ?>
                             <?php if ($k === 'students' && $Model->StudentCount): ?><span class="pf-n"><?= (int)$Model->StudentCount ?></span><?php endif; ?>
                             <?php if ($k === 'reviews' && $rs['count']): ?><span class="pf-n"><?= (int)$rs['count'] ?></span><?php endif; ?>
-                            <?php if ($k === 'friends' && $Model->FriendCount): ?><span class="pf-n"><?= (int)$Model->FriendCount ?></span><?php endif; ?>
+                            <?php if ($k === 'views' && !empty($Model->ProfileViews['stats']['views90'])): ?><span class="pf-n"><?= (int)$Model->ProfileViews['stats']['views90'] ?></span><?php endif; ?>
                         </a>
                         <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
@@ -355,6 +353,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
             <div class="pf-main">
                 <!-- ======================= OVERVIEW / DASHBOARD ======================= -->
                 <section class="pf-sec <?= $tab === 'overview' ? 'active' : '' ?>" id="sec-overview">
+                    <?php if ($isOwner && $Model->ProfileViews) partial('Profile/_ViewsCard', ['pv' => $Model->ProfileViews]); ?>
                     <div class="pf-stats">
                         <?php if ($isOwner): ?>
                             <a href="?tab=students" data-tab="students" class="pf-card st">
@@ -392,18 +391,14 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                 <span class="st-bars" aria-hidden="true"><?php foreach (array_slice($earn['months'], 1) as $v): ?><i style="height: <?= max(12, (int)round($v / $mx * 100)) ?>%"></i><?php endforeach; ?></span>
                             </a>
                         <?php else: ?>
-                            <a href="?tab=friends" data-tab="friends" class="pf-card st">
-                                <span class="st-ico st-friend"><i class="fas fa-user-group"></i></span>
+                            <div class="pf-card st">
+                                <span class="st-ico st-friend"><i class="fas fa-calendar-check"></i></span>
                                 <div class="st-body">
-                                    <div class="st-t">Friends</div>
-                                    <div class="st-v"><b><?= (int)$Model->FriendCount ?></b><span><?= $Model->MutualCount ? (int)$Model->MutualCount . ' mutual' : 'friends' ?></span></div>
-                                    <div class="st-faces">
-                                        <?php foreach (array_slice($friends, 0, 4) as $f): ?>
-                                            <span class="fc" title="<?= e($f->FullName) ?>"><?= e($f->Initials) ?><?php if ($f->Image): ?><img src="<?= e($f->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
+                                    <div class="st-t">Member Since</div>
+                                    <div class="st-v"><b><?= e(fmt_date($u->CreatedAt, 'M Y', '—')) ?></b></div>
+                                    <div class="st-empty"><?= e($isTeacher ? 'Tutor' : 'Student') ?> at মাষ্টার মশাই</div>
                                 </div>
-                            </a>
+                            </div>
                             <div class="pf-card st">
                                 <span class="st-ico st-tut"><i class="fas fa-user-graduate"></i></span>
                                 <div class="st-body">
@@ -462,7 +457,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <div class="pf-card pf-empty" id="psEmpty" <?= $Model->Posts ? 'hidden' : '' ?>>
                                 <div class="ei"><i class="far fa-newspaper"></i></div>
                                 <h5><?= $isOwner ? 'স্টুডেন্টদের সাথে প্রথম আপডেট শেয়ার করুন' : 'দেখানোর মতো কোনো পোস্ট নেই' ?></h5>
-                                <p><?= $isOwner ? 'নোট/PDF শেয়ার করতে Study Material, ক্লাসের খবর জানাতে Class Update বা Notice দিন।' : ($rel === 'friends' ? e($firstName) . ' এখনো কিছু পোস্ট করেননি।' : 'ফ্রেন্ড হলে শুধু-ফ্রেন্ডদের পোস্টও দেখতে পাবেন।') ?></p>
+                                <p><?= $isOwner ? 'নোট/PDF শেয়ার করতে Study Material, ক্লাসের খবর জানাতে Class Update বা Notice দিন।' : e($firstName) . ' এখনো কিছু পোস্ট করেননি।' ?></p>
                             </div>
                             <?php if ($Model->HasMore): ?>
                                 <button type="button" class="pc-loadmore" id="psMore"><i class="fas fa-angles-down"></i> আরো পোস্ট দেখুন</button>
@@ -560,7 +555,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
 
                 <!-- ======================= PROFILE (About) ======================= -->
                 <section class="pf-sec <?= $tab === 'profile' ? 'active' : '' ?>" id="sec-profile">
-                    <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখে।' : 'ফোন, ইমেইল ও ঠিকানা শুধু ফ্রেন্ডরা দেখতে পারেন।' ?></p></div>
+                    <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Profile' : 'Profile' ?></h2><p><?= $isOwner ? 'আপনার সব তথ্য — অন্যরা যা দেখতে পায়। ফোন, ইমেইল ও ঠিকানা শুধু আপনি দেখতে পান।' : 'ফোন, ইমেইল ও ঠিকানা গোপন রাখা হয়।' ?></p></div>
                         <?php if ($isOwner): ?><a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a><?php endif; ?></div>
                     <?php partial('Profile/_ShowAbout', ['u' => $u, 'isOwner' => $isOwner, 'isTeacher' => true, 'ti' => $ti, 'canPrivate' => $canPrivate, 'Model' => $Model]); ?>
                 </section>
@@ -653,20 +648,6 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                     <?php endif; ?>
                 </section>
 
-                <!-- ======================= FRIENDS ======================= -->
-                <section class="pf-sec <?= $tab === 'friends' ? 'active' : '' ?>" id="sec-friends">
-                    <div class="pf-sec-h"><div><h2><?= $isOwner ? 'My Friends' : e($firstName) . "'s Friends" ?></h2><p><?= (int)$Model->FriendCount ?> friend<?= $Model->FriendCount === 1 ? '' : 's' ?></p></div>
-                        <?php if ($isOwner): ?><a href="/Friends?tab=find" class="pf-btn"><i class="fas fa-user-plus"></i> Find People</a><?php endif; ?></div>
-                    <div class="fr-grid" id="psFriendsGrid">
-                        <?php if (!$friends): ?>
-                            <?php partial('Friends/_Empty', ['icon' => 'fa-user-group', 'title' => 'কোনো ফ্রেন্ড নেই',
-                                'text' => $isOwner ? 'স্টুডেন্ট বা টিচার খুঁজে ফ্রেন্ড রিকোয়েস্ট পাঠান।' : $firstName . ' এর এখনো কোনো ফ্রেন্ড নেই।',
-                                'btnText' => $isOwner ? 'Find People' : null, 'btnHref' => '/Friends?tab=find']); ?>
-                        <?php else: ?>
-                            <?php foreach ($friends as $f) partial('Friends/_PersonCard', ['p' => $f]); ?>
-                        <?php endif; ?>
-                    </div>
-                </section>
 
                 <?php if ($isOwner): ?>
                 <!-- ======================= STUDENTS ======================= -->
@@ -874,7 +855,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                 <a href="?tab=profile#ab-address" data-ab-go="address" data-ab-open="1"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="?tab=profile#ab-links" data-ab-go="links" data-ab-open="1"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="/Teacher/TeacherDashboard"><i class="fas fa-gauge"></i> Teacher Dashboard <i class="fas fa-chevron-right chev"></i></a>
-                                <a href="/Friends"><i class="fas fa-user-group"></i> Friends & Requests <i class="fas fa-chevron-right chev"></i></a>
+                                <a href="/Profile/Views"><i class="fas fa-eye"></i> Who viewed my profile <i class="fas fa-chevron-right chev"></i></a>
                             </div>
                         </div>
                         <div class="pf-card set-card" id="ab-password">

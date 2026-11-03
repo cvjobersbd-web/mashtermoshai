@@ -1,6 +1,6 @@
 <?php
 /**
- * প্রোফাইল পেজের কমন JS (স্টুডেন্ট + টিচার): সেকশন ট্যাব, পোস্ট ফিড, ফ্রেন্ড ফিল্টার, Saved, প্রোফাইল ছবি, কভার, মডাল, পাসওয়ার্ড।
+ * প্রোফাইল পেজের কমন JS (স্টুডেন্ট + টিচার): সেকশন ট্যাব, পোস্ট ফিড, Saved, প্রোফাইল ছবি, কভার, মডাল, পাসওয়ার্ড।
  * দরকার: $u, $isOwner, $tab, $rel, $coverY
  * পেজের নিজস্ব JS window.PF থেকে হেল্পারগুলো পায়।
  */
@@ -80,16 +80,6 @@
         } catch (e) { more.disabled = false; more.innerHTML = 'আবার চেষ্টা করুন'; }
     });
 
-    var ff = $('#psFriendFilter');
-    if (ff) ff.addEventListener('input', function () {
-        var q = ff.value.trim().toLowerCase();
-        $$('#psFriendsGrid .fr-card').forEach(function (c) { c.style.display = !q || (c.getAttribute('data-name') || '').indexOf(q) !== -1 ? '' : 'none'; });
-    });
-    document.addEventListener('fr:relation', function (e) {
-        if (String(e.detail.uid) !== String(OWNER)) return;
-        var was = <?= js($rel === 'friends') ?>;
-        if ((e.detail.rel === 'friends') !== was) setTimeout(function () { hardReload(); }, 900);
-    });
 
     // ===== Saved সেকশন: ফিল্টার + আনসেভ করলে সরে যায় =====
     var svF = $('#svFilters');

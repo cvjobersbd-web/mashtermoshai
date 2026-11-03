@@ -12,6 +12,10 @@ require_once __DIR__ . '/CircularData.php';
 require_once __DIR__ . '/FindTutorData.php';
 require_once __DIR__ . '/PackageData.php';
 require_once __DIR__ . '/PaymentData.php';
+require_once __DIR__ . '/CategoryData.php';
+require_once __DIR__ . '/EduFeedData.php';
+require_once __DIR__ . '/ProfileViewData.php';
+require_once __DIR__ . '/AdminAccessData.php';
 
 class Db
 {
@@ -20,6 +24,10 @@ class Db
     use FindTutorData;
     use PackageData;
     use PaymentData;
+    use CategoryData;
+    use EduFeedData;
+    use ProfileViewData;
+    use AdminAccessData;
 
     private PDO $pdo;
 
@@ -356,7 +364,7 @@ class Db
             $this->exec('DELETE FROM `TeacherRequests` WHERE `UserId` = :id', ['id' => $userId]);
             $n = $this->exec('DELETE FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
             $this->pdo->commit();
-            if ($n > 0) { $this->DeleteFriendshipsOfUser($userId); $this->DeleteProfileContentOfUser($userId); $this->DeleteTeacherDataOf($userId); }
+            if ($n > 0) { $this->DeleteFriendshipsOfUser($userId); $this->DeleteProfileViewsOfUser($userId); $this->DeleteProfileContentOfUser($userId); $this->DeleteTeacherDataOf($userId); }
             return $n > 0;
         } catch (Throwable $e) {
             $this->pdo->rollBack();
@@ -2018,6 +2026,8 @@ class Db
     public function GetFriendRelation(int $me, int $other): string
     {
         if ($me === $other) return 'self';
+        // ফ্রেন্ড সিস্টেম বন্ধ — কেউ কারো "ফ্রেন্ড" নয় (প্রোফাইল শুধু দেখা যায়; কে দেখল তা ProfileViewData তে)
+        if (!self::FRIENDS_ENABLED) return 'none';
         try {
             $f = $this->GetFriendship($me, $other);
         } catch (Throwable $e) { return 'none'; }
@@ -2049,6 +2059,7 @@ class Db
      */
     public function SendFriendRequest(int $me, int $other): string
     {
+        if (!self::FRIENDS_ENABLED) return 'none';
         try {
             $this->EnsureFriendshipsTable();
             $f = $this->GetFriendship($me, $other);
@@ -2107,6 +2118,7 @@ class Db
     /** @return Obj[] আমার ফ্রেন্ড লিস্ট */
     public function GetFriends(int $me): array
     {
+        if (!self::FRIENDS_ENABLED) return [];
         try {
             $this->EnsureFriendshipsTable();
             $rows = $this->all('SELECT f.`Id` AS FriendshipId, COALESCE(f.`RespondedAt`, f.`CreatedAt`) AS Since, \'friends\' AS Relation, ' . self::FRIEND_USER_COLS . '
@@ -2121,6 +2133,7 @@ class Db
     /** @return int[] আমার ফ্রেন্ডদের Id */
     public function GetFriendIds(int $me): array
     {
+        if (!self::FRIENDS_ENABLED) return [];
         try {
             $this->EnsureFriendshipsTable();
             $ids = [];
@@ -2135,6 +2148,7 @@ class Db
     /** @return Obj[] আমার কাছে আসা রিকোয়েস্ট */
     public function GetIncomingFriendRequests(int $me): array
     {
+        if (!self::FRIENDS_ENABLED) return [];
         try {
             $this->EnsureFriendshipsTable();
             $rows = $this->all('SELECT f.`Id` AS FriendshipId, f.`CreatedAt` AS Since, \'received\' AS Relation, ' . self::FRIEND_USER_COLS . '
@@ -2147,6 +2161,7 @@ class Db
     /** @return Obj[] আমার পাঠানো (এখনো Accept হয়নি) রিকোয়েস্ট */
     public function GetSentFriendRequests(int $me): array
     {
+        if (!self::FRIENDS_ENABLED) return [];
         try {
             $this->EnsureFriendshipsTable();
             $rows = $this->all('SELECT f.`Id` AS FriendshipId, f.`CreatedAt` AS Since, \'sent\' AS Relation, ' . self::FRIEND_USER_COLS . '
@@ -2158,6 +2173,7 @@ class Db
 
     public function CountIncomingFriendRequests(int $me): int
     {
+        if (!self::FRIENDS_ENABLED) return 0;
         try {
             $this->EnsureFriendshipsTable();
             return (int)$this->scalar('SELECT COUNT(*) FROM `Friendships` WHERE `AddresseeId` = :me AND `Status` = \'Pending\'', ['me' => $me]);
@@ -2265,7 +2281,9 @@ class Db
     // Reaction: like | love | care | haha | wow | sad | angry
     // কমেন্টে এক লেভেলের রিপ্লাই (রিপ্লাইয়ের রিপ্লাই হলে @নাম দিয়ে একই থ্রেডে যায়)
     // ============================================================
-    public const POST_PRIVACY = ['Public', 'Friends', 'OnlyMe'];
+    /** ফ্রেন্ড সিস্টেম বন্ধ (true করলে আবার চালু হবে) */
+    public const FRIENDS_ENABLED = false;
+    public const POST_PRIVACY = ['Public', 'OnlyMe'];
     public const REACTIONS = ['like'];
     public const POST_TYPES = ['post', 'study', 'question', 'achievement', 'poll', 'material', 'update', 'notice'];
     /** শুধু টিচাররা যে ধরনের পোস্ট দিতে পারে */

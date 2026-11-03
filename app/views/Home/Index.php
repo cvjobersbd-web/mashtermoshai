@@ -4,7 +4,7 @@ $settings = ($ViewBag->SiteSettings instanceof SiteSettings) ? $ViewBag->SiteSet
 $heroImages = $settings->GetHeroImageList();
 if (count($heroImages) == 0)
 {
-    $heroImages[] = "https://i.ibb.co.com/pqbXLMx/learn-learning-education-studying-concept.jpg";
+    $heroImages[] = "https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png";
 }
 $heroImages = array_values($heroImages);
 
@@ -17,148 +17,120 @@ $tutorSectionImg = is_blank($settings->TutorSectionImageUrl)
 $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 ?>
 
+<?php if (home_section_on('hero')): ?>
 <!-- ========================================= -->
-<!-- HERO SECTION -->
+<!-- HERO SECTION — লোগো + শিরোনাম + সার্চ + ডান পাশে ইলাস্ট্রেশন -->
 <!-- ========================================= -->
-<section class="relative overflow-hidden bg-white">
-    <div class="grid grid-cols-1 lg:grid-cols-2 min-h-[85vh]">
-
-        <!-- Left Side -->
-        <div class="relative flex flex-col justify-center px-4 sm:px-6 md:px-10 lg:px-20 py-12 sm:py-16 md:py-20 lg:py-0"
-             style="background-color:#CFF2FC;
-            background-image: radial-gradient(#A9DDEE 1px, transparent 1px);
-            background-size: 26px 26px;">
-
-            <div class="relative max-w-lg mx-auto lg:mx-0">
-                <h1 class="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.15] text-center lg:text-left"
-                    style="color:#08224A;">
-                    Find the Right Tutor in Bangladesh
-                </h1>
-
-                <p class="mt-4 sm:mt-6 text-sm sm:text-base md:text-lg leading-6 sm:leading-7 md:leading-8 text-center lg:text-left"
-                   style="color:<?= e($settings->TextColor) ?>;">
-                    Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, or post your tuition requirement and connect with the right teacher.
-                </p>
-
-                <?php
-                    // লগইন থাকলে Tuition Circular-এ সরাসরি পোস্ট লেখার বক্স খোলে, না থাকলে আগে লগইন
-                    $postReqHref = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
-                ?>
-                <div class="text-center lg:text-left mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-4 justify-center lg:justify-start">
-                    <a href="/FindTutor"
-                       class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-white transition hover:opacity-90 text-sm sm:text-base shadow-lg"
-                       style="background-color:<?= e($settings->PrimaryColor) ?>; white-space:nowrap;">
-                        Find a Tutor
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0-4 4m4-4H3" />
-                        </svg>
-                    </a>
-                    <a href="<?= e($postReqHref) ?>"
-                       class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold border transition hover:opacity-80 text-sm sm:text-base"
-                       style="color:#0099D6; border-color:<?= e($settings->PrimaryColor) ?>; background-color:transparent; white-space:nowrap;">
-                        Post Your Tuition Requirement
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0-4 4m4-4H3" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            <div class="hidden lg:block absolute top-0 right-0 h-full w-40 pointer-events-none"
-                 style="background: linear-gradient(to right, #CFF2FC 0%, rgba(207,242,252,0.7) 35%, rgba(207,242,252,0) 100%);
-                transform: translateX(100%);
-                z-index: 10;">
-            </div>
+<?php
+    // লগইন থাকলে Tuition Circular-এ সরাসরি পোস্ট লেখার বক্স খোলে, না থাকলে আগে লগইন
+    $postReqHref = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
+    $heroSlider = count($heroImages) > 1 && $settings->SliderEnabled;
+?>
+<style>
+    .hx { position: relative; overflow: hidden; margin-top: -80px; padding-top: 80px; background: linear-gradient(180deg, #F4F9FE 0%, #EDF5FD 55%, #F3F8FE 100%); }
+    .hx-deco { position: absolute; pointer-events: none; z-index: 0; }
+    .hx-arc { width: 420px; height: 420px; }
+    .hx-arc circle { fill: none; stroke: #D5E6F6; stroke-width: 1.6; }
+    .hx-arc.tl { top: -190px; left: -230px; }
+    .hx-arc.br { bottom: -270px; right: -250px; }
+    .hx-dots { width: 132px; height: 104px; background-image: radial-gradient(#C3D9EE 2px, transparent 2.4px); background-size: 24px 24px; }
+    .hx-dots.tr { top: 110px; right: 50px; }
+    .hx-dots.bl { bottom: 34px; left: 38px; width: 100px; height: 80px; }
+    .hx-in { position: relative; z-index: 1; max-width: 1920px; margin: 0 auto; padding: 56px 6vw 64px 9.4vw; display: grid; grid-template-columns: minmax(0, 47fr) minmax(0, 53fr); gap: 2vw; align-items: center; }
+    .hx h1 { margin: 0; font-family: var(--font-heading); font-weight: 700; font-size: clamp(34px, 3.7vw, 70px); line-height: 1.14; color: #0B1F44; letter-spacing: -.6px; }
+    .hx h1 .l1 { white-space: nowrap; }
+    .hx h1 .bd { position: relative; display: inline-block; color: #1677E5; padding-bottom: 14px; }
+    .hx h1 .bd svg { position: absolute; left: 2%; bottom: -2px; width: 98%; height: 16px; overflow: visible; }
+    .hx-p { margin: 30px 0 0; max-width: 690px; font-size: clamp(16px, 1.17vw, 22.5px); line-height: 1.55; color: #4B5563; font-weight: 500; }
+    .hx-search { margin-top: 36px; max-width: 740px; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px; padding: 8px 8px 8px 22px;
+        box-shadow: 0 10px 30px rgba(15,52,103,.10), 0 1px 3px rgba(15,52,103,.06); border: 1px solid #E6EEF7; }
+    .hx-search i { color: #6B7280; font-size: 21px; }
+    .hx-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 18px; color: #0B1F44; font-family: inherit; padding: 12px 4px; }
+    .hx-search input::placeholder { color: #6B7280; }
+    .hx-search button { flex-shrink: 0; border: none; border-radius: 10px; background: #1677E5; color: #fff; font-weight: 700; font-size: 19px; padding: 0 34px; height: 56px; cursor: pointer;
+        font-family: inherit; transition: background .2s, transform .15s; white-space: nowrap; }
+    .hx-search button:hover { background: #0F63C8; }
+    .hx-search:focus-within { border-color: #9CC7F5; box-shadow: 0 10px 30px rgba(15,52,103,.12), 0 0 0 4px rgba(22,119,229,.10); }
+    .hx-post { margin-top: 30px; display: inline-flex; align-items: center; gap: 16px; padding: 18px 34px; border: 2px solid #1677E5; border-radius: 999px; color: #1263C8; font-weight: 700;
+        font-size: 19px; text-decoration: none; background: transparent; transition: background .2s, color .2s; white-space: nowrap; }
+    .hx-post:hover { background: #1677E5; color: #fff; }
+    .hx-post i { font-size: 17px; transition: transform .2s; }
+    .hx-post:hover i { transform: translateX(4px); }
+    .hx-art { position: relative; display: flex; align-items: center; justify-content: center; min-height: 420px; }
+    .hx-art img { display: block; width: 100%; max-width: 820px; height: auto; object-fit: contain; }
+    .hx-art .hero-slide { position: absolute; inset: 0; margin: auto; transition: opacity 1s ease; }
+    .hx-art.slider { aspect-ratio: 16 / 12; }
+    .hx-art.slider .hero-slide { height: 100%; }
+    .hx-dotsnav { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
+    .hx-dotsnav button { width: 10px; height: 10px; border-radius: 50%; border: none; padding: 0; cursor: pointer; background: #BCD3EA; transition: all .3s; }
+    .hx-dotsnav button.on { background: #1677E5; transform: scale(1.3); }
+    @media (max-width: 1280px) { .hx-in { padding: 40px 34px 48px 56px; gap: 24px; } .hx h1 .l1 { white-space: normal; } }
+    @media (max-width: 1024px) {
+        .hx-in { grid-template-columns: minmax(0, 1fr); padding: 34px 28px 46px; text-align: left; }
+        .hx-text { min-width: 0; }
+        .hx-art { order: 2; min-height: 0; max-width: 680px; margin: 0 auto; width: 100%; }
+        .hx-arc.tl { top: -230px; left: -230px; } .hx-dots.tr { top: 96px; right: 20px; }
+    }
+    @media (max-width: 640px) {
+        .hx-in { padding: 22px 16px 36px; gap: 18px; }
+        .hx h1 { font-size: 32px; } .hx h1 .bd { padding-bottom: 10px; } .hx h1 .bd svg { height: 12px; }
+        .hx-p { margin-top: 16px; font-size: 15.5px; }
+        .hx-search { margin-top: 22px; padding: 6px 6px 6px 14px; gap: 6px; }
+        .hx-search i { font-size: 17px; } .hx-search input { font-size: 15px; padding: 10px 2px; }
+        .hx-search button { font-size: 15px; padding: 0 16px; height: 46px; }
+        .hx-post { margin-top: 18px; padding: 14px 22px; font-size: 15.5px; gap: 10px; width: 100%; justify-content: center; }
+        .hx-dots.tr, .hx-dots.bl { display: none; }
+        .hx-arc { transform: scale(.7); }
+    }
+</style>
+<section class="hx" aria-label="Find the Right Tutor in Bangladesh">
+    <svg class="hx-deco hx-arc tl" viewBox="0 0 420 420" aria-hidden="true"><circle cx="210" cy="210" r="150" /><circle cx="210" cy="210" r="178" /><circle cx="210" cy="210" r="206" /></svg>
+    <svg class="hx-deco hx-arc br" viewBox="0 0 420 420" aria-hidden="true"><circle cx="210" cy="210" r="150" /><circle cx="210" cy="210" r="178" /><circle cx="210" cy="210" r="206" /></svg>
+    <span class="hx-deco hx-dots tr"></span><span class="hx-deco hx-dots bl"></span>
+    <div class="hx-in">
+        <div class="hx-text">
+            <h1><span class="l1">Find the Right Tutor</span><br>in <span class="bd">Bangladesh<svg viewBox="0 0 240 16" preserveAspectRatio="none" aria-hidden="true"><path d="M3 12 C 70 2, 170 1, 237 9" fill="none" stroke="#1677E5" stroke-width="4" stroke-linecap="round" /></svg></span></h1>
+            <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, or post your tuition requirement and connect with the right teacher.</p>
+            <form class="hx-search" action="/FindTutor" method="get" role="search">
+                <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" name="q" maxlength="60" placeholder="Search by subject, class or location..." aria-label="Search by subject, class or location" />
+                <button type="submit">Find a Tutor</button>
+            </form>
+            <a class="hx-post" href="<?= e($postReqHref) ?>">Post Your Tuition Requirement <i class="fas fa-arrow-right"></i></a>
         </div>
 
-        <!-- Right Side: Image / Slider -->
-        <div class="relative min-h-[250px] sm:min-h-[300px] md:min-h-[350px] lg:min-h-full order-first lg:order-last overflow-hidden">
-
-            <?php if (count($heroImages) > 1 && $settings->SliderEnabled): ?>
-                <!-- ✅ Slider Mode: Multiple Images -->
-                <?php $idx = 0;
-                foreach ($heroImages as $img): ?>
-                    <img src="<?= e($img) ?>"
-                         alt="Hero image <?= e($idx + 1) ?>"
-                         class="hero-slide absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
-                         style="opacity:<?= e($idx == 0 ? "1" : "0") ?>;"
-                         data-index="<?= e($idx) ?>" />
-                    <?php $idx++;
-                endforeach; ?>
-
-                <!-- Slider Dots -->
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                    <?php for ($i = 0; $i < count($heroImages); $i++): ?>
-                        <button class="slider-dot" data-index="<?= e($i) ?>"
-                                style="width:10px; height:10px; border-radius:50%; border:none; cursor:pointer; background:<?= e($i == 0 ? "white" : "rgba(255,255,255,0.5)") ?>; transition: all 0.3s;"></button>
-                    <?php endfor; ?>
+        <div class="hx-art<?= $heroSlider ? ' slider' : '' ?>">
+            <?php if ($heroSlider): ?>
+                <?php foreach ($heroImages as $idx => $img): ?>
+                    <img src="<?= e($img) ?>" alt="<?= $idx === 0 ? 'শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন' : '' ?>" class="hero-slide" style="opacity:<?= $idx === 0 ? '1' : '0' ?>;" data-index="<?= (int)$idx ?>"<?= $idx === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?> />
+                <?php endforeach; ?>
+                <div class="hx-dotsnav">
+                    <?php foreach ($heroImages as $idx => $img): ?><button type="button" class="slider-dot<?= $idx === 0 ? ' on' : '' ?>" data-index="<?= (int)$idx ?>" aria-label="ছবি <?= $idx + 1 ?>"></button><?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <!-- Single Image Mode -->
-                <img src="<?= e($heroImages[0]) ?>"
-                     alt="Learning concept"
-                     class="absolute inset-0 w-full h-full object-cover" />
+                <img src="<?= e($heroImages[0]) ?>" alt="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন" fetchpriority="high" />
             <?php endif; ?>
-
-            <div class="absolute inset-0 pointer-events-none"
-                 style="background: linear-gradient(to bottom, rgba(207,242,252,0.3) 0%, rgba(207,242,252,0) 50%, rgba(207,242,252,0) 100%);">
-            </div>
         </div>
-
     </div>
 </section>
 
-<?php if (count($heroImages) > 1 && $settings->SliderEnabled): ?>
+<?php if ($heroSlider): ?>
     <script>
         (function () {
-            const slides = document.querySelectorAll('.hero-slide');
-            const dots = document.querySelectorAll('.slider-dot');
-            let current = 0;
-            const interval = <?= (int)($settings->SliderIntervalSeconds > 0 ? $settings->SliderIntervalSeconds : 5) ?> * 1000;
-            let timer = null;
-
-            function showSlide(idx) {
-                if (idx === current) return;
-                slides.forEach((s, i) => {
-                    s.style.opacity = i === idx ? '1' : '0';
-                });
-                dots.forEach((d, i) => {
-                    d.style.background = i === idx ? 'white' : 'rgba(255,255,255,0.5)';
-                    d.style.transform = i === idx ? 'scale(1.3)' : 'scale(1)';
-                });
-                current = idx;
-            }
-
-            function startAuto() {
-                stopAuto();
-                timer = setInterval(() => {
-                    const next = (current + 1) % slides.length;
-                    showSlide(next);
-                }, interval);
-            }
-
-            function stopAuto() {
-                if (timer) { clearInterval(timer); timer = null; }
-            }
-
-            startAuto();
-
-            dots.forEach((dot) => {
-                dot.addEventListener('click', () => {
-                    showSlide(parseInt(dot.dataset.index));
-                    startAuto();
-                });
-            });
-
-            const heroContainer = document.querySelector('.hero-slide')?.parentElement;
-            if (heroContainer) {
-                heroContainer.addEventListener('mouseenter', stopAuto);
-                heroContainer.addEventListener('mouseleave', startAuto);
-            }
+            var slides = document.querySelectorAll('.hx-art .hero-slide'), dots = document.querySelectorAll('.hx-dotsnav .slider-dot');
+            var cur = 0, ms = <?= (int)($settings->SliderIntervalSeconds > 0 ? $settings->SliderIntervalSeconds : 5) ?> * 1000, timer = null;
+            function show(i) { if (i === cur) return; slides.forEach(function (s, k) { s.style.opacity = k === i ? '1' : '0'; }); dots.forEach(function (d, k) { d.classList.toggle('on', k === i); }); cur = i; }
+            function start() { stop(); timer = setInterval(function () { show((cur + 1) % slides.length); }, ms); }
+            function stop() { if (timer) { clearInterval(timer); timer = null; } }
+            start();
+            dots.forEach(function (d) { d.addEventListener('click', function () { show(parseInt(d.getAttribute('data-index'), 10)); start(); }); });
+            var box = document.querySelector('.hx-art'); box.addEventListener('mouseenter', stop); box.addEventListener('mouseleave', start);
         })();
     </script>
 <?php endif; ?>
+<?php endif; /* home_section: hero */ ?>
 
+<?php if (home_section_on('how')): ?>
 <!-- ========================================= -->
 <!-- ✅ HOW IT WORKS — ধাপে ধাপে (Parents / Students) -->
 <!-- ========================================= -->
@@ -192,7 +164,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         transition: opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1);
     }
     .hw-step.in { opacity: 1; transform: none; }
-    .hw-step:nth-child(2) { transition-delay: .12s; } .hw-step:nth-child(3) { transition-delay: .24s; } .hw-step:nth-child(4) { transition-delay: .36s; }
+    .hw-step:nth-of-type(2) { transition-delay: .12s; } .hw-step:nth-of-type(3) { transition-delay: .24s; } .hw-step:nth-of-type(4) { transition-delay: .36s; }
 
     .hw-icon-wrap { position: relative; height: 150px; display: flex; align-items: center; justify-content: center; }
     .hw-icon {
@@ -210,15 +182,10 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     }
     .hw-step:hover .hw-icon { transform: translateY(-6px) scale(1.04); background: #0099D6; box-shadow: 0 16px 30px rgba(2,184,245,0.38); }
 
-    /* বাঁকা ড্যাশ তীর (একটা উপরে, একটা নিচে — পালাক্রমে) */
-    .hw-arrow {
-        position: absolute; z-index: 1; pointer-events: none;
-        left: calc(50% + 50px); width: calc(100% - 76px); height: 80px; overflow: visible;
-    }
-    .hw-arrow.up { top: 2px; }
-    .hw-arrow.down { bottom: 2px; }
-    .hw-arrow path { fill: none; stroke: #8FD8F2; stroke-width: 2; stroke-dasharray: 7 7; stroke-linecap: round; }
-    .hw-step.in .hw-arrow path { animation: hwDash 1.2s linear infinite; }
+    /* বাঁকা ড্যাশ তীর — JS দিয়ে আসল বৃত্তের অবস্থান মেপে আঁকা (এক বৃত্তের কিনারা থেকে পরেরটার কিনারায়) */
+    .hw-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; opacity: 0; transition: opacity .6s ease .3s; }
+    .hw-lines.on { opacity: 1; }
+    .hw-lines path.l { fill: none; stroke: #8FD8F2; stroke-width: 2; stroke-dasharray: 7 7; stroke-linecap: round; animation: hwDash 1.2s linear infinite; }
     @keyframes hwDash { to { stroke-dashoffset: -28; } }
 
     .hw-step h3 { margin: 18px 0 10px; font-size: 20px; font-weight: 700; color: #08224A; }
@@ -229,7 +196,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     /* ট্যাবলেট: ২ কলাম, তীর লুকানো */
     @media (max-width: 1024px) {
         .hw-steps { grid-template-columns: repeat(2, 1fr); row-gap: 36px; }
-        .hw-arrow { display: none; }
+        .hw-lines { display: none; }
         .hw-icon-wrap { height: 110px; }
     }
     /* মোবাইল: উপর-নিচে টাইমলাইন */
@@ -254,7 +221,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     }
     @media (prefers-reduced-motion: reduce) {
         .hw-step { opacity: 1; transform: none; transition: none; }
-        .hw-step.in .hw-arrow path { animation: none; }
+        .hw-lines path.l { animation: none; }
     }
 </style>
 
@@ -263,22 +230,15 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         <h2 class="hw-title">The ways <span class="hl">Parents / Students</span> find a tutor.</h2>
         <p class="hw-sub">মাত্র ৪টি সহজ ধাপে আপনার পছন্দের টিউটর খুঁজে নিন</p>
 
-        <div class="hw-steps">
+        <div class="hw-steps" id="hwSteps">
+            <svg class="hw-lines" id="hwLines" aria-hidden="true">
+                <defs><marker id="hwHead" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto">
+                    <path d="M2 2 L10 6 L2 10" fill="none" stroke="#5CC8EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></marker></defs>
+            </svg>
             <?php foreach ($hwSteps as $i => [$icon, $title, $desc, $href]): ?>
                 <a class="hw-step" href="<?= e($href) ?>">
                     <div class="hw-icon-wrap">
                         <span class="hw-icon"><i class="fas <?= e($icon) ?>"></i><span class="hw-num"><?= $i + 1 ?></span></span>
-                        <?php if ($i < count($hwSteps) - 1): $up = $i % 2 === 0; ?>
-                            <svg class="hw-arrow <?= $up ? 'up' : 'down' ?>" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true">
-                                <?php if ($up): ?>
-                                    <path d="M4 66 C 50 -6, 150 -6, 190 58" />
-                                    <path d="M180 50 L 191 60 L 194 45" style="stroke-dasharray:none" />
-                                <?php else: ?>
-                                    <path d="M4 14 C 50 86, 150 86, 190 22" />
-                                    <path d="M180 30 L 191 20 L 194 35" style="stroke-dasharray:none" />
-                                <?php endif; ?>
-                            </svg>
-                        <?php endif; ?>
                     </div>
                     <h3><?= e($title) ?></h3>
                     <p><?= e($desc) ?></p>
@@ -297,12 +257,67 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         }, { threshold: 0.2 });
         steps.forEach(function (s) { io.observe(s); });
     })();
+    // তীর আঁকা: প্রতিটা বৃত্তের কেন্দ্র মেপে, একটা উপরে বাঁকা, পরেরটা নিচে — পালাক্রমে
+    (function () {
+        var box = document.getElementById('hwSteps'), svg = document.getElementById('hwLines'); if (!box || !svg) return;
+        var NS = 'http://www.w3.org/2000/svg';
+        function pos(el) { // transform বাদ দিয়ে লেআউটের আসল অবস্থান (fade-in এর সময়ও ঠিক থাকে)
+            var x = 0, y = 0, e = el;
+            while (e && e !== box) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; }
+            if (e !== box) { var r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); return { x: r.left - b.left, y: r.top - b.top }; }
+            return { x: x, y: y };
+        }
+        function draw() {
+            svg.querySelectorAll('path.l').forEach(function (p) { p.remove(); });
+            if (getComputedStyle(svg).display === 'none') return;
+            var icons = box.querySelectorAll('.hw-icon');
+            for (var i = 0; i < icons.length - 1; i++) {
+                var a = icons[i], b = icons[i + 1], pa = pos(a), pb = pos(b);
+                var ra = a.offsetWidth / 2, rb = b.offsetWidth / 2;
+                var ca = { x: pa.x + ra, y: pa.y + a.offsetHeight / 2 }, cb = { x: pb.x + rb, y: pb.y + b.offsetHeight / 2 };
+                if (Math.abs(ca.y - cb.y) > 20) continue; // একই লাইনে না থাকলে তীর নয়
+                var up = i % 2 === 0, s = up ? -1 : 1, gap = 10, ang = 40 * Math.PI / 180;
+                var sx = ca.x + (ra + gap) * Math.cos(ang), sy = ca.y + s * (ra + gap) * Math.sin(ang);
+                var ex = cb.x - (rb + gap) * Math.cos(ang), ey = cb.y + s * (rb + gap) * Math.sin(ang);
+                var d = ex - sx, h = Math.min(70, Math.max(34, d * 0.32));
+                var p = document.createElementNS(NS, 'path');
+                p.setAttribute('class', 'l');
+                p.setAttribute('d', 'M' + sx.toFixed(1) + ' ' + sy.toFixed(1) + ' C ' + (sx + d * 0.22).toFixed(1) + ' ' + (sy + s * h).toFixed(1) + ', '
+                    + (ex - d * 0.22).toFixed(1) + ' ' + (ey + s * h).toFixed(1) + ', ' + ex.toFixed(1) + ' ' + ey.toFixed(1));
+                p.setAttribute('marker-end', 'url(#hwHead)');
+                svg.appendChild(p);
+            }
+            svg.classList.add('on');
+        }
+        var t; function later() { clearTimeout(t); t = setTimeout(draw, 80); }
+        draw(); window.addEventListener('resize', later); window.addEventListener('load', draw);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+    })();
 </script>
+<?php endif; /* home_section: how */ ?>
+
+<!-- ========================================= -->
+<!-- ✅ CATEGORIES (Admin → Categories থেকে) -->
+<!-- ========================================= -->
+<?php $homeCats = is_array($ViewBag->HomeCategories) ? $ViewBag->HomeCategories : []; ?>
+<?php partial('Home/_Styles'); ?>
+<?php if ($homeCats && home_section_on('categories')): ?>
+<?php partial('Categories/_CardStyles'); ?>
+<section class="hs-sec hs-cats" id="home-categories" style="background:#fff;" aria-label="Categories">
+    <div class="hs-wrap">
+        <?php partial('Home/_SectionHead', ['title' => 'Explore', 'hl' => 'Categories', 'sub' => 'Play থেকে HSC, IELTS থেকে Guitar — যে বিষয়ে শিখতে চান, সেই ক্যাটাগরির অভিজ্ঞ টিউটর খুঁজুন।', 'href' => '/Categories', 'btn' => 'View More']); ?>
+        <div class="cc-grid">
+            <?php foreach ($homeCats as $c) partial('Categories/_Card', ['c' => $c]); ?>
+        </div>
+        <div class="hs-foot"><a class="hs-more" href="/Categories">View More Categories <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- ========================================= -->
 <!-- ✅ FEATURED TUITIONS (Home Page) -->
 <!-- ========================================= -->
-<?php if (count($homeTuitions) > 0): ?>
+<?php if (count($homeTuitions) > 0 && home_section_on('tuitions')): ?>
     <section class="py-8 sm:py-10 md:py-12 lg:py-16" style="background-color:<?= e($settings->SecondaryColor) ?>;">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -393,6 +408,53 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         </div>
     </section>
 <?php endif; ?>
+
+<?php if (home_section_on('feed')): ?>
+<!-- ========================================= -->
+<!-- ✅ EDUCATIONAL FEED — সর্বশেষ Approve হওয়া পোস্ট -->
+<!-- ========================================= -->
+<?php $homeFeed = is_array($ViewBag->HomeFeed) ? $ViewBag->HomeFeed : []; ?>
+<section class="hs-sec" id="home-feed" style="background:#fff;" aria-label="Educational Feed">
+    <div class="hs-wrap">
+        <?php partial('Home/_SectionHead', ['title' => 'Educational', 'hl' => 'Feed', 'sub' => 'শিক্ষক আর শিক্ষার্থীদের শেয়ার করা নোট, ছবি, ভিডিও আর পড়াশোনার টিপস।', 'href' => '/Feed', 'btn' => 'View More']); ?>
+        <?php if ($homeFeed): ?>
+            <div class="hf-grid">
+                <?php foreach ($homeFeed as $fp):
+                    $txt = trim(preg_replace('/\s+/u', ' ', $fp->Content)); ?>
+                    <a class="hf-card" href="<?= e($fp->Url) ?>">
+                        <?php if ($fp->Images): ?>
+                            <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
+                        <?php elseif ($fp->YouTube !== ''): ?>
+                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                        <?php elseif ($fp->Video !== ''): ?>
+                            <div class="hf-media"><video src="<?= e($fp->Video) ?>#t=0.5" preload="metadata" muted playsinline></video><span class="play"><i class="fas fa-play"></i></span></div>
+                        <?php else: ?>
+                            <div class="hf-media txt"><i class="fas fa-quote-right q"></i><p><?= e(mb_substr($txt, 0, 180)) ?></p></div>
+                        <?php endif; ?>
+                        <div class="hf-body">
+                            <div class="hf-who">
+                                <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                                <div style="min-width:0;"><b><?= e($fp->AuthorName) ?><span class="hf-role<?= $fp->AuthorRole === 'Teacher' ? ' t' : '' ?>"><?= $fp->AuthorRole === 'Teacher' ? 'Teacher' : ($fp->AuthorRole === 'Admin' ? 'Admin' : 'Student') ?></span></b>
+                                    <small><?= e(time_ago($fp->ApprovedAt ?? $fp->CreatedAt)) ?></small></div>
+                            </div>
+                            <?php if ($fp->Subject !== ''): ?><span class="hf-subj"><i class="fas fa-book-open"></i><?= e($fp->Subject) ?></span><?php endif; ?>
+                            <?php if ($txt !== '' && ($fp->Images || $fp->YouTube !== '' || $fp->Video !== '')): ?><p class="hf-text"><?= e($txt) ?></p><?php endif; ?>
+                            <div class="hf-meta"><span><span><i class="far fa-thumbs-up"></i><?= (int)$fp->LikeCount ?></span><span><i class="far fa-comment"></i><?= (int)$fp->CommentCount ?></span></span><b>Read more <i class="fas fa-arrow-right" style="color:inherit;margin:0 0 0 2px;"></i></b></div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="hf-empty">
+                <span class="ic"><i class="fas fa-graduation-cap"></i></span>
+                <div><h3>আপনার জ্ঞান শেয়ার করুন</h3><p>নোট, প্রশ্নের সমাধান, শিক্ষামূলক ভিডিও বা পড়াশোনার টিপস পোস্ট করুন — অ্যাডমিন রিভিউ করার পর সবাই দেখতে পাবে।</p></div>
+                <a class="hs-more" href="/Feed">Educational Feed <i class="fas fa-arrow-right"></i></a>
+            </div>
+        <?php endif; ?>
+        <div class="hs-foot"><a class="hs-more" href="/Feed">View More Posts <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+<?php endif; /* home_section: feed */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ BECOME A TUTOR (Teacher Request Form এর সাথে যুক্ত) -->
@@ -528,6 +590,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 </section>
 <?php endif; ?>
 
+<?php if (home_section_on('features')): ?>
 <!-- ========================================= -->
 <!-- KEY FEATURES -->
 <!-- ========================================= -->
@@ -578,6 +641,51 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         </div>
     </div>
 </section>
+<?php endif; /* home_section: features */ ?>
+
+<!-- ========================================= -->
+<!-- ✅ PACKAGES — Admin → Packages থেকে -->
+<!-- ========================================= -->
+<?php
+$homePk = is_array($ViewBag->HomePackages) ? $ViewBag->HomePackages : ['Teacher' => [], 'Student' => []];
+$hpFree = (bool)$ViewBag->StudentFree;
+$hpTab = 'Teacher'; // সবসময় "শিক্ষকদের জন্য" ট্যাব আগে খোলা থাকে
+if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $hpTab = $hpTab === 'Teacher' ? 'Student' : 'Teacher';
+?>
+<?php if (($homePk['Teacher'] || $homePk['Student']) && home_section_on('packages')): ?>
+<?php partial('Package/_CardStyles'); ?>
+<section class="hs-sec" id="home-packages" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Packages">
+    <div class="hs-wrap">
+        <?php partial('Home/_SectionHead', ['title' => 'Our', 'hl' => 'Packages', 'sub' => 'শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'href' => '/Package?for=' . strtolower($hpTab), 'btn' => 'View More']); ?>
+        <?php if ($homePk['Teacher'] && $homePk['Student']): ?>
+            <div style="text-align:center;"><div class="hp-tabs" role="tablist">
+                <button type="button" role="tab" data-hp="Teacher" class="<?= $hpTab === 'Teacher' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Teacher' ? 'true' : 'false' ?>"><i class="fas fa-chalkboard-user"></i> শিক্ষকদের জন্য</button>
+                <button type="button" role="tab" data-hp="Student" class="<?= $hpTab === 'Student' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Student' ? 'true' : 'false' ?>"><i class="fas fa-user-graduate"></i> শিক্ষার্থীদের জন্য</button>
+            </div></div>
+        <?php endif; ?>
+        <?php foreach (['Teacher', 'Student'] as $aud): if (!$homePk[$aud]) continue; ?>
+            <div class="pk-grid<?= count($homePk[$aud]) < 3 ? ' few' : '' ?>" data-hp-grid="<?= $aud ?>"<?= $aud === $hpTab ? '' : ' hidden' ?>>
+                <?php foreach (array_slice($homePk[$aud], 0, 4) as $p) partial('Package/_Card', ['p' => $p, 'cta' => $aud === 'Teacher' ? 'Subscribe করুন' : 'পোস্ট প্যাকেজ নিন', 'studentFree' => $hpFree]); ?>
+            </div>
+        <?php endforeach; ?>
+        <div class="hs-foot"><a class="hs-more" href="/Package?for=<?= strtolower($hpTab) ?>">View All Packages <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+<script>
+(function () {
+    var tabs = document.querySelectorAll('[data-hp]');
+    tabs.forEach(function (b) {
+        b.addEventListener('click', function () {
+            var a = b.getAttribute('data-hp');
+            tabs.forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+            document.querySelectorAll('[data-hp-grid]').forEach(function (g) { g.hidden = g.getAttribute('data-hp-grid') !== a; });
+            var m = document.querySelector('#home-packages .hs-head .hs-more'), f = document.querySelector('#home-packages .hs-foot .hs-more');
+            [m, f].forEach(function (l) { if (l) l.href = '/Package?for=' + a.toLowerCase(); });
+        });
+    });
+})();
+</script>
+<?php endif; ?>
 
 <!-- ========================================= -->
 <!-- ✅ WHY CHOOSE + FAQ — স্টাইল -->
@@ -620,6 +728,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     }
 </style>
 
+<?php if (home_section_on('why')): ?>
 <!-- ========================================= -->
 <!-- ✅ WHY CHOOSE মাষ্টার মশাই -->
 <!-- ========================================= -->
@@ -646,12 +755,13 @@ $why = [
         </div>
     </div>
 </section>
+<?php endif; /* home_section: why */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ REVIEWS / TESTIMONIALS (অ্যাডমিন Approve করা রিভিউ) -->
 <!-- ========================================= -->
 <?php $tsReviews = db()->GetApprovedReviews(12); ?>
-<?php if (!empty($tsReviews)): ?>
+<?php if (!empty($tsReviews) && home_section_on('reviews')): ?>
 <style>
     .ts-section { padding: 56px 0 50px; overflow: hidden; }
     .ts-head { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
@@ -797,6 +907,7 @@ $why = [
 </script>
 <?php endif; ?>
 
+<?php if (home_section_on('findteacher')): ?>
 <!-- ========================================= -->
 <!-- FIND YOUR TEACHER (DB Image + Clickable) -->
 <!-- ========================================= -->
@@ -821,6 +932,7 @@ $why = [
 
     </div>
 </section>
+<?php endif; /* home_section: findteacher */ ?>
 
 <!-- ========================================= -->
 <!-- ✅ FAQ (প্রশ্ন-উত্তর Admin → Settings থেকে বদলানো যায়) -->
