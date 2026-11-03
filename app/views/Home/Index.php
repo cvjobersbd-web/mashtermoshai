@@ -23,80 +23,59 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <!-- ========================================= -->
 <?php
     // লগইন থাকলে Tuition Circular-এ সরাসরি পোস্ট লেখার বক্স খোলে, না থাকলে আগে লগইন
-    $postReqHref = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
     $heroSlider = count($heroImages) > 1 && $settings->SliderEnabled;
 ?>
 <style>
-    .hx { position: relative; overflow: hidden; margin-top: -80px; padding-top: 80px; background: linear-gradient(180deg, #F4F9FE 0%, #EDF5FD 55%, #F3F8FE 100%); }
-    .hx-deco { position: absolute; pointer-events: none; z-index: 0; }
-    .hx-arc { width: 420px; height: 420px; }
-    .hx-arc circle { fill: none; stroke: #D5E6F6; stroke-width: 1.6; }
-    .hx-arc.tl { top: -190px; left: -230px; }
-    .hx-arc.br { bottom: -270px; right: -250px; }
-    .hx-dots { width: 132px; height: 104px; background-image: radial-gradient(#C3D9EE 2px, transparent 2.4px); background-size: 24px 24px; }
-    .hx-dots.tr { top: 110px; right: 50px; }
-    .hx-dots.bl { bottom: 34px; left: 38px; width: 100px; height: 80px; }
-    .hx-in { position: relative; z-index: 1; max-width: 1920px; margin: 0 auto; padding: 56px 6vw 64px 9.4vw; display: grid; grid-template-columns: minmax(0, 47fr) minmax(0, 53fr); gap: 2vw; align-items: center; }
-    .hx h1 { margin: 0; font-family: var(--font-heading); font-weight: 700; font-size: clamp(34px, 3.7vw, 70px); line-height: 1.14; color: #0B1F44; letter-spacing: -.6px; }
-    .hx h1 .l1 { white-space: nowrap; }
-    .hx h1 .bd { position: relative; display: inline-block; color: #1677E5; padding-bottom: 14px; }
-    .hx h1 .bd svg { position: absolute; left: 2%; bottom: -2px; width: 98%; height: 16px; overflow: visible; }
-    .hx-p { margin: 30px 0 0; max-width: 690px; font-size: clamp(16px, 1.17vw, 22.5px); line-height: 1.55; color: #4B5563; font-weight: 500; }
-    .hx-search { margin-top: 36px; max-width: 740px; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px; padding: 8px 8px 8px 22px;
-        box-shadow: 0 10px 30px rgba(15,52,103,.10), 0 1px 3px rgba(15,52,103,.06); border: 1px solid #E6EEF7; }
-    .hx-search i { color: #6B7280; font-size: 21px; }
-    .hx-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 18px; color: #0B1F44; font-family: inherit; padding: 12px 4px; }
+    /* ✅ ক্লিন হিরো — হালকা ব্যাকগ্রাউন্ড, বাঁয়ে লেখা + সার্চ, ডানে ছবি */
+    .hx { position: relative; overflow: hidden; margin-top: -80px; padding-top: 80px; background: #F4F7FB; }
+    .hx-in { position: relative; max-width: 1440px; margin: 0 auto; padding: 56px 64px 72px 96px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; min-height: 480px; }
+    .hx h1 { margin: 0; font-family: var(--font-heading); font-weight: 600; font-size: clamp(30px, 2.6vw, 48px); line-height: 1.22; color: #1F2937; letter-spacing: -.3px; }
+    .hx h1 .bd { color: #1677E5; }
+    .hx-p { margin: 22px 0 0; max-width: 580px; font-size: clamp(15px, 1.05vw, 18px); line-height: 1.6; color: #4B5563; }
+    .hx-search { margin-top: 34px; max-width: 600px; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 10px;
+        box-shadow: 0 8px 28px rgba(15,40,80,.08); }
+    .hx-search .fld { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 1px solid #E5E7EB; border-radius: 8px; padding: 0 14px; height: 46px; transition: border-color .2s, box-shadow .2s; }
+    .hx-search .fld:focus-within { border-color: #9CC7F5; box-shadow: 0 0 0 3px rgba(22,119,229,.10); }
+    .hx-search i { color: #9CA3AF; font-size: 15px; }
+    .hx-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 15px; color: #1F2937; font-family: inherit; }
     .hx-search input::placeholder { color: #6B7280; }
-    .hx-search button { flex-shrink: 0; border: none; border-radius: 10px; background: #1677E5; color: #fff; font-weight: 700; font-size: 19px; padding: 0 34px; height: 56px; cursor: pointer;
-        font-family: inherit; transition: background .2s, transform .15s; white-space: nowrap; }
+    .hx-search button { flex-shrink: 0; border: none; border-radius: 8px; background: #1677E5; color: #fff; font-weight: 600; font-size: 15px; padding: 0 24px; height: 46px; cursor: pointer;
+        font-family: inherit; transition: background .2s; white-space: nowrap; }
     .hx-search button:hover { background: #0F63C8; }
-    .hx-search:focus-within { border-color: #9CC7F5; box-shadow: 0 10px 30px rgba(15,52,103,.12), 0 0 0 4px rgba(22,119,229,.10); }
-    .hx-post { margin-top: 30px; display: inline-flex; align-items: center; gap: 16px; padding: 18px 34px; border: 2px solid #1677E5; border-radius: 999px; color: #1263C8; font-weight: 700;
-        font-size: 19px; text-decoration: none; background: transparent; transition: background .2s, color .2s; white-space: nowrap; }
-    .hx-post:hover { background: #1677E5; color: #fff; }
-    .hx-post i { font-size: 17px; transition: transform .2s; }
-    .hx-post:hover i { transform: translateX(4px); }
-    .hx-art { position: relative; display: flex; align-items: center; justify-content: center; min-height: 420px; }
-    .hx-art img { display: block; width: 100%; max-width: 820px; height: auto; object-fit: contain; }
+    .hx-art { position: relative; display: flex; align-items: center; justify-content: center; }
+    /* ছবির সাদা ব্যাকগ্রাউন্ড হিরোর রঙের সাথে মিশে যায় */
+    .hx-art img { display: block; width: 100%; max-width: 560px; height: auto; object-fit: contain; mix-blend-mode: multiply; }
     .hx-art .hero-slide { position: absolute; inset: 0; margin: auto; transition: opacity 1s ease; }
-    .hx-art.slider { aspect-ratio: 16 / 12; }
+    .hx-art.slider { aspect-ratio: 16 / 12; width: 100%; max-width: 560px; margin: 0 auto; }
     .hx-art.slider .hero-slide { height: 100%; }
     .hx-dotsnav { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
-    .hx-dotsnav button { width: 10px; height: 10px; border-radius: 50%; border: none; padding: 0; cursor: pointer; background: #BCD3EA; transition: all .3s; }
+    .hx-dotsnav button { width: 9px; height: 9px; border-radius: 50%; border: none; padding: 0; cursor: pointer; background: #C9D6E5; transition: all .3s; }
     .hx-dotsnav button.on { background: #1677E5; transform: scale(1.3); }
-    @media (max-width: 1280px) { .hx-in { padding: 40px 34px 48px 56px; gap: 24px; } .hx h1 .l1 { white-space: normal; } }
+    @media (max-width: 1280px) { .hx-in { padding: 44px 40px 56px 56px; gap: 32px; min-height: 0; } }
     @media (max-width: 1024px) {
-        .hx-in { grid-template-columns: minmax(0, 1fr); padding: 34px 28px 46px; text-align: left; }
+        .hx-in { grid-template-columns: minmax(0, 1fr); padding: 36px 28px 48px; }
         .hx-text { min-width: 0; }
-        .hx-art { order: 2; min-height: 0; max-width: 680px; margin: 0 auto; width: 100%; }
-        .hx-arc.tl { top: -230px; left: -230px; } .hx-dots.tr { top: 96px; right: 20px; }
+        .hx-art { max-width: 520px; margin: 0 auto; width: 100%; }
     }
     @media (max-width: 640px) {
-        .hx-in { padding: 22px 16px 36px; gap: 18px; }
-        .hx h1 { font-size: 32px; } .hx h1 .bd { padding-bottom: 10px; } .hx h1 .bd svg { height: 12px; }
-        .hx-p { margin-top: 16px; font-size: 15.5px; }
-        .hx-search { margin-top: 22px; padding: 6px 6px 6px 14px; gap: 6px; }
-        .hx-search i { font-size: 17px; } .hx-search input { font-size: 15px; padding: 10px 2px; }
-        .hx-search button { font-size: 15px; padding: 0 16px; height: 46px; }
-        .hx-post { margin-top: 18px; padding: 14px 22px; font-size: 15.5px; gap: 10px; width: 100%; justify-content: center; }
-        .hx-dots.tr, .hx-dots.bl { display: none; }
-        .hx-arc { transform: scale(.7); }
+        .hx-in { padding: 24px 16px 36px; gap: 24px; }
+        .hx h1 { font-size: 28px; }
+        .hx-p { margin-top: 14px; font-size: 15px; }
+        .hx-search { margin-top: 22px; padding: 8px; gap: 8px; }
+        .hx-search .fld { padding: 0 10px; height: 44px; } .hx-search input { font-size: 14.5px; }
+        .hx-search button { font-size: 14.5px; padding: 0 16px; height: 44px; }
     }
 </style>
 <section class="hx" aria-label="Find the Right Tutor in Bangladesh">
-    <svg class="hx-deco hx-arc tl" viewBox="0 0 420 420" aria-hidden="true"><circle cx="210" cy="210" r="150" /><circle cx="210" cy="210" r="178" /><circle cx="210" cy="210" r="206" /></svg>
-    <svg class="hx-deco hx-arc br" viewBox="0 0 420 420" aria-hidden="true"><circle cx="210" cy="210" r="150" /><circle cx="210" cy="210" r="178" /><circle cx="210" cy="210" r="206" /></svg>
-    <span class="hx-deco hx-dots tr"></span><span class="hx-deco hx-dots bl"></span>
     <div class="hx-in">
         <div class="hx-text">
-            <h1><span class="l1">Find the Right Tutor</span><br>in <span class="bd">Bangladesh<svg viewBox="0 0 240 16" preserveAspectRatio="none" aria-hidden="true"><path d="M3 12 C 70 2, 170 1, 237 9" fill="none" stroke="#1677E5" stroke-width="4" stroke-linecap="round" /></svg></span></h1>
-            <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, or post your tuition requirement and connect with the right teacher.</p>
+            <h1>Find the Right Tutor<br>in <span class="bd">Bangladesh</span></h1>
+            <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.</p>
             <form class="hx-search" action="/FindTutor" method="get" role="search">
-                <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-                <input type="search" name="q" maxlength="60" placeholder="Search by subject, class or location..." aria-label="Search by subject, class or location" />
+                <label class="fld"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" name="q" maxlength="60" placeholder="Search by subject, class or location..." aria-label="Search by subject, class or location" /></label>
                 <button type="submit">Find a Tutor</button>
             </form>
-            <a class="hx-post" href="<?= e($postReqHref) ?>">Post Your Tuition Requirement <i class="fas fa-arrow-right"></i></a>
         </div>
 
         <div class="hx-art<?= $heroSlider ? ' slider' : '' ?>">
