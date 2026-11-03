@@ -42,43 +42,9 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
     .efp-tabs .b { background: #F5A623; color: #fff; font-size: 11px; padding: 1px 7px; border-radius: 9px; }
 
     /* কম্পোজার */
-    .efc { background: #fff; border: 1px solid #E3E9F1; border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(15,27,45,.05); }
-    .efc-top { display: flex; gap: 11px; align-items: flex-start; }
-    .efc textarea { flex: 1; border: none; resize: none; outline: none; font-size: 16px; font-family: inherit; color: #0F172A; min-height: 46px; max-height: 320px; padding: 11px 14px; background: #F1F5F9; border-radius: 14px; line-height: 1.5; }
-    .efc textarea:focus { background: #EEF6FC; }
-    .efc-more[hidden] { display: none; }
-    .efc-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
-    .efc-subj { flex: 1 1 200px; height: 40px; border: 1px solid #DCE5EF; border-radius: 10px; padding: 0 12px; font-size: 14px; outline: none; font-family: inherit; color: #0F172A; }
-    .efc-subj:focus, .efc-yt:focus { border-color: #02B8F5; }
-    .efc-yt { width: 100%; height: 40px; border: 1px solid #DCE5EF; border-radius: 10px; padding: 0 12px; font-size: 14px; outline: none; font-family: inherit; margin-top: 10px; }
-    .efc-tools { display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid #EEF2F7; margin-top: 12px; padding-top: 10px; align-items: center; }
-    .efc-tools label, .efc-tools button.t { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13.5px; color: #475569; margin: 0; border: none; background: none; font-family: inherit; }
-    .efc-tools label:hover, .efc-tools button.t:hover { background: #F1F5F9; }
-    .efc-tools .sp { flex: 1; }
-    .efc-send { height: 40px; padding: 0 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #1D7FE5, #02B8F5); color: #fff; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 8px; }
-    .efc-send:disabled { opacity: .6; cursor: default; }
-    .efc-prev { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 12px; }
-    .efc-prev:empty { display: none; }
-    .efc-prev .it { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #E2E8F0; }
-    .efc-prev .it.vid { grid-column: 1 / -1; aspect-ratio: auto; background: #000; }
-    .efc-prev img, .efc-prev video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .efc-prev video { max-height: 280px; object-fit: contain; }
-    .efc-prev .rm { position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(15,23,42,.75); color: #fff; cursor: pointer; font-size: 12px; z-index: 2; }
-    .efc-note { font-size: 12.5px; color: #64748B; margin-top: 10px; display: flex; gap: 7px; align-items: flex-start; }
-    .efc-note i { color: #F5A623; margin-top: 3px; }
-    .efc-bar { height: 6px; border-radius: 4px; background: #E2E8F0; overflow: hidden; margin-top: 10px; }
-    .efc-bar[hidden] { display: none; }
-    .efc-bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1D7FE5, #02B8F5); transition: width .2s; }
-    .efc-login { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-    .efc-login p { margin: 0; color: #334155; font-size: 15px; }
-    .efc-login a { padding: 10px 18px; border-radius: 10px; background: #08224A; color: #fff; text-decoration: none; font-weight: 700; font-size: 14px; white-space: nowrap; }
 
     .efp-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; color: #475569; font-size: 14px; }
     .efp-filter a { color: #0369A1; font-weight: 700; text-decoration: none; }
-    .efp-empty { background: #fff; border: 1px dashed #CBD5E1; border-radius: 16px; padding: 44px 20px; text-align: center; color: #64748B; }
-    .efp-empty i { font-size: 38px; color: #B9D6E6; display: block; margin-bottom: 12px; }
-    .efp-load { display: block; margin: 6px auto 0; padding: 11px 26px; border-radius: 999px; border: 1px solid #DCE5EF; background: #fff; color: #08224A; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 14px; }
-    .efp-load:disabled { opacity: .6; }
 
     /* ডান পাশ */
     .efp-side { position: sticky; top: 96px; display: flex; flex-direction: column; gap: 16px; }
@@ -107,10 +73,6 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
     @media (max-width: 640px) {
         .efp-wrap { padding: 0 10px; }
         .efp-hero { padding: 22px 0 28px; } .efp-hero p { font-size: 14px; }
-        .efc { padding: 12px; border-radius: 12px; }
-        .efc textarea { font-size: 15px; }
-        .efc-tools label, .efc-tools button.t { padding: 8px; font-size: 13px; }
-        .efc-tools .lbl { display: none; }
         .efp-tabs a { font-size: 13.5px; padding: 9px 6px; }
     }
 </style>
@@ -134,40 +96,7 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
                 <?php endif; ?>
 
                 <!-- ===== কম্পোজার ===== -->
-                <?php if ($me !== null): ?>
-                    <form class="efc" id="efc" autocomplete="off" novalidate>
-                        <div class="efc-top">
-                            <span class="ef-av"><?= e(initials($myName, 'U')) ?><?php if ($myPhoto !== ''): ?><img src="<?= e($myPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
-                            <textarea name="content" id="efcText" rows="1" maxlength="5000" placeholder="কী শেখাতে বা শেয়ার করতে চান, <?= e(explode(' ', trim($myName))[0] ?: 'বন্ধু') ?>?" aria-label="পোস্ট লিখুন"></textarea>
-                        </div>
-                        <div class="efc-more" id="efcMore" hidden>
-                            <div class="efc-row">
-                                <input class="efc-subj" name="subject" list="efcSubjList" maxlength="60" placeholder="বিষয় (ঐচ্ছিক) — যেমন: Mathematics, Physics" aria-label="বিষয়" />
-                                <datalist id="efcSubjList"><?php foreach (array_unique(array_merge($subjects, $opts['subjects'] ?? [])) as $s): ?><option value="<?= e($s) ?>"></option><?php endforeach; ?></datalist>
-                            </div>
-                            <?php if ($isAdmin): /* ভিডিও / YouTube শুধু অ্যাডমিন অ্যাকাউন্ট থেকে */ ?>
-                            <input class="efc-yt" name="youtube" id="efcYt" maxlength="200" placeholder="YouTube ভিডিওর লিংক — https://youtu.be/..." hidden aria-label="YouTube লিংক" />
-                            <?php endif; ?>
-                            <div class="efc-prev" id="efcPrev"></div>
-                            <div class="efc-bar" id="efcBar" hidden><span></span></div>
-                            <?php if (!$isAdmin): ?><div class="efc-note"><i class="fas fa-shield-halved"></i><span>ছবি আর লেখা পোস্ট করা যায়। পোস্টটি আগে অ্যাডমিনের কাছে রিভিউর জন্য যাবে — Approve হলে সবাই দেখতে পাবে। শুধু শিক্ষামূলক পোস্ট দিন।</span></div><?php endif; ?>
-                        </div>
-                        <div class="efc-tools">
-                            <label title="ছবি (সর্বোচ্চ ৬টা, প্রতিটা ৫MB)"><i class="fas fa-images" style="color:#22C55E;"></i><span class="lbl">Photo</span><input type="file" id="efcImg" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden /></label>
-                            <?php if ($isAdmin): ?>
-                            <label title="ভিডিও (MP4/WEBM, সর্বোচ্চ <?= $videoMb ?>MB)"><i class="fas fa-video" style="color:#EF4444;"></i><span class="lbl">Video</span><input type="file" id="efcVid" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" hidden /></label>
-                            <button type="button" class="t" id="efcYtBtn" title="YouTube লিংক"><i class="fab fa-youtube" style="color:#FF0000;"></i><span class="lbl">YouTube</span></button>
-                            <?php endif; ?>
-                            <span class="sp"></span>
-                            <button type="submit" class="efc-send" id="efcSend"><i class="fas fa-paper-plane"></i> <?= $isAdmin ? 'Post' : 'Submit' ?></button>
-                        </div>
-                    </form>
-                <?php else: ?>
-                    <div class="efc efc-login">
-                        <p><i class="fas fa-pen-to-square" style="color:#02B8F5;"></i> নিজের নোট বা ছবি শেয়ার করতে লগইন করুন।</p>
-                        <a href="/Account/Login?returnUrl=<?= rawurlencode('/Feed') ?>">Login</a>
-                    </div>
-                <?php endif; ?>
+                <?php partial('Feed/_Composer', ['me' => $me, 'isAdmin' => $isAdmin, 'myName' => $myName, 'myPhoto' => $myPhoto, 'videoMb' => $videoMb, 'subjects' => $subjects, 'opts' => $opts, 'returnUrl' => '/Feed']); ?>
 
                 <?php if ($tab === 'all' && $subjects): ?>
                     <nav class="efp-mchips" aria-label="Subjects">
@@ -248,95 +177,7 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
     });
     document.addEventListener('ef:removed', function () { empty.hidden = !!list.querySelector('[data-post]'); });
 
-    // ===== কম্পোজার =====
-    var form = document.getElementById('efc'); if (!form) return;
-    var ta = document.getElementById('efcText'), moreBox = document.getElementById('efcMore'), prev = document.getElementById('efcPrev');
-    var imgIn = document.getElementById('efcImg'), vidIn = document.getElementById('efcVid'), ytBtn = document.getElementById('efcYtBtn');
-    // ভিডিও/YouTube শুধু অ্যাডমিনের জন্য — সাধারণ ইউজারের পেজে এগুলো থাকে না
-    var yt = document.getElementById('efcYt') || { value: '', hidden: true, focus: function () {} };
-    var send = document.getElementById('efcSend'), bar = document.getElementById('efcBar');
-    var VIDEO_MAX = <?= (int)$ViewBag->VideoLimit ?>, IMG_MAX = 5 * 1024 * 1024, MAX_IMGS = 6, TAB = <?= js($tab) ?>;
-    var images = [], video = null, urls = [];
-    function expand() { moreBox.hidden = false; }
-    ta.addEventListener('focus', expand);
-    ta.addEventListener('input', function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 320) + 'px'; });
-    function clearUrls() { urls.forEach(URL.revokeObjectURL); urls = []; }
-    function draw() {
-        clearUrls(); prev.innerHTML = '';
-        images.forEach(function (f, i) {
-            var u = URL.createObjectURL(f); urls.push(u);
-            prev.insertAdjacentHTML('beforeend', '<div class="it"><img src="' + u + '" alt="" /><button type="button" class="rm" data-rm="img" data-i="' + i + '" aria-label="সরান"><i class="fas fa-xmark"></i></button></div>');
-        });
-        if (video) {
-            var vu = URL.createObjectURL(video); urls.push(vu);
-            prev.insertAdjacentHTML('beforeend', '<div class="it vid"><video src="' + vu + '" controls muted playsinline></video><button type="button" class="rm" data-rm="vid" aria-label="সরান"><i class="fas fa-xmark"></i></button></div>');
-        }
-    }
-    function only(kind) {
-        // ছবি / ভিডিও / YouTube — যেকোনো একটা
-        if (kind !== 'img' && images.length) { images = []; }
-        if (kind !== 'vid') video = null;
-        if (kind !== 'yt') { yt.value = ''; yt.hidden = true; }
-    }
-    prev.addEventListener('click', function (e) {
-        var b = e.target.closest('[data-rm]'); if (!b) return;
-        if (b.getAttribute('data-rm') === 'vid') video = null; else images.splice(+b.getAttribute('data-i'), 1);
-        draw();
-    });
-    imgIn.addEventListener('change', function () {
-        var files = Array.prototype.slice.call(imgIn.files); imgIn.value = ''; if (!files.length) return;
-        expand(); only('img');
-        for (var i = 0; i < files.length; i++) {
-            var f = files[i];
-            if (!/^image\/(jpeg|png|gif|webp)$/.test(f.type)) { EF.toast('"' + f.name + '" — শুধু JPG, PNG, GIF বা WEBP ছবি।', true); continue; }
-            if (f.size > IMG_MAX) { EF.toast('"' + f.name + '" ৫MB এর বেশি বড়।', true); continue; }
-            if (images.length >= MAX_IMGS) { EF.toast('সর্বোচ্চ ' + MAX_IMGS + 'টা ছবি দেওয়া যাবে।', true); break; }
-            images.push(f);
-        }
-        draw();
-    });
-    if (vidIn) vidIn.addEventListener('change', function () {
-        var f = vidIn.files[0]; vidIn.value = ''; if (!f) return;
-        if (f.size > VIDEO_MAX) { EF.toast('ভিডিও ' + Math.floor(VIDEO_MAX / 1048576) + 'MB এর বেশি বড়। বড় ভিডিও YouTube-এ দিয়ে লিংক শেয়ার করুন।', true); return; }
-        expand(); only('vid'); video = f; draw();
-    });
-    if (ytBtn) ytBtn.addEventListener('click', function () { expand(); only('yt'); yt.hidden = false; draw(); yt.focus(); });
-
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var text = ta.value.trim();
-        if (!text && !images.length && !video && !yt.value.trim()) { ta.focus(); EF.toast('কিছু লিখুন অথবা ছবি/ভিডিও দিন।', true); return; }
-        var fd = new FormData();
-        fd.append('content', text); fd.append('subject', form.subject.value.trim()); fd.append('youtube', yt.hidden ? '' : yt.value.trim());
-        images.forEach(function (f) { fd.append('images[]', f, f.name); });
-        if (video) fd.append('video', video, video.name);
-        fd.append('__RequestVerificationToken', EF.token());
-        send.disabled = true; send.innerHTML = '<i class="fas fa-spinner fa-spin"></i> পাঠানো হচ্ছে';
-        var hasFiles = images.length || video; bar.hidden = !hasFiles; bar.firstElementChild.style.width = '0';
-        // XHR — যাতে আপলোডের অগ্রগতি দেখানো যায়
-        var x = new XMLHttpRequest();
-        x.open('POST', '/Feed/Create'); x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        x.upload.onprogress = function (ev) { if (ev.lengthComputable) bar.firstElementChild.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
-        x.onload = function () {
-            var r; try { r = JSON.parse(x.responseText); } catch (er) { r = { success: false, message: x.status === 413 ? 'ফাইল খুব বড় — ছোট ফাইল দিন।' : 'সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।' }; }
-            if (!r.success && x.status === 400 && hasFiles) r.message = 'ফাইলগুলো সার্ভারের সীমার চেয়ে বড় হতে পারে — ছোট ফাইল দিয়ে আবার চেষ্টা করুন।';
-            done(r);
-        };
-        x.onerror = function () { done({ success: false, message: 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।' }); };
-        x.send(fd);
-    });
-    function done(r) {
-        send.disabled = false; send.innerHTML = '<i class="fas fa-paper-plane"></i> ' + <?= js($isAdmin ? 'Post' : 'Submit') ?>; bar.hidden = true;
-        if (!r.success) { EF.toast(r.message || 'পোস্ট করা যায়নি।', true); return; }
-        EF.toast(r.message);
-        ta.value = ''; ta.style.height = ''; form.subject.value = ''; images = []; video = null; only('none'); draw(); moreBox.hidden = true;
-        if (r.status === 'Approved' || TAB === 'mine') { list.insertAdjacentHTML('afterbegin', r.html); empty.hidden = true; }
-        else {
-            var n = document.createElement('div'); n.className = 'ef-status Pending'; n.style.margin = '0 0 16px';
-            n.innerHTML = '<i class="fas fa-hourglass-half"></i><span>আপনার পোস্ট রিভিউতে আছে। <a href="/Feed?tab=mine" style="color:inherit;font-weight:800;">My Posts</a>-এ দেখতে পাবেন।</span>';
-            form.after(n);
-        }
-    }
 })();
 </script>
+<?php partial('Feed/_ComposerJs', ['videoLimit' => (int)$ViewBag->VideoLimit, 'isAdmin' => $isAdmin, 'tab' => $tab]); ?>
 <?php section_end(); ?>

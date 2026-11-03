@@ -1153,6 +1153,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <?php endif; ?>
                                 <?php if ($isAdmin): ?>
                                     <li>
+                                        <a class="dropdown-item" href="/Profile/Show/<?= (int)current_user_id() ?>">
+                                            <i class="fas fa-id-card"></i> My Page
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a class="dropdown-item" href="/Admin/Dashboard">
                                             <i class="fas fa-shield-alt"></i> Admin Panel
                                             <span class="badge-role admin">Admin</span>
@@ -1258,6 +1263,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <?php if ($mLoggedIn && $mRole === 'Admin'): ?>
                 <div class="m-label">Admin</div>
                 <nav class="m-nav">
+                    <a href="/Profile/Show/<?= (int)current_user_id() ?>" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Page</span></a>
                     <a href="/Admin/Dashboard" class="<?= $mActive('/Admin') ?>"><i class="fas fa-shield-alt"></i><span>Admin Panel</span></a>
                 </nav>
             <?php endif; ?>

@@ -78,9 +78,11 @@ class FeedController extends Controller
     {
         $me = current_user_id();
         $before = input_int('before', 0) ?: null;
-        $posts = input_str('tab', '') === 'mine' && $me !== null
+        $author = input_int('author', 0);
+        $posts = $author > 0 ? $this->db->GetUserEduPosts($author, $me, $before, self::PAGE)
+            : (input_str('tab', '') === 'mine' && $me !== null
             ? $this->db->GetMyEduPosts($me, $before, self::PAGE)
-            : $this->db->GetEduFeed($me, $before, self::PAGE, mb_substr(trim((string)input_str('subject', '')), 0, 60), mb_substr(trim((string)input_str('q', '')), 0, 60));
+            : $this->db->GetEduFeed($me, $before, self::PAGE, mb_substr(trim((string)input_str('subject', '')), 0, 60), mb_substr(trim((string)input_str('q', '')), 0, 60)));
         header('Content-Type: text/html; charset=utf-8');
         header('X-Has-More: ' . (count($posts) === self::PAGE ? '1' : '0'));
         foreach ($posts as $p) partial('Feed/_Post', ['p' => $p, 'me' => $me]);

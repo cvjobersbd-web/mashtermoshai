@@ -20,7 +20,7 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
     <header class="ef-ph">
         <a class="ef-av" href="/Profile/Show/<?= (int)$p->UserId ?>" aria-hidden="true" tabindex="-1"><?= e($p->Initials) ?><?php if ($p->AuthorPhoto !== ''): ?><img src="<?= e($p->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
         <div class="ef-who">
-            <a class="n" href="/Profile/Show/<?= (int)$p->UserId ?>"><?= e($p->AuthorName) ?></a><span class="ef-role<?= $roleLbl === 'Teacher' ? ' t' : '' ?>"><?= $roleLbl ?></span>
+            <a class="n" href="/Profile/Show/<?= (int)$p->UserId ?>"><?= e($p->AuthorName) ?></a><?php if ($p->AuthorRole === 'Admin'): ?> <i class="fas fa-circle-check" style="color:#00CFFF;font-size:13px;" title="অফিসিয়াল"></i><?php else: ?><span class="ef-role<?= $roleLbl === 'Teacher' ? ' t' : '' ?>"><?= $roleLbl ?></span><?php endif; ?>
             <div class="ef-meta">
                 <a href="<?= e($p->Url) ?>" title="<?= e(date('d M Y, h:i A', strtotime((string)($p->ApprovedAt ?? $p->CreatedAt)))) ?>"><?= e(time_ago($approved && !$admin ? ($p->ApprovedAt ?? $p->CreatedAt) : $p->CreatedAt)) ?></a>
                 <?php if ($p->Subject !== ''): ?>· <?php if ($approved && !$admin): ?><a class="ef-subj" href="/Feed?subject=<?= rawurlencode($p->Subject) ?>"><i class="fas fa-book-open"></i><?= e($p->Subject) ?></a><?php else: ?><span class="ef-subj"><i class="fas fa-book-open"></i><?= e($p->Subject) ?></span><?php endif; ?><?php endif; ?>
