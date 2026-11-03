@@ -28,6 +28,20 @@ trait ChatData
         try { $this->pdo->query('SELECT `Kind` FROM `ChatMessages` LIMIT 1'); }
         catch (Throwable $e) { $this->pdo->exec("ALTER TABLE `ChatMessages` ADD COLUMN `Kind` VARCHAR(8) NOT NULL DEFAULT 'app'"); }
         if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') $this->pdo->exec('CREATE INDEX IF NOT EXISTS "IX_Chat_Thread" ON "ChatMessages" ("Kind", "AppId", "Id")');
+        // অনলাইন ক্লাস (Zoom / Google Meet / Teams) — চ্যাটে কার্ড হিসেবে দেখায়
+        try { $this->pdo->query('SELECT `ClassId` FROM `ChatMessages` LIMIT 1'); }
+        catch (Throwable $e) { $this->pdo->exec('ALTER TABLE `ChatMessages` ADD COLUMN `ClassId` INT NULL'); }
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ChatClasses" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "Kind" TEXT NOT NULL, "AppId" INTEGER NOT NULL, "TeacherId" INTEGER NOT NULL,
+                "Title" TEXT NOT NULL, "Link" TEXT NOT NULL, "Platform" TEXT NOT NULL, "StartsAt" TEXT NOT NULL, "DurationMin" INTEGER NOT NULL DEFAULT 60,
+                "Status" TEXT NOT NULL DEFAULT \'Scheduled\', "CreatedAt" TEXT NOT NULL)');
+            $this->pdo->exec('CREATE INDEX IF NOT EXISTS "IX_ChatClass_Thread" ON "ChatClasses" ("Kind", "AppId", "StartsAt")');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatClasses` (`Id` INT NOT NULL AUTO_INCREMENT, `Kind` VARCHAR(8) NOT NULL, `AppId` INT NOT NULL, `TeacherId` INT NOT NULL,
+                `Title` VARCHAR(150) NOT NULL, `Link` VARCHAR(500) NOT NULL, `Platform` VARCHAR(20) NOT NULL, `StartsAt` DATETIME NOT NULL, `DurationMin` INT NOT NULL DEFAULT 60,
+                `Status` VARCHAR(20) NOT NULL DEFAULT 'Scheduled', `CreatedAt` DATETIME NOT NULL, PRIMARY KEY (`Id`), KEY `IX_ChatClass_Thread` (`Kind`, `AppId`, `StartsAt`))
+                ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
         $this->chatReady = true;
     }
 
@@ -157,21 +171,51 @@ trait ChatData
         $p = ['k' => $t->Kind, 'a' => $t->RefId];
         if ($after > 0) {
             $p['x'] = $after;
-            $rows = $this->all("SELECT `Id`, `SenderId`, `Body`, `CreatedAt`, `ReadAt` FROM `ChatMessages` WHERE `Kind` = :k AND `AppId` = :a AND `Id` > :x ORDER BY `Id` ASC LIMIT $limit", $p);
+            $rows = $this->all("SELECT `Id`, `SenderId`, `Body`, `CreatedAt`, `ReadAt`, `ClassId` FROM `ChatMessages` WHERE `Kind` = :k AND `AppId` = :a AND `Id` > :x ORDER BY `Id` ASC LIMIT $limit", $p);
         } else {
             $w = '`Kind` = :k AND `AppId` = :a';
             if ($before > 0) { $w .= ' AND `Id` < :b'; $p['b'] = $before; }
-            $rows = array_reverse($this->all("SELECT `Id`, `SenderId`, `Body`, `CreatedAt`, `ReadAt` FROM `ChatMessages` WHERE $w ORDER BY `Id` DESC LIMIT $limit", $p));
+            $rows = array_reverse($this->all("SELECT `Id`, `SenderId`, `Body`, `CreatedAt`, `ReadAt`, `ClassId` FROM `ChatMessages` WHERE $w ORDER BY `Id` DESC LIMIT $limit", $p));
         }
-        foreach ($rows as $r) { $r->Id = (int)$r->Id; $r->SenderId = (int)$r->SenderId; }
+        foreach ($rows as $r) { $r->Id = (int)$r->Id; $r->SenderId = (int)$r->SenderId; $r->ClassId = (int)($r->ClassId ?? 0); }
         return $rows;
     }
 
-    public function AddChatMessage(Obj $t, int $senderId, string $body): int
+    public function AddChatMessage(Obj $t, int $senderId, string $body, int $classId = 0): int
     {
         $this->EnsureChatTables();
-        return (int)$this->insert('INSERT INTO `ChatMessages` (`Kind`, `AppId`, `SenderId`, `Body`, `CreatedAt`) VALUES (:k, :a, :s, :b, :t)',
-            ['k' => $t->Kind, 'a' => $t->RefId, 's' => $senderId, 'b' => $body, 't' => now()]);
+        return (int)$this->insert('INSERT INTO `ChatMessages` (`Kind`, `AppId`, `SenderId`, `Body`, `CreatedAt`, `ClassId`) VALUES (:k, :a, :s, :b, :t, :c)',
+            ['k' => $t->Kind, 'a' => $t->RefId, 's' => $senderId, 'b' => $body, 't' => now(), 'c' => $classId > 0 ? $classId : null]);
+    }
+
+    // ---------- অনলাইন ক্লাস ----------
+    public function CreateChatClass(Obj $t, int $teacherId, string $title, string $link, string $platform, string $startsAt, int $duration): int
+    {
+        $this->EnsureChatTables();
+        return (int)$this->insert('INSERT INTO `ChatClasses` (`Kind`, `AppId`, `TeacherId`, `Title`, `Link`, `Platform`, `StartsAt`, `DurationMin`, `Status`, `CreatedAt`)
+            VALUES (:k, :a, :tid, :ti, :l, :p, :s, :d, \'Scheduled\', :c)', ['k' => $t->Kind, 'a' => $t->RefId, 'tid' => $teacherId, 'ti' => $title, 'l' => $link, 'p' => $platform, 's' => $startsAt, 'd' => $duration, 'c' => now()]);
+    }
+
+    /** এই চ্যাটের সব ক্লাস (নতুন গুলো পরে) */
+    public function GetChatClasses(Obj $t): array
+    {
+        $this->EnsureChatTables();
+        $rows = $this->all('SELECT * FROM `ChatClasses` WHERE `Kind` = :k AND `AppId` = :a ORDER BY `StartsAt` ASC, `Id` ASC', ['k' => $t->Kind, 'a' => $t->RefId]);
+        foreach ($rows as $r) { $r->Id = (int)$r->Id; $r->TeacherId = (int)$r->TeacherId; $r->DurationMin = (int)$r->DurationMin; }
+        return $rows;
+    }
+
+    public function GetChatClass(int $id): ?Obj
+    {
+        $this->EnsureChatTables();
+        $r = $this->one('SELECT * FROM `ChatClasses` WHERE `Id` = :i', ['i' => $id]);
+        if ($r) { $r->Id = (int)$r->Id; $r->TeacherId = (int)$r->TeacherId; $r->AppId = (int)$r->AppId; $r->DurationMin = (int)$r->DurationMin; }
+        return $r;
+    }
+
+    public function CancelChatClass(int $id): void
+    {
+        $this->exec("UPDATE `ChatClasses` SET `Status` = 'Cancelled' WHERE `Id` = :i", ['i' => $id]);
     }
 
     /** অন্যজনের পাঠানো মেসেজগুলো পড়া হয়েছে চিহ্নিত করে */
