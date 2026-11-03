@@ -30,18 +30,18 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     .hx { position: relative; overflow: hidden; margin-top: -80px; padding-top: 80px; background: #F4F7FB; }
     .hx-in { position: relative; max-width: 1440px; margin: 0 auto; padding: 56px 64px 72px 96px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; min-height: 480px; }
     .hx h1 { margin: 0; font-family: var(--font-heading); font-weight: 600; font-size: clamp(30px, 2.6vw, 48px); line-height: 1.22; color: #1F2937; letter-spacing: -.3px; }
-    .hx h1 .bd { color: #1677E5; }
+    .hx h1 .bd { color: #00CFFF; }
     .hx-p { margin: 22px 0 0; max-width: 580px; font-size: clamp(15px, 1.05vw, 18px); line-height: 1.6; color: #4B5563; }
     .hx-search { margin-top: 34px; max-width: 600px; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 10px;
         box-shadow: 0 8px 28px rgba(15,40,80,.08); }
     .hx-search .fld { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 1px solid #E5E7EB; border-radius: 8px; padding: 0 14px; height: 46px; transition: border-color .2s, box-shadow .2s; }
-    .hx-search .fld:focus-within { border-color: #9CC7F5; box-shadow: 0 0 0 3px rgba(22,119,229,.10); }
+    .hx-search .fld:focus-within { border-color: #00CFFF; box-shadow: 0 0 0 3px rgba(0,207,255,.15); }
     .hx-search i { color: #9CA3AF; font-size: 15px; }
     .hx-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 15px; color: #1F2937; font-family: inherit; }
     .hx-search input::placeholder { color: #6B7280; }
-    .hx-search button { flex-shrink: 0; border: none; border-radius: 8px; background: #1677E5; color: #fff; font-weight: 600; font-size: 15px; padding: 0 24px; height: 46px; cursor: pointer;
+    .hx-search button { flex-shrink: 0; border: none; border-radius: 8px; background: #00CFFF; color: #fff; font-weight: 600; font-size: 15px; padding: 0 24px; height: 46px; cursor: pointer;
         font-family: inherit; transition: background .2s; white-space: nowrap; }
-    .hx-search button:hover { background: #0F63C8; }
+    .hx-search button:hover { background: #00B5E0; }
     .hx-art { position: relative; display: flex; align-items: center; justify-content: center; }
     /* ছবির সাদা ব্যাকগ্রাউন্ড হিরোর রঙের সাথে মিশে যায় */
     .hx-art img { display: block; width: 100%; max-width: 560px; height: auto; object-fit: contain; mix-blend-mode: multiply; }
@@ -50,7 +50,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     .hx-art.slider .hero-slide { height: 100%; }
     .hx-dotsnav { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
     .hx-dotsnav button { width: 9px; height: 9px; border-radius: 50%; border: none; padding: 0; cursor: pointer; background: #C9D6E5; transition: all .3s; }
-    .hx-dotsnav button.on { background: #1677E5; transform: scale(1.3); }
+    .hx-dotsnav button.on { background: #00CFFF; transform: scale(1.3); }
     @media (max-width: 1280px) { .hx-in { padding: 44px 40px 56px 56px; gap: 32px; min-height: 0; } }
     @media (max-width: 1024px) {
         .hx-in { grid-template-columns: minmax(0, 1fr); padding: 36px 28px 48px; }

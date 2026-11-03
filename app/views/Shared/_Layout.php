@@ -807,13 +807,12 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             @media (max-width: 359px) { .site-header .brand-sep, .site-header .brand-word { display: none; } }
             .site-header .nav-desktop-link { color: #0B1F44 !important; opacity: 1; font-weight: 600; border-radius: 9px; }
             .site-header .nav-desktop-link i { color: #0B1F44; }
-            .site-header .nav-desktop-link:hover { background: rgba(22,119,229,.08); color: #1677E5 !important; }
-            .site-header .nav-desktop-link:hover i { color: #1677E5; }
-            .site-header .nav-desktop-link.active, .site-header .nav-desktop-link.active:hover {
-                background: #1677E5; color: #fff !important; font-weight: 700; box-shadow: 0 6px 16px rgba(22,119,229,.28);
-            }
-            .site-header .nav-desktop-link.active i { color: #fff; }
-            .site-header .nav-desktop-link.active::after { display: none; }
+            .site-header .nav-desktop-link:hover { background: none; color: #00A8D6 !important; }
+            .site-header .nav-desktop-link:hover i { color: #00A8D6; }
+            /* ✅ যে পেজে আছেন — বক্স নয়, #00CFFF আন্ডারলাইন */
+            .site-header .nav-desktop-link.active, .site-header .nav-desktop-link.active:hover { background: none; box-shadow: none; color: #0B1F44 !important; font-weight: 700; }
+            .site-header .nav-desktop-link.active i { color: #00CFFF; }
+            .site-header .nav-desktop-link.active::after { display: block; background: #00CFFF; height: 3px; bottom: 0; }
             .site-header .notification-bell { color: #0B1F44; }
             .site-header .notification-bell:hover { color: #1677E5; }
             .site-header .profile-dropdown .nav-av { border-color: #CFE0F2; }
