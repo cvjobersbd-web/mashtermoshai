@@ -415,6 +415,8 @@ $waLink = function (?string $phone): string {
     }
     .ta-status.Pending { background: #FFF7E0; color: #8a5a00; }
     .ta-status.Accepted { background: #d4edda; color: #155724; }
+    .ta-btn.chat { background: #00CFFF; color: #fff !important; }
+    .ta-btn.chat[hidden] { display: none !important; }
     .ta-status.Rejected { background: #f8d7da; color: #721c24; }
 
     .ta-info { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 0; font-size: 13.5px; color: #334155; }
@@ -666,6 +668,7 @@ $waLink = function (?string $phone): string {
                             <?php if (!is_blank($a->TeacherEmail)): ?>
                                 <a class="ta-btn mail" href="mailto:<?= e($a->TeacherEmail) ?>"><i class="fas fa-envelope"></i> Email</a>
                             <?php endif; ?>
+                            <a class="ta-btn chat" id="ta-chat-<?= e($a->Id) ?>" href="/Chat?c=<?= (int)$a->Id ?>"<?= $a->Status === 'Accepted' ? '' : ' hidden' ?>><i class="fas fa-comments"></i> Message</a>
                             <span style="flex:1"></span>
                             <span class="ta-decide" id="ta-decide-<?= e($a->Id) ?>">
                                 <?php if ($a->Status === 'Pending'): ?>
@@ -711,7 +714,7 @@ $waLink = function (?string $phone): string {
     })();
 
     async function setAppStatus(id, status) {
-        if (status === 'Rejected' && !confirm('এই টিচারের অ্যাপ্লিকেশন Reject করবেন?')) return;
+        if (status === 'Rejected' && !confirm('এই টিচারের অ্যাপ্লিকেশন Reject করবেন? Reject করলে তার সাথে চ্যাটও বন্ধ হয়ে যাবে।')) return;
         var box = document.getElementById('ta-decide-' + id);
         box.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
 
@@ -729,6 +732,8 @@ $waLink = function (?string $phone): string {
             var st = document.getElementById('ta-status-' + id);
             st.className = 'ta-status ' + status;
             st.textContent = status;
+            // Accepted হলে চ্যাট বাটন দেখায়, অন্য অবস্থায় চ্যাট বন্ধ
+            var chat = document.getElementById('ta-chat-' + id); if (chat) chat.hidden = status !== 'Accepted';
             box.innerHTML = status === 'Pending'
                 ? '<button class="ta-btn accept" onclick="setAppStatus(' + id + ', \'Accepted\')"><i class="fas fa-check"></i> Accept</button> '
                   + '<button class="ta-btn reject" onclick="setAppStatus(' + id + ', \'Rejected\')"><i class="fas fa-times"></i> Reject</button>'

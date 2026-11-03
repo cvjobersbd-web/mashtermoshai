@@ -839,8 +839,9 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                             <?php if (!is_blank($ca->Subjects)): ?><span><i class="fas fa-book" style="color:#028EA5;"></i> <?= e($ca->Subjects) ?></span><?php endif; ?>
                             <?php if (!is_blank($ca->Budget)): ?><span><i class="fas fa-money-bill-wave" style="color:#028EA5;"></i> ৳<?= e($ca->Budget) ?></span><?php endif; ?>
                         </div>
-                        <?php if ($ca->Status === 'Accepted' && (!is_blank($ca->OwnerPhone) || !is_blank($ca->OwnerEmail))): ?>
+                        <?php if ($ca->Status === 'Accepted'): ?>
                             <div class="d-flex gap-2 flex-wrap mt-3 pt-3 border-top">
+                                <a href="/Chat?c=<?= (int)$ca->Id ?>" class="btn btn-sm text-white" style="background:#00CFFF; border-radius:8px; font-weight:600;"><i class="fas fa-comments"></i> Message</a>
                                 <?php if (!is_blank($ca->OwnerPhone)):
                                     $d = preg_replace('/\D/', '', (string)$ca->OwnerPhone); if (str_starts_with($d, '01')) $d = '88' . $d; ?>
                                     <a href="https://wa.me/<?= e($d) ?>" target="_blank" rel="noopener" class="btn btn-sm text-white" style="background:#25D366; border-radius:8px; font-weight:600;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
