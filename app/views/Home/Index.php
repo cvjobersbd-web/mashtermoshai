@@ -65,6 +65,16 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         .hx-search .fld { padding: 0 10px; height: 44px; } .hx-search input { font-size: 14.5px; }
         .hx-search button { font-size: 14.5px; padding: 0 16px; height: 44px; }
     }
+    /* ✅ সার্চ বক্সে চলমান লেখা (ডান থেকে বাঁয়ে) — লিখতে শুরু করলে/ক্লিক করলে লুকায় */
+    .hx-mq-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-self: stretch; align-items: center; }
+    .hx-mq { position: absolute; inset: 0; overflow: hidden; pointer-events: none; display: flex; align-items: center; color: #6B7280; font-size: 15px; transition: opacity .2s;
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+    .hx-mq-track { display: inline-flex; white-space: nowrap; animation: hxMarquee 12s linear infinite; will-change: transform; }
+    .hx-mq-track span { padding-right: 120px; }
+    @keyframes hxMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .hx-mq-wrap input:focus + .hx-mq, .hx-mq-wrap input:not(:placeholder-shown) + .hx-mq { opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { .hx-mq-track { animation: none; } }
+    @media (max-width: 640px) { .hx-mq { font-size: 14.5px; } .hx-mq-track span { padding-right: 60px; } }
 </style>
 <section class="hx" aria-label="Find the Right Tutor in Bangladesh">
     <div class="hx-in">
@@ -73,7 +83,8 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.</p>
             <form class="hx-search" action="/FindTutor" method="get" role="search">
                 <label class="fld"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-                <input type="search" name="q" maxlength="60" placeholder="Search by subject, class or location..." aria-label="Search by subject, class or location" /></label>
+                <span class="hx-mq-wrap"><input type="search" name="q" maxlength="60" placeholder=" " aria-label="Your Right Tutor, Just a Click Away — search by subject, class or location" />
+                <span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span>Your Right Tutor, Just a Click Away.</span><span>Your Right Tutor, Just a Click Away.</span></span></span></span></label>
                 <button type="submit">Find a Tutor</button>
             </form>
         </div>
