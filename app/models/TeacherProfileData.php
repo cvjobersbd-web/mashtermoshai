@@ -276,6 +276,11 @@ trait TeacherProfileData
             $a = (int)$this->scalar("SELECT COUNT(*) FROM `TuitionCircularApplications` a INNER JOIN `TuitionCircularPosts` p ON p.`Id` = a.`PostId`
                 WHERE a.`TeacherId` = :t AND p.`UserId` = :s AND a.`Status` = 'Accepted'", ['t' => $teacherId, 's' => $studentId]);
             if ($a > 0) return true;
+            // স্টুডেন্ট সরাসরি রিকোয়েস্ট পাঠিয়েছিল আর টিচার Accept করেছে
+            try {
+                $this->EnsureTutorRequestUserColumns();
+                if ((int)$this->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `TeacherUserId` = :t AND `StudentUserId` = :s AND `Status` = 'Accepted'", ['t' => $teacherId, 's' => $studentId]) > 0) return true;
+            } catch (Throwable $e) { }
             return (int)$this->scalar('SELECT COUNT(*) FROM `TeacherStudents` WHERE `TeacherId` = :t AND `StudentUserId` = :s', ['t' => $teacherId, 's' => $studentId]) > 0;
         } catch (Throwable $e) { return false; }
     }

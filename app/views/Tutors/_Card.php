@@ -9,7 +9,7 @@ $city = $t->City !== '' ? $t->City : ($t->Location !== '' ? explode(',', $t->Loc
 $inst = $t->Institution !== 'Not specified' ? $t->Institution : 'N/A';
 ?>
 <div class="tl-card">
-    <a class="tl-pic" href="/Profile/Show/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">
+    <a class="tl-pic" href="/Tutors/Profile/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">
         <span><?= e($t->Initials) ?></span>
         <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
     </a>
@@ -21,5 +21,5 @@ $inst = $t->Institution !== 'Not specified' ? $t->Institution : 'N/A';
     <h3 class="tl-name" title="<?= e($t->FullName) ?>"><?= e($short) ?></h3>
     <div class="tl-inst" title="<?= e($inst) ?>"><?= e($inst) ?></div>
     <div class="tl-loc"><i class="fas fa-location-dot"></i> <?= e($city) ?></div>
-    <a class="tl-see" href="/Profile/Show/<?= (int)$t->UserId ?>">See</a>
+    <a class="tl-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">See</a>
 </div>

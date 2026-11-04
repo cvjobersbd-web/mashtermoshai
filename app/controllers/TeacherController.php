@@ -32,36 +32,85 @@ class TeacherController extends Controller
         $this->view(null, $model);
     }
 
+    /** ডিটেইলস ফর্ম (td[...]) পরিষ্কার করে + বাধ্যতামূলক ঘরগুলো যাচাই — ভুল থাকলে বার্তার তালিকা */
+    private function readDetails(array &$errors): array
+    {
+        $raw = $_POST['td'] ?? [];
+        $d = Db::cleanTeacherDetails(is_array($raw) ? $raw : []);
+        $need = ['whyHire' => 'Reasons to be Hired', 'university' => 'University / College', 'livingCity' => 'Living City', 'subjects' => 'Subjects',
+            'classes' => 'Classes', 'methods' => 'Tutoring Method', 'days' => 'Availability Days', 'experienceYears' => 'Tutoring Experience',
+            'expectedSalary' => 'Expected Salary', 'gender' => 'Gender'];
+        foreach ($need as $k => $label) if ($d[$k] === '' || $d[$k] === []) $errors[] = "$label দিন।";
+        if ($d['expectedSalary'] !== '' && !preg_match('/^\d[\d,]*$/', $d['expectedSalary'])) $errors[] = 'Expected Salary শুধু সংখ্যায় দিন (যেমন 5000)।';
+        return $d;
+    }
+
     /** POST /Teacher/RequestForm */
     public function RequestForm_POST(): void
     {
         if (session_get('UserName') === null) $this->redirectToAction('Login', 'Account');
+        $userId = current_user_id() ?? 0;
+        $user = $this->db->GetUserById($userId);
 
         $model = obj();
         foreach (self::REQUEST_FIELDS as $f) $model->$f = trim((string)input_str($f, ''));
-        $model->UserId = current_user_id() ?? 0;   // নিরাপত্তার জন্য সেশন থেকে নেওয়া
+        $model->UserId = $userId;   // নিরাপত্তার জন্য সেশন থেকে নেওয়া
+        $model->FullName = (string)($user->FullName ?? $model->FullName);
+        $model->Email = (string)($user->Email ?? $model->Email);
+        $model->MobileNumber = (string)($user->MobileNumber ?? $model->MobileNumber);
         $model->Id = 0;
         $model->Status = 'Pending';
 
         $errors = [];
-        foreach (self::REQUEST_FIELDS as $f) {
-            if (in_array($f, ['TeachingStyle', 'PreferredTime', 'CvLink'], true)) continue; // ফর্মে ঐচ্ছিক
-            if ($model->$f === '') $errors[] = "The $f field is required.";
-        }
+        $d = $this->readDetails($errors);
+        // পুরোনো ঘরগুলো ডিটেইলস থেকে (অ্যাডমিনের Teacher Requests পেজ আর Find Tutor এ আগের মতোই দেখায়)
+        $model->Institution = $d['university'];
+        $model->SubjectExpertise = implode(', ', $d['subjects']);
+        $model->Experience = $d['experienceYears'];
+        $model->HourlyRate = $d['expectedSalary'];
+        $model->AvailableDays = implode(', ', $d['days']);
+        $model->PreferredTime = $d['timeFrom'] !== '' && $d['timeTo'] !== '' ? date('h:i A', strtotime($d['timeFrom'])) . ' - ' . date('h:i A', strtotime($d['timeTo'])) : '';
+        $model->WhyTeach = $d['whyHire'];
+        if ($model->Education === '') $errors[] = 'Highest Education দিন।';
+        if ($model->CvLink !== '' && !preg_match('#^https?://#i', $model->CvLink)) $errors[] = 'CV Link https:// দিয়ে শুরু হতে হবে।';
+        if ($this->db->GetUserTeacherRequestStatus($userId) === 'Pending') $errors[] = 'আপনার আগের আবেদন এখনো যাচাই হচ্ছে।';
 
-        $viewBag = [];
+        $viewBag = ['Details' => $d];
         if (!$errors) {
             $model->RequestDate = now();
             $err = null;
             if ($this->db->CreateTeacherRequest($model, $err)) {
+                $this->db->SaveTeacherDetails($userId, $d);
                 tempdata_set('Success', 'Your teacher request has been submitted successfully! Please wait for admin approval.');
-                $this->view(null, $model);
+                $this->view(null, $model, $viewBag);
             }
             $viewBag['Error'] = is_blank($err) ? 'Failed to submit request. Please try again.' : "Failed to submit request. Database error: $err";
         } else {
-            $viewBag['Error'] = 'Please fix the following: ' . implode(' ', $errors);
+            $viewBag['Error'] = 'অনুগ্রহ করে ঠিক করুন: ' . implode(' ', $errors);
         }
         $this->view(null, $model, $viewBag);
+    }
+
+    /** GET /Teacher/EditDetails — অনুমোদিত টিচার নিজের Tutor Details (ডিটেইলস পেজের তথ্য) বদলায় */
+    public function EditDetails(): void
+    {
+        $me = current_user_id();
+        if ($me === null) redirect('/Account/Login?returnUrl=' . rawurlencode('/Teacher/EditDetails'));
+        if (current_role() !== 'Teacher') redirect('/Teacher/RequestForm');
+        $this->view(null, null, ['Details' => $this->db->GetTeacherDetails((int)$me)]);
+    }
+
+    /** POST /Teacher/EditDetails */
+    public function EditDetails_POST(): void
+    {
+        $me = current_user_id();
+        if ($me === null || current_role() !== 'Teacher') redirect('/Account/Login');
+        $errors = [];
+        $d = $this->readDetails($errors);
+        if ($errors) { $this->view('EditDetails', null, ['Details' => $d, 'Error' => 'অনুগ্রহ করে ঠিক করুন: ' . implode(' ', $errors)]); return; }
+        $this->db->SaveTeacherDetails((int)$me, $d);
+        tempdata_set('Success', 'Tutor Details সেভ হয়েছে।');
+        redirect('/Tutors/Profile/' . (int)$me);
     }
 
     /** GET /Teacher/TeacherDashboard */

@@ -313,7 +313,10 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                     <div class="pf-actions">
                         <?php if ($isOwner): ?>
                             <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
+                            <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-id-card"></i> Tutor Details</a>
                         <?php elseif (!$isAdminViewer): ?>
+                            <?php if (current_role() !== 'Teacher'): ?><a href="/FindTutor?req=<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-paper-plane"></i> Request Tutor</a><?php endif; ?>
+                            <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn"><i class="fas fa-id-card"></i> Full Details</a>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
                                 <i class="<?= $Model->TutorSaved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $Model->TutorSaved ? 'Saved' : 'Save' ?></span>
                             </button>

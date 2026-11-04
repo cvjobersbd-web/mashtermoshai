@@ -2014,6 +2014,7 @@ $ftBanner = findtutor_banner();
 $savedTutors = $ViewBag->SavedTutors ?? [];
 $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 ?>
+<style>.ft2 .ft2-tutors-hidden[hidden], .ft2 .ft2-qf[hidden], .ft2 .ft2-tid[hidden] { display: none !important; }</style>
 <section class="ft2">
     <div class="ft2-wrap">
         <!-- ======================= BANNER ======================= -->
@@ -2054,6 +2055,9 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <?php endif; ?>
                 </div>
 
+                <!-- ===== টিউটর তালিকা এখন আলাদা পেজে (/Tutors — Find Tutor → Tutor List)। এই পেজে শুধু "পড়াতে চাই" পোস্ট।
+                     নিচের অংশ লুকানো রাখা হয়েছে যাতে Request Tutor ফর্মটা (টিউটরের ডাটা সহ) কাজ করে। ===== -->
+                <div class="ft2-tutors-hidden" hidden>
                 <!-- ===== সার্চ + সর্ট ===== -->
                 <div class="ft2-card ft2-search">
                     <label class="ft2-search-in"><i class="fas fa-magnifying-glass"></i>
@@ -2079,9 +2083,15 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 </div>
                 <div id="tutorList"></div>
                 <button type="button" class="ft2-more" id="ftMore" hidden><i class="fas fa-angles-down"></i> আরো টিউটর দেখুন</button>
+                </div>
+                <a class="ft2-card" href="/Tutors" style="display:flex; align-items:center; gap:14px; text-decoration:none; color:#0B1F44; padding:16px 18px;">
+                    <i class="fas fa-users" style="width:42px; height:42px; border-radius:12px; background:#E6F9FF; color:#00A8D6; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;"></i>
+                    <span style="flex:1; min-width:0;"><b style="display:block; font-size:15px;">টিউটর খুঁজছেন?</b><small style="color:#64748B; font-size:13px;">সব যাচাই করা টিউটরের তালিকা আর প্রোফাইল দেখুন — Tutor List</small></span>
+                    <i class="fas fa-arrow-right" style="color:#00A8D6;"></i>
+                </a>
 
                 <!-- ===== টিচারদের পোস্ট ===== -->
-                <div class="ft2-list-h" style="margin-top:30px;">
+                <div class="ft2-list-h" style="margin-top:22px;">
                     <h2><i class="fas fa-chalkboard-user"></i> টিচারদের পোস্ট <span class="ft2-count" id="postCountBadge"><?= count($posts) ?>টি</span></h2>
                 </div>
             <div class="post-feed" id="postFeed">
@@ -2280,7 +2290,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <button type="button" class="ft2-btn yellow block" onclick="openAreaTuitionModal()"><i class="fas fa-headset"></i> Contact Admin</button>
                 </div>
 
-                <div class="ft2-card ft2-qf" id="ftFilters" style="scroll-margin-top:100px;">
+                <div class="ft2-card ft2-qf" id="ftFilters" style="scroll-margin-top:100px;" hidden>
                     <h3><i class="fas fa-filter"></i> Quick Filters</h3>
                     <div class="ft2-fg"><label for="qfClass">Class / Level</label><select id="qfClass"><option value="">Select class</option><?php if (isset($ftPreset['class'])): ?><option value="<?= e($ftPreset['class'][0]) ?>" selected><?= e($ftPreset['class'][1]) ?></option><?php endif; ?><?php foreach (array_merge(tuition_options()['classes'], ['Bangla Medium', 'English Medium']) as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
                     <div class="ft2-fg"><label for="qfSubject">Subject</label><select id="qfSubject"><option value="">Select subject</option><?php if (isset($ftPreset['subject'])): ?><option value="<?= e($ftPreset['subject'][0]) ?>" selected><?= e($ftPreset['subject'][1]) ?></option><?php endif; ?><?php foreach (tuition_options()['subjects'] as $o): ?><option value="<?= e($o) ?>"><?= e($o) ?></option><?php endforeach; ?></select></div>
@@ -2302,7 +2312,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     </ul>
                 </div>
 
-                <div class="ft2-card ft2-tid">
+                <div class="ft2-card ft2-tid" hidden>
                     <h4><i class="fas fa-id-badge"></i> Tutor ID আছে?</h4>
                     <div class="ft2-tid-in"><input type="text" id="tidInput" placeholder="TCH-1024" /><button type="button" onclick="findByTutorId()" aria-label="Find"><i class="fas fa-search"></i></button></div>
                 </div>
@@ -3315,7 +3325,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 // ✅ লগইন চেক
                 if (!isLoggedIn) {
                     alert('রিকোয়েস্ট পাঠাতে অনুগ্রহ করে প্রথমে লগইন করুন।');
-                    window.location.href = '/Account/Login?returnUrl=/FindTutor/Index';
+                    window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(location.pathname + location.search);
                     return;
                 }
 
@@ -3859,6 +3869,13 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 if (document.getElementById('ftSearch').value.trim()) {
                     var lh = document.getElementById('countBadge'); lh = lh && lh.closest('.ft2-list-h');
                     if (lh) setTimeout(function () { lh.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
+                }
+
+                // টিচারের প্রোফাইল থেকে "Request Tutor" (/FindTutor?req={userId}) — সরাসরি রিকোয়েস্ট ফর্ম খোলে
+                var reqUid = parseInt(new URLSearchParams(location.search).get('req') || '0', 10);
+                if (reqUid) {
+                    var rt = (window.allTutors || []).find(function (x) { return +x.userId === reqUid; });
+                    if (rt) setTimeout(function () { openRequestTutorModal(rt.id); }, 300);
                 }
 
                 var tidInput = document.getElementById('tidInput');

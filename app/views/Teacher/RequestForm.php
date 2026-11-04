@@ -7,7 +7,7 @@ $ViewData['Title'] = 'Become a Tutor';
 
 <style>
     .teacher-form-container {
-        max-width: 800px;
+        max-width: 980px;
         margin: 0 auto;
         background: white;
         border-radius: 16px;
@@ -110,45 +110,20 @@ $ViewData['Title'] = 'Become a Tutor';
             <input type="hidden" name="MobileNumber" id="MobileNumber" value="<?= e($Model->MobileNumber) ?>" />
 
             <div class="form-section">
-                <div class="form-section-title"><i class="fas fa-id-card"></i> Basic Information</div>
+                <div class="form-section-title"><i class="fas fa-graduation-cap"></i> Highest Education</div>
                 <div class="row">
-                    <div class="col-md-6 mb-3"><label class="form-label fw-bold">Full Name</label><input type="text" class="form-control" value="<?= e($Model->FullName) ?>" disabled /></div>
-                    <div class="col-md-6 mb-3"><label class="form-label fw-bold">Email</label><input type="email" class="form-control" value="<?= e($Model->Email) ?>" disabled /></div>
-                    <div class="col-md-12 mb-3"><label class="form-label fw-bold">Mobile Number</label><input type="text" class="form-control" value="<?= e($Model->MobileNumber) ?>" disabled /></div>
+                    <div class="col-md-12 mb-3"><label for="Education" class="form-label fw-bold">Highest Education <span class="required-star">*</span></label><input type="text" name="Education" id="Education" value="<?= e($Model->Education) ?>" class="form-control" placeholder="e.g. BSc in Computer Science (running)" required /></div>
                 </div>
             </div>
 
-            <div class="form-section">
-                <div class="form-section-title"><i class="fas fa-graduation-cap"></i> Educational Qualification</div>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label for="Education" class="form-label fw-bold">Education <span class="required-star">*</span></label><input type="text" name="Education" id="Education" value="<?= e($Model->Education) ?>" class="form-control" placeholder="e.g. BSc in Computer Science" required /></div>
-                    <div class="col-md-6 mb-3"><label for="Institution" class="form-label fw-bold">Institution <span class="required-star">*</span></label><input type="text" name="Institution" id="Institution" value="<?= e($Model->Institution) ?>" class="form-control" placeholder="e.g. Dhaka University" required /></div>
-                </div>
-            </div>
+            <!-- এই তথ্যগুলো Tutor List → See (ডিটেইলস পেজে) দেখাবে -->
+            <?php partial('Teacher/_DetailsForm', ['d' => $ViewBag->Details ?? db()->GetTeacherDetails((int)$Model->UserId)]); ?>
 
             <div class="form-section">
-                <div class="form-section-title"><i class="fas fa-chalkboard"></i> Teaching Information</div>
+                <div class="form-section-title"><i class="fas fa-link"></i> CV (ঐচ্ছিক)</div>
                 <div class="row">
-                    <div class="col-md-6 mb-3"><label for="SubjectExpertise" class="form-label fw-bold">Subject Expertise <span class="required-star">*</span></label><input type="text" name="SubjectExpertise" id="SubjectExpertise" value="<?= e($Model->SubjectExpertise) ?>" class="form-control" placeholder="e.g. Mathematics, Physics, Programming" required /></div>
-                    <div class="col-md-6 mb-3"><label for="Experience" class="form-label fw-bold">Experience <span class="required-star">*</span></label><select name="Experience" id="Experience" class="form-control" required><option value="" <?= (string)$Model->Experience === '' ? 'selected' : '' ?>>Select Experience</option><option value="Fresher" <?= (string)$Model->Experience === 'Fresher' ? 'selected' : '' ?>>Fresher (No experience)</option><option value="1-2 years" <?= (string)$Model->Experience === '1-2 years' ? 'selected' : '' ?>>1-2 years</option><option value="3-5 years" <?= (string)$Model->Experience === '3-5 years' ? 'selected' : '' ?>>3-5 years</option><option value="5-10 years" <?= (string)$Model->Experience === '5-10 years' ? 'selected' : '' ?>>5-10 years</option><option value="10+ years" <?= (string)$Model->Experience === '10+ years' ? 'selected' : '' ?>>10+ years</option></select></div>
-                    <div class="col-md-6 mb-3"><label for="TeachingStyle" class="form-label fw-bold">Teaching Style</label><input type="text" name="TeachingStyle" id="TeachingStyle" value="<?= e($Model->TeachingStyle) ?>" class="form-control" placeholder="e.g. Interactive, Lecture-based, Hands-on" /></div>
-                    <div class="col-md-6 mb-3"><label for="HourlyRate" class="form-label fw-bold">Hourly Rate (BDT) <span class="required-star">*</span></label><input type="text" name="HourlyRate" id="HourlyRate" value="<?= e($Model->HourlyRate) ?>" class="form-control" placeholder="e.g. 500" required /></div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="form-section-title"><i class="fas fa-clock"></i> Availability</div>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label for="AvailableDays" class="form-label fw-bold">Available Days <span class="required-star">*</span></label><input type="text" name="AvailableDays" id="AvailableDays" value="<?= e($Model->AvailableDays) ?>" class="form-control" placeholder="e.g. Sun, Mon, Wed, Fri" required /></div>
-                    <div class="col-md-6 mb-3"><label for="PreferredTime" class="form-label fw-bold">Preferred Time</label><input type="text" name="PreferredTime" id="PreferredTime" value="<?= e($Model->PreferredTime) ?>" class="form-control" placeholder="e.g. 6 PM - 9 PM" /></div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="form-section-title"><i class="fas fa-link"></i> CV & Motivation</div>
-                <div class="row">
-                    <div class="col-md-12 mb-3"><label for="CvLink" class="form-label fw-bold">CV Link</label><input type="text" name="CvLink" id="CvLink" value="<?= e($Model->CvLink) ?>" class="form-control" placeholder="https://drive.google.com/your-cv" /></div>
-                    <div class="col-md-12 mb-3"><label for="WhyTeach" class="form-label fw-bold">Why do you want to teach? <span class="required-star">*</span></label><textarea name="WhyTeach" id="WhyTeach" class="form-control" rows="4" placeholder="Tell us why you're passionate about teaching..." required><?= e($Model->WhyTeach) ?></textarea></div>
+                    <div class="col-md-6 mb-3"><label for="CvLink" class="form-label fw-bold">CV Link</label><input type="text" name="CvLink" id="CvLink" value="<?= e($Model->CvLink) ?>" class="form-control" placeholder="https://drive.google.com/your-cv" /></div>
+                    <div class="col-md-6 mb-3"><label for="TeachingStyle" class="form-label fw-bold">Teaching Style</label><input type="text" name="TeachingStyle" id="TeachingStyle" value="<?= e($Model->TeachingStyle) ?>" class="form-control" placeholder="e.g. Interactive, Hands-on" /></div>
                 </div>
             </div>
 

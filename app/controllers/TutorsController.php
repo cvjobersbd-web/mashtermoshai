@@ -91,4 +91,55 @@ class TutorsController extends Controller
             'Type' => $type, 'Title' => self::TYPES[$type], 'Cities' => $cities, 'Page' => $page, 'Pages' => $pages, 'Total' => $total,
         ]);
     }
+
+    /** GET /Tutors/Profile/{userId} — টিচারের পূর্ণ ডিটেইলস (লগইন ছাড়াও দেখা যায়; ফোন / ইমেইল / ঠিকানা দেখায় না) */
+    public function Profile(): void
+    {
+        $uid = input_int('id', 0);
+        $me = current_user_id();
+        $isOwner = $me !== null && (int)$me === $uid;
+        $isAdmin = is_admin();
+        $all = $this->db->GetTutorDirectory();
+        $t = null;
+        foreach ($all as $x) if ($x->UserId === $uid) { $t = $x; break; }
+        $user = $this->db->GetUserById($uid);
+        if (!$user || $user->Role !== 'Teacher') not_found('এই টিউটরকে পাওয়া যায়নি।');
+        if (!$t && !$isOwner && !$isAdmin) not_found('এই টিউটরের প্রোফাইল এখন দেখা যাচ্ছে না।');
+        if (!$t) { // মালিক / অ্যাডমিন — তালিকায় না থাকলেও (যেমন সাবস্ক্রিপশন নেই) দেখতে পারবে
+            $name = !is_blank($user->FullName) ? (string)$user->FullName : (string)$user->UserName;
+            $t = obj(['UserId' => $uid, 'TutorId' => '', 'FullName' => $name, 'Initials' => initials($name, 'T'), 'PhotoUrl' => (string)($user->ProfileImageLink ?? ''),
+                'Institution' => 'Not specified', 'Subjects' => [], 'Classes' => [], 'Mediums' => [], 'City' => '', 'Location' => '', 'ExperienceYears' => 0,
+                'MonthlyFee' => 0, 'AvailableTime' => '', 'About' => '', 'IsPremium' => false, 'IsTopRated' => false, 'Gender' => (string)($user->Gender ?? ''), 'TeachingMode' => '']);
+        }
+        if (!$isOwner && $me !== null && current_role() !== 'Admin') $this->db->RecordProfileView($uid, (int)$me);
+        // নিজে বা অ্যাডমিন দেখলে গোনা হয় না
+        if ($isOwner || $isAdmin) { $this->db->EnsureTeacherDetailsTable(); $views = (int)$this->db->scalar('SELECT COALESCE(MAX(`PageViews`), 0) FROM `TeacherDetails` WHERE `UserId` = :u', ['u' => $uid]); }
+        else $views = $this->db->BumpTeacherPageViews($uid);
+
+        // একই শহর বা একই বিষয়ের অন্য টিউটর
+        $related = [];
+        foreach ($all as $x) {
+            if ($x->UserId === $uid) continue;
+            $score = ($t->City !== '' && strcasecmp($x->City, $t->City) === 0 ? 2 : 0) + count(array_intersect(array_map('mb_strtolower', $x->Subjects), array_map('mb_strtolower', $t->Subjects)));
+            if ($score > 0) $related[] = [$score, $x];
+        }
+        usort($related, fn($a, $b) => $b[0] <=> $a[0]);
+        $related = array_map(fn($r) => $r[1], array_slice($related, 0, 8));
+        if (count($related) < 4) foreach ($all as $x) { if (count($related) >= 8) break; if ($x->UserId !== $uid && !in_array($x, $related, true)) $related[] = $x; }
+
+        $cv = '';
+        try { $cv = (string)$this->db->scalar("SELECT `CvLink` FROM `TeacherRequests` WHERE `UserId` = :u AND `Status` = 'Approved' ORDER BY `Id` DESC LIMIT 1", ['u' => $uid]); } catch (Throwable $e) { }
+        $lastSeen = null;
+        try { $lastSeen = $this->db->GetTeacherIntro($uid)->LastSeenAt; } catch (Throwable $e) { }
+
+        $this->view(null, $t, [
+            'User' => $user, 'D' => $this->db->GetTeacherDetails($uid), 'IsOwner' => $isOwner, 'IsAdmin' => $isAdmin, 'Views' => $views,
+            'Related' => $related, 'Stats' => $this->db->TeacherPlatformStats($uid), 'Cv' => preg_match('#^https?://#i', $cv) ? $cv : '',
+            'Reviews' => $this->db->GetTeacherReviews($uid, 30), 'RStats' => $this->db->TeacherReviewStats($uid),
+            'CanReview' => $me !== null && !$isOwner && current_role() !== 'Admin' && $this->db->CanReviewTeacher((int)$me, $uid),
+            'MyReview' => $me !== null ? $this->db->GetMyTeacherReview($uid, (int)$me) : null,
+            'Saved' => $me !== null && !$isOwner ? $this->db->IsSaved((int)$me, 'tutor', $uid) : false,
+            'LastSeen' => $lastSeen,
+        ]);
+    }
 }
