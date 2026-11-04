@@ -750,9 +750,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             }
             /* লোগো পুরোটা দেখায় — কোনো অংশ কাটা বা জুম করা হয় না */
             .brand-logo-box img, .footer-brand-logo-box img { border-radius: 8px; clip-path: none; transform: none; mix-blend-mode: normal; }
-            .brand-logo-box img { height: 62px; max-width: 240px; }
+            .brand-logo-box img { height: 76px; max-width: 280px; }
             .brand-logo-box:hover img { transform: scale(1.04); }
-            @media (max-width: 768px) { .brand-logo-box img { height: 52px; max-width: 190px; } }
+            @media (max-width: 768px) { .brand-logo-box img { height: 64px; max-width: 220px; } }
 
             /* ===== ✅ নেভবার মেনু: কোন পেজে আছেন বোঝা যায় ===== */
             .nav-desktop-link {
@@ -848,8 +848,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .site-header #navLinks.ink-ready.ink-away .nav-desktop-link.active::after { opacity: .28; }
             .site-header #navLinks.ink-ready .nav-desktop-link.ink-hover { color: #00A8D6 !important; }
             @media (prefers-reduced-motion: reduce) { .nav-ink { transition: opacity .2s; } }
-            .footer-brand-logo-box img { height: 76px; max-width: 260px; }
-            @media (max-width: 640px) { .footer-brand-logo-box img { height: 64px; } }
+            .footer-brand-logo-box img { height: 104px; max-width: 340px; }
+            @media (max-width: 640px) { .footer-brand-logo-box img { height: 88px; } }
 
             .brand-site-name {
                 color: var(--nav-text);
@@ -916,7 +916,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             }
             .m-brand { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: #fff; }
             .m-brand-logo { flex-shrink: 0; display: flex; align-items: center; }
-            .m-brand-logo img { height: 40px; width: auto; max-width: 110px; object-fit: contain; border-radius: 8px; }
+            .m-brand-logo img { height: 50px; width: auto; max-width: 140px; object-fit: contain; border-radius: 8px; }
             .m-brand-name { font-family: var(--font-heading); font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .m-close {
                 width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0;
