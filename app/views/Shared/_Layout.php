@@ -1166,6 +1166,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         </a>
                                     </li>
                                     <li>
+                                        <a class="dropdown-item" href="/Referral">
+                                            <i class="fas fa-gift"></i> My Referral Bonus
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a class="dropdown-item" href="/Profile/Views">
                                             <i class="fas fa-eye"></i> Profile Views
                                             <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> new</span><?php endif; ?>
@@ -1291,6 +1296,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <div class="m-label">My Account</div>
                 <nav class="m-nav">
                     <a href="/Profile/Show" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
+                    <a href="/Referral" class="<?= $mActive('/Referral') ?>"><i class="fas fa-gift"></i><span>My Referral Bonus</span></a>
                     <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <?php if ($mRole === 'User'): ?>

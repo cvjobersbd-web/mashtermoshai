@@ -18,6 +18,7 @@ require_once __DIR__ . '/ProfileViewData.php';
 require_once __DIR__ . '/AdminAccessData.php';
 require_once __DIR__ . '/ChatData.php';
 require_once __DIR__ . '/TeacherDetailsData.php';
+require_once __DIR__ . '/ReferralData.php';
 
 class Db
 {
@@ -32,6 +33,7 @@ class Db
     use AdminAccessData;
     use ChatData;
     use TeacherDetailsData;
+    use ReferralData;
 
     private PDO $pdo;
 

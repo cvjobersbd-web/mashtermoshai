@@ -340,6 +340,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
                 </nav>
+                <?php if ($isOwner && current_role() !== 'Admin') partial('Referral/_ProfileCard', ['where' => 'side']); /* My Referral Bonus */ ?>
                 <?php $tp = teacher_promo(); if ($tp['tp_enabled'] !== '0'):
                     $tpLink = !is_blank($tp['tp_link']) ? $tp['tp_link'] : '/FindTutor';
                     $tpExt = preg_match('#^https?://#i', $tpLink); ?>
@@ -354,6 +355,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
             </div>
 
             <div class="pf-main">
+                <?php if ($isOwner && current_role() !== 'Admin') partial('Referral/_ProfileCard', ['where' => 'mobile']); ?>
                 <!-- ======================= OVERVIEW / DASHBOARD ======================= -->
                 <section class="pf-sec <?= $tab === 'overview' ? 'active' : '' ?>" id="sec-overview">
                     <?php if ($isOwner && $Model->ProfileViews) partial('Profile/_ViewsCard', ['pv' => $Model->ProfileViews]); ?>

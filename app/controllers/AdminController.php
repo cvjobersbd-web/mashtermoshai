@@ -801,6 +801,61 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => "$page ব্যানার সেভ হয়েছে।"] + $vals);
     }
 
+    // ============================================================
+    // ===== REFERRAL — বোনাস সেটিং, উইথড্র আবেদন (টাকা পাঠানো), রেফারেল তালিকা =====
+    // ============================================================
+    /** GET /Admin/Referrals?w=Pending|Paid|Rejected|all */
+    public function Referrals(): void
+    {
+        $this->requireAdminPage();
+        $w = (string)input_str('w', 'Pending');
+        if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
+        $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
+            'Withdrawals' => $this->db->GetWithdrawalsAdmin($w), 'Referrals' => $this->db->GetReferralsAdmin(100)]);
+    }
+
+    /** POST /Admin/SaveReferralSettings (bonus, min, enabled) */
+    public function SaveReferralSettings_POST(): void
+    {
+        $this->requireAdminJson();
+        $bonus = input_int('bonus', -1); $min = input_int('min', 0);
+        if ($bonus < 0 || $bonus > 10000) json_response(['success' => false, 'message' => 'বোনাস ০ থেকে ১০০০০ টাকার মধ্যে দিন।']);
+        if ($min < 1 || $min > 100000) json_response(['success' => false, 'message' => 'সর্বনিম্ন উইথড্র ঠিক নেই।']);
+        $this->db->SaveSiteContent(['ref_bonus' => (string)$bonus, 'ref_min_withdraw' => (string)$min, 'ref_enabled' => input_bool('enabled') ? '1' : '0']);
+        json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে প্রতি রেফারে ৳{$bonus}।"]);
+    }
+
+    /** POST /Admin/ProcessWithdrawal (id, status = Paid|Rejected, txn, note) */
+    public function ProcessWithdrawal_POST(): void
+    {
+        $this->requireAdminJson();
+        $w = $this->db->GetWithdrawal(input_int('id', 0));
+        if (!$w) json_response(['success' => false, 'message' => 'আবেদনটি পাওয়া যায়নি।']);
+        if ($w->Status !== 'Pending') json_response(['success' => false, 'message' => 'এই আবেদন আগেই প্রক্রিয়া করা হয়েছে।']);
+        $status = (string)input_str('status', '');
+        if (!in_array($status, ['Paid', 'Rejected'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+        $txn = mb_substr(trim((string)input_str('txn', '')), 0, 60); $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        if ($status === 'Rejected' && $note === '') json_response(['success' => false, 'message' => 'বাতিলের কারণ লিখুন — ইউজার দেখতে পাবে।']);
+        $this->db->SetWithdrawalStatus((int)$w->Id, $status, $txn, $note, (int)current_user_id());
+        $amt = (int)$w->Amount;
+        if ($status === 'Paid') {
+            $this->db->CreateNotification((int)$w->UserId, 'টাকা পাঠানো হয়েছে 💸', "আপনার ৳$amt {$w->Method} এ পাঠানো হয়েছে" . ($txn !== '' ? " (TxnID: $txn)" : '') . '।', 'success', '/Referral', 'fa-money-bill-transfer');
+        } else {
+            $this->db->CreateNotification((int)$w->UserId, 'উইথড্র আবেদন বাতিল', "৳$amt এর আবেদন বাতিল হয়েছে: $note — টাকা আবার ব্যালেন্সে ফেরত এসেছে।", 'warning', '/Referral', 'fa-circle-xmark');
+        }
+        json_response(['success' => true, 'message' => $status === 'Paid' ? 'Paid হিসেবে চিহ্নিত হয়েছে।' : 'আবেদন বাতিল হয়েছে — টাকা ইউজারের ব্যালেন্সে ফেরত গেছে।']);
+    }
+
+    /** POST /Admin/SetReferralStatus (id, status = Credited|Revoked) — ভুয়া রেফারেল বাতিল */
+    public function SetReferralStatus_POST(): void
+    {
+        $this->requireAdminJson();
+        $status = (string)input_str('status', '');
+        if (!in_array($status, ['Credited', 'Revoked'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+        $this->db->SetReferralStatus(input_int('id', 0), $status);
+        json_response(['success' => true, 'message' => $status === 'Revoked' ? 'রেফারেল বোনাস বাতিল হয়েছে।' : 'বোনাস আবার চালু হয়েছে।']);
+    }
+
     /** POST /Admin/SaveKeyFeatures (kf_img_1..6, reset) — হোম পেজের Key Features কার্ডের ছবি (খালি = আইকন প্যানেল) */
     public function SaveKeyFeatures_POST(): void
     {

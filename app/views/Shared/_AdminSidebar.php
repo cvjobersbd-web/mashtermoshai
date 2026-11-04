@@ -306,7 +306,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -434,6 +434,15 @@ try {
                 <?php if ($pendingPayments > 0): ?>
                     <span class="badge-sidebar warning"><?= e($pendingPayments) ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Referrals'))):
+            $pendingWd = 0; try { $pendingWd = (int)db()->ReferralAdminStats()['pendingCount']; } catch (Throwable $e) { } ?>
+        <li>
+            <a href="/Admin/Referrals" class="<?= $currentAction === 'Referrals' ? 'active' : '' ?>">
+                <i class="fas fa-gift"></i> Referrals
+                <?php if ($pendingWd > 0): ?><span class="badge-sidebar warning"><?= (int)$pendingWd ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>

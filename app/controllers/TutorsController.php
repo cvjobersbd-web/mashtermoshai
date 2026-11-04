@@ -54,7 +54,7 @@ class TutorsController extends Controller
             if (preg_match('/^(?:TCH-?)?(\d{1,7})$/', $tid, $m)) {
                 foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) redirect('/Profile/Show/' . $t->UserId);
             }
-            $tidError = "“$tid” আইডির কোনো টিউটর পাওয়া যায়নি।";
+            $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
         }
         $male = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Male') === 0));
         $female = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Female') === 0));

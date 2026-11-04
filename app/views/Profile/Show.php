@@ -147,6 +147,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                         <?php if ($k === 'profile' && $isOwner) partial('Profile/_NavProfileSub', ['u' => $u, 'isTeacher' => $isTeacher, 'Model' => $Model]); ?>
                     <?php endforeach; ?>
                 </nav>
+                <?php if ($isOwner && current_role() !== 'Admin') partial('Referral/_ProfileCard', ['where' => 'side']); /* My Referral Bonus */ ?>
                 <?php $promo = profile_promo(); if ($promo['pp_enabled'] !== '0' && !is_blank($promo['pp_image'])):
                     $promoLink = !is_blank($promo['pp_link']) ? $promo['pp_link'] : ($isTeacher ? '/Tuition/Circular' : '/FindTutor');
                     $promoExt = preg_match('#^https?://#i', $promoLink); ?>
@@ -157,6 +158,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             </div>
 
             <div class="pf-main">
+                <?php if ($isOwner && current_role() !== 'Admin') partial('Referral/_ProfileCard', ['where' => 'mobile']); ?>
                 <!-- ======================= OVERVIEW ======================= -->
                 <section class="pf-sec <?= $tab === 'overview' ? 'active' : '' ?>" id="sec-overview">
                     <?php if ($isOwner && $Model->ProfileViews) partial('Profile/_ViewsCard', ['pv' => $Model->ProfileViews]); ?>

@@ -71,6 +71,18 @@ class AccountController extends Controller
 
         try {
             if ($this->db->RegisterUser(obj(['UserName' => $username, 'Password' => $password, 'FullName' => $fullName, 'Email' => $email]))) {
+                // রেফারেল: কারো লিংক দিয়ে এলে তাকে বোনাস
+                $code = (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
+                if ($code !== '' && preg_match('/^MM[A-Z0-9]{6}$/', $code)) {
+                    $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]);
+                    $refId = $newId ? $this->db->CreditReferral($code, $newId, (string)($_SERVER['REMOTE_ADDR'] ?? '')) : null;
+                    if ($refId) {
+                        $bonus = $this->db->ReferralSettings()['bonus'];
+                        $this->db->CreateNotification($refId, 'Referral Bonus 🎉', "$fullName আপনার রেফারেল লিংক দিয়ে সাইনআপ করেছেন — আপনি ৳$bonus বোনাস পেয়েছেন!", 'success', '/Referral', 'fa-gift');
+                    }
+                    unset($_SESSION['ref_code']);
+                    if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);
+                }
                 tempdata_set('Success', 'Registration successful! Please login.');
                 $this->redirectToAction('Login');
             }
