@@ -1065,7 +1065,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         <i class="fas fa-house"></i>Home
                     </a>
                     <a href="/Feed" class="nav-desktop-link<?= $navOn('/Feed') ? ' active' : '' ?>"<?= $navOn('/Feed') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-graduation-cap"></i>Educational Feed
+                        <i class="fas fa-graduation-cap"></i>Edu Feed
                     </a>
                     <?php $ftOn = $navOn('/FindTutor') || $navOn('/Tutors'); ?>
                     <div class="nav-dd" id="navFt">
@@ -1294,7 +1294,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <div class="m-label">Menu</div>
             <nav class="m-nav">
                 <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span>Home</span></a>
-                <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span>Educational Feed</span></a>
+                <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span>Edu Feed</span></a>
                 <a href="/Tutors" class="<?= $mActive('/Tutors') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor — Tutor List</span></a>
                 <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span>Find Tutor — পড়াতে চাই</span></a>
                 <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
