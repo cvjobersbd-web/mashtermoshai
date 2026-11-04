@@ -849,6 +849,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .site-header #navLinks.ink-ready .nav-desktop-link.ink-hover { color: #00A8D6 !important; }
             @media (prefers-reduced-motion: reduce) { .nav-ink { transition: opacity .2s; } }
             .footer-brand-logo-box img { height: 104px; max-width: 340px; }
+            /* ফুটার: লোগো, তার নিচে সাইটের নাম + ট্যাগলাইন (ফোনে মাঝখানে, বড় স্ক্রিনে বাম দিকে) */
+            .footer-brand { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+            @media (min-width: 640px) { .footer-brand { align-items: flex-start; text-align: left; } }
             @media (max-width: 640px) { .footer-brand-logo-box img { height: 88px; } }
 
             .brand-site-name {
@@ -1429,16 +1432,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
                 <div class="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
 
-                    <div class="flex items-start gap-2.5 text-center sm:text-left">
-                        <!-- ✅ Footer Logo (Dynamic) -->
+                    <div class="footer-brand">
+                        <!-- ✅ Footer Logo (Dynamic) — নিচে সাইটের নাম আর ট্যাগলাইন -->
                         <span class="footer-brand-logo-box"><img src="<?= e($footerLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
 
                         <div>
                             <p class="font-serif text-base sm:text-lg font-bold tracking-wide" style="color:#FFFFFF;">
                                 <?= e($safeSiteName) ?>
-                            </p>
-                            <p class="mt-1 text-xs sm:text-sm" style="color:rgba(255,255,255,0.8);">
-                                Personalized, adaptive, and interactive learning experiences powered by AI.
                             </p>
                         </div>
                     </div>
