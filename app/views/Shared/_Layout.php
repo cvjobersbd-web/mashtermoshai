@@ -837,6 +837,17 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .nav-dd-menu a:hover > i, .nav-dd-menu a.on > i { background: #00CFFF; color: #fff; }
             .nav-dd-menu b { display: block; font-size: 14px; font-weight: 700; }
             .nav-dd-menu small { display: block; font-size: 12px; color: #64748B; margin-top: 1px; white-space: normal; }
+            /* ===== নেভবারের চলমান আন্ডারলাইন — মাউস যেদিকে যায়, বাতাসের মতো আলতো করে সেদিকে সরে; মাউস সরালে আবার বর্তমান পেজে ফিরে আসে ===== */
+            #navLinks { position: relative; }
+            .nav-ink { position: absolute; left: 0; top: 0; width: 0; height: 3px; border-radius: 3px; background: #00CFFF; pointer-events: none; opacity: 0; z-index: 1;
+                box-shadow: 0 2px 10px rgba(0,207,255,.45); will-change: transform, width;
+                transition: transform .6s cubic-bezier(.25,1.2,.45,1), width .6s cubic-bezier(.25,1.2,.45,1), opacity .35s ease; }
+            #navLinks.ink-on .nav-ink { opacity: 1; }
+            /* JS চালু থাকলে স্থির আন্ডারলাইন লুকায় — চলমানটাই দেখায়; অন্য মেনুতে গেলে বর্তমান পেজে হালকা একটা দাগ থাকে */
+            .site-header #navLinks.ink-ready .nav-desktop-link.active::after { opacity: 0; transition: opacity .35s ease; }
+            .site-header #navLinks.ink-ready.ink-away .nav-desktop-link.active::after { opacity: .28; }
+            .site-header #navLinks.ink-ready .nav-desktop-link.ink-hover { color: #00A8D6 !important; }
+            @media (prefers-reduced-motion: reduce) { .nav-ink { transition: opacity .2s; } }
             .footer-brand-logo-box img { height: 76px; max-width: 260px; }
             @media (max-width: 640px) { .footer-brand-logo-box img { height: 64px; } }
 
@@ -1048,7 +1059,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     return $navPath === $h || str_starts_with($navPath, $h . '/');
                 };
                 ?>
-                <div class="hidden xl:flex items-center gap-1 2xl:gap-3">
+                <div class="hidden xl:flex items-center gap-1 2xl:gap-3" id="navLinks">
+                    <span class="nav-ink" aria-hidden="true"></span>
                     <a href="/" class="nav-desktop-link<?= $navOn('/') ? ' active' : '' ?>"<?= $navOn('/') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-house"></i>Home
                     </a>
@@ -1805,6 +1817,60 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             try { var r = await (await fetch('/Chat/Unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); var n = r.count || 0; b.textContent = n > 9 ? '9+' : n; b.classList.toggle('show', n > 0); } catch (e) { }
         }
         setInterval(upd, 30000);
+    })();
+</script>
+<script>
+    /* নেভবারের চলমান আন্ডারলাইন */
+    (function () {
+        var box = document.getElementById('navLinks'); if (!box) return;
+        var ink = box.querySelector('.nav-ink'), links = [].slice.call(box.querySelectorAll('.nav-desktop-link'));
+        if (!links.length) return;
+        var active = box.querySelector('.nav-desktop-link.active'), cur = null, shift = 0, raf = 0;
+        function geo(a) {
+            var b = box.getBoundingClientRect(), r = a.getBoundingClientRect(), cs = getComputedStyle(a);
+            var pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+            return { x: r.left - b.left + pl, w: Math.max(8, r.width - pl - pr), y: r.bottom - b.top - 3 };
+        }
+        function place(a, nudge) {
+            if (!a || !a.offsetParent) return;
+            var g = geo(a);
+            ink.style.top = g.y + 'px';
+            ink.style.width = g.w + 'px';
+            ink.style.transform = 'translateX(' + (g.x + (nudge || 0)) + 'px)';
+        }
+        function home(instant) {
+            box.classList.remove('ink-away');
+            links.forEach(function (l) { l.classList.remove('ink-hover'); });
+            cur = null; shift = 0;
+            if (active) {
+                if (instant) { ink.style.transition = 'none'; place(active); ink.offsetWidth; ink.style.transition = ''; }
+                else place(active);
+                box.classList.add('ink-on');
+            } else box.classList.remove('ink-on');
+        }
+        links.forEach(function (a) {
+            a.addEventListener('mouseenter', function () {
+                if (!box.classList.contains('ink-on')) { ink.style.transition = 'none'; place(a); ink.offsetWidth; ink.style.transition = ''; }
+                cur = a; shift = 0;
+                links.forEach(function (l) { l.classList.toggle('ink-hover', l === a && l !== active); });
+                box.classList.toggle('ink-away', a !== active);
+                box.classList.add('ink-on');
+                place(a);
+            });
+            // মেনুর ভেতরে মাউস নড়লে দাগটাও আলতো করে সেদিকে হেলে (সর্বোচ্চ ±10px)
+            a.addEventListener('mousemove', function (e) {
+                if (cur !== a) return;
+                var r = a.getBoundingClientRect();
+                shift = Math.max(-10, Math.min(10, (e.clientX - (r.left + r.width / 2)) * 0.14));
+                if (!raf) raf = requestAnimationFrame(function () { raf = 0; if (cur) place(cur, shift); });
+            });
+        });
+        box.addEventListener('mouseleave', function () { home(false); });
+        window.addEventListener('resize', function () { cur ? place(cur) : home(true); });
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { home(true); });
+        window.addEventListener('load', function () { home(true); });
+        home(true);
+        box.classList.add('ink-ready');
     })();
 </script>
 </body>

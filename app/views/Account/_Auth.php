@@ -36,12 +36,14 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
     .au-copy h2 { margin: 0; font-family: var(--font-heading); font-weight: 600; color: var(--au-ink); font-size: clamp(30px, 2.6vw, 44px); line-height: 1.1; }
     .au-copy h2 b { display: block; font-weight: 800; color: var(--au-blue); font-size: 1.18em; letter-spacing: -.5px; margin-top: 4px; }
     .au-copy p { margin: 14px 0 0; color: #475569; font-size: 16.5px; line-height: 1.55; max-width: 520px; }
-    .au-feats { display: flex; gap: 34px; margin-top: 22px; }
-    .au-feat { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-weight: 600; font-size: 14.5px; color: var(--au-ink); line-height: 1.25; max-width: 120px; }
+    /* তিনটা আইকন সমান চওড়া কলামে — আইকন আর লেখা একই লাইনে */
+    .au-feats { display: grid; grid-template-columns: repeat(3, 150px); gap: 18px; margin-top: 24px; justify-content: start; }
+    .au-feat { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; font-weight: 600; font-size: 14.5px; color: var(--au-ink); line-height: 1.25; white-space: nowrap; }
     .au-feat i { width: 60px; height: 60px; border-radius: 14px; background: #fff; color: var(--au-blue); font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px rgba(22,119,229,.12); }
     .au[data-mode="register"] .au-copy { text-align: center; }
     .au[data-mode="register"] .au-copy p { margin-left: auto; margin-right: auto; }
     .au[data-mode="register"] .au-feats { justify-content: center; }
+    @media (max-width: 1200px) { .au-feats { grid-template-columns: repeat(3, 128px); gap: 12px; } .au-feat { font-size: 13.5px; } }
     /* ===== ফর্ম কার্ড ===== */
     .au-card { position: relative; width: 100%; max-width: 600px; background: #fff; border: 1px solid #E3ECF6; border-radius: 26px; box-shadow: 0 24px 60px rgba(15,52,103,.10);
         padding: 40px 48px 34px; overflow: hidden; transition: height .55s var(--au-ease); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
