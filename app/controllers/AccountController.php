@@ -23,6 +23,14 @@ class AccountController extends Controller
             // ✅ পাসওয়ার্ড ঠিক, কিন্তু অ্যাকাউন্ট Suspend করা — লগইন হবে না, কারণ ও সময় দেখাবে
             $this->view('Login', null, ['Suspension' => suspension_info($susp), 'ReturnUrl' => $returnUrl]);
         }
+        if ($user && $user->Role !== 'Admin' && !$this->db->IsEmailVerified((int)$user->Id)) {
+            // ✅ পাসওয়ার্ড ঠিক, কিন্তু ইমেইল ভেরিফাই হয়নি — নতুন কোড পাঠিয়ে ভেরিফাই পেজে
+            session_set('verify_uid', (int)$user->Id);
+            $err = null;
+            if ($this->sendOtp((int)$user->Id, $err)) tempdata_set('Success', 'লগইনের আগে ইমেইল ভেরিফাই করুন — আপনার ইমেইলে নতুন কোড পাঠানো হয়েছে।');
+            else tempdata_set('Error', 'লগইনের আগে ইমেইল ভেরিফাই করুন। ' . $err);
+            $this->redirectToAction('VerifyEmail');
+        }
         if ($user) {
             $this->db->UpdateLastLogin($user->UserName);
             session_regenerate_id(true);
@@ -71,18 +79,23 @@ class AccountController extends Controller
 
         try {
             if ($this->db->RegisterUser(obj(['UserName' => $username, 'Password' => $password, 'FullName' => $fullName, 'Email' => $email]))) {
-                // রেফারেল: কারো লিংক দিয়ে এলে তাকে বোনাস
+                $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]);
                 $code = (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
-                if ($code !== '' && preg_match('/^MM[A-Z0-9]{6}$/', $code)) {
-                    $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]);
-                    $refId = $newId ? $this->db->CreditReferral($code, $newId, (string)($_SERVER['REMOTE_ADDR'] ?? '')) : null;
-                    if ($refId) {
-                        $bonus = $this->db->ReferralSettings()['bonus'];
-                        $this->db->CreateNotification($refId, 'Referral Bonus 🎉', "$fullName আপনার রেফারেল লিংক দিয়ে সাইনআপ করেছেন — আপনি ৳$bonus বোনাস পেয়েছেন!", 'success', '/Referral', 'fa-gift');
-                    }
-                    unset($_SESSION['ref_code']);
-                    if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);
+                if (!preg_match('/^MM[A-Z0-9]{6}$/', $code)) $code = '';
+                unset($_SESSION['ref_code']);
+                if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);
+
+                if ($newId && Mailer::fromSettings()->isConfigured()) {
+                    // ✅ ইমেইল ভেরিফিকেশন: OTP না দেওয়া পর্যন্ত লগইন হবে না; রেফারেল বোনাস ভেরিফাই হলে যাবে
+                    $this->db->MarkEmailUnverified($newId, $code);
+                    session_set('verify_uid', $newId);
+                    $err = null;
+                    if ($this->sendOtp($newId, $err)) tempdata_set('Success', 'আপনার ইমেইলে ৬ ডিজিটের একটা কোড পাঠানো হয়েছে।');
+                    else tempdata_set('Error', $err);
+                    $this->redirectToAction('VerifyEmail');
                 }
+                // SMTP সেট করা না থাকলে ভেরিফিকেশন ছাড়াই আগের মতো
+                if ($newId && $code !== '') $this->creditReferral($code, $newId, $fullName);
                 tempdata_set('Success', 'Registration successful! Please login.');
                 $this->redirectToAction('Login');
             }
@@ -179,8 +192,116 @@ class AccountController extends Controller
         if (!$this->db->CompletePasswordReset((int)$r->ResetId, (int)$r->UserId, $pw)) {
             $this->view('ResetPassword', null, ['Token' => $token, 'Valid' => false]);
         }
+        if (!$this->db->IsEmailVerified((int)$r->UserId)) {   // ইমেইলের লিংক খুলেছে = ইমেইল তারই
+            $ref = $this->db->MarkEmailVerified((int)$r->UserId);
+            if ($ref !== '') $this->creditReferral($ref, (int)$r->UserId, (string)($r->FullName ?: $r->UserName));
+        }
         try { $this->db->CreateNotification((int)$r->UserId, 'Password Changed 🔒', 'আপনার পাসওয়ার্ড ইমেইল লিংকের মাধ্যমে পরিবর্তন করা হয়েছে। আপনি না করে থাকলে এখনই Helpdesk এ জানান।', 'warning', '/Helpdesk', 'fa-key'); } catch (Throwable $e) { }
         tempdata_set('Success', 'পাসওয়ার্ড পরিবর্তন হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।');
         $this->redirectToAction('Login');
+    }
+
+    // ============================================================
+    // ===== EMAIL VERIFICATION (সাইনআপের পর OTP) =====
+    // ============================================================
+    private const OTP_COOLDOWN = 60;   // সেকেন্ড — আবার কোড পাঠানোর আগে অপেক্ষা
+
+    /** রেফারারকে বোনাস + নোটিফিকেশন */
+    private function creditReferral(string $code, int $newId, string $fullName): void
+    {
+        $refId = $this->db->CreditReferral($code, $newId, (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+        if ($refId) {
+            $bonus = $this->db->ReferralSettings()['bonus'];
+            $this->db->CreateNotification($refId, 'Referral Bonus 🎉', "{$fullName} আপনার রেফারেল লিংক দিয়ে সাইনআপ করেছেন — আপনি ৳{$bonus} বোনাস পেয়েছেন!", 'success', '/Referral', 'fa-gift');
+        }
+    }
+
+    /** ইমেইলে OTP পাঠায়। ১ মিনিটে একবার, ঘণ্টায় সর্বোচ্চ ৬টা। ব্যর্থ হলে $err এ বাংলা কারণ */
+    private function sendOtp(int $uid, ?string &$err): bool
+    {
+        $since = $this->db->SecondsSinceLastOtp($uid);
+        if ($since !== null && $since < self::OTP_COOLDOWN) { $err = 'আগের কোডটা কয়েক সেকেন্ড আগে পাঠানো হয়েছে। ' . (self::OTP_COOLDOWN - $since) . ' সেকেন্ড পর আবার চাইতে পারবেন।'; return false; }
+        if ($this->db->CountRecentOtps($uid, 60) >= 6) { $err = 'অনেকবার কোড চাওয়া হয়েছে। ১ ঘণ্টা পর আবার চেষ্টা করুন।'; return false; }
+        $u = $this->db->GetUserById($uid);
+        if (!$u || is_blank($u->Email)) { $err = 'অ্যাকাউন্টে কোনো ইমেইল নেই। Helpdesk এ যোগাযোগ করুন।'; return false; }
+        $code = $this->db->CreateEmailOtp($uid, (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+        $name = (string)($u->FullName ?: $u->UserName);
+        $site = site_settings()->GetSafeSiteName();
+        $min = Db::OTP_MINUTES;
+        $html = Mailer::template('ইমেইল ভেরিফিকেশন কোড',
+            '<p>হ্যালো <b>' . e($name) . '</b>,</p><p><b>' . e($site) . '</b> এ সাইনআপ করার জন্য ধন্যবাদ! আপনার ইমেইল ভেরিফাই করতে নিচের কোডটা দিন:</p>'
+            . '<p style="text-align:center;margin:22px 0"><span style="display:inline-block;font-size:32px;font-weight:700;letter-spacing:10px;padding:12px 22px;border-radius:12px;background:#E6FAFF;color:#0B1F44;border:1px solid #9BE7FA;font-family:Consolas,monospace">' . $code . '</span></p>',
+            null, null,
+            "কোডটা {$min} মিনিট কাজ করবে। কাউকে এই কোড বলবেন না — আমরা কখনো কোড চাই না। আপনি সাইনআপ না করে থাকলে এই ইমেইলটা উপেক্ষা করুন।");
+        $text = "হ্যালো {$name},\n\n{$site} — আপনার ইমেইল ভেরিফিকেশন কোড: {$code}\n\nকোডটা {$min} মিনিট কাজ করবে। কাউকে এই কোড বলবেন না।";
+        $mErr = null;
+        if (!Mailer::fromSettings()->send((string)$u->Email, $name, "{$site} — ভেরিফিকেশন কোড {$code}", $html, $text, $mErr)) {
+            error_log('[VerifyEmail] mail to user#' . $uid . ' failed: ' . $mErr);
+            $err = 'এই মুহূর্তে ইমেইল পাঠানো যাচ্ছে না। একটু পর "আবার কোড পাঠান" চাপুন অথবা Helpdesk এ যোগাযোগ করুন।';
+            return false;
+        }
+        return true;
+    }
+
+    private static function maskEmail(string $email): string
+    {
+        [$a, $d] = array_pad(explode('@', $email, 2), 2, '');
+        $keep = mb_substr($a, 0, min(2, mb_strlen($a)));
+        return $keep . str_repeat('•', max(2, mb_strlen($a) - mb_strlen($keep))) . ($d !== '' ? '@' . $d : '');
+    }
+
+    /** সেশনে থাকা ভেরিফাই-বাকি ইউজার (না থাকলে লগইনে পাঠায়) */
+    private function pendingVerifyUser(): Obj
+    {
+        $uid = (int)(session_get('verify_uid') ?? 0);
+        $u = $uid ? $this->db->GetUserById($uid) : null;
+        if (!$u || $this->db->IsEmailVerified($uid)) {
+            unset($_SESSION['verify_uid']);
+            $this->redirectToAction('Login');
+        }
+        return $u;
+    }
+
+    private function verifyView(Obj $u, ?string $error = null): void
+    {
+        $since = $this->db->SecondsSinceLastOtp((int)$u->Id);
+        $this->view('VerifyEmail', null, [
+            'Email' => self::maskEmail((string)$u->Email), 'Error' => $error,
+            'Wait' => $since === null ? 0 : max(0, self::OTP_COOLDOWN - $since), 'Minutes' => Db::OTP_MINUTES,
+        ]);
+    }
+
+    /** GET /Account/VerifyEmail */
+    public function VerifyEmail(): void
+    {
+        if (session_get('UserName') !== null) $this->redirectToAction('Index', 'Home');
+        $this->verifyView($this->pendingVerifyUser());
+    }
+
+    /** POST /Account/VerifyEmail — কোড যাচাই */
+    public function VerifyEmail_POST(): void
+    {
+        $u = $this->pendingVerifyUser();
+        $code = preg_replace('/\D/', '', strtr((string)input_str('code', ''), ['০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9']));
+        $res = $this->db->CheckEmailOtp((int)$u->Id, $code);
+        if ($res === 'wrong') $this->verifyView($u, 'কোডটা ভুল হয়েছে। ইমেইলে পাঠানো ৬ ডিজিটের কোডটা আবার দেখে দিন।');
+        if ($res === 'locked') $this->verifyView($u, 'অনেকবার ভুল কোড দেওয়া হয়েছে। "আবার কোড পাঠান" চেপে নতুন কোড নিন।');
+        if ($res === 'expired') $this->verifyView($u, 'কোডের মেয়াদ শেষ। "আবার কোড পাঠান" চেপে নতুন কোড নিন।');
+
+        $ref = $this->db->MarkEmailVerified((int)$u->Id);
+        if ($ref !== '') $this->creditReferral($ref, (int)$u->Id, (string)($u->FullName ?: $u->UserName));
+        unset($_SESSION['verify_uid']);
+        tempdata_set('Success', 'ইমেইল ভেরিফাই হয়েছে! এখন আপনার Username/Email আর পাসওয়ার্ড দিয়ে লগইন করুন।');
+        $this->redirectToAction('Login');
+    }
+
+    /** POST /Account/ResendOtp */
+    public function ResendOtp_POST(): void
+    {
+        $u = $this->pendingVerifyUser();
+        $err = null;
+        if ($this->sendOtp((int)$u->Id, $err)) tempdata_set('Success', 'নতুন কোড পাঠানো হয়েছে। আগের কোডটা আর কাজ করবে না।');
+        else tempdata_set('Error', $err);
+        $this->redirectToAction('VerifyEmail');
     }
 }
