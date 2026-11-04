@@ -316,6 +316,9 @@ trait PaymentData
                 if ($cur && $cur->EndsAt && $cur->EndsAt > $start) $start = $cur->EndsAt;
                 $end = (new DateTime($start))->modify('+' . max(1, $p->DurationMonths) . ' months')->format('Y-m-d H:i:s');
             } elseif ($p->DurationMonths > 0) {
+                // শিক্ষার্থীর আগের প্যাকেজ চালু থাকলে তার শেষ দিন থেকে নতুন মেয়াদ যোগ হয়
+                $curEnd = $p->Audience === 'Student' ? $this->GetStudentPackageEnd((int)$p->UserId) : null;
+                if ($curEnd && $curEnd > $start) $start = $curEnd;
                 $end = (new DateTime($start))->modify('+' . $p->DurationMonths . ' months')->format('Y-m-d H:i:s');
             }
             $this->insert('INSERT INTO `UserSubscriptions` (`UserId`, `PaymentId`, `PackageName`, `Audience`, `StartsAt`, `EndsAt`, `PostsTotal`, `PostsUsed`, `CreatedAt`)
@@ -382,6 +385,16 @@ trait PaymentData
             }
             return $left;
         } catch (Throwable $e) { return 0; }
+    }
+
+    /** শিক্ষার্থীর চালু প্যাকেজের শেষ তারিখ (মেয়াদহীন ক্রেডিট হলে null) */
+    public function GetStudentPackageEnd(int $userId): ?string
+    {
+        try {
+            $this->EnsurePaymentTables();
+            $e = $this->scalar("SELECT MAX(`EndsAt`) FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = 'Student' AND `EndsAt` > :n", ['u' => $userId, 'n' => now()]);
+            return $e ? (string)$e : null;
+        } catch (Throwable $e) { return null; }
     }
 
     /** একটা পোস্ট ক্রেডিট খরচ (আগে যেটার মেয়াদ আগে শেষ হবে সেটা থেকে) */

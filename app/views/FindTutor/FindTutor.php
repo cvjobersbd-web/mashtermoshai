@@ -2162,7 +2162,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                             <!-- Stats -->
                             <div class="fb-post-stats">
                                 <span><i class="fas fa-thumbs-up text-primary"></i> <span id="like-count-<?= e($post->Id) ?>"><?= e($post->LikeCount) ?></span> Likes</span>
-                                <span id="comment-count-<?= e($post->Id) ?>"><?= array_sum(array_map(fn($c) => 1 + count($c->Replies ?? []), $post->Comments ?? [])) ?> Comments</span>
+<?php if (feed_comments_on()): ?>                                <span id="comment-count-<?= e($post->Id) ?>"><?= array_sum(array_map(fn($c) => 1 + count($c->Replies ?? []), $post->Comments ?? [])) ?> Comments</span><?php endif; ?>
                             </div>
 
                             <!-- Actions -->
@@ -2176,11 +2176,14 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                         <i class="far fa-thumbs-up"></i> Like
                                     </button>
                                 <?php endif; ?>
+                                <?php if (feed_comments_on()): ?>
                                 <button class="fb-action-btn" onclick="toggleComments(<?= (int)$post->Id ?>)">
                                     <i class="far fa-comment"></i> Comment
                                 </button>
+                                <?php endif; ?>
                             </div>
 
+                            <?php if (feed_comments_on()): ?>
                             <!-- Comments Area (Facebook style) -->
                             <div class="fb-comments-area" id="comments-<?= e($post->Id) ?>">
                                 <div class="fb-comment-list" id="comment-list-<?= e($post->Id) ?>">
@@ -2275,6 +2278,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                     </div>
                                 <?php endif; ?>
                             </div>
+                            <?php endif; /* কমেন্ট বন্ধ — শুধু লাইক */ ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -3873,6 +3877,10 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 // টিচারের প্রোফাইল থেকে "Request Tutor" (/FindTutor?req={userId}) — সরাসরি রিকোয়েস্ট ফর্ম খোলে
                 var reqUid = parseInt(new URLSearchParams(location.search).get('req') || '0', 10);
+                if (reqUid && !<?= viewer_can_contact_teachers() ? 'true' : 'false' ?>) {
+                    alert('<?= current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (১ মাস ৳50, ৩ মাস ৳100)।' ?>');
+                    location.href = <?= js(student_package_url()) ?>; reqUid = 0;
+                }
                 if (reqUid) {
                     var rt = (window.allTutors || []).find(function (x) { return +x.userId === reqUid; });
                     if (rt) setTimeout(function () { openRequestTutorModal(rt.id); }, 300);

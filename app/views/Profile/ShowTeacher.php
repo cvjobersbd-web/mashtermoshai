@@ -315,7 +315,10 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <a href="?tab=profile#ab-basic" data-ab-go="basic" data-ab-open="1" class="pf-btn"><i class="fas fa-pen"></i> Edit Profile</a>
                             <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-id-card"></i> Tutor Details</a>
                         <?php elseif (!$isAdminViewer): ?>
-                            <?php if (current_role() !== 'Teacher'): ?><a href="/FindTutor?req=<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-paper-plane"></i> Request Tutor</a><?php endif; ?>
+                            <?php if (current_role() !== 'Teacher'): ?>
+                                <?php if (viewer_can_contact_teachers()): ?><a href="/FindTutor?req=<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-paper-plane"></i> Request Tutor</a>
+                                <?php else: ?><a href="<?= e(student_package_url()) ?>" class="pf-btn primary" title="টিচারের ছবি, মোবাইল নম্বর দেখতে ও রিকোয়েস্ট পাঠাতে প্যাকেজ নিন"><i class="fas fa-lock"></i> <?= current_user_id() === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request' ?></a><?php endif; ?>
+                            <?php endif; ?>
                             <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn"><i class="fas fa-id-card"></i> Full Details</a>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
                                 <i class="<?= $Model->TutorSaved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $Model->TutorSaved ? 'Saved' : 'Save' ?></span>

@@ -118,6 +118,7 @@ class FeedController extends Controller
     {
         $me = $this->me();
         $isAdmin = is_admin();
+        if (current_role() === 'User') $this->fail('Edu Feed এ শুধু টিচাররা পোস্ট করতে পারেন। টিউটর দরকার হলে Tuition Circular এ পোস্ট করুন।');
         $content = str_replace(["\r\n", "\r"], "\n", (string)input_str('content', ''));
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $content) ?? '') ?? '');
         if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
@@ -248,6 +249,7 @@ class FeedController extends Controller
     /** POST /Feed/Comment — postId, content */
     public function Comment_POST(): void
     {
+        if (!feed_comments_on()) json_response(['success' => false, 'message' => 'এখানে কমেন্ট বন্ধ — শুধু লাইক দেওয়া যায়।']);
         $me = $this->me();
         $p = $this->db->GetEduPost((int)input_int('postId', 0));
         if (!$p || $p->Status !== 'Approved') $this->fail('পোস্টটি পাওয়া যায়নি।');

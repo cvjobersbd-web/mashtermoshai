@@ -12,6 +12,7 @@ trait PackageData
 
     public const PACKAGE_AUDIENCES = ['Teacher', 'Student'];
     private const TEACHER_FEATURES_V1 = "প্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
+    private const STUDENT_FEATURES_V2 = "টিচারদের প্রোফাইল ছবি, মোবাইল নম্বর ও ইমেইল দেখতে পারবেন\nপছন্দের টিচারকে সরাসরি Direct Request পাঠাতে পারবেন\nTuition Circular এ যত খুশি টিউশন পোস্ট করতে পারবেন\nআগ্রহী টিচারদের আবেদন দেখে পছন্দের টিচার বাছাই করতে পারবেন";
     private const TEACHER_FEATURES_V2 = "প্রোফাইলে নীল ভেরিফায়েড টিক\nFind Tutor তালিকায় উপরের দিকে দেখাবে\nপ্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
 
     public function EnsurePackageTable(): void
@@ -37,26 +38,41 @@ trait PackageData
             if ($seeded === '' && (int)$this->scalar('SELECT COUNT(*) FROM `Packages`') === 0) {
                 foreach (self::defaultPackages() as $i => $p) $this->insertPackage($p + ['SortOrder' => $i + 1]);
             }
-            if ($seeded === '') $this->SaveSiteContent(['pkg_seeded' => '1', 'pkg_feat_v2' => '1']);
+            if ($seeded === '') $this->SaveSiteContent(['pkg_seeded' => '1', 'pkg_feat_v2' => '1', 'pkg_student_v2' => '1', 'pay_enforce_student' => '1', 'pkg_student_free' => '']);
             elseif (($this->GetSiteContent(['pkg_feat_v2' => ''])['pkg_feat_v2'] ?? '') === '') {
                 // আগের ডিফল্ট সুবিধার তালিকায় নীল টিক যোগ (অ্যাডমিন নিজে বদলে থাকলে হাত দেয় না)
                 $this->exec("UPDATE `Packages` SET `Features` = :n WHERE `Audience` = 'Teacher' AND `Features` = :o", ['n' => self::TEACHER_FEATURES_V2, 'o' => self::TEACHER_FEATURES_V1]);
                 $this->SaveSiteContent(['pkg_feat_v2' => '1']);
             }
+            if ($seeded !== '' && ($this->GetSiteContent(['pkg_student_v2' => ''])['pkg_student_v2'] ?? '') === '') {
+                // নতুন নিয়ম: শিক্ষার্থীর প্যাকেজ মেয়াদভিত্তিক (১ মাস ৳50, ৩ মাস ৳100) — আগের পোস্ট প্যাকেজ বন্ধ (মুছে না — পুরোনো পেমেন্টের রেকর্ড থাকে)
+                $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = 'Student'");
+                $n = (int)$this->scalar("SELECT COALESCE(MAX(`SortOrder`), 0) FROM `Packages` WHERE `Audience` = 'Student'");
+                foreach (self::studentPackagesV2() as $i => $p) $this->insertPackage($p + ['SortOrder' => $n + $i + 1]);
+                // প্যাকেজ ছাড়া শিক্ষার্থী পোস্ট / টিচারের সাথে যোগাযোগ করতে পারবে না
+                $this->SaveSiteContent(['pkg_student_v2' => '1', 'pay_enforce_student' => '1', 'pkg_student_free' => '']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
+    }
+
+    private static function studentPackagesV2(): array
+    {
+        $s = self::STUDENT_FEATURES_V2;
+        return [
+            ['Audience' => 'Student', 'Name' => '১ মাস', 'DurationMonths' => 1, 'PostLimit' => 0, 'Price' => 50, 'RegularPrice' => null, 'Badge' => '', 'Description' => 'টিচারের সাথে যোগাযোগ আর টিউশন পোস্ট — ১ মাস', 'Features' => $s, 'IsFeatured' => 0],
+            ['Audience' => 'Student', 'Name' => '৩ মাস', 'DurationMonths' => 3, 'PostLimit' => 0, 'Price' => 100, 'RegularPrice' => 150, 'Badge' => 'সেরা মূল্য', 'Description' => 'কম খরচে বেশি সময় — ৩ মাস', 'Features' => $s, 'IsFeatured' => 1],
+        ];
     }
 
     private static function defaultPackages(): array
     {
         $t = self::TEACHER_FEATURES_V2;
-        $s = "কোন বিষয় পড়াতে হবে\nকোন ক্লাসের শিক্ষার্থী\nকোথায় পড়াতে হবে\nকতদিন / কত ঘণ্টা পড়াতে হবে\nপারিশ্রমিক বা বাজেট\nঅন্যান্য প্রয়োজনীয় তথ্য";
-        return [
+        return array_merge([
             ['Audience' => 'Teacher', 'Name' => '১ মাস', 'DurationMonths' => 1, 'PostLimit' => 0, 'Price' => 100, 'RegularPrice' => 1000, 'Badge' => '90% ছাড়', 'Description' => 'শুরু করার জন্য সবচেয়ে সহজ', 'Features' => $t, 'IsFeatured' => 0],
             ['Audience' => 'Teacher', 'Name' => '৩ মাস', 'DurationMonths' => 3, 'PostLimit' => 0, 'Price' => 300, 'RegularPrice' => null, 'Badge' => '', 'Description' => 'নিয়মিত টিউশনের জন্য', 'Features' => $t, 'IsFeatured' => 0],
             ['Audience' => 'Teacher', 'Name' => '৬ মাস', 'DurationMonths' => 6, 'PostLimit' => 0, 'Price' => 500, 'RegularPrice' => null, 'Badge' => 'জনপ্রিয়', 'Description' => 'কম খরচে বেশি সময়', 'Features' => $t, 'IsFeatured' => 1],
             ['Audience' => 'Teacher', 'Name' => '১২ মাস', 'DurationMonths' => 12, 'PostLimit' => 0, 'Price' => 1000, 'RegularPrice' => null, 'Badge' => 'সেরা মূল্য', 'Description' => 'পুরো বছর নিশ্চিন্ত', 'Features' => $t, 'IsFeatured' => 0],
-            ['Audience' => 'Student', 'Name' => 'Tuition Post', 'DurationMonths' => 0, 'PostLimit' => 1, 'Price' => 100, 'RegularPrice' => null, 'Badge' => '', 'Description' => '“Teacher Needed / Tutor Required” পোস্ট করে শিক্ষক খুঁজুন', 'Features' => $s, 'IsFeatured' => 1],
-        ];
+        ], self::studentPackagesV2());
     }
 
     private function insertPackage(array $p): int

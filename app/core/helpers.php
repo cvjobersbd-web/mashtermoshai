@@ -460,7 +460,7 @@ function json_response($data, int $status = 200): void
     if (is_array($data) && ($px = pixel_take()) !== []) $data['_px'] = $px;
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
+    echo mask_teacher_photos((string)json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION));
     exit;
 }
 
@@ -1010,6 +1010,7 @@ function package_duration_label($p): string
 {
     $m = (int)($p->DurationMonths ?? 0); $l = (int)($p->PostLimit ?? 0);
     if (($p->Audience ?? '') === 'Student') {
+        if ($l === 0 && $m > 0) return bn_num($m) . ' মাস মেয়াদ';
         $t = $l > 0 ? bn_num($l) . 'টি পোস্ট' : 'আনলিমিটেড পোস্ট';
         return $m > 0 ? $t . ' · ' . bn_num($m) . ' মাস মেয়াদ' : $t;
     }
@@ -1090,10 +1091,10 @@ function package_benefits_defaults(): array
             ['i' => 'fa-headset', 't' => 'অগ্রাধিকার সাপোর্ট', 'd' => 'কোনো সমস্যা হলে Helpdesk-এ আপনার প্রশ্ন আগে দেখা হবে।'],
         ],
         'Student' => [
-            ['i' => 'fa-pen-to-square', 't' => 'Teacher Needed পোস্ট', 'd' => 'কোন বিষয়, কোন ক্লাস, কোথায়, কতদিন আর বাজেট — সব জানিয়ে Tuition পোস্ট করুন।'],
-            ['i' => 'fa-certificate', 't' => 'যাচাইকৃত শিক্ষক', 'd' => 'অ্যাডমিন যাচাই করা শিক্ষকরাই আপনার পোস্টে Apply করতে পারবেন।'],
-            ['i' => 'fa-comments', 't' => 'সরাসরি যোগাযোগ', 'd' => 'আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন — আপনি প্রোফাইল ও রিভিউ দেখে বেছে নিন।'],
-            ['i' => 'fa-gift', 't' => 'Account সবসময় ফ্রি', 'd' => 'টিউটর খোঁজা, সেভ করা, রিভিউ দেখা — সব ফ্রি। শুধু পোস্ট করতে প্যাকেজ লাগে।'],
+            ['i' => 'fa-address-card', 't' => 'টিচারের ছবি ও যোগাযোগ', 'd' => 'টিচারদের প্রোফাইল ছবি, মোবাইল নম্বর আর ইমেইল দেখতে পারবেন।'],
+            ['i' => 'fa-paper-plane', 't' => 'Direct Request', 'd' => 'পছন্দের টিচারকে সরাসরি টিউশনের রিকোয়েস্ট পাঠাতে পারবেন।'],
+            ['i' => 'fa-pen-to-square', 't' => 'Tuition Circular এ পোস্ট', 'd' => 'কোন বিষয়, কোন ক্লাস, কোথায়, বাজেট — জানিয়ে যত খুশি টিউশন পোস্ট করুন, যাচাই করা টিচাররা Apply করবেন।'],
+            ['i' => 'fa-gift', 't' => 'ফ্রিতে যা পাবেন', 'd' => 'Edu Feed দেখা ও লাইক, টিচারদের তথ্য ও প্রোফাইল দেখা — Account খোলা সবসময় ফ্রি।'],
         ],
     ];
 }
@@ -1799,4 +1800,93 @@ function joined_via_css(): string
         . '.jv-badge i{font-size:11px}.jv-direct{background:#F1F5F9;color:#475569}.jv-ref{background:#FEF3C7;color:#92400E}.jv-ref a{color:#92400E;text-decoration:underline}.jv-ref small{font-weight:600;opacity:.85}'
         . '.jv-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.jv-filter button{border:1.5px solid #DCE5EE;background:#fff;color:#334155;border-radius:999px;padding:6px 14px;font-weight:700;font-size:13px;cursor:pointer}'
         . '.jv-filter button.on{background:#134856;border-color:#134856;color:#fff}</style>';
+}
+
+
+// ============================================================
+// ===== শিক্ষার্থীর প্যাকেজ — কী কী খোলে =====
+// ============================================================
+// ফ্রি: Edu Feed দেখা + লাইক, টিচারদের তথ্য ও প্রোফাইল দেখা
+// প্যাকেজ লাগে: টিচারের প্রোফাইল ছবি / মোবাইল / ইমেইল দেখা, Direct Request, Tuition Circular এ পোস্ট
+// (Admin → Packages এ "শিক্ষার্থীদের জন্য ফ্রি" চালু করলে বা Payment Methods এ নিয়ম বন্ধ করলে সব ফ্রি)
+
+/** শিক্ষার্থীদের জন্য প্যাকেজ বাধ্যতামূলক কিনা */
+function student_package_required(): bool
+{
+    static $r = null;
+    if ($r === null) {
+        try { db()->EnsurePackageTable(); $r = (bool)(db()->PaymentRules()['student'] ?? true); } catch (Throwable $e) { $r = true; }
+    }
+    return $r;
+}
+
+/** এই শিক্ষার্থীর প্যাকেজ চালু আছে কিনা (মেয়াদ বাকি / পোস্ট ক্রেডিট বাকি) */
+function student_has_package(int $userId): bool
+{
+    static $c = [];
+    if (!isset($c[$userId])) { try { $c[$userId] = db()->GetStudentPostCredits($userId) !== 0; } catch (Throwable $e) { $c[$userId] = false; } }
+    return $c[$userId];
+}
+
+/** বর্তমান ভিজিটর টিচারের সাথে যোগাযোগ করতে পারবে কিনা (ছবি, মোবাইল, ইমেইল, Direct Request) */
+function viewer_can_contact_teachers(): bool
+{
+    if (is_admin()) return true;
+    $uid = current_user_id();
+    if ($uid === null) return false;
+    if (current_role() !== 'User') return false;   // টিচার অন্য টিচারকে রিকোয়েস্ট পাঠায় না
+    return !student_package_required() || student_has_package($uid);
+}
+
+/** বর্তমান ভিজিটর টিচারদের প্রোফাইল ছবি দেখতে পারবে কিনা — অ্যাডমিন, টিচার আর প্যাকেজ নেওয়া শিক্ষার্থী */
+function viewer_sees_teacher_photos(): bool
+{
+    if (is_admin() || current_role() === 'Teacher') return true;
+    if (current_user_id() === null) return !student_package_required();
+    return viewer_can_contact_teachers();
+}
+
+/** প্যাকেজ ছাড়া দেখালে টিচারের ছবির জায়গায় এই ছবি */
+function teacher_photo_placeholder(): string
+{
+    return 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#E2E8F0"/><circle cx="60" cy="46" r="22" fill="#94A3B8"/><path d="M18 112c4-24 22-38 42-38s38 14 42 38z" fill="#94A3B8"/></svg>');
+}
+
+/**
+ * পেজ / JSON পাঠানোর ঠিক আগে: যে ভিজিটর টিচারের ছবি দেখতে পারবে না, তার জন্য সব টিচারের ছবির লিংক বদলে placeholder।
+ * (সব পেজে, ফিড, কার্ড, কমেন্ট — যেখানেই ছবি থাকুক, একসাথে ধরা পড়ে)
+ */
+function mask_teacher_photos(string $out): string
+{
+    static $map = null;
+    if ($out === '' || viewer_sees_teacher_photos()) return $out;
+    if ($map === null) {
+        $map = [];
+        try {
+            $me = (int)(current_user_id() ?? 0);
+            $ph = teacher_photo_placeholder();
+            foreach (db()->all("SELECT `Id`, `ProfileImageLink` FROM `Users` WHERE `Role` = 'Teacher' AND `ProfileImageLink` IS NOT NULL AND `ProfileImageLink` <> ''") as $r) {
+                if ((int)$r->Id === $me) continue;
+                $u = trim((string)$r->ProfileImageLink);
+                if (strlen($u) < 8) continue;
+                $map[$u] = $ph;
+                $map[htmlspecialchars($u, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')] = $ph;
+                $map[str_replace('/', '\/', $u)] = $ph;   // JSON এ escape করা "/" থাকলে
+                $map[substr(js($u), 1, -1)] = $ph;          // js() দিয়ে পেজের <script> এ বসানো হলে
+            }
+        } catch (Throwable $e) { error_log('[mask_teacher_photos] ' . $e->getMessage()); }
+    }
+    return $map ? strtr($out, $map) : $out;
+}
+
+/** প্যাকেজ ছাড়া যোগাযোগের বাটনের জায়গায় দেখানোর লিংক */
+function student_package_url(): string
+{
+    return current_user_id() === null ? '/Account/Login?returnUrl=' . rawurlencode((string)($_SERVER['REQUEST_URI'] ?? '/')) : '/Package?for=student';
+}
+
+/** Edu Feed, পড়াতে চাই আর Tuition Circular এ কমেন্ট — বন্ধ (শুধু লাইক)। আবার চালু করতে true ফেরত দিন। */
+function feed_comments_on(): bool
+{
+    return false;
 }

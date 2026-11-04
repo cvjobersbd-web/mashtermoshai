@@ -96,7 +96,15 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
                 <?php endif; ?>
 
                 <!-- ===== কম্পোজার ===== -->
-                <?php partial('Feed/_Composer', ['me' => $me, 'isAdmin' => $isAdmin, 'myName' => $myName, 'myPhoto' => $myPhoto, 'videoMb' => $videoMb, 'subjects' => $subjects, 'opts' => $opts, 'returnUrl' => '/Feed']); ?>
+                <?php if ($me !== null && current_role() === 'User'): /* শিক্ষার্থীরা Edu Feed এ পোস্ট করে না — শুধু দেখে আর লাইক দেয় */ ?>
+                    <?php partial('Feed/_Composer', ['me' => $me, 'isAdmin' => false, 'myName' => $myName, 'myPhoto' => $myPhoto, 'videoMb' => 0, 'subjects' => [], 'opts' => [], 'returnUrl' => '/Feed', 'cssOnly' => true]); ?>
+                    <div style="background:#fff;border:1px solid #E2ECF3;border-radius:16px;padding:14px 16px;margin-bottom:14px;font-size:14px;color:#475569;display:flex;gap:10px;align-items:flex-start;">
+                        <i class="fas fa-circle-info" style="color:#00B5E0;margin-top:3px;"></i>
+                        <div>Edu Feed এ টিচাররা পোস্ট করেন — আপনি ফ্রিতে সব পোস্ট দেখে লাইক দিতে পারবেন। টিউটর দরকার হলে <a href="/Tuition/Circular" style="font-weight:700;color:#0F4C5C;">Tuition Circular</a> এ পোস্ট করুন (শিক্ষার্থী প্যাকেজ লাগবে)।</div>
+                    </div>
+                <?php else: ?>
+                    <?php partial('Feed/_Composer', ['me' => $me, 'isAdmin' => $isAdmin, 'myName' => $myName, 'myPhoto' => $myPhoto, 'videoMb' => $videoMb, 'subjects' => $subjects, 'opts' => $opts, 'returnUrl' => '/Feed']); ?>
+                <?php endif; ?>
 
                 <?php if ($tab === 'all' && $subjects): ?>
                     <nav class="efp-mchips" aria-label="Subjects">

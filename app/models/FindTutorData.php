@@ -112,7 +112,7 @@ trait FindTutorData
                 'Id' => (int)$r->Id, 'UserId' => $uid, 'TutorId' => 'TCH-' . (1000 + (int)$r->Id),
                 'FullName' => $name, 'Initials' => initials($name, 'T'),
                 'Gender' => !is_blank($r->Gender) ? (string)$r->Gender : 'Any',
-                'PhotoUrl' => (string)($r->ProfileImageLink ?? ''),
+                'PhotoUrl' => viewer_sees_teacher_photos() || (int)$uid === (int)(current_user_id() ?? 0) ? (string)($r->ProfileImageLink ?? '') : '',   // প্যাকেজ ছাড়া ছবি না — নামের অক্ষর দেখায়
                 'Headline' => (string)($r->Headline ?? ''),
                 'Subjects' => $subjects ?: ['General'],
                 'Classes' => $classes ?: ['All Classes'], 'Levels' => $classes, 'Mediums' => $mediums,

@@ -55,6 +55,11 @@ class FindTutorController extends Controller
     public function SubmitTutorRequest_POST(): void
     {
         try {
+            // নির্দিষ্ট টিচারকে Direct Request — শুধু প্যাকেজ নেওয়া শিক্ষার্থী
+            if (!is_blank(input_str('tutorId')) && !viewer_can_contact_teachers()) {
+                json_response(['success' => false, 'needPackage' => student_package_url(),
+                    'message' => current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে আগে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (১ মাস ৳50, ৩ মাস ৳100)।']);
+            }
             $studentName = input_str('studentName');
             $phone = input_str('phoneNumber');
             if (is_blank($studentName)) json_response(['success' => false, 'message' => 'Student name is required.']);
@@ -230,6 +235,7 @@ class FindTutorController extends Controller
     /** POST /FindTutor/AddTeachComment */
     public function AddTeachComment_POST(): void
     {
+        if (!feed_comments_on()) json_response(['success' => false, 'message' => 'এখানে কমেন্ট বন্ধ — শুধু লাইক দেওয়া যায়।']);
         if (session_get('UserName') === null) json_response(['success' => false, 'message' => 'Please login to comment.']);
         $content = input_str('content');
         if (is_blank($content)) json_response(['success' => false, 'message' => 'Comment cannot be empty.']);

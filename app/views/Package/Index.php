@@ -227,7 +227,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
                 <?php if ($me['role'] === 'Teacher'): ?>
                     <b>আপনার Subscription:</b> <?= $me['sub'] ? 'চালু — ' . e(date('d M Y', strtotime($me['sub']->EndsAt))) . ' পর্যন্ত' : 'চালু নেই' ?>
                 <?php else: ?>
-                    <?php if ($studentFree): ?><b>Tuition পোস্ট:</b> এখন সম্পূর্ণ ফ্রি 🎉<?php else: ?><b>আপনার পোস্ট ক্রেডিট:</b> <?= $me['credits'] === -1 ? 'আনলিমিটেড' : e(bn_num($me['credits'])) . 'টি' ?><?php endif; ?>
+                    <?php if ($studentFree): ?><b>শিক্ষার্থী প্যাকেজ:</b> এখন সম্পূর্ণ ফ্রি 🎉<?php else: $pkEnd = db()->GetStudentPackageEnd((int)current_user_id()); ?><b>আপনার প্যাকেজ:</b> <?= $me['credits'] === 0 ? 'চালু নেই' : ($pkEnd ? 'চালু — ' . e(date('d M Y', strtotime($pkEnd))) . ' পর্যন্ত' : ($me['credits'] === -1 ? 'চালু' : 'চালু — ' . e(bn_num($me['credits'])) . 'টি পোস্ট বাকি')) ?><?php endif; ?>
                 <?php endif; ?>
                 <?php if ($me['pending'] > 0): ?><span class="pk-me-p"><i class="fas fa-hourglass-half"></i> <?= e(bn_num($me['pending'])) ?>টি পেমেন্ট যাচাই হচ্ছে</span><?php endif; ?>
             </div>
@@ -262,7 +262,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
     <section class="pk-sec" id="pk-student"<?= $tab === 'student' ? '' : ' hidden' ?>>
         <div class="pk-sec-h">
             <h2>শিক্ষার্থীদের জন্য</h2>
-            <p>Account খোলা ও প্ল্যাটফর্ম ব্যবহার সম্পূর্ণ ফ্রি। শুধু “Teacher Needed / Tutor Required” ধরনের Tuition Post করতে চাইলে পোস্ট প্যাকেজ নিতে হবে।</p>
+            <p>Account খোলা, Edu Feed দেখা আর টিচারদের প্রোফাইল দেখা ফ্রি। টিচারের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ পোস্ট করতে প্যাকেজ নিন — ১ মাস ৳50, ৩ মাস ৳100।</p>
         </div>
         <?php if ($studentFree): ?>
             <div class="pk-free-note"><i class="fas fa-gift"></i><div><b>সুখবর! এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি।</b><br>কোনো প্যাকেজ বা পেমেন্ট লাগবে না — সরাসরি পোস্ট করুন।</div><a href="/Tuition/Circular">পোস্ট করুন</a></div>
@@ -274,9 +274,9 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
                 <span class="pk-pill green">কোনো খরচ নেই · আজীবন</span>
                 <ul class="pk-feat">
                     <li><i class="fas fa-check"></i><span>বিনামূল্যে Account খুলুন</span></li>
-                    <li><i class="fas fa-check"></i><span>টিউটর খুঁজুন, প্রোফাইল ও রিভিউ দেখুন</span></li>
-                    <li><i class="fas fa-check"></i><span>টিউটর সেভ করুন ও Request পাঠান</span></li>
-                    <li><i class="fas fa-check"></i><span>Notice, Helpdesk সহ সব ফিচার ব্যবহার করুন</span></li>
+                    <li><i class="fas fa-check"></i><span>Edu Feed দেখুন ও লাইক দিন</span></li>
+                    <li><i class="fas fa-check"></i><span>টিচারদের তথ্য, প্রোফাইল ও রিভিউ দেখুন</span></li>
+                    <li><i class="fas fa-check"></i><span>Notice, Helpdesk ব্যবহার করুন</span></li>
                 </ul>
                 <?php if ($isLoggedIn): ?>
                     <a class="pk-btn" href="/FindTutor">টিউটর খুঁজুন <i class="fas fa-arrow-right"></i></a>
@@ -284,11 +284,11 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
                     <a class="pk-btn" href="/Account/Register">ফ্রি Account খুলুন <i class="fas fa-arrow-right"></i></a>
                 <?php endif; ?>
             </div>
-            <?php foreach ($studentPk as $p) $card($p, 'পোস্ট প্যাকেজ নিন'); ?>
+            <?php foreach ($studentPk as $p) $card($p, 'প্যাকেজ নিন'); ?>
         </div>
         <div class="pk-note"><i class="fas fa-info-circle" style="margin-top:3px;"></i>
-            <span>পেমেন্টের পর আপনার প্রয়োজন অনুযায়ী Tuition Post করতে পারবেন — বিষয়, ক্লাস, কোথায় পড়াতে হবে, কতদিন/কত ঘণ্টা, পারিশ্রমিক বা বাজেট ইত্যাদি। শিক্ষকরা পোস্ট দেখে আপনার সাথে যোগাযোগ করবেন।</span></div>
-        <?php $benefitGrid($benefits['Student'], 'পোস্ট প্যাকেজ নিলে যা যা পাবেন'); ?>
+            <span>পেমেন্ট অ্যাডমিন Accept করলেই প্যাকেজ চালু হবে — মেয়াদের মধ্যে টিচারদের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ যত খুশি পোস্ট করতে পারবেন।</span></div>
+        <?php $benefitGrid($benefits['Student'], 'প্যাকেজ নিলে যা যা পাবেন'); ?>
     </section>
 
     <section class="pk-goal">

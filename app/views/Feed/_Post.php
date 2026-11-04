@@ -65,13 +65,14 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
     <?php if ($approved && !$admin): ?>
         <div class="ef-counts">
             <span data-likes><?php if ($p->LikeCount): ?><?= like_badge_html() ?> <span data-lc><?= (int)$p->LikeCount ?></span><?php endif; ?></span>
-            <button type="button" data-ef="comments" data-cc><?= $p->CommentCount ? (int)$p->CommentCount . ' comment' . ($p->CommentCount > 1 ? 's' : '') : '' ?></button>
+            <?php if (feed_comments_on()): ?><button type="button" data-ef="comments" data-cc><?= $p->CommentCount ? (int)$p->CommentCount . ' comment' . ($p->CommentCount > 1 ? 's' : '') : '' ?></button><?php endif; ?>
         </div>
         <div class="ef-acts">
             <button type="button" data-ef="like" class="<?= $p->Liked ? 'liked' : '' ?>" aria-pressed="<?= $p->Liked ? 'true' : 'false' ?>"><i class="<?= $p->Liked ? 'fas' : 'far' ?> fa-thumbs-up"></i> Like</button>
-            <button type="button" data-ef="comments"><i class="far fa-comment"></i> Comment</button>
+            <?php if (feed_comments_on()): ?><button type="button" data-ef="comments"><i class="far fa-comment"></i> Comment</button><?php endif; ?>
             <button type="button" data-ef="share"><i class="fas fa-share"></i> Share</button>
         </div>
+        <?php if (feed_comments_on()): ?>
         <div class="ef-cbox"<?= $open ? '' : ' hidden' ?> data-loaded="<?= $open ? '1' : '0' ?>">
             <div class="ef-clist">
                 <?php if ($open): ?>
@@ -87,6 +88,7 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
                 <div class="ef-clogin"><a href="/Account/Login?returnUrl=<?= rawurlencode($p->Url) ?>">লগইন করুন</a> — তাহলে লাইক ও কমেন্ট করতে পারবেন।</div>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
     <?php endif; ?>
     <?php if ($admin) echo $adminFooter ?? ''; ?>
 </article>

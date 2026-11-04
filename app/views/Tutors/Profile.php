@@ -26,6 +26,8 @@ $preface = $d['preface'] !== '' ? $d['preface'] : ($d['whyHire'] === '' ? (strin
 $gender = $d['gender'] !== '' ? $d['gender'] : (in_array($t->Gender, ['Male', 'Female'], true) ? $t->Gender : '');
 $reqHref = '/FindTutor?req=' . (int)$t->UserId;
 $canRequest = !$isOwner && $role !== 'Teacher' && $role !== 'Admin' && $t->TutorId !== '';
+$canContact = viewer_can_contact_teachers();   // প্যাকেজ নেওয়া শিক্ষার্থী
+$lockBtn = '<a class="tp-btn pri" href="' . e(student_package_url()) . '" title="টিচারের ছবি, মোবাইল নম্বর দেখতে ও Direct Request পাঠাতে প্যাকেজ নিন"><i class="fas fa-lock"></i> ' . ($me === null ? 'লগইন করে Direct Request' : 'প্যাকেজ নিয়ে Direct Request') . '</a>';
 $ViewData['Title'] = $t->FullName;
 $ViewData['FullTitle'] = $t->FullName . ' — Tutor Details | মাষ্টার মশাই';
 $ViewData['Description'] = $t->FullName . ' — ' . ($univ ?: 'Tutor') . '। ' . ($subjects ? implode(', ', array_slice($subjects, 0, 5)) . ' পড়ান। ' : '') . ($city ? "$city এ।" : '');
@@ -170,7 +172,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
             <?php else: ?>
                 <p>পছন্দ হলে সরাসরি রিকোয়েস্ট পাঠান, অথবা পরে দেখার জন্য সেভ করে রাখুন।</p>
                 <div class="tp-acts">
-                    <?php if ($canRequest): ?><a class="tp-btn pri" href="<?= e($reqHref) ?>"><i class="fas fa-paper-plane"></i> Direct Request</a><?php endif; ?>
+                    <?php if ($canRequest): ?><?= $canContact ? '<a class="tp-btn pri" href="' . e($reqHref) . '"><i class="fas fa-paper-plane"></i> Direct Request</a>' : $lockBtn ?><?php endif; ?>
                     <?php if ($me !== null && $role !== 'Admin'): ?>
                         <button type="button" class="tp-btn<?= $ViewBag->Saved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$t->UserId ?>"><i class="<?= $ViewBag->Saved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $ViewBag->Saved ? 'Saved' : 'Bookmark' ?></span></button>
                     <?php elseif ($me === null): ?>
@@ -320,7 +322,8 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
         <!-- ===== Hire ===== -->
         <?php if (!$isOwner): ?>
             <div class="tp-card tp-hire">
-                <?php if ($canRequest): ?><a class="tp-btn pri" href="<?= e($reqHref) ?>"><i class="fas fa-paper-plane"></i> Request This Tutor</a><?php endif; ?>
+                <?php if ($canRequest): ?><?= $canContact ? '<a class="tp-btn pri" href="' . e($reqHref) . '"><i class="fas fa-paper-plane"></i> Request This Tutor</a>' : $lockBtn ?><?php endif; ?>
+                <?php if ($canRequest && !$canContact): ?><p style="margin:8px 0 0;"><i class="fas fa-lock" style="color:#B45309;"></i> টিচারের প্রোফাইল ছবি, মোবাইল নম্বর, ইমেইল দেখতে আর সরাসরি রিকোয়েস্ট পাঠাতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন — ১ মাস ৳50, ৩ মাস ৳100।</p><?php endif; ?>
                 <p>এই টিউটর সম্পর্কে আরো জানতে Tutor ID "<b><?= e($t->TutorId) ?></b>" দিয়ে <a href="/Helpdesk">Helpdesk</a> এ যোগাযোগ করুন।</p>
             </div>
         <?php endif; ?>

@@ -174,7 +174,8 @@ class ProfileController extends Controller
 
         $this->view('Profile/ShowTeacher', obj([
             'User' => $user, 'IsOwner' => $isOwner, 'Relation' => $relation, 'IsAdminViewer' => $isAdminViewer,
-            'CanSeePrivate' => $isOwner || $isAdminViewer,
+            // প্যাকেজ নেওয়া শিক্ষার্থী টিচারের মোবাইল / ইমেইল দেখতে পারে
+            'CanSeePrivate' => $isOwner || $isAdminViewer || viewer_can_contact_teachers(),
             'ProfileViews' => $ownerViews,
             'TeacherInfo' => $teacherInfo, 'TeacherStatus' => 'Approved',
             'Posts' => $posts, 'HasMore' => count($posts) === 10,

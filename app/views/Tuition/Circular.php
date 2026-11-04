@@ -758,7 +758,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                         <?php if ($isFiltered): ?><small style="font-size:14px;color:#64748B;font-weight:500;">(<?= $total ?>টি)</small><?php endif; ?></h2>
                     <label class="tc-sort">Sort by:
                         <select id="tcSort" aria-label="Sort posts">
-                            <?php foreach (['recent' => 'Recent', 'views' => 'Most viewed', 'comments' => 'Most discussed'] as $k => $l): ?>
+                            <?php foreach (feed_comments_on() ? ['recent' => 'Recent', 'views' => 'Most viewed', 'comments' => 'Most discussed'] : ['recent' => 'Recent', 'views' => 'Most viewed'] as $k => $l): ?>
                                 <option value="<?= e($qs(['sort' => $k === 'recent' ? null : $k, 'page' => null])) ?>"<?= $sort === $k ? ' selected' : '' ?>><?= $l ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -850,12 +850,12 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                                 <a class="tc-like" href="<?= e($loginUrl) ?>" title="Like করতে লগইন করুন"><span class="ico"><?= like_icon_html(false) ?></span> <span class="n"><?= (int)$post->LikeCount ?></span></a>
                                             <?php endif; ?>
                                             <span title="কতবার দেখা হয়েছে"><i class="far fa-eye"></i> <?= (int)$post->ViewCount ?></span>
-                                            <button type="button" onclick="toggleCircularComments(<?= $pid ?>)" title="Comments"><i class="far fa-comment"></i> <span id="comment-count-<?= $pid ?>"><?= (int)$post->CommentCount ?></span></button>
+                                            <?php if (feed_comments_on()): ?><button type="button" onclick="toggleCircularComments(<?= $pid ?>)" title="Comments"><i class="far fa-comment"></i> <span id="comment-count-<?= $pid ?>"><?= (int)$post->CommentCount ?></span></button><?php endif; ?>
                                             <?php if ($isLoggedIn && $isTeacher && !$isOwn): ?>
                                                 <?php if (isset($myApplied[$pid])): ?>
                                                     <button type="button" class="tc-apply applied" disabled><i class="fas fa-check-circle"></i> Applied<?= $myApplied[$pid] !== 'Pending' ? ' · ' . e($myApplied[$pid]) : '' ?></button>
                                                 <?php else: ?>
-                                                    <button type="button" class="tc-apply" id="apply-btn-<?= $pid ?>" onclick="applyForCircular(<?= $pid ?>)"><i class="fas fa-paper-plane"></i> Apply</button>
+                                                    <button type="button" class="tc-apply" id="apply-btn-<?= $pid ?>" onclick="applyForCircular(<?= $pid ?>)"><i class="fas fa-paper-plane"></i> Apply Now</button>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
@@ -863,6 +863,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                 </div>
                             </div>
 
+                            <?php if (feed_comments_on()): ?>
                             <!-- Comments -->
                             <div class="fb-comments-area" id="circular-comments-<?= $pid ?>">
                                 <div class="fb-comment-list" id="circular-comment-list-<?= $pid ?>">
@@ -924,6 +925,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                     <p style="margin:0;font-size:13.5px;color:#64748B;"><a href="<?= e($loginUrl) ?>" style="font-weight:700;color:#0F4C5C;">লগইন করুন</a> কমেন্ট করতে।</p>
                                 <?php endif; ?>
                             </div>
+                            <?php endif; /* কমেন্ট বন্ধ — শুধু লাইক আর Apply Now */ ?>
                         </article>
                     <?php endforeach; ?>
                 </div>
@@ -967,11 +969,12 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <button type="button" class="tc-btn yellow block" data-tc-open="post"><i class="fas fa-paper-plane"></i> Post Tuition Request</button>
                     <?php if ($payRule && $isLoggedIn && !$isAdmin && !$isTeacher): $cr = db()->GetStudentPostCredits((int)$userId); ?>
                         <a href="<?= $cr === 0 ? '/Package?for=student' : '/Payment/My' ?>" class="tc-pk-link"><i class="fas fa-ticket"></i>
-                            <?= $cr === -1 ? 'আনলিমিটেড পোস্ট ক্রেডিট' : ($cr === 0 ? 'পোস্ট করতে প্যাকেজ নিন' : 'পোস্ট ক্রেডিট: ' . e(bn_num($cr)) . 'টি বাকি') ?> <i class="fas fa-arrow-right"></i></a>
+                            <?php $pkEnd = $cr !== 0 ? db()->GetStudentPackageEnd((int)$userId) : null; ?>
+                            <?= $cr === 0 ? 'পোস্ট করতে প্যাকেজ নিন (১ মাস ৳50)' : ($pkEnd ? 'প্যাকেজ চালু — ' . e(date('d M Y', strtotime($pkEnd))) . ' পর্যন্ত' : ($cr === -1 ? 'প্যাকেজ চালু' : 'পোস্ট ক্রেডিট: ' . e(bn_num($cr)) . 'টি বাকি')) ?> <i class="fas fa-arrow-right"></i></a>
                     <?php elseif (($payRules['studentFree'] ?? false)): ?>
                         <span class="tc-pk-link" style="color:#15803D;"><i class="fas fa-gift"></i> এখন পোস্ট করা সম্পূর্ণ ফ্রি!</span>
                     <?php else: ?>
-                        <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> পোস্ট প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
+                        <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> শিক্ষার্থী প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
                     <?php endif; ?>
                 </div>
                 <div class="tc-card tc-how">

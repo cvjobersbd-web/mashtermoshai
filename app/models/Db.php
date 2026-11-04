@@ -541,7 +541,7 @@ class Db
                 'FullName' => $fullName,
                 'Initials' => initials($fullName, 'T'),
                 'Gender' => 'Any',
-                'PhotoUrl' => (string)($r->ProfileImageLink ?? ''),
+                'PhotoUrl' => viewer_sees_teacher_photos() ? (string)($r->ProfileImageLink ?? '') : '',
                 'Subjects' => $subjects,
                 'Classes' => ['All Classes'],
                 'Qualification' => $r->Education ?? 'Not specified',
