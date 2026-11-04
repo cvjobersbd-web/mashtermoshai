@@ -319,6 +319,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                             <span><i class="fas fa-phone me-1 text-muted"></i> <?= e($selectedTeacher->MobileNumber) ?></span>
                             <span><i class="far fa-calendar me-1 text-muted"></i> Joined: <?= e(fmt_date($selectedTeacher->CreatedAt, 'M Y')) ?></span>
                         </div>
+                        <div class="mt-2"><?= joined_via_css() . joined_via_html($ViewBag->RefSource ?? null, true) ?></div>
                         <div class="mt-2">
                             <span class="badge bg-success" style="font-size: 11px; padding: 5px 12px;">Teacher</span>
                             <?php if ($selectedTeacher->IsActive): ?>

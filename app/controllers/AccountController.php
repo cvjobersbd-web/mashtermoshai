@@ -85,10 +85,12 @@ class AccountController extends Controller
                 unset($_SESSION['ref_code']);
                 if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);
 
+                // রেফারেল সাইনআপের সময়ই রেকর্ড হয় (অ্যাডমিন দেখতে পান কে কার লিংকে এসেছে) — বোনাস যায় প্যাকেজ কিনলে
+                if ($newId && $code !== '') $this->creditReferral($code, $newId, $fullName);
                 if ($newId) {
                     // SMTP সেট না থাকলেও Mailer সার্ভারের mail() দিয়ে পাঠানোর চেষ্টা করে
-                    // ✅ ইমেইল ভেরিফিকেশন: OTP না দেওয়া পর্যন্ত লগইন হবে না; রেফারেল বোনাস ভেরিফাই হলে যাবে
-                    $this->db->MarkEmailUnverified($newId, $code);
+                    // ✅ ইমেইল ভেরিফিকেশন: OTP না দেওয়া পর্যন্ত লগইন হবে না
+                    $this->db->MarkEmailUnverified($newId);
                     session_set('verify_uid', $newId);
                     $err = null;
                     if ($this->sendOtp($newId, $err)) tempdata_set('Success', 'আপনার ইমেইলে ৬ ডিজিটের একটা কোড পাঠানো হয়েছে।');
@@ -96,7 +98,6 @@ class AccountController extends Controller
                     $this->redirectToAction('VerifyEmail');
                 }
                 // (নতুন আইডি পাওয়া না গেলে — হওয়ার কথা না)
-                if ($newId && $code !== '') $this->creditReferral($code, $newId, $fullName);
                 pixel_track('CompleteRegistration', ['status' => true, 'content_name' => 'Signup']);
                 tempdata_set('Success', 'Registration successful! Please login.');
                 $this->redirectToAction('Login');

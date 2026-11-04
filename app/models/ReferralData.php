@@ -200,4 +200,27 @@ trait ReferralData
             'pendingAmount' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Pending'"),
         ];
     }
+
+    /**
+     * কে কার রেফারেন্সে অ্যাকাউন্ট খুলেছে — [নতুন ইউজারের Id => Obj(ReferrerId, ReferrerName, ReferrerRole, Status, Bonus, CreatedAt)]
+     * এই তালিকায় না থাকলে = ডাইরেক্ট সাইনআপ
+     */
+    public function GetReferralSourceMap(): array
+    {
+        try {
+            $this->EnsureReferralTables();
+            $map = [];
+            foreach ($this->all('SELECT r.`ReferredUserId`, r.`ReferrerId`, r.`Status`, r.`Bonus`, r.`CreatedAt`, a.`FullName` AS ReferrerName, a.`UserName` AS ReferrerUser, a.`Role` AS ReferrerRole
+                FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId`') as $r) {
+                $r->ReferrerName = !is_blank($r->ReferrerName) ? (string)$r->ReferrerName : ((string)($r->ReferrerUser ?? '') ?: 'Deleted user');
+                $map[(int)$r->ReferredUserId] = $r;
+            }
+            return $map;
+        } catch (Throwable $e) { error_log('[GetReferralSourceMap] ' . $e->getMessage()); return []; }
+    }
+
+    public function GetReferralSource(int $userId): ?Obj
+    {
+        return $this->GetReferralSourceMap()[$userId] ?? null;
+    }
 }

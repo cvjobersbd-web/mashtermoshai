@@ -77,6 +77,7 @@ class AdminController extends Controller
         $users = $this->db->GetAllUsers();
         $this->view(null, $users, [
             'Suspensions' => $this->db->GetActiveSuspensionsMap(),
+            'RefMap' => $this->db->GetReferralSourceMap(),
             'UserCount' => count($users),
             'PendingCount' => $this->db->GetPendingTeacherRequestCount(),
         ]);
@@ -93,6 +94,7 @@ class AdminController extends Controller
             foreach ($all as $t) {
                 if ($t->Id === $id) {
                     $bag['SelectedTeacher'] = $t;
+                    $bag['RefSource'] = $this->db->GetReferralSource((int)$t->Id);
                     $bag['TeacherStats'] = $this->db->GetTeacherDashboardStats($t->Id);
                     $bag['PostStats'] = $this->db->GetTeacherPostStats($t->Id);
                     $bag['DirectRequests'] = $this->db->GetTeacherDirectRequests($t->FullName);
@@ -115,6 +117,7 @@ class AdminController extends Controller
             foreach ($all as $u) {
                 if ($u->Id === $id) {
                     $bag['SelectedUser'] = $u;
+                    $bag['RefSource'] = $this->db->GetReferralSource((int)$u->Id);
                     $bag['UserStats'] = $this->db->GetUserOverviewStats($u->Id);
                     $bag['UserPostStats'] = $this->db->GetUserPostStats($u->Id);
                     $bag['TeachersEngaged'] = $this->db->GetTeachersEngagedWithUser($u->Id);
@@ -145,6 +148,7 @@ class AdminController extends Controller
         $out['LastLoginAt'] = $u->LastLoginAt ? fmt_date($u->LastLoginAt, 'Y-m-d H:i') : 'Never';
         // পেজের JS এগুলো সরাসরি innerHTML এ বসায় — তাই HTML-escape (XSS প্রতিরোধ)
         $out = array_map(fn($v) => is_string($v) ? e($v) : $v, $out);
+        $out['JoinedVia'] = joined_via_html($this->db->GetReferralSource((int)$u->Id), true);   // নিজেই escape করা HTML
         json_camel(['success' => true, 'user' => $out]);
     }
 

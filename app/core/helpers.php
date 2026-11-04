@@ -1779,3 +1779,24 @@ function capi_flush(): void
         if (!$ok) error_log('[Meta CAPI] HTTP ' . $code . ' ' . mb_substr($res, 0, 300));
     } catch (Throwable $e) { error_log('[Meta CAPI] ' . $e->getMessage()); }
 }
+
+
+/** অ্যাডমিন প্যানেল: ইউজার কীভাবে অ্যাকাউন্ট খুলেছে — "Referral: নাম" লিংক অথবা "Direct" ব্যাজ (HTML) */
+function joined_via_html(?object $ref, bool $long = false): string
+{
+    if (!$ref) return '<span class="jv-badge jv-direct" title="নিজে সরাসরি সাইনআপ করেছেন"><i class="fas fa-user-plus"></i> Direct</span>';
+    $st = ['Credited' => ' · ৳' . (int)$ref->Bonus . ' বোনাস দেওয়া হয়েছে', 'Waiting' => ' · প্যাকেজ কেনেনি', 'Revoked' => ' · বাতিল'][(string)$ref->Status] ?? '';
+    $role = ($ref->ReferrerRole ?? '') === 'Teacher' ? 'Teacher' : (($ref->ReferrerRole ?? '') === 'Admin' ? 'Admin' : 'Student');
+    $who = '<a href="/Profile/Show/' . (int)$ref->ReferrerId . '" target="_blank" rel="noopener">' . e((string)$ref->ReferrerName) . '</a>';
+    return '<span class="jv-badge jv-ref" title="' . e('রেফার করেছেন: ' . $ref->ReferrerName . ' (' . $role . ')' . $st) . '"><i class="fas fa-gift"></i> ' . ($long ? 'রেফার করেছেন: ' : 'Ref: ') . $who
+        . ($long ? ' <small>(' . $role . $st . ')</small>' : '') . '</span>';
+}
+
+/** joined_via_html() এর স্টাইল — পেজে একবার */
+function joined_via_css(): string
+{
+    return '<style>.jv-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap;line-height:1.5}'
+        . '.jv-badge i{font-size:11px}.jv-direct{background:#F1F5F9;color:#475569}.jv-ref{background:#FEF3C7;color:#92400E}.jv-ref a{color:#92400E;text-decoration:underline}.jv-ref small{font-weight:600;opacity:.85}'
+        . '.jv-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.jv-filter button{border:1.5px solid #DCE5EE;background:#fff;color:#334155;border-radius:999px;padding:6px 14px;font-weight:700;font-size:13px;cursor:pointer}'
+        . '.jv-filter button.on{background:#134856;border-color:#134856;color:#fff}</style>';
+}

@@ -355,6 +355,13 @@ $ViewBag->PendingCount = $pendingTeacherCount;
             <h5 class="mb-0"><i class="fas fa-list me-2"></i>All Users</h5>
         </div>
         <div class="card-body">
+            <?php $refMap = $ViewBag->RefMap ?? []; $refCount = count(array_filter($Model, fn($u) => isset($refMap[(int)$u->Id])));
+                echo joined_via_css(); ?>
+            <div class="jv-filter" id="jvFilter">
+                <button type="button" class="on" data-jv="all">সব (<?= count($Model) ?>)</button>
+                <button type="button" data-jv="ref"><i class="fas fa-gift"></i> রেফারেলে এসেছে (<?= (int)$refCount ?>)</button>
+                <button type="button" data-jv="direct"><i class="fas fa-user-plus"></i> ডাইরেক্ট সাইনআপ (<?= count($Model) - (int)$refCount ?>)</button>
+            </div>
             <div class="table-responsive">
                 <table class="table table-striped table-hover admin-cards-table">
                     <thead>
@@ -365,14 +372,15 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                             <th>Email</th>
                             <th>Role</th>
                             <th>Status</th>
+                            <th>Joined via</th>
                             <th>Created</th>
                             <th>Last Login</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($Model as $user): ?>
-                            <tr>
+                        <?php foreach ($Model as $user): $jvRef = $refMap[(int)$user->Id] ?? null; ?>
+                            <tr data-jv="<?= $jvRef ? 'ref' : 'direct' ?>">
                                 <td data-label="ID"><?= e($user->Id) ?></td>
                                 <td data-label="Username"><strong><?= e($user->UserName) ?></strong></td>
                                 <td data-label="Full Name"><?= e($user->FullName) ?></td>
@@ -397,6 +405,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                         <small class="susp-until"><?= $sp->IsPermanent ? 'Permanent' : 'till ' . e(fmt_date($sp->SuspendedUntil, 'd M, h:i A')) ?></small>
                                     <?php endif; ?>
                                 </td>
+                                <td data-label="Joined via"><?= joined_via_html($jvRef) ?></td>
                                 <td data-label="Created"><?= e(fmt_date($user->CreatedAt, 'd/m/Y')) ?></td>
                                 <td data-label="Last Login"><?= e(fmt_date($user->LastLoginAt, 'd/m/Y H:i', 'Never')) ?></td>
                                 <td class="td-actions">
@@ -650,6 +659,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                         html += '<div class="detail-row"><span class="detail-label">Full Name</span><span class="detail-value">' + u.fullName + '</span></div>';
                         html += '<div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">' + u.email + '</span></div>';
                         html += '<div class="detail-row"><span class="detail-label">Mobile Number</span><span class="detail-value">' + (u.mobileNumber || notProvided) + '</span></div>';
+                        html += '<div class="detail-row"><span class="detail-label">Joined via</span><span class="detail-value">' + (u.joinedVia || '') + '</span></div>';
                         html += '<div class="detail-row"><span class="detail-label">Created At</span><span class="detail-value">' + u.createdAt + '</span></div>';
                         html += '<div class="detail-row"><span class="detail-label">Last Login</span><span class="detail-value">' + u.lastLoginAt + '</span></div>';
                         html += '</div>';
@@ -827,3 +837,15 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         });
     </script>
 <?php section_end(); ?>
+<script>
+    // All Users: রেফারেল / ডাইরেক্ট ফিল্টার
+    (function () {
+        var box = document.getElementById('jvFilter'); if (!box) return;
+        box.addEventListener('click', function (e) {
+            var b = e.target.closest('button[data-jv]'); if (!b) return;
+            box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+            var v = b.getAttribute('data-jv');
+            document.querySelectorAll('tr[data-jv]').forEach(function (tr) { tr.style.display = v === 'all' || tr.getAttribute('data-jv') === v ? '' : 'none'; });
+        });
+    })();
+</script>
