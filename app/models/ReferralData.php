@@ -2,7 +2,9 @@
 /**
  * রেফারেল (Referral) — Db ক্লাসে trait হিসেবে যুক্ত।
  *  - প্রত্যেক ইউজারের একটা রেফারেল কোড: ReferralCodes (UserId, Code)
- *  - কারো লিংক দিয়ে নতুন কেউ সাইনআপ করলে: Referrals (ReferrerId, ReferredUserId, Bonus, Status = Credited | Revoked)
+ *  - কারো লিংক দিয়ে নতুন কেউ সাইনআপ করলে: Referrals এ Status = Waiting (বোনাস ০)
+ *  - সেই ইউজার প্রথম প্যাকেজ কিনলে (পেমেন্ট Approve হলে) → Status = Credited, Bonus = সেটিংয়ের পরিমাণ (ডিফল্ট ৳10)
+ *  - অ্যাডমিন ভুয়া রেফারেল বাতিল করলে → Revoked
  *  - টাকা তোলার আবেদন: ReferralWithdrawals (Status = Pending | Paid | Rejected) — অ্যাডমিন টাকা পাঠিয়ে Paid করে
  *  ব্যালেন্স = মোট Credited বোনাস − (Pending + Paid উইথড্র)। Rejected হলে টাকা আবার ব্যালেন্সে ফিরে আসে।
  *  বোনাসের পরিমাণ / সর্বনিম্ন উইথড্র / চালু-বন্ধ: SiteContents (ref_bonus, ref_min_withdraw, ref_enabled)
@@ -38,10 +40,14 @@ trait ReferralData
         $this->refReady = true;
     }
 
-    /** ['bonus' => int, 'min' => int, 'enabled' => bool] */
+    /** ['bonus' => int, 'min' => int, 'enabled' => bool] — bonus = রেফার করা ইউজার প্যাকেজ কিনলে রেফারার যা পায় */
     public function ReferralSettings(): array
     {
-        $c = $this->GetSiteContent(['ref_bonus' => '30', 'ref_min_withdraw' => '50', 'ref_enabled' => '1']);
+        $c = $this->GetSiteContent(['ref_bonus' => '10', 'ref_min_withdraw' => '50', 'ref_enabled' => '1', 'ref_model' => '']);
+        if ($c['ref_model'] !== 'purchase') {
+            // নিয়ম বদলেছে: সাইনআপে ৳30 → প্যাকেজ কিনলে ৳10 (একবারই সেট হয়, পরে অ্যাডমিন বদলাতে পারবেন)
+            try { $this->SaveSiteContent(['ref_bonus' => '10', 'ref_model' => 'purchase']); $c['ref_bonus'] = '10'; } catch (Throwable $e) { }
+        }
         return ['bonus' => max(0, (int)$c['ref_bonus']), 'min' => max(1, (int)$c['ref_min_withdraw']), 'enabled' => $c['ref_enabled'] !== '0'];
     }
 
@@ -74,23 +80,45 @@ trait ReferralData
     }
 
     /**
-     * নতুন ইউজার সাইনআপ করলে রেফারারকে বোনাস — একজন নতুন ইউজারের জন্য একবারই।
-     * নিজেকে নিজে, অ্যাডমিন অ্যাকাউন্ট, বা দিনে ২০ জনের বেশি — বোনাস হয় না।
+     * নতুন ইউজার কারো লিংক দিয়ে সাইনআপ করলে রেফারেল রেকর্ড হয় (Waiting — এখনো টাকা না)।
+     * নিজেকে নিজে, অ্যাডমিন অ্যাকাউন্ট, বা দিনে ২০ জনের বেশি — রেকর্ড হয় না। রিটার্ন: রেফারারের Id
      */
     public function CreditReferral(string $code, int $newUserId, string $ip): ?int
     {
         try {
             $set = $this->ReferralSettings();
-            if (!$set['enabled'] || $set['bonus'] <= 0) return null;
+            if (!$set['enabled']) return null;
             $ref = $this->GetUserIdByReferralCode($code);
             if (!$ref || $ref === $newUserId) return null;
             $u = $this->GetUserById($ref);
             if (!$u || $u->Role === 'Admin' || !(int)$u->IsActive) return null;
             if ((int)$this->scalar('SELECT COUNT(*) FROM `Referrals` WHERE `ReferrerId` = :r AND `CreatedAt` >= :t', ['r' => $ref, 't' => date('Y-m-d H:i:s', time() - 86400)]) >= 20) return null;
-            $this->exec('INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`) VALUES (:r, :n, :b, \'Credited\', :ip, :t)',
-                ['r' => $ref, 'n' => $newUserId, 'b' => $set['bonus'], 'ip' => mb_substr($ip, 0, 64), 't' => now()]);
+            $this->exec('INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`) VALUES (:r, :n, 0, \'Waiting\', :ip, :t)',
+                ['r' => $ref, 'n' => $newUserId, 'ip' => mb_substr($ip, 0, 64), 't' => now()]);
             return $ref;
         } catch (Throwable $e) { error_log('[CreditReferral] ' . $e->getMessage()); return null; }
+    }
+
+    /**
+     * রেফার করা ইউজারের পেমেন্ট Approve হলে (প্রথম প্যাকেজ কেনা) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই।
+     * বোনাস দিলে রেফারারকে নোটিফিকেশন যায়। রিটার্ন: ['referrer' => id, 'bonus' => ৳] অথবা null
+     */
+    public function CreditReferralPurchase(int $buyerId): ?array
+    {
+        try {
+            $this->EnsureReferralTables();
+            $set = $this->ReferralSettings();
+            if (!$set['enabled'] || $set['bonus'] <= 0) return null;
+            $r = $this->one("SELECT `Id`, `ReferrerId` FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` = 'Waiting'", ['u' => $buyerId]);
+            if (!$r) return null;
+            $n = $this->exec("UPDATE `Referrals` SET `Status` = 'Credited', `Bonus` = :b WHERE `Id` = :i AND `Status` = 'Waiting'", ['b' => $set['bonus'], 'i' => (int)$r->Id]);
+            if (!$n) return null;
+            $buyer = $this->GetUserById($buyerId);
+            $name = $buyer ? (!is_blank($buyer->FullName) ? (string)$buyer->FullName : (string)$buyer->UserName) : 'আপনার রেফার করা ইউজার';
+            $bonus = $set['bonus'];
+            try { $this->CreateNotification((int)$r->ReferrerId, 'Referral Bonus 🎉', "{$name} প্যাকেজ কিনেছেন — রেফার করার জন্য আপনি ৳{$bonus} বোনাস পেয়েছেন!", 'success', '/Referral', 'fa-gift'); } catch (Throwable $e) { }
+            return ['referrer' => (int)$r->ReferrerId, 'bonus' => $bonus];
+        } catch (Throwable $e) { error_log('[CreditReferralPurchase] ' . $e->getMessage()); return null; }
     }
 
     /** ['earned', 'withdrawn' (Paid), 'pending', 'balance', 'count'] */
@@ -98,7 +126,7 @@ trait ReferralData
     {
         $this->EnsureReferralTables();
         $earned = (int)$this->scalar("SELECT COALESCE(SUM(`Bonus`), 0) FROM `Referrals` WHERE `ReferrerId` = :u AND `Status` = 'Credited'", ['u' => $userId]);
-        $count = (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `ReferrerId` = :u AND `Status` = 'Credited'", ['u' => $userId]);
+        $count = (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `ReferrerId` = :u AND `Status` <> 'Revoked'", ['u' => $userId]);
         $paid = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Paid'", ['u' => $userId]);
         $pending = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Pending'", ['u' => $userId]);
         return ['earned' => $earned, 'withdrawn' => $paid, 'pending' => $pending, 'balance' => max(0, $earned - $paid - $pending), 'count' => $count];
@@ -155,6 +183,8 @@ trait ReferralData
 
     public function SetReferralStatus(int $id, string $status): void
     {
+        // "আবার চালু": বোনাস আগে পায়নি (এখনো প্যাকেজ কেনেনি) হলে Waiting এ ফেরে
+        if ($status === 'Credited' && (int)$this->scalar('SELECT `Bonus` FROM `Referrals` WHERE `Id` = :i', ['i' => $id]) <= 0) $status = 'Waiting';
         $this->exec('UPDATE `Referrals` SET `Status` = :s WHERE `Id` = :i', ['s' => $status, 'i' => $id]);
     }
 
@@ -162,7 +192,8 @@ trait ReferralData
     {
         $this->EnsureReferralTables();
         return [
-            'referrals' => (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `Status` = 'Credited'"),
+            'referrals' => (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `Status` <> 'Revoked'"),
+            'bought' => (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `Status` = 'Credited'"),
             'earned' => (int)$this->scalar("SELECT COALESCE(SUM(`Bonus`), 0) FROM `Referrals` WHERE `Status` = 'Credited'"),
             'paid' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Paid'"),
             'pendingCount' => (int)$this->scalar("SELECT COUNT(*) FROM `ReferralWithdrawals` WHERE `Status` = 'Pending'"),

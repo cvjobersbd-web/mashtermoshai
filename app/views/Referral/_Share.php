@@ -13,7 +13,7 @@ $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
     <div class="rf-linkbox">
         <span class="rf-tag"><i class="fas fa-link"></i> আপনার রেফারেল লিংক</span>
         <div class="rf-link"><input type="text" readonly value="<?= e($link) ?>" aria-label="Referral link" onclick="this.select()" /><button type="button" class="rf-copy" data-rf="copy"><i class="far fa-copy"></i> <span>Copy</span></button></div>
-        <p class="rf-earn"><i class="fas fa-gift"></i> প্রতিজন বন্ধু এই লিংক দিয়ে সাইনআপ করলে আপনি পাবেন <b>৳<?= (int)$bonus ?></b> বোনাস!</p>
+        <p class="rf-earn"><i class="fas fa-gift"></i> এই লিংক দিয়ে সাইনআপ করে কেউ প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$bonus ?></b> বোনাস!</p>
     </div>
     <div class="rf-socials" aria-label="শেয়ার করুন">
         <a class="wa" href="https://wa.me/?text=<?= $encMsg ?>" target="_blank" rel="noopener" title="WhatsApp"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>

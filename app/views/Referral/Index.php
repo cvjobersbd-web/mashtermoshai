@@ -51,7 +51,7 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
     <div class="rfp-wrap">
         <div class="rfp-hero">
             <h1><i class="fas fa-gift"></i> My Referral Bonus</h1>
-            <p>বন্ধুদের সাথে লিংক শেয়ার করুন — প্রতিজন আপনার লিংক দিয়ে সাইনআপ করলে (স্টুডেন্ট বা টিচার) আপনি পাবেন <b>৳<?= (int)$set['bonus'] ?></b>। টাকা যখন খুশি bKash, Nagad, Rocket বা ব্যাংকে তুলতে পারবেন।</p>
+            <p>বন্ধুদের সাথে লিংক শেয়ার করুন — আপনার লিংক দিয়ে সাইনআপ করে কেউ (স্টুডেন্ট বা টিচার) প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$set['bonus'] ?></b>। টাকা যখন খুশি bKash, Nagad, Rocket বা ব্যাংকে তুলতে পারবেন।</p>
         </div>
 
         <div class="rfp-stats">
@@ -71,7 +71,8 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                     <h2><i class="fas fa-circle-question"></i> কীভাবে কাজ করে</h2>
                     <ol class="rfp-how">
                         <li>উপরের লিংকটা WhatsApp, Facebook, Messenger, Instagram বা যেকোনো জায়গায় বন্ধুদের পাঠান।</li>
-                        <li>কেউ আপনার লিংকে ক্লিক করে নতুন অ্যাকাউন্ট খুললে (স্টুডেন্ট বা টিচার) আপনার অ্যাকাউন্টে ৳<?= (int)$set['bonus'] ?> যোগ হবে।</li>
+                        <li>কেউ আপনার লিংকে ক্লিক করে নতুন অ্যাকাউন্ট খুললে নিচের তালিকায় তার নাম আসবে ("প্যাকেজ কেনেনি")।</li>
+                        <li>সেই ইউজার (স্টুডেন্ট বা টিচার) কোনো প্যাকেজ কিনলে, পেমেন্ট Approve হওয়ার সাথে সাথে আপনার অ্যাকাউন্টে ৳<?= (int)$set['bonus'] ?> যোগ হবে।</li>
                         <li>ব্যালেন্স ৳<?= (int)$set['min'] ?> বা বেশি হলে উইথড্র আবেদন দিন — অ্যাডমিন যাচাই করে টাকা পাঠাবেন।</li>
                     </ol>
                     <p style="font-size:12.5px; color:#94A3B8; margin:12px 0 0;">ভুয়া বা নিজের একাধিক অ্যাকাউন্ট দিয়ে রেফার করলে বোনাস বাতিল করা হবে।</p>
@@ -88,7 +89,7 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                                     <td><?= e($nm) ?></td>
                                     <td><?= $r->Role === 'Teacher' ? 'Teacher' : 'Student' ?></td>
                                     <td><?= e(fmt_date($r->CreatedAt, 'd M Y')) ?></td>
-                                    <td><?= $r->Status === 'Credited' ? '<b style="color:#16A34A;">+৳' . (int)$r->Bonus . '</b>' : '<span class="rfp-st rej">বাতিল</span>' ?></td>
+                                    <td><?= $r->Status === 'Credited' ? '<b style="color:#16A34A;">+৳' . (int)$r->Bonus . '</b>' : ($r->Status === 'Waiting' ? '<span style="color:#94A3B8; font-size:12.5px;">প্যাকেজ কেনেনি</span>' : '<span class="rfp-st rej">বাতিল</span>') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </table></div>

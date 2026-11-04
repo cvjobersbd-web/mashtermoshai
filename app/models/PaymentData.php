@@ -325,6 +325,8 @@ trait PaymentData
             ]);
             $this->pdo->commit();
         } catch (Throwable $e) { $this->pdo->rollBack(); throw $e; }
+        // রেফারেল: এই ইউজার কারো লিংক দিয়ে এসে থাকলে, প্রথম প্যাকেজ কেনায় রেফারার বোনাস পায়
+        if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId);
         return $this->GetPaymentRequest($id);
     }
 

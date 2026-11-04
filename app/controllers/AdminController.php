@@ -844,7 +844,7 @@ class AdminController extends Controller
         if ($bonus < 0 || $bonus > 10000) json_response(['success' => false, 'message' => 'বোনাস ০ থেকে ১০০০০ টাকার মধ্যে দিন।']);
         if ($min < 1 || $min > 100000) json_response(['success' => false, 'message' => 'সর্বনিম্ন উইথড্র ঠিক নেই।']);
         $this->db->SaveSiteContent(['ref_bonus' => (string)$bonus, 'ref_min_withdraw' => (string)$min, 'ref_enabled' => input_bool('enabled') ? '1' : '0']);
-        json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে প্রতি রেফারে ৳{$bonus}।"]);
+        json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে রেফার করা কেউ প্যাকেজ কিনলে ৳{$bonus}।"]);
     }
 
     /** POST /Admin/ProcessWithdrawal (id, status = Paid|Rejected, txn, note) */

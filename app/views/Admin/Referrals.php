@@ -41,10 +41,10 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content rfa">
     <h2><i class="fas fa-gift" style="color:#F59E0B;"></i> Referrals</h2>
-    <p class="sub">ইউজাররা নিজের লিংক শেয়ার করে — কেউ সেই লিংক দিয়ে সাইনআপ করলে রেফারার বোনাস পায়। উইথড্র আবেদন দেখে টাকা পাঠান, তারপর <b>Paid</b> চাপুন।</p>
+    <p class="sub">ইউজাররা নিজের লিংক শেয়ার করে — কেউ সেই লিংক দিয়ে সাইনআপ করে প্যাকেজ কিনলে (পেমেন্ট Approve হলে) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই। উইথড্র আবেদন দেখে টাকা পাঠান, তারপর <b>Paid</b> চাপুন।</p>
 
     <div class="rfa-stats">
-        <div class="rfa-stat"><small>মোট রেফারেল</small><b><?= number_format($st['referrals']) ?></b></div>
+        <div class="rfa-stat"><small>মোট রেফারেল · প্যাকেজ কিনেছে</small><b><?= number_format($st['referrals']) ?> · <?= number_format($st['bought'] ?? 0) ?></b></div>
         <div class="rfa-stat"><small>মোট বোনাস দেওয়া হয়েছে</small><b>৳<?= number_format($st['earned']) ?></b></div>
         <div class="rfa-stat"><small>পাঠানো হয়েছে (Paid)</small><b>৳<?= number_format($st['paid']) ?></b></div>
         <div class="rfa-stat warn"><small>অপেক্ষমাণ উইথড্র</small><b><?= (int)$st['pendingCount'] ?> টি · ৳<?= number_format($st['pendingAmount']) ?></b></div>
@@ -53,12 +53,12 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     <div class="rfa-card">
         <h3><i class="fas fa-sliders" style="color:#00B5E0;"></i> বোনাস সেটিং</h3>
         <form class="rfa-set" id="rfaSet">
-            <div><label for="rfaBonus">প্রতি রেফারে বোনাস (৳)</label><input type="number" id="rfaBonus" name="bonus" min="0" max="10000" value="<?= (int)$set['bonus'] ?>" /></div>
+            <div><label for="rfaBonus">প্যাকেজ কিনলে বোনাস (৳)</label><input type="number" id="rfaBonus" name="bonus" min="0" max="10000" value="<?= (int)$set['bonus'] ?>" /></div>
             <div><label for="rfaMin">সর্বনিম্ন উইথড্র (৳)</label><input type="number" id="rfaMin" name="min" min="1" value="<?= (int)$set['min'] ?>" /></div>
             <div class="form-check form-switch" style="padding-bottom:8px;"><input class="form-check-input" type="checkbox" id="rfaOn" name="enabled" <?= $set['enabled'] ? 'checked' : '' ?> /><label class="form-check-label fw-semibold" for="rfaOn">রেফারেল চালু</label></div>
             <button type="submit" class="rfa-btn"><i class="fas fa-save"></i> Save</button>
         </form>
-        <p style="font-size:12.5px; color:#64748B; margin:10px 0 0;">বোনাস বদলালে শুধু এরপরের নতুন সাইনআপে নতুন পরিমাণ দেবে — আগের বোনাস যেমন আছে তেমন থাকবে।</p>
+        <p style="font-size:12.5px; color:#64748B; margin:10px 0 0;">বোনাস বদলালে এরপর যারা প্যাকেজ কিনবে তাদের রেফারার নতুন পরিমাণ পাবে — আগে দেওয়া বোনাস যেমন আছে তেমন থাকবে।</p>
     </div>
 
     <div class="rfa-card">
@@ -103,8 +103,8 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
                         <td><?= e($r->ReferredName ?: $r->ReferredUser ?: 'Deleted') ?><br><small style="color:#94A3B8;"><?= e((string)$r->ReferredEmail) ?></small></td>
                         <td><?= e(fmt_date($r->CreatedAt, 'd M Y, h:i A')) ?></td>
                         <td><small><?= e((string)$r->Ip) ?></small></td>
-                        <td><?= $r->Status === 'Credited' ? '<b style="color:#16A34A;">৳' . (int)$r->Bonus . '</b>' : '<span class="rfa-pill no">বাতিল</span>' ?></td>
-                        <td><button type="button" class="rfa-btn <?= $r->Status === 'Credited' ? 'r' : 'l' ?>" style="height:32px; font-size:12px;" data-ref="<?= (int)$r->Id ?>" data-st="<?= $r->Status === 'Credited' ? 'Revoked' : 'Credited' ?>"><?= $r->Status === 'Credited' ? 'বাতিল' : 'আবার চালু' ?></button></td>
+                        <td><?= $r->Status === 'Credited' ? '<b style="color:#16A34A;">৳' . (int)$r->Bonus . '</b>' : ($r->Status === 'Waiting' ? '<span style="color:#94A3B8; font-size:12.5px;">প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>') ?></td>
+                        <td><button type="button" class="rfa-btn <?= $r->Status !== 'Revoked' ? 'r' : 'l' ?>" style="height:32px; font-size:12px;" data-ref="<?= (int)$r->Id ?>" data-st="<?= $r->Status !== 'Revoked' ? 'Revoked' : 'Credited' ?>"><?= $r->Status !== 'Revoked' ? 'বাতিল' : 'আবার চালু' ?></button></td>
                     </tr>
                 <?php endforeach; ?>
             </table></div>
