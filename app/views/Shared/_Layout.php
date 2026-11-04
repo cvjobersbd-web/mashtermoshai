@@ -1025,7 +1025,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         @media (max-width: 640px) { .footer-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; } .footer-nav > div:first-child { grid-column: 1 / -1; } }
 </style>
     <?= blue_tick_css() ?>
-<?php if (!is_admin() && ($__pxId = meta_pixel_id()) !== ''): $__pxQ = pixel_take(); ?>
+<?php if (px_trackable()): $__pxId = meta_pixel_id(); $__pxQ = pixel_take(); $__pxUd = px_user_data();
+    $__pxPv = px_event_on('PageView') ? bin2hex(random_bytes(8)) : '';
+    if ($__pxPv !== '') capi_queue('PageView', [], $__pxPv); ?>
     <!-- Meta Pixel Code (অ্যাডমিনদের জন্য লোড হয় না) -->
     <script>
     !function(f,b,e,v,n,t,s)
@@ -1036,8 +1038,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '<?= e($__pxId) ?>');
-    fbq('track', 'PageView');
+    fbq('init', '<?= e($__pxId) ?>'<?= $__pxUd ? ', ' . json_encode($__pxUd) : '' ?>);
+<?php if ($__pxPv !== ''): ?>    fbq('track', 'PageView', {}, { eventID: '<?= $__pxPv ?>' });
+<?php endif; ?>
     (function () {
         // সাইটের ইভেন্ট (ViewContent, Search, CompleteRegistration, Lead, PostRequest) — সার্ভার থেকে আসে
         var STD = ['ViewContent', 'Search', 'CompleteRegistration', 'Lead', 'Contact', 'Purchase', 'InitiateCheckout', 'SubmitApplication'];
@@ -1068,9 +1071,10 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         });
     })();
     </script>
-    <noscript><img height="1" width="1" style="display:none" alt=""
+<?php if ($__pxPv !== ''): ?>    <noscript><img height="1" width="1" style="display:none" alt=""
     src="https://www.facebook.com/tr?id=<?= e($__pxId) ?>&ev=PageView&noscript=1"
     /></noscript>
+<?php endif; ?>
     <!-- End Meta Pixel Code -->
 <?php endif; ?>
 </head>

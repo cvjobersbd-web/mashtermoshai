@@ -1601,30 +1601,63 @@ function admin_password_problem(string $pw): string
 
 
 // ============================================================
-// ===== META (FACEBOOK) PIXEL =====
+// ===== META (FACEBOOK) PIXEL + CONVERSIONS API =====
 // ============================================================
-/** Pixel ID — Admin সেটিং (SiteContents: meta_pixel_id) না থাকলে ডিফল্ট */
+// সেটিং (SiteContents): Admin → Meta Pixel পেজ থেকে বদলানো যায়
+//  px_enabled, meta_pixel_id, px_capi_token (সার্ভার থেকে পাঠানো — ঐচ্ছিক), px_test_code, px_adv_match, px_ev_{Event}
+const PIXEL_DEFAULT_ID = '1125687780363494';
+/** ইভেন্ট => [বাংলা বর্ণনা, Meta standard ইভেন্ট কিনা] */
+const PIXEL_EVENTS = [
+    'PageView'             => ['যেকোনো পেজ খুললে', true],
+    'ViewContent'          => ['টিউটরের প্রোফাইল / Full Details, টিউশন পোস্টের ডিটেইলস বা Package পেজ দেখলে', true],
+    'Search'               => ['Tutor List এ জেলা ফিল্টার, Tutor ID দিয়ে খোঁজা, বা Tuition Circular এ সার্চ / ফিল্টার করলে', true],
+    'CompleteRegistration' => ['নতুন ইউজার সাইনআপ করে ইমেইল (OTP) ভেরিফাই করলে', true],
+    'Lead'                 => ['স্টুডেন্ট টিউটর রিকোয়েস্ট পাঠালে, বা টিচার টিউশন পোস্টে Apply করলে', true],
+    'PostRequest'          => ['স্টুডেন্ট টিউশনের পোস্ট দিলে বা টিচার "পড়াতে চাই" পোস্ট দিলে (Custom ইভেন্ট)', false],
+];
+
+function px_settings(bool $fresh = false): array
+{
+    static $c = null;
+    if ($c !== null && !$fresh) return $c;
+    $def = ['px_enabled' => '1', 'meta_pixel_id' => PIXEL_DEFAULT_ID, 'px_capi_token' => '', 'px_test_code' => '', 'px_adv_match' => '1'];
+    foreach (PIXEL_EVENTS as $ev => $_) $def['px_ev_' . $ev] = '1';
+    try { $c = db()->GetSiteContent($def); } catch (Throwable $e) { $c = $def; }
+    if (!preg_match('/^\d{6,20}$/', trim((string)$c['meta_pixel_id']))) $c['meta_pixel_id'] = '';
+    $c['meta_pixel_id'] = trim((string)$c['meta_pixel_id']);
+    return $c;
+}
+
+/** Pixel চালু থাকলে তার ID, না হলে '' */
 function meta_pixel_id(): string
 {
-    static $id = null;
-    if ($id === null) {
-        $id = '1125687780363494';
-        try { $v = trim((string)(db()->GetSiteContent(['meta_pixel_id' => ''])['meta_pixel_id'] ?? '')); if (preg_match('/^\d{6,20}$/', $v)) $id = $v; } catch (Throwable $e) { }
-    }
-    return $id;
+    $c = px_settings();
+    return $c['px_enabled'] !== '0' ? $c['meta_pixel_id'] : '';
+}
+
+function px_event_on(string $event): bool
+{
+    $c = px_settings();
+    return ($c['px_ev_' . $event] ?? '1') !== '0';
+}
+
+/** এই ভিজিটরকে ট্র্যাক করা হবে কিনা — অ্যাডমিন / স্টাফ কখনো না */
+function px_trackable(): bool
+{
+    return meta_pixel_id() !== '' && !is_admin();
 }
 
 /**
  * Pixel ইভেন্ট কিউতে রাখে — পরের পেজ রেন্ডারে (লেআউট) বা এই JSON রেসপন্সে ব্রাউজারে যায়।
- * Standard: ViewContent, Search, CompleteRegistration, Lead … · Custom (trackCustom): PostRequest
+ * Conversions API token থাকলে একই event_id দিয়ে সার্ভার থেকেও যায় (Meta duplicate বাদ দেয়)।
  */
 function pixel_track(string $event, array $params = []): void
 {
-    if (session_status() !== PHP_SESSION_ACTIVE || is_admin()) return;   // অ্যাডমিনের কাজ গোনা হয় না
+    if (session_status() !== PHP_SESSION_ACTIVE || !px_trackable() || !px_event_on($event)) return;
+    $id = bin2hex(random_bytes(8));
     $q = $_SESSION['_px'] ?? [];
-    if (count($q) >= 20) return;
-    $q[] = ['e' => $event, 'p' => $params, 'id' => substr(bin2hex(random_bytes(8)), 0, 16)];
-    $_SESSION['_px'] = $q;
+    if (count($q) < 20) { $q[] = ['e' => $event, 'p' => $params, 'id' => $id]; $_SESSION['_px'] = $q; }
+    capi_queue($event, $params, $id);
 }
 
 /** কিউতে থাকা ইভেন্টগুলো নিয়ে খালি করে */
@@ -1633,4 +1666,116 @@ function pixel_take(): array
     $q = $_SESSION['_px'] ?? [];
     unset($_SESSION['_px']);
     return is_array($q) ? $q : [];
+}
+
+function px_norm_phone(string $p): string
+{
+    $d = preg_replace('/\D/', '', $p);
+    if ($d === '') return '';
+    if (str_starts_with($d, '01') && strlen($d) === 11) $d = '88' . $d;   // বাংলাদেশি নম্বর → 8801XXXXXXXXX
+    return $d;
+}
+
+/** লগইন করা ইউজারের email / phone / id — SHA-256 hash (Advanced matching) */
+function px_user_data(): array
+{
+    if (px_settings()['px_adv_match'] === '0') return [];
+    $uid = current_user_id();
+    if ($uid === null) return [];
+    static $ud = null;
+    if ($ud !== null) return $ud;
+    $ud = ['external_id' => hash('sha256', 'mm-' . $uid)];
+    $email = strtolower(trim((string)(session_get('UserEmail') ?? '')));
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) $ud['em'] = hash('sha256', $email);
+    try {
+        $ph = px_norm_phone((string)(db()->scalar('SELECT `MobileNumber` FROM `Users` WHERE `Id` = :u', ['u' => $uid]) ?? ''));
+        if ($ph !== '') $ud['ph'] = hash('sha256', $ph);
+    } catch (Throwable $e) { }
+    return $ud;
+}
+
+function px_current_url(): string
+{
+    $path = (string)($_SERVER['REQUEST_URI'] ?? '/');
+    return site_public_url() . (str_starts_with($path, '/') ? $path : '/' . $path);
+}
+
+/** সার্ভার (Conversions API) এ পাঠানোর জন্য জমা রাখে — রেসপন্স পাঠানোর পরে একসাথে যায় */
+function capi_queue(string $event, array $params, string $eventId, ?string $sourceUrl = null): void
+{
+    $c = px_settings();
+    if (trim((string)$c['px_capi_token']) === '' || meta_pixel_id() === '') return;
+    $isPage = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && empty($_SERVER['HTTP_X_REQUESTED_WITH']);
+    $ref = (string)($_SERVER['HTTP_REFERER'] ?? '');
+    $url = $sourceUrl ?? ($isPage || $ref === '' ? px_current_url() : $ref);
+    $user = array_filter([
+        'client_ip_address' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+        'client_user_agent' => mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),
+        'fbp' => preg_match('/^fb\.\d\.\d+\.\d+$/', (string)($_COOKIE['_fbp'] ?? '')) ? $_COOKIE['_fbp'] : '',
+        'fbc' => px_fbc(),
+    ], 'strlen');
+    foreach (px_user_data() as $k => $v) $user[$k] = [$v];
+    $ev = ['event_name' => $event, 'event_time' => time(), 'event_id' => $eventId, 'action_source' => 'website', 'event_source_url' => $url, 'user_data' => (object)$user];
+    if ($params) $ev['custom_data'] = $params;
+    if (empty($GLOBALS['__capi'])) {
+        $GLOBALS['__capi'] = [];
+        register_shutdown_function('capi_flush');
+    }
+    $GLOBALS['__capi'][] = $ev;
+}
+
+/** _fbc কুকি, না থাকলে URL এর fbclid থেকে */
+function px_fbc(): string
+{
+    $c = (string)($_COOKIE['_fbc'] ?? '');
+    if (preg_match('/^fb\.\d\.\d+\.[A-Za-z0-9_\-]+$/', $c)) return $c;
+    $id = (string)($_GET['fbclid'] ?? '');
+    return preg_match('/^[A-Za-z0-9_\-]{10,500}$/', $id) ? 'fb.1.' . (int)(microtime(true) * 1000) . '.' . $id : '';
+}
+
+/** Graph API তে ইভেন্ট পাঠায়। রিটার্ন: [ok, HTTP code, Meta এর উত্তর] */
+function capi_send(array $events, ?string $testCode = null): array
+{
+    $c = px_settings();
+    $pixel = meta_pixel_id(); $token = trim((string)$c['px_capi_token']);
+    if ($pixel === '' || $token === '') return [false, 0, 'Pixel ID / Access token নেই'];
+    $body = ['data' => array_values($events)];
+    $tc = trim((string)($testCode ?? $c['px_test_code']));
+    if ($tc !== '') $body['test_event_code'] = $tc;
+    $base = getenv('MM_CAPI_BASE') ?: 'https://graph.facebook.com/v21.0';
+    $url = rtrim($base, '/') . '/' . $pixel . '/events?access_token=' . rawurlencode($token);
+    $json = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $json, CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 8]);
+        $res = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+        if ($res === false) return [false, 0, $err ?: 'কানেক্ট করা যায়নি'];
+    } else {
+        $ctx = stream_context_create(['http' => ['method' => 'POST', 'header' => "Content-Type: application/json\r\n", 'content' => $json, 'timeout' => 8, 'ignore_errors' => true]]);
+        $res = @file_get_contents($url, false, $ctx);
+        $code = 0;
+        foreach ($http_response_header ?? [] as $h) if (preg_match('#^HTTP/\S+\s+(\d+)#', $h, $m)) $code = (int)$m[1];
+        if ($res === false) return [false, 0, 'কানেক্ট করা যায়নি'];
+    }
+    return [$code >= 200 && $code < 300, $code, (string)$res];
+}
+
+/** রিকোয়েস্ট শেষে (ইউজারকে পেজ পাঠানোর পরে) জমা ইভেন্টগুলো Conversions API তে পাঠায় */
+function capi_flush(): void
+{
+    $events = $GLOBALS['__capi'] ?? [];
+    $GLOBALS['__capi'] = [];
+    if (!$events) return;
+    // সেশন আগে সেভ করে ছেড়ে দেওয়া — না হলে পরের পেজ (redirect) সেশন লকের জন্য আটকে থাকত
+    if (session_status() === PHP_SESSION_ACTIVE) @session_write_close();
+    if (function_exists('fastcgi_finish_request')) @fastcgi_finish_request();
+    elseif (function_exists('litespeed_finish_request')) @litespeed_finish_request();
+    try {
+        [$ok, $code, $res] = capi_send($events);
+        if (!$ok) error_log('[Meta CAPI] HTTP ' . $code . ' ' . mb_substr($res, 0, 300));
+    } catch (Throwable $e) { error_log('[Meta CAPI] ' . $e->getMessage()); }
 }

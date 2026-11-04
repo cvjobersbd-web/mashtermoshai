@@ -40,14 +40,14 @@ class AdminController extends Controller
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
             'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
-            'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ',
+            'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
             'AddNotice' => 'নোটিশ যোগ', 'EditNotice' => 'নোটিশ এডিট', 'DeleteNotice' => 'নোটিশ মুছেছেন',
             'DeleteTuitionPost' => 'টিউশন পোস্ট মুছেছেন', 'UpdateApplicationStatus' => 'টিউশন অ্যাপ্লিকেশন স্ট্যাটাস',
             'SaveAdmin' => 'অ্যাডমিন যোগ/এডিট', 'AdminSetActive' => 'অ্যাডমিন চালু/বন্ধ', 'RemoveAdmin' => 'অ্যাডমিন সরিয়েছেন', 'ResetAdminPassword' => 'অ্যাডমিনের পাসওয়ার্ড রিসেট', 'UploadAdminPhoto' => 'অ্যাডমিনের প্রোফাইল ছবি', 'RemoveAdminPhoto' => 'অ্যাডমিনের প্রোফাইল ছবি সরানো',
         ];
-        if ((str_starts_with($action, 'Upload') && $action !== 'UploadAdminPhoto') || in_array($action, ['CategoryDefaultText', 'SendTestEmail'], true)) return; // শুধু ছবি আপলোড/প্রিভিউ — লগ নয়
+        if ((str_starts_with($action, 'Upload') && $action !== 'UploadAdminPhoto') || in_array($action, ['CategoryDefaultText', 'SendTestEmail', 'TestMetaPixel'], true)) return; // শুধু ছবি আপলোড/প্রিভিউ — লগ নয়
         $bits = [];
         foreach (['id', 'userId', 'postId', 'paymentId', 'status', 'which', 'name', 'email'] as $k) {
             $v = $_POST[$k] ?? null;
@@ -845,6 +845,70 @@ class AdminController extends Controller
         if ($min < 1 || $min > 100000) json_response(['success' => false, 'message' => 'সর্বনিম্ন উইথড্র ঠিক নেই।']);
         $this->db->SaveSiteContent(['ref_bonus' => (string)$bonus, 'ref_min_withdraw' => (string)$min, 'ref_enabled' => input_bool('enabled') ? '1' : '0']);
         json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে রেফার করা কেউ প্যাকেজ কিনলে ৳{$bonus}।"]);
+    }
+
+    // ============================================================
+    // ===== META PIXEL & CONVERSIONS API (শুধু Super Admin) =====
+    // ============================================================
+    /** GET /Admin/MetaPixel */
+    public function MetaPixel(): void
+    {
+        $this->requireAdminPage();
+        $c = px_settings(true);
+        $tok = trim((string)$c['px_capi_token']);
+        $this->view(null, null, [
+            'S' => $c, 'HasToken' => $tok !== '', 'TokenHint' => $tok !== '' ? '••••' . substr($tok, -4) : '',
+            'Events' => PIXEL_EVENTS, 'CurlOk' => function_exists('curl_init') || ini_get('allow_url_fopen'),
+        ]);
+    }
+
+    /** POST /Admin/SaveMetaPixel */
+    public function SaveMetaPixel_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = preg_replace('/\s+/', '', (string)input_str('pixelId', ''));
+        $on = input_bool('enabled');
+        if ($id !== '' && !preg_match('/^\d{6,20}$/', $id)) json_response(['success' => false, 'message' => 'Pixel ID শুধু সংখ্যা হবে (সাধারণত ১৫–১৬ ডিজিট)।']);
+        if ($on && $id === '') json_response(['success' => false, 'message' => 'Pixel চালু করতে Pixel ID দিন।']);
+        $test = trim((string)input_str('testCode', ''));
+        if ($test !== '' && !preg_match('/^[A-Za-z0-9_\-]{3,40}$/', $test)) json_response(['success' => false, 'message' => 'Test event code ঠিক নেই (যেমন TEST12345)।']);
+        $save = ['px_enabled' => $on ? '1' : '0', 'meta_pixel_id' => $id, 'px_test_code' => $test, 'px_adv_match' => input_bool('advMatch') ? '1' : '0'];
+        $tok = trim((string)input_str('capiToken', ''));
+        if (input_bool('clearToken')) $save['px_capi_token'] = '';
+        elseif ($tok !== '') {
+            if (!preg_match('/^[A-Za-z0-9_\-|]{40,600}$/', $tok)) json_response(['success' => false, 'message' => 'Access token ঠিক মনে হচ্ছে না — Events Manager থেকে পুরোটা কপি করে দিন।']);
+            $save['px_capi_token'] = $tok;
+        }
+        $evs = (array)($_POST['events'] ?? []);
+        foreach (PIXEL_EVENTS as $ev => $_) $save['px_ev_' . $ev] = in_array($ev, $evs, true) ? '1' : '0';
+        $this->db->SaveSiteContent($save);
+        $c = px_settings(true);
+        $n = count(array_filter(array_keys(PIXEL_EVENTS), fn($e) => ($c['px_ev_' . $e] ?? '1') !== '0'));
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।', 'status' => [
+            'active' => $c['px_enabled'] !== '0' && $c['meta_pixel_id'] !== '', 'pixel' => $c['meta_pixel_id'],
+            'mode' => trim((string)$c['px_capi_token']) !== '' ? 'Browser + Server (CAPI)' : 'Browser only', 'events' => $n, 'total' => count(PIXEL_EVENTS),
+            'tokenHint' => trim((string)$c['px_capi_token']) !== '' ? '••••' . substr(trim((string)$c['px_capi_token']), -4) : '',
+        ]]);
+    }
+
+    /** POST /Admin/TestMetaPixel — সার্ভার থেকে একটা test PageView পাঠিয়ে Meta এর উত্তর দেখায় */
+    public function TestMetaPixel_POST(): void
+    {
+        $this->requireAdminJson();
+        $c = px_settings(true);
+        if ($c['px_enabled'] === '0' || $c['meta_pixel_id'] === '') json_response(['success' => false, 'message' => 'আগে Pixel চালু করে Pixel ID সেভ করুন।']);
+        if (trim((string)$c['px_capi_token']) === '') json_response(['success' => false, 'message' => 'সার্ভার টেস্টের জন্য Conversions API access token লাগবে। Token ছাড়া ব্রাউজার Pixel ঠিকই কাজ করে — Events Manager → Test Events এ সাইট খুলে দেখুন।']);
+        $code = trim((string)$c['px_test_code']);
+        $ev = ['event_name' => 'PageView', 'event_time' => time(), 'event_id' => 'test-' . bin2hex(random_bytes(6)), 'action_source' => 'website',
+            'event_source_url' => site_public_url() . '/', 'user_data' => ['client_ip_address' => (string)($_SERVER['REMOTE_ADDR'] ?? ''), 'client_user_agent' => (string)($_SERVER['HTTP_USER_AGENT'] ?? 'MashterMoshai-Admin-Test')]];
+        [$ok, $http, $res] = capi_send([$ev], $code);
+        $j = json_decode($res, true);
+        if ($ok) {
+            $n = (int)($j['events_received'] ?? 0);
+            json_response(['success' => true, 'message' => "Meta ইভেন্ট গ্রহণ করেছে (events_received: {$n})।" . ($code !== '' ? " Events Manager → Test Events এ \"{$code}\" দিয়ে দেখুন।" : ' Test event code দিলে Test Events ট্যাবে সাথে সাথে দেখা যায়।'), 'raw' => $j ?? $res]);
+        }
+        $msg = (string)($j['error']['error_user_msg'] ?? $j['error']['message'] ?? $res);
+        json_response(['success' => false, 'message' => 'Meta ইভেন্ট নেয়নি' . ($http ? " (HTTP {$http})" : '') . ': ' . mb_substr($msg, 0, 300), 'raw' => $j ?? $res]);
     }
 
     /** POST /Admin/ProcessWithdrawal (id, status = Paid|Rejected, txn, note) */
