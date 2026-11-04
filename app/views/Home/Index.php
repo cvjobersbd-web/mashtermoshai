@@ -596,26 +596,27 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             .kf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 40px; }
             .kf-card { background: #fff; border: 1px solid #DCECF5; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: transform .25s ease, box-shadow .25s ease; }
             .kf-card:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(8,34,74,.10); }
-            .kf-media { position: relative; height: 176px; background: #EAF7FD; overflow: hidden; }
-            .kf-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            /* ছবি পুরোটা দেখায় (কাটা হয় না) — ছবির নিজের মাপে উচ্চতা; ছবি না থাকলে ২:১ আইকন প্যানেল */
+            .kf-media { position: relative; background: #EAF7FD; overflow: hidden; aspect-ratio: 2 / 1; }
+            .kf-media.has-img { aspect-ratio: auto; background: #F4FAFE; }
+            .kf-media img { width: 100%; height: auto; display: block; }
             .kf-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
                 background: radial-gradient(circle at 80% 15%, rgba(255,255,255,.35) 0 60px, transparent 61px), linear-gradient(135deg, #E0F7FF 0%, #BDEFFF 55%, #8FE3FB 100%); }
+            .kf-ph[hidden] { display: none; }
             .kf-ph i { width: 76px; height: 76px; border-radius: 22px; background: #fff; color: #00B5E0; font-size: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 26px rgba(0,150,200,.18); }
-            .kf-num { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; background: rgba(8,34,74,.85); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 1; }
             .kf-body { padding: 20px 22px 24px; }
             .kf-body h3 { margin: 0; font-size: 18px; font-weight: 800; color: #08224A; line-height: 1.3; }
             .kf-tag { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: #00A8D6; }
             .kf-desc { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #64748B; }
             @media (max-width: 1023px) { .kf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } }
-            @media (max-width: 639px) { .kf-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 24px; } .kf-media { height: 160px; } .kf-body { padding: 16px 18px 20px; } }
+            @media (max-width: 639px) { .kf-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 24px; } .kf-body { padding: 16px 18px 20px; } }
         </style>
         <div class="kf-grid">
             <?php foreach (key_features() as $kfi => $kf): ?>
                 <div class="kf-card">
-                    <div class="kf-media">
-                        <span class="kf-num"><?= (int)$kfi ?></span>
-                        <div class="kf-ph" aria-hidden="true"><i class="fas <?= e($kf['icon']) ?>"></i></div>
-                        <?php if ($kf['image'] !== ''): ?><img src="<?= e($kf['image']) ?>" alt="<?= e($kf['title']) ?>" loading="lazy" style="position:relative;" onerror="this.remove()" /><?php endif; ?>
+                    <div class="kf-media<?= $kf['image'] !== '' ? ' has-img' : '' ?>">
+                        <?php if ($kf['image'] !== ''): ?><img src="<?= e($kf['image']) ?>" alt="<?= e($kf['title']) ?>" loading="lazy" onerror="this.parentNode.classList.remove('has-img'); this.nextElementSibling.hidden = false; this.remove()" /><?php endif; ?>
+                        <div class="kf-ph" aria-hidden="true"<?= $kf['image'] !== '' ? ' hidden' : '' ?>><i class="fas <?= e($kf['icon']) ?>"></i></div>
                     </div>
                     <div class="kf-body">
                         <h3><?= e($kf['title']) ?></h3>
