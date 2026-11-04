@@ -823,6 +823,20 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .chat-nav-wrap { margin-right: 4px; }
             .chat-nav-wrap .notification-bell { display: inline-flex; text-decoration: none; }
             @media (max-width: 1599px) and (min-width: 1280px) { .chat-nav-wrap { margin-right: 0; } }
+            /* ===== Find Tutor সাবমেনু ===== */
+            .nav-dd { position: relative; display: inline-flex; }
+            .nav-dd-caret { font-size: 9px !important; margin-left: 2px; opacity: .7; transition: transform .2s; display: inline-block !important; }
+            .nav-dd:hover .nav-dd-caret, .nav-dd:focus-within .nav-dd-caret { transform: rotate(180deg); }
+            .nav-dd-menu { position: absolute; top: calc(100% + 8px); left: 50%; transform: translate(-50%, 6px); min-width: 280px; background: #fff; border: 1px solid #E3ECF6; border-radius: 14px;
+                box-shadow: 0 16px 40px rgba(11,31,68,.14); padding: 8px; opacity: 0; visibility: hidden; transition: opacity .18s, transform .18s, visibility .18s; z-index: 1100; }
+            .nav-dd-menu::before { content: ''; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
+            .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu, .nav-dd.open .nav-dd-menu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+            .nav-dd-menu a { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: #0B1F44; }
+            .nav-dd-menu a:hover, .nav-dd-menu a.on { background: #E6F9FF; }
+            .nav-dd-menu a > i { width: 34px; height: 34px; border-radius: 9px; background: #E6F9FF; color: #00A8D6; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+            .nav-dd-menu a:hover > i, .nav-dd-menu a.on > i { background: #00CFFF; color: #fff; }
+            .nav-dd-menu b { display: block; font-size: 14px; font-weight: 700; }
+            .nav-dd-menu small { display: block; font-size: 12px; color: #64748B; margin-top: 1px; white-space: normal; }
             .footer-brand-logo-box img { height: 76px; max-width: 260px; }
             @media (max-width: 640px) { .footer-brand-logo-box img { height: 64px; } }
 
@@ -1041,9 +1055,16 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Feed" class="nav-desktop-link<?= $navOn('/Feed') ? ' active' : '' ?>"<?= $navOn('/Feed') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-graduation-cap"></i>Educational Feed
                     </a>
-                    <a href="/FindTutor" class="nav-desktop-link<?= $navOn('/FindTutor') ? ' active' : '' ?>"<?= $navOn('/FindTutor') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-chalkboard-user"></i>Find Tutor
-                    </a>
+                    <?php $ftOn = $navOn('/FindTutor') || $navOn('/Tutors'); ?>
+                    <div class="nav-dd" id="navFt">
+                        <a href="/Tutors" class="nav-desktop-link<?= $ftOn ? ' active' : '' ?>" aria-haspopup="true"<?= $ftOn ? ' aria-current="page"' : '' ?>>
+                            <i class="fas fa-chalkboard-user"></i>Find Tutor<i class="fas fa-chevron-down nav-dd-caret"></i>
+                        </a>
+                        <div class="nav-dd-menu" role="menu">
+                            <a href="/Tutors" role="menuitem" class="<?= $navOn('/Tutors') ? 'on' : '' ?>"><i class="fas fa-users"></i><span><b>Tutor List</b><small>সব যাচাই করা টিউটর আর তাদের প্রোফাইল</small></span></a>
+                            <a href="/FindTutor" role="menuitem" class="<?= $navOn('/FindTutor') ? 'on' : '' ?>"><i class="fas fa-pen-to-square"></i><span><b>পড়াতে চাই</b><small>টিচারদের "পড়াতে চাই" পোস্ট</small></span></a>
+                        </div>
+                    </div>
                     <a href="/Categories" class="nav-desktop-link<?= $navOn('/Categories') ? ' active' : '' ?>"<?= $navOn('/Categories') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-layer-group"></i>Categories
                     </a>
@@ -1257,7 +1278,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <nav class="m-nav">
                 <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span>Home</span></a>
                 <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span>Educational Feed</span></a>
-                <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor</span></a>
+                <a href="/Tutors" class="<?= $mActive('/Tutors') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor — Tutor List</span></a>
+                <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span>Find Tutor — পড়াতে চাই</span></a>
                 <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
                 <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
