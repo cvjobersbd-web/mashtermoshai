@@ -215,7 +215,7 @@ class TutorController extends Controller
         $tid = input_int('teacherId', 0) ?? 0;
         $t = $this->db->GetUserById($tid);
         if (!$t || $t->Role !== 'Teacher') $this->fail('টিচার পাওয়া যায়নি।');
-        if (!$this->db->CanReviewTeacher($me, $tid)) $this->fail('শুধু এই টিচারের কাছে পড়েছেন (অ্যাপ্লিকেশন Accept করেছেন) এমন স্টুডেন্টরা রিভিউ দিতে পারেন।');
+        if (!$this->db->CanReviewTeacher($me, $tid)) $this->fail('শুধু স্টুডেন্ট / ইউজার অ্যাকাউন্ট থেকে টিচারকে রেটিং দেওয়া যায়।');
         $rating = input_int('rating', 0) ?? 0;
         if ($rating < 1 || $rating > 5) $this->fail('১ থেকে ৫ স্টার বাছাই করুন।');
         $comment = trim(preg_replace("/\n{3,}/", "\n\n", str_replace("\r", '', (string)input_str('comment', ''))));

@@ -103,7 +103,8 @@ class TutorsController extends Controller
         $t = null;
         foreach ($all as $x) if ($x->UserId === $uid) { $t = $x; break; }
         $user = $this->db->GetUserById($uid);
-        if (!$user || $user->Role !== 'Teacher') not_found('এই টিউটরকে পাওয়া যায়নি।');
+        // অ্যাডমিন টিচার আবেদন যাচাইয়ের সময় (এখনো টিচার না) পুরো ফর্ম দেখতে পারেন
+        if (!$user || ($user->Role !== 'Teacher' && !($isAdmin && $this->db->HasTeacherDetails($uid)))) not_found('এই টিউটরকে পাওয়া যায়নি।');
         if (!$t && !$isOwner && !$isAdmin) not_found('এই টিউটরের প্রোফাইল এখন দেখা যাচ্ছে না।');
         if (!$t) { // মালিক / অ্যাডমিন — তালিকায় না থাকলেও (যেমন সাবস্ক্রিপশন নেই) দেখতে পারবে
             $name = !is_blank($user->FullName) ? (string)$user->FullName : (string)$user->UserName;

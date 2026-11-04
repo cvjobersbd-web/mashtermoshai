@@ -165,13 +165,16 @@ $forms = !$isOwner ? [] : [
                     <?php endif; ?>
                 <?php else: /* নিজের প্রোফাইল, এখনো টিচার না */ ?>
                     <?php $st = $Model->TeacherStatus; ?>
-                    <?php if ($st === 'Pending'): ?>
-                        <div class="ab-tutor"><i class="fas fa-hourglass-half" style="color:#f39c12;"></i><div><strong>আবেদন যাচাই হচ্ছে</strong><p>অ্যাডমিন Approve করলে আপনি টিচার হয়ে যাবেন এবং নোটিফিকেশন পাবেন।</p></div></div>
+                    <?php if ($st === 'AwaitingPayment'): ?>
+                        <div class="ab-tutor"><i class="fas fa-credit-card" style="color:#f39c12;"></i><div><strong>ফর্ম জমা হয়েছে — এখন প্যাকেজ কিনুন</strong><p>পছন্দের টিচার প্যাকেজ বেছে পেমেন্ট করলে আবেদন অ্যাডমিনের কাছে যাবে।</p></div></div>
+                        <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-tags"></i> টিচার প্যাকেজ বেছে নিন</a>
+                    <?php elseif ($st === 'Pending'): ?>
+                        <div class="ab-tutor"><i class="fas fa-hourglass-half" style="color:#f39c12;"></i><div><strong>আবেদন যাচাই হচ্ছে</strong><p>আপনার ফর্ম আর পেমেন্ট অ্যাডমিন যাচাই করছেন — Approve করলে আপনি টিচার হয়ে যাবেন এবং নোটিফিকেশন পাবেন।</p></div></div>
                     <?php elseif ($st === 'Rejected'): ?>
                         <div class="ab-tutor"><i class="fas fa-circle-xmark" style="color:#e74c3c;"></i><div><strong>আগের আবেদন গ্রহণ হয়নি</strong><p>তথ্য ঠিক করে আবার আবেদন করতে পারেন।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> আবার আবেদন করুন</a>
                     <?php else: ?>
-                        <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>আবেদন করুন — অ্যাডমিন Approve করলে টিউশনে Apply করতে পারবেন।</p></div></div>
+                        <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>১) ফর্ম পূরণ করুন → ২) টিচার প্যাকেজ কিনুন → ৩) অ্যাডমিন যাচাই করে Approve করলে আপনি টিচার।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> Become a Tutor</a>
                         <a href="/Package?for=teacher" class="ps-btn" style="margin:6px 0 0 6px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-tags"></i> Subscription প্যাকেজ দেখুন</a>
                     <?php endif; ?>

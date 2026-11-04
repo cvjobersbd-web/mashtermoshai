@@ -267,21 +267,15 @@ trait TeacherProfileData
 
     // ---------------- Reviews ----------------
     /** রিভিউ দিতে পারবে: যার পোস্টে টিচারের অ্যাপ্লিকেশন Accept হয়েছে, অথবা টিচারের স্টুডেন্ট তালিকায় লিংক করা আছে */
+    /**
+     * কে রেটিং দিতে পারবে: যেকোনো সক্রিয় ইউজার / স্টুডেন্ট (টিচার বা অ্যাডমিন না) — প্রত্যেকে একজন টিচারকে একবার (পরে বদলাতে পারে)।
+     */
     public function CanReviewTeacher(int $studentId, int $teacherId): bool
     {
         if ($studentId === $teacherId) return false;
         try {
-            $this->EnsureTeacherTables();
-            $this->EnsureCircularApplicationsTable();
-            $a = (int)$this->scalar("SELECT COUNT(*) FROM `TuitionCircularApplications` a INNER JOIN `TuitionCircularPosts` p ON p.`Id` = a.`PostId`
-                WHERE a.`TeacherId` = :t AND p.`UserId` = :s AND a.`Status` = 'Accepted'", ['t' => $teacherId, 's' => $studentId]);
-            if ($a > 0) return true;
-            // স্টুডেন্ট সরাসরি রিকোয়েস্ট পাঠিয়েছিল আর টিচার Accept করেছে
-            try {
-                $this->EnsureTutorRequestUserColumns();
-                if ((int)$this->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `TeacherUserId` = :t AND `StudentUserId` = :s AND `Status` = 'Accepted'", ['t' => $teacherId, 's' => $studentId]) > 0) return true;
-            } catch (Throwable $e) { }
-            return (int)$this->scalar('SELECT COUNT(*) FROM `TeacherStudents` WHERE `TeacherId` = :t AND `StudentUserId` = :s', ['t' => $teacherId, 's' => $studentId]) > 0;
+            $u = $this->one('SELECT `Role`, `IsActive` FROM `Users` WHERE `Id` = :u', ['u' => $studentId]);
+            return $u !== null && $u->Role === 'User' && (int)$u->IsActive === 1;
         } catch (Throwable $e) { return false; }
     }
 

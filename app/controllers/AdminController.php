@@ -255,8 +255,14 @@ class AdminController extends Controller
     public function TeacherRequests(): void
     {
         $this->requireAdminPage();
+        $this->db->EnsureTeacherRequestPaymentCol();
         $requests = $this->db->GetAllTeacherRequests();
+        // প্রতিটা আবেদনের পেমেন্টের তথ্য (প্যাকেজ, টাকা, মেথড, TxnID, রিসিট)
+        $payIds = []; $pays = [];
+        foreach ($this->db->all('SELECT `Id`, `PaymentId` FROM `TeacherRequests` WHERE `PaymentId` IS NOT NULL') as $r) $payIds[(int)$r->Id] = (int)$r->PaymentId;
+        foreach ($requests as $r) if (isset($payIds[(int)$r->Id])) { $p = $this->db->GetPaymentRequest($payIds[(int)$r->Id]); if ($p) $pays[(int)$r->Id] = $p; }
         $this->view(null, $requests, [
+            'Payments' => $pays,
             'UserCount' => count($this->db->GetAllUsers()),
             'PendingCount' => count(array_filter($requests, fn($r) => $r->Status === 'Pending')),
         ]);
@@ -273,6 +279,16 @@ class AdminController extends Controller
 
         $status = $action === 'Approve' ? 'Approved' : 'Rejected';
         $req = $this->db->GetTeacherRequestById($id);
+        // আবেদনের সাথে টিচার প্যাকেজের পেমেন্ট — Approve করলে পেমেন্টও Accept (Subscription চালু), Reject করলে পেমেন্টও বাতিল
+        $this->db->EnsureTeacherRequestPaymentCol();
+        $raw = $this->db->one('SELECT * FROM `TeacherRequests` WHERE `Id` = :i', ['i' => $id]);
+        $pay = $raw && !empty($raw->PaymentId) ? $this->db->GetPaymentRequest((int)$raw->PaymentId) : null;
+        if ($action === 'Approve' && $raw && $raw->Status === 'AwaitingPayment') json_response(['success' => false, 'message' => 'এই আবেদনকারী এখনো প্যাকেজের পেমেন্ট জমা দেননি — পেমেন্টের পর Approve করুন।']);
+        if ($action === 'Approve' && $pay && $pay->Status === 'Rejected') json_response(['success' => false, 'message' => 'এই আবেদনের পেমেন্ট বাতিল করা হয়েছে — নতুন পেমেন্ট ছাড়া Approve করা যাবে না।']);
+        if ($pay && $pay->Status === 'Pending') {
+            if ($action === 'Approve') $this->db->ApprovePayment((int)$pay->Id, (int)current_user_id(), 'টিচার আবেদনের সাথে Approve');
+            else $this->db->RejectPayment((int)$pay->Id, (int)current_user_id(), $note !== null && $note !== '' ? (string)$note : 'টিচার আবেদন গ্রহণ হয়নি');
+        }
         if ($this->db->UpdateTeacherRequest($id, $status, $note)) {
             if ($action === 'Approve' && $req) {
                 $this->db->MakeUserTeacher($req->UserId);

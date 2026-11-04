@@ -20,6 +20,10 @@ $inst = $t->Institution !== 'Not specified' ? $t->Institution : 'N/A';
     </div>
     <h3 class="tl-name" title="<?= e($t->FullName) ?>"><?= e($short) ?></h3>
     <div class="tl-inst" title="<?= e($inst) ?>"><?= e($inst) ?></div>
+    <a class="tl-rate" href="/Tutors/Profile/<?= (int)$t->UserId ?>#rate" title="<?= $t->TotalReviews ? e(number_format((float)$t->Rating, 1)) . ' / 5 — ' . (int)$t->TotalReviews . ' রেটিং' : 'প্রথম রেটিং দিন' ?>">
+        <?php for ($si = 1; $si <= 5; $si++): ?><i class="<?= $si <= round((float)$t->Rating) ? 'fas' : 'far' ?> fa-star"></i><?php endfor; ?>
+        <span><?= $t->TotalReviews ? e(number_format((float)$t->Rating, 1)) . ' (' . (int)$t->TotalReviews . ')' : 'Rate' ?></span>
+    </a>
     <div class="tl-loc"><i class="fas fa-location-dot"></i> <?= e($city) ?></div>
     <a class="tl-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">See</a>
 </div>

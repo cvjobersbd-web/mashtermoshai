@@ -13,6 +13,10 @@ class TeacherController extends Controller
         $userId = current_user_id() ?? 0;
 
         $status = $this->db->GetUserTeacherRequestStatus($userId);
+        if ($status === 'AwaitingPayment') {
+            tempdata_set('Info', 'আপনার ফর্ম জমা আছে — এখন একটা টিচার প্যাকেজ কিনে পেমেন্ট করুন, তারপর আবেদন অ্যাডমিনের কাছে যাবে।');
+            redirect('/Package?for=teacher&apply=1');
+        }
         if ($status === 'Pending') {
             tempdata_set('Info', 'You have already submitted a teacher request. Please wait for admin approval.');
             $this->redirectToAction('Index', 'Profile');
@@ -73,7 +77,7 @@ class TeacherController extends Controller
         $model->WhyTeach = $d['whyHire'];
         if ($model->Education === '') $errors[] = 'Highest Education দিন।';
         if ($model->CvLink !== '' && !preg_match('#^https?://#i', $model->CvLink)) $errors[] = 'CV Link https:// দিয়ে শুরু হতে হবে।';
-        if ($this->db->GetUserTeacherRequestStatus($userId) === 'Pending') $errors[] = 'আপনার আগের আবেদন এখনো যাচাই হচ্ছে।';
+        if (in_array($this->db->GetUserTeacherRequestStatus($userId), ['Pending', 'AwaitingPayment', 'Approved'], true)) $errors[] = 'আপনার আগের আবেদন এখনো চালু আছে।';
 
         $viewBag = ['Details' => $d];
         if (!$errors) {
@@ -81,6 +85,12 @@ class TeacherController extends Controller
             $err = null;
             if ($this->db->CreateTeacherRequest($model, $err)) {
                 $this->db->SaveTeacherDetails($userId, $d);
+                // টিচার প্যাকেজ থাকলে: আগে প্যাকেজ কিনে পেমেন্ট, তারপর আবেদন অ্যাডমিনের কাছে যায়
+                if ($this->db->TeacherApplyNeedsPayment()) {
+                    $this->db->SetTeacherRequestState((int)$model->Id, 'AwaitingPayment');
+                    tempdata_set('Success', 'ফর্ম জমা হয়েছে! এখন পছন্দের টিচার প্যাকেজ বেছে পেমেন্ট করুন — তারপর আবেদন অ্যাডমিনের কাছে যাবে।');
+                    redirect('/Package?for=teacher&apply=1');
+                }
                 tempdata_set('Success', 'Your teacher request has been submitted successfully! Please wait for admin approval.');
                 $this->view(null, $model, $viewBag);
             }

@@ -153,4 +153,34 @@ trait TeacherDetailsData
         try { $s['students'] = (int)$this->scalar('SELECT COUNT(*) FROM `TeacherStudents` WHERE `TeacherId` = :t', ['t' => $userId]); } catch (Throwable $e) { }
         return $s;
     }
+
+    // ---------- টিচার আবেদন + পেমেন্ট ----------
+    // নিয়ম: ফর্ম জমা → (Status = AwaitingPayment) → টিচার প্যাকেজ কিনে পেমেন্টের প্রমাণ জমা → (Status = Pending, PaymentId) → অ্যাডমিন দেখে Approve
+    private bool $trPayReady = false;
+    public function EnsureTeacherRequestPaymentCol(): void
+    {
+        if ($this->trPayReady) return;
+        $this->trPayReady = true;
+        try { $this->pdo->query('SELECT `PaymentId` FROM `TeacherRequests` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `TeacherRequests` ADD COLUMN `PaymentId` INT NULL'); } catch (Throwable $e2) { error_log('[TR PaymentId] ' . $e2->getMessage()); } }
+    }
+
+    /** কোনো চালু টিচার প্যাকেজ থাকলে আবেদনের আগে পেমেন্ট লাগবে */
+    public function TeacherApplyNeedsPayment(): bool
+    {
+        try { return count($this->GetPackages('Teacher', true)) > 0; } catch (Throwable $e) { return false; }
+    }
+
+    public function GetLatestTeacherRequest(int $userId): ?Obj
+    {
+        $this->EnsureTeacherRequestPaymentCol();
+        return $this->one('SELECT * FROM `TeacherRequests` WHERE `UserId` = :u ORDER BY `Id` DESC LIMIT 1', ['u' => $userId]);
+    }
+
+    public function SetTeacherRequestState(int $id, string $status, ?int $paymentId = null): void
+    {
+        $this->EnsureTeacherRequestPaymentCol();
+        if ($paymentId !== null) $this->exec('UPDATE `TeacherRequests` SET `Status` = :s, `PaymentId` = :p WHERE `Id` = :i', ['s' => $status, 'p' => $paymentId, 'i' => $id]);
+        else $this->exec('UPDATE `TeacherRequests` SET `Status` = :s WHERE `Id` = :i', ['s' => $status, 'i' => $id]);
+    }
 }

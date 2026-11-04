@@ -10,6 +10,9 @@
     .tl-badges .pr { color: #F59E0B; } .tl-badges .tp { color: #A855F7; } .tl-badges .vf { color: #00B5E0; }
     .tl-name { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: #1F2937; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tl-inst { margin-top: 8px; font-size: 13px; color: #6B7280; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-rate { display: inline-flex; align-items: center; gap: 2px; margin-top: 6px; color: #F59E0B; font-size: 12.5px; text-decoration: none; }
+    .tl-rate span { color: #64748B; font-size: 12px; margin-left: 5px; font-weight: 600; }
+    .tl-rate:hover span { color: #0284C7; text-decoration: underline; }
     .tl-loc { margin-top: 6px; font-size: 13.5px; color: #374151; }
     .tl-loc i { color: #00CFFF; margin-right: 3px; }
     .tl-see { margin-top: 16px; align-self: stretch; margin-left: -14px; margin-right: -14px; display: block; background: #1F2328; color: #fff !important; font-weight: 700; font-size: 14px; padding: 10px 0; text-decoration: none; transition: background .2s; }

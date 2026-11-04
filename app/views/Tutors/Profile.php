@@ -289,13 +289,13 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
                 </div>
                 <div>
                     <?php if (!empty($ViewBag->CanReview)): ?>
-                        <button type="button" class="tp-revbtn" id="tpRevBtn"><?= $ViewBag->MyReview ? 'Edit My Review' : 'Make a Review' ?></button>
+                        <button type="button" class="tp-revbtn" id="tpRevBtn"><i class="fas fa-star" style="color:#F59E0B;"></i> <?= $ViewBag->MyReview ? 'আমার রেটিং বদলান' : 'Rate This Tutor' ?></button>
                     <?php elseif ($me === null): ?>
-                        <a class="tp-revbtn" style="display:inline-flex; align-items:center; text-decoration:none;" href="/Account/Login?returnUrl=<?= rawurlencode('/Tutors/Profile/' . (int)$t->UserId . '#reviews') ?>">Make a Review</a>
+                        <a class="tp-revbtn" style="display:inline-flex; align-items:center; text-decoration:none;" href="/Account/Login?returnUrl=<?= rawurlencode('/Tutors/Profile/' . (int)$t->UserId . '#rate') ?>">Make a Review</a>
                         <div class="tp-revnote">রিভিউ দিতে লগইন করুন।</div>
                     <?php elseif (!$isOwner && $role !== 'Admin'): ?>
                         <button type="button" class="tp-revbtn" disabled style="opacity:.5; cursor:default;">Make a Review</button>
-                        <div class="tp-revnote">এই টিচারের সাথে টিউশন ঠিক হলে (Accept হলে) রিভিউ দিতে পারবেন।</div>
+                        <div class="tp-revnote">শুধু স্টুডেন্ট / ইউজার অ্যাকাউন্ট থেকে রেটিং দেওয়া যায়।</div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -352,6 +352,8 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
     pick.addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (b) { rating = +b.getAttribute('data-v'); paint(); } });
     paint();
     document.getElementById('tpRevBtn').addEventListener('click', function () { dlg.classList.add('open'); });
+    // Tutor List কার্ডের স্টার থেকে এলে সাথে সাথে রেটিং বক্স খোলে
+    if (location.hash === '#rate') { document.getElementById('reviews').scrollIntoView({ block: 'center' }); setTimeout(function () { dlg.classList.add('open'); }, 300); }
     document.getElementById('tpNo').addEventListener('click', function () { dlg.classList.remove('open'); });
     dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.classList.remove('open'); });
     document.getElementById('tpRevForm').addEventListener('submit', async function (e) {

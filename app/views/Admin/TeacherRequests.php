@@ -302,6 +302,12 @@ $ViewData['Title'] = 'Teacher Requests';
                 justify-content: center;
             }
     }
+    .tr-pay { margin-top: 10px; background: #F8FAFC; border: 1px solid #E5ECF3; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; color: #334155; line-height: 1.7; }
+    .tr-pay.warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+    .tr-pay code { color: #0F172A; font-weight: 700; }
+    .tr-pay a { font-weight: 700; color: #0284C7; text-decoration: none; margin-left: 4px; }
+    .tr-pst { font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; margin-left: 4px; }
+    .tr-full { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 700; color: #0284C7; text-decoration: none; }
 </style>
 
 <!-- ===== Admin Sidebar (Partial) ===== -->
@@ -341,7 +347,8 @@ $ViewData['Title'] = 'Teacher Requests';
         </div>
     <?php else: ?>
         <?php foreach ($Model as $request): ?>
-            <?php $statusClass = $request->Status === 'Pending' ? 'status-pending' : ($request->Status === 'Approved' ? 'status-approved' : 'status-rejected'); ?>
+            <?php $statusClass = $request->Status === 'Pending' || $request->Status === 'AwaitingPayment' ? 'status-pending' : ($request->Status === 'Approved' ? 'status-approved' : 'status-rejected');
+                  $pay = $ViewBag->Payments[(int)$request->Id] ?? null; ?>
 
             <div class="request-card" id="request-<?= e($request->Id) ?>">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
@@ -349,7 +356,7 @@ $ViewData['Title'] = 'Teacher Requests';
                         <h5>
                             <i class="fas fa-user"></i>
                             <?= e($request->FullName) ?>
-                            <span class="<?= e($statusClass) ?>"><?= e($request->Status) ?></span>
+                            <span class="<?= e($statusClass) ?>"><?= $request->Status === 'AwaitingPayment' ? 'পেমেন্ট বাকি' : e($request->Status) ?></span>
                         </h5>
 
                         <div class="info-line">
@@ -368,9 +375,22 @@ $ViewData['Title'] = 'Teacher Requests';
                                 <span class="tag"><i class="fas fa-clock"></i><?= e($request->Experience) ?></span>
                             <?php endif; ?>
                             <?php if (!is_blank($request->HourlyRate)): ?>
-                                <span class="tag"><i class="fas fa-money-bill-wave"></i>৳<?= e($request->HourlyRate) ?>/hr</span>
+                                <span class="tag"><i class="fas fa-money-bill-wave"></i>৳<?= e($request->HourlyRate) ?>/মাস</span>
                             <?php endif; ?>
                         </div>
+
+                        <!-- টিচার প্যাকেজের পেমেন্ট -->
+                        <?php if ($pay): $pc = $pay->Status === 'Approved' ? '#166534;background:#DCFCE7' : ($pay->Status === 'Rejected' ? '#991B1B;background:#FEE2E2' : '#92400E;background:#FEF3C7'); ?>
+                            <div class="tr-pay">
+                                <b><i class="fas fa-receipt"></i> পেমেন্ট:</b> <?= e($pay->PackageName) ?> — <b><?= e(taka($pay->Amount)) ?></b> · <?= e($pay->MethodName) ?>
+                                <?php if (!is_blank($pay->TxnId)): ?> · TxnID: <code><?= e($pay->TxnId) ?></code><?php endif; ?> · <?= e(fmt_date($pay->PayDate, 'd M Y')) ?>
+                                <span class="tr-pst" style="color:<?= $pc ?>;"><?= $pay->Status === 'Approved' ? 'Accepted' : e($pay->Status) ?></span>
+                                <?php if (!is_blank($pay->ReceiptUrl)): ?> <a href="<?= e($pay->ReceiptUrl) ?>" target="_blank" rel="noopener"><i class="fas fa-file-image"></i> রিসিট দেখুন</a><?php endif; ?>
+                            </div>
+                        <?php elseif ($request->Status === 'AwaitingPayment'): ?>
+                            <div class="tr-pay warn"><i class="fas fa-hourglass-half"></i> ফর্ম জমা দিয়েছেন, কিন্তু এখনো টিচার প্যাকেজের পেমেন্ট করেননি — পেমেন্ট জমা হলে Approve করা যাবে।</div>
+                        <?php endif; ?>
+                        <a class="tr-full" href="/Tutors/Profile/<?= (int)$request->UserId ?>" target="_blank"><i class="fas fa-id-card"></i> পুরো ফর্ম (Tutor Details) দেখুন</a>
                     </div>
 
                     <div class="req-actions">

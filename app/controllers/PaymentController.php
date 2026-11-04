@@ -16,7 +16,11 @@ class PaymentController extends Controller
         $role = (string)session_get('UserRole');
         if ($role === 'Admin') return 'অ্যাডমিন অ্যাকাউন্ট দিয়ে প্যাকেজ কেনা যায় না।';
         if ($pkg->Audience === 'Student' && ($this->db->PaymentRules()['studentFree'] ?? false)) return 'এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি — কোনো প্যাকেজ বা পেমেন্ট লাগবে না। সরাসরি Tuition Circular-এ গিয়ে পোস্ট করুন।';
-        if ($pkg->Audience === 'Teacher' && $role !== 'Teacher') return 'এই Subscription শুধু অনুমোদিত শিক্ষকদের জন্য। আগে “Become a Tutor” থেকে টিচার হওয়ার আবেদন করুন।';
+        if ($pkg->Audience === 'Teacher' && $role !== 'Teacher') {
+            // টিচার হওয়ার ফর্ম জমা দিয়েছে (পেমেন্ট বাকি / যাচাই চলছে) — প্যাকেজ কিনতে পারবে
+            $tr = $this->db->GetLatestTeacherRequest((int)current_user_id());
+            if (!$tr || !in_array($tr->Status, ['AwaitingPayment', 'Pending'], true)) return 'টিচার প্যাকেজ কিনতে আগে “Become a Tutor” ফর্ম পূরণ করুন — তারপর প্যাকেজ বেছে পেমেন্ট করবেন।';
+        }
         return null;
     }
 
@@ -88,6 +92,18 @@ class PaymentController extends Controller
             $this->fail('জমা দেওয়া যায়নি। আবার চেষ্টা করুন।');
         }
         $who = (string)(session_get('UserFullName') ?? session_get('UserName'));
+        // টিচার হওয়ার আবেদন + পেমেন্ট একসাথে অ্যাডমিনের কাছে
+        if ($pkg->Audience === 'Teacher' && session_get('UserRole') !== 'Teacher') {
+            $tr = $this->db->GetLatestTeacherRequest($uid);
+            if ($tr && in_array($tr->Status, ['AwaitingPayment', 'Pending'], true)) {
+                $this->db->SetTeacherRequestState((int)$tr->Id, 'Pending', $id);
+                foreach ($this->db->GetAdmins() as $a) {
+                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — যাচাই করে Approve করুন।", 'info', '/Admin/TeacherRequests', 'fa-chalkboard-teacher');
+                }
+                json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
+                    'message' => 'পেমেন্ট আর টিচার আবেদন অ্যাডমিনের কাছে পাঠানো হয়েছে! যাচাই করে Approve করলে আপনি টিচার হয়ে যাবেন।']);
+            }
+        }
         foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, 'New Payment', "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($pkg->Price) . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', '/Admin/Payments', 'fa-money-bill-wave');
         }
