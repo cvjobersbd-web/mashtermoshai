@@ -456,6 +456,8 @@ function json_response($data, int $status = 200): void
         $cb = $GLOBALS['__on_json_success']; unset($GLOBALS['__on_json_success']);
         try { $cb($data); } catch (Throwable $e) { error_log('[json success hook] ' . $e->getMessage()); }
     }
+    // Meta Pixel: এই রিকোয়েস্টে কোনো ইভেন্ট হলে JSON এর সাথে পাঠানো হয় — ব্রাউজারে লেআউটের স্ক্রিপ্ট fbq() চালায়
+    if (is_array($data) && ($px = pixel_take()) !== []) $data['_px'] = $px;
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
@@ -1595,4 +1597,40 @@ function admin_password_problem(string $pw): string
     if (!preg_match('/\d/', $pw)) $miss[] = 'একটা সংখ্যা (0-9)';
     if (!preg_match('/[^A-Za-z0-9]/', $pw)) $miss[] = 'একটা চিহ্ন (যেমন @ # !)';
     return $miss ? 'অ্যাডমিনের পাসওয়ার্ডে লাগবে: ' . implode(', ', $miss) . '।' : '';
+}
+
+
+// ============================================================
+// ===== META (FACEBOOK) PIXEL =====
+// ============================================================
+/** Pixel ID — Admin সেটিং (SiteContents: meta_pixel_id) না থাকলে ডিফল্ট */
+function meta_pixel_id(): string
+{
+    static $id = null;
+    if ($id === null) {
+        $id = '1125687780363494';
+        try { $v = trim((string)(db()->GetSiteContent(['meta_pixel_id' => ''])['meta_pixel_id'] ?? '')); if (preg_match('/^\d{6,20}$/', $v)) $id = $v; } catch (Throwable $e) { }
+    }
+    return $id;
+}
+
+/**
+ * Pixel ইভেন্ট কিউতে রাখে — পরের পেজ রেন্ডারে (লেআউট) বা এই JSON রেসপন্সে ব্রাউজারে যায়।
+ * Standard: ViewContent, Search, CompleteRegistration, Lead … · Custom (trackCustom): PostRequest
+ */
+function pixel_track(string $event, array $params = []): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE || is_admin()) return;   // অ্যাডমিনের কাজ গোনা হয় না
+    $q = $_SESSION['_px'] ?? [];
+    if (count($q) >= 20) return;
+    $q[] = ['e' => $event, 'p' => $params, 'id' => substr(bin2hex(random_bytes(8)), 0, 16)];
+    $_SESSION['_px'] = $q;
+}
+
+/** কিউতে থাকা ইভেন্টগুলো নিয়ে খালি করে */
+function pixel_take(): array
+{
+    $q = $_SESSION['_px'] ?? [];
+    unset($_SESSION['_px']);
+    return is_array($q) ? $q : [];
 }

@@ -116,6 +116,7 @@ class FindTutorController extends Controller
                     }
                 } catch (Throwable $e) {}
 
+                pixel_track('Lead', ['content_name' => 'Tutor Request', 'content_category' => (string)($req->RequiredSubject ?? '')]);
                 json_response([
                     'success' => true,
                     'message' => 'Request submitted successfully! Our admin team will contact you soon.',
@@ -169,7 +170,10 @@ class FindTutorController extends Controller
         $videoUrl = $video ? $this->saveTeachVideo($video) : null;
         $post = obj(['UserId' => $userId, 'Content' => $content, 'ImageUrl' => $imageUrl, 'VideoUrl' => $videoUrl]);
         $err = null;
-        if ($this->db->CreateTeachWantedPost($post, $err)) json_response(['success' => true, 'id' => $post->Id]);
+        if ($this->db->CreateTeachWantedPost($post, $err)) {
+            pixel_track('PostRequest', ['content_name' => 'Teach Post (পড়াতে চাই)', 'post_type' => 'teacher']);
+            json_response(['success' => true, 'id' => $post->Id]);
+        }
         if ($imageUrl) $this->deleteTeachImage($imageUrl);
         if ($videoUrl) delete_upload($videoUrl);
         json_response(['success' => false, 'message' => $err]);

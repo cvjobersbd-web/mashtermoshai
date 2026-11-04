@@ -24,6 +24,9 @@ class TuitionController extends Controller
         ];
         $sort = in_array(input_str('sort', 'recent'), ['recent', 'views', 'comments'], true) ? input_str('sort', 'recent') : 'recent';
         $page = max(1, min(20, input_int('page', 1) ?? 1));
+        if ($page === 1 && ($f['location'] !== '' || $f['class'] !== '' || $f['subject'] !== '' || $f['medium'] || $f['type'] || $f['q'] !== '')) {
+            pixel_track('Search', ['search_string' => trim(implode(' ', array_filter([$f['q'], $f['subject'], $f['class'], $f['location'], implode(',', $f['medium']), implode(',', $f['type'])]))), 'content_category' => 'Tuition Circular']);
+        }
         $feed = $this->db->GetCircularFeed($f, $sort, current_user_id(), self::PAGE_SIZE * $page);
         try { $adminPosts = $this->db->GetOpenTuitionPosts(null, null); } catch (Throwable $e) { $adminPosts = []; }
         $this->view(null, $adminPosts, [
@@ -86,6 +89,7 @@ class TuitionController extends Controller
         $err = null;
         if ($this->db->CreateTuitionCircularPost($post, $err)) {
             if ($needCredit) { try { $this->db->ConsumeStudentPostCredit($userId); } catch (Throwable $e) { error_log('[post credit] ' . $e->getMessage()); } }
+            pixel_track('PostRequest', ['content_name' => 'Tuition Requirement', 'post_type' => 'student', 'content_category' => (string)($post->Subjects ?? ''), 'location' => (string)($post->PreferredArea ?? '')]);
             json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।']);
         }
         delete_upload($imageUrl); delete_upload($videoUrl);
@@ -228,6 +232,7 @@ class TuitionController extends Controller
                 $this->db->CreateNotification($post->UserId, 'New Teacher Application',
                     "$teacherName আপনার টিউশন পোস্টে Apply করেছেন।", 'success',
                     '/User/Dashboard?section=applications', 'fa-chalkboard-teacher');
+                pixel_track('Lead', ['content_name' => 'Tuition Application', 'content_ids' => [(string)$postId]]);
                 json_response(['success' => true, 'message' => 'আপনার অ্যাপ্লিকেশন স্টুডেন্টের কাছে পাঠানো হয়েছে।']);
             case 'exists':
                 json_response(['success' => false, 'message' => 'আপনি এই পোস্টে আগেই Apply করেছেন।']);
@@ -247,6 +252,7 @@ class TuitionController extends Controller
             tempdata_set('Error', 'Tuition post not found.');
             $this->redirectToAction('Circular');
         }
+        pixel_track('ViewContent', ['content_type' => 'tuition', 'content_ids' => [(string)$post->Id], 'content_name' => (string)($post->Title ?? '')]);
         $this->view(null, $post);
     }
 
@@ -354,6 +360,7 @@ class TuitionController extends Controller
                 }
             } catch (Throwable $e) {}
 
+            pixel_track('Lead', ['content_name' => 'Tuition Application', 'content_ids' => [(string)$model->TuitionPostId]]);
             tempdata_set('Success', 'Application submitted successfully! Admin will contact you soon.');
             $this->redirectToAction('ApplySuccess', null, ['id' => $model->Id]);
         } catch (Throwable $e) {

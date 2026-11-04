@@ -52,9 +52,10 @@ class TutorsController extends Controller
         $tidError = '';
         if ($tid !== '') {
             if (preg_match('/^(?:TCH-?)?(\d{1,7})$/', $tid, $m)) {
-                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) redirect('/Profile/Show/' . $t->UserId);
+                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) { pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']); redirect('/Profile/Show/' . $t->UserId); }
             }
             $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
+            pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']);
         }
         $male = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Male') === 0));
         $female = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Female') === 0));
@@ -85,6 +86,7 @@ class TutorsController extends Controller
         $cities = array_values(array_intersect(self::CITIES, array_map(fn($c) => trim((string)$c), $raw)));
         $tutors = array_values(array_filter($this->ofType($this->db->GetTutorDirectory(), $type), fn($t) => self::cityMatches($t, $cities)));
         $total = count($tutors);
+        if ($cities && input_int('page', 1) <= 1) pixel_track('Search', ['search_string' => implode(', ', $cities), 'content_category' => self::TYPES[$type]]);
         $pages = max(1, (int)ceil($total / self::PER_PAGE));
         $page = min($pages, max(1, input_int('page', 1)));
         $this->view(null, array_slice($tutors, ($page - 1) * self::PER_PAGE, self::PER_PAGE), [
@@ -113,6 +115,7 @@ class TutorsController extends Controller
                 'MonthlyFee' => 0, 'AvailableTime' => '', 'About' => '', 'IsPremium' => false, 'IsTopRated' => false, 'Gender' => (string)($user->Gender ?? ''), 'TeachingMode' => '']);
         }
         if (!$isOwner && $me !== null && current_role() !== 'Admin') $this->db->RecordProfileView($uid, (int)$me);
+        if (!$isOwner) pixel_track('ViewContent', ['content_type' => 'tutor', 'content_ids' => [(string)$uid], 'content_name' => (string)$t->FullName]);
         // নিজে বা অ্যাডমিন দেখলে গোনা হয় না
         if ($isOwner || $isAdmin) { $this->db->EnsureTeacherDetailsTable(); $views = (int)$this->db->scalar('SELECT COALESCE(MAX(`PageViews`), 0) FROM `TeacherDetails` WHERE `UserId` = :u', ['u' => $uid]); }
         else $views = $this->db->BumpTeacherPageViews($uid);

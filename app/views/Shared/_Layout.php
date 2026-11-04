@@ -1025,6 +1025,54 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         @media (max-width: 640px) { .footer-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; } .footer-nav > div:first-child { grid-column: 1 / -1; } }
 </style>
     <?= blue_tick_css() ?>
+<?php if (!is_admin() && ($__pxId = meta_pixel_id()) !== ''): $__pxQ = pixel_take(); ?>
+    <!-- Meta Pixel Code (অ্যাডমিনদের জন্য লোড হয় না) -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '<?= e($__pxId) ?>');
+    fbq('track', 'PageView');
+    (function () {
+        // সাইটের ইভেন্ট (ViewContent, Search, CompleteRegistration, Lead, PostRequest) — সার্ভার থেকে আসে
+        var STD = ['ViewContent', 'Search', 'CompleteRegistration', 'Lead', 'Contact', 'Purchase', 'InitiateCheckout', 'SubmitApplication'];
+        var seen = {};
+        window.mmPixel = function (list) {
+            (list || []).forEach(function (x) {
+                if (!x || !x.e || seen[x.id]) return; seen[x.id] = 1;
+                try { fbq(STD.indexOf(x.e) >= 0 ? 'track' : 'trackCustom', x.e, x.p || {}, x.id ? { eventID: x.id } : undefined); } catch (err) { }
+            });
+        };
+        mmPixel(<?= json_encode(array_values($__pxQ), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>);
+        // AJAX (fetch / jQuery) রেসপন্সে "_px" থাকলে সেই ইভেন্ট চালানো
+        if (window.fetch) {
+            var _f = window.fetch;
+            window.fetch = function () {
+                return _f.apply(this, arguments).then(function (res) {
+                    try {
+                        if ((res.headers.get('content-type') || '').indexOf('json') >= 0) {
+                            res.clone().json().then(function (d) { if (d && d._px) mmPixel(d._px); }).catch(function () { });
+                        }
+                    } catch (err) { }
+                    return res;
+                });
+            };
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.jQuery) jQuery(document).ajaxSuccess(function (ev, xhr) { try { var d = xhr.responseJSON || JSON.parse(xhr.responseText); if (d && d._px) mmPixel(d._px); } catch (err) { } });
+        });
+    })();
+    </script>
+    <noscript><img height="1" width="1" style="display:none" alt=""
+    src="https://www.facebook.com/tr?id=<?= e($__pxId) ?>&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
+<?php endif; ?>
 </head>
 <body>
     <?php if (session_get('UserName') === null): ?><?= csrf_field() ?><?php endif; ?>

@@ -97,6 +97,7 @@ class AccountController extends Controller
                 }
                 // (নতুন আইডি পাওয়া না গেলে — হওয়ার কথা না)
                 if ($newId && $code !== '') $this->creditReferral($code, $newId, $fullName);
+                pixel_track('CompleteRegistration', ['status' => true, 'content_name' => 'Signup']);
                 tempdata_set('Success', 'Registration successful! Please login.');
                 $this->redirectToAction('Login');
             }
@@ -292,6 +293,7 @@ class AccountController extends Controller
         $ref = $this->db->MarkEmailVerified((int)$u->Id);
         if ($ref !== '') $this->creditReferral($ref, (int)$u->Id, (string)($u->FullName ?: $u->UserName));
         unset($_SESSION['verify_uid']);
+        pixel_track('CompleteRegistration', ['status' => true, 'content_name' => 'Email Verified Signup']);
         tempdata_set('Success', 'ইমেইল ভেরিফাই হয়েছে! এখন আপনার Username/Email আর পাসওয়ার্ড দিয়ে লগইন করুন।');
         $this->redirectToAction('Login');
     }

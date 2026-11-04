@@ -16,6 +16,7 @@ class PackageController extends Controller
             $me = ['role' => (string)session_get('UserRole'), 'sub' => $this->db->GetActiveTeacherSubscription($uid),
                 'credits' => $this->db->GetStudentPostCredits($uid), 'pending' => $this->db->CountUserPendingPayments($uid)];
         }
+        pixel_track('ViewContent', ['content_type' => 'package', 'content_name' => $for === 'student' ? 'Student Packages' : 'Teacher Packages']);
         $this->view(null, null, [
             'Me' => $me,
             'StudentFree' => $this->db->PaymentRules()['studentFree'] ?? false,

@@ -76,6 +76,7 @@ class ProfileController extends Controller
         } catch (Throwable $e) { $teacherInfo = null; }
 
         // টিচারের প্রোফাইল আলাদা ডিজাইনে
+        if ($user->Role === 'Teacher' && !$isOwner) pixel_track('ViewContent', ['content_type' => 'tutor', 'content_ids' => [(string)$user->Id], 'content_name' => (string)($user->FullName ?: $user->UserName)]);
         if ($user->Role === 'Teacher') { $this->showTeacher($user, $me, $isOwner, $isAdminViewer, $relation, $suspended, $teacherInfo, $ownerViews); return; }
 
         // ট্যাব (পুরোনো লিংক posts/about ও কাজ করে)
