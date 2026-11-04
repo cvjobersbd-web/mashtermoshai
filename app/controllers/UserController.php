@@ -36,13 +36,14 @@ class UserController extends Controller
         $student = session_get('UserFullName') ?? session_get('UserName') ?? 'Student';
         if ($status === 'Accepted') {
             $this->db->CreateNotification($app->TeacherId, 'Application Accepted 🎉',
-                "$student আপনার অ্যাপ্লিকেশন গ্রহণ করেছেন। ড্যাশবোর্ড থেকে তার সাথে যোগাযোগ করুন।", 'success',
-                '/Teacher/TeacherDashboard?section=applications', 'fa-check-circle');
+                "$student আপনার অ্যাপ্লিকেশন গ্রহণ করেছেন। এখন Messages থেকে সরাসরি চ্যাট করতে পারবেন।", 'success',
+                '/Chat?c=' . (int)$app->Id, 'fa-comments');
         } elseif ($status === 'Rejected') {
             $this->db->CreateNotification($app->TeacherId, 'Application Not Selected',
                 "$student আপনার অ্যাপ্লিকেশনটি এবার গ্রহণ করেননি।", 'warning',
                 '/Teacher/TeacherDashboard?section=applications', 'fa-times-circle');
         }
-        json_response(['success' => true, 'status' => $status]);
+        // Accepted হলে দুজনের চ্যাট খোলে; Reject / Undo করলে চ্যাট বন্ধ হয়ে যায়
+        json_response(['success' => true, 'status' => $status, 'chat' => $status === 'Accepted' ? '/Chat?c=' . (int)$app->Id : null]);
     }
 }

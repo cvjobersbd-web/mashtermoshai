@@ -4,7 +4,7 @@ $settings = ($ViewBag->SiteSettings instanceof SiteSettings) ? $ViewBag->SiteSet
 $heroImages = $settings->GetHeroImageList();
 if (count($heroImages) == 0)
 {
-    $heroImages[] = "https://i.ibb.co.com/pqbXLMx/learn-learning-education-studying-concept.jpg";
+    $heroImages[] = "https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png";
 }
 $heroImages = array_values($heroImages);
 
@@ -19,143 +19,97 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 
 <?php if (home_section_on('hero')): ?>
 <!-- ========================================= -->
-<!-- HERO SECTION -->
+<!-- HERO SECTION — লোগো + শিরোনাম + সার্চ + ডান পাশে ইলাস্ট্রেশন -->
 <!-- ========================================= -->
-<section class="relative overflow-hidden bg-white">
-    <div class="grid grid-cols-1 lg:grid-cols-2 min-h-[85vh]">
-
-        <!-- Left Side -->
-        <div class="relative flex flex-col justify-center px-4 sm:px-6 md:px-10 lg:px-20 py-12 sm:py-16 md:py-20 lg:py-0"
-             style="background-color:#CFF2FC;
-            background-image: radial-gradient(#A9DDEE 1px, transparent 1px);
-            background-size: 26px 26px;">
-
-            <div class="relative max-w-lg mx-auto lg:mx-0">
-                <h1 class="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.15] text-center lg:text-left"
-                    style="color:#08224A;">
-                    Find the Right Tutor in Bangladesh
-                </h1>
-
-                <p class="mt-4 sm:mt-6 text-sm sm:text-base md:text-lg leading-6 sm:leading-7 md:leading-8 text-center lg:text-left"
-                   style="color:<?= e($settings->TextColor) ?>;">
-                    Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, or post your tuition requirement and connect with the right teacher.
-                </p>
-
-                <?php
-                    // লগইন থাকলে Tuition Circular-এ সরাসরি পোস্ট লেখার বক্স খোলে, না থাকলে আগে লগইন
-                    $postReqHref = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
-                ?>
-                <div class="text-center lg:text-left mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-4 justify-center lg:justify-start">
-                    <a href="/FindTutor"
-                       class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-white transition hover:opacity-90 text-sm sm:text-base shadow-lg"
-                       style="background-color:<?= e($settings->PrimaryColor) ?>; white-space:nowrap;">
-                        Find a Tutor
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0-4 4m4-4H3" />
-                        </svg>
-                    </a>
-                    <a href="<?= e($postReqHref) ?>"
-                       class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold border transition hover:opacity-80 text-sm sm:text-base"
-                       style="color:#0099D6; border-color:<?= e($settings->PrimaryColor) ?>; background-color:transparent; white-space:nowrap;">
-                        Post Your Tuition Requirement
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0-4 4m4-4H3" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            <div class="hidden lg:block absolute top-0 right-0 h-full w-40 pointer-events-none"
-                 style="background: linear-gradient(to right, #CFF2FC 0%, rgba(207,242,252,0.7) 35%, rgba(207,242,252,0) 100%);
-                transform: translateX(100%);
-                z-index: 10;">
+<?php
+    // লগইন থাকলে Tuition Circular-এ সরাসরি পোস্ট লেখার বক্স খোলে, না থাকলে আগে লগইন
+    $heroSlider = count($heroImages) > 1 && $settings->SliderEnabled;
+?>
+<style>
+    /* ✅ ক্লিন হিরো — হালকা ব্যাকগ্রাউন্ড, বাঁয়ে লেখা + সার্চ, ডানে ছবি */
+    .hx { position: relative; overflow: hidden; margin-top: -80px; padding-top: 80px; background: #F4F7FB; }
+    .hx-in { position: relative; max-width: 1440px; margin: 0 auto; padding: 56px 64px 72px 96px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; min-height: 480px; }
+    .hx h1 { margin: 0; font-family: var(--font-heading); font-weight: 600; font-size: clamp(30px, 2.6vw, 48px); line-height: 1.22; color: #1F2937; letter-spacing: -.3px; }
+    .hx h1 .bd { color: #00CFFF; }
+    .hx-p { margin: 22px 0 0; max-width: 580px; font-size: clamp(15px, 1.05vw, 18px); line-height: 1.6; color: #4B5563; }
+    .hx-search { margin-top: 34px; max-width: 600px; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 10px;
+        box-shadow: 0 8px 28px rgba(15,40,80,.08); }
+    .hx-search .fld { position: relative; flex: 1; min-width: 0; display: block; border: 1px solid #E5E7EB; border-radius: 8px; height: 46px; text-decoration: none; transition: border-color .2s; }
+    .hx-search .fld:hover { border-color: #00CFFF; }
+    .hx-search .hx-btn { display: inline-flex; align-items: center; text-decoration: none; flex-shrink: 0; border: none; border-radius: 8px; background: #00CFFF; color: #fff; font-weight: 600; font-size: 15px; padding: 0 24px; height: 46px; cursor: pointer;
+        font-family: inherit; transition: background .2s; white-space: nowrap; }
+    .hx-search .hx-btn:hover { background: #00B5E0; color: #fff; }
+    .hx-art { position: relative; display: flex; align-items: center; justify-content: center; }
+    /* ছবির সাদা ব্যাকগ্রাউন্ড হিরোর রঙের সাথে মিশে যায় */
+    .hx-art img { display: block; width: 100%; max-width: 560px; height: auto; object-fit: contain; mix-blend-mode: multiply; }
+    .hx-art .hero-slide { position: absolute; inset: 0; margin: auto; transition: opacity 1s ease; }
+    .hx-art.slider { aspect-ratio: 16 / 12; width: 100%; max-width: 560px; margin: 0 auto; }
+    .hx-art.slider .hero-slide { height: 100%; }
+    .hx-dotsnav { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
+    .hx-dotsnav button { width: 9px; height: 9px; border-radius: 50%; border: none; padding: 0; cursor: pointer; background: #C9D6E5; transition: all .3s; }
+    .hx-dotsnav button.on { background: #00CFFF; transform: scale(1.3); }
+    @media (max-width: 1280px) { .hx-in { padding: 44px 40px 56px 56px; gap: 32px; min-height: 0; } }
+    @media (max-width: 1024px) {
+        .hx-in { grid-template-columns: minmax(0, 1fr); padding: 36px 28px 48px; }
+        .hx-text { min-width: 0; }
+        .hx-art { max-width: 520px; margin: 0 auto; width: 100%; }
+    }
+    @media (max-width: 640px) {
+        .hx-in { padding: 24px 16px 36px; gap: 24px; }
+        .hx h1 { font-size: 28px; }
+        .hx-p { margin-top: 14px; font-size: 15px; }
+        .hx-search { margin-top: 22px; padding: 8px; gap: 8px; }
+        .hx-search .fld { height: 44px; }
+        .hx-search .hx-btn { font-size: 14.5px; padding: 0 16px; height: 44px; }
+    }
+    /* ✅ বক্সে চলমান লেখা (ডান থেকে বাঁয়ে) — ক্লিক করলে Find Tutor পেজ */
+    .hx-mq { position: absolute; inset: 0 12px; overflow: hidden; pointer-events: none; display: flex; align-items: center; color: #6B7280; font-size: 15px; transition: opacity .2s;
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+    .hx-mq-track { display: inline-flex; white-space: nowrap; animation: hxMarquee 12s linear infinite; will-change: transform; }
+    .hx-mq-track span { padding-right: 120px; }
+    @keyframes hxMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    @media (prefers-reduced-motion: reduce) { .hx-mq-track { animation: none; } }
+    @media (max-width: 640px) { .hx-mq { font-size: 14.5px; } .hx-mq-track span { padding-right: 60px; } }
+</style>
+<section class="hx" aria-label="Find the Right Tutor in Bangladesh">
+    <div class="hx-in">
+        <div class="hx-text">
+            <h1>Find the Right Tutor<br>in <span class="bd">Bangladesh</span></h1>
+            <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.</p>
+            <div class="hx-search">
+                <a class="fld" href="/FindTutor" aria-label="Your Right Tutor, Just a Click Away.">
+                    <span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span>Your Right Tutor, Just a Click Away.</span><span>Your Right Tutor, Just a Click Away.</span></span></span>
+                </a>
+                <a class="hx-btn" href="/FindTutor">Find a Tutor</a>
             </div>
         </div>
 
-        <!-- Right Side: Image / Slider -->
-        <div class="relative min-h-[250px] sm:min-h-[300px] md:min-h-[350px] lg:min-h-full order-first lg:order-last overflow-hidden">
-
-            <?php if (count($heroImages) > 1 && $settings->SliderEnabled): ?>
-                <!-- ✅ Slider Mode: Multiple Images -->
-                <?php $idx = 0;
-                foreach ($heroImages as $img): ?>
-                    <img src="<?= e($img) ?>"
-                         alt="Hero image <?= e($idx + 1) ?>"
-                         class="hero-slide absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
-                         style="opacity:<?= e($idx == 0 ? "1" : "0") ?>;"
-                         data-index="<?= e($idx) ?>" />
-                    <?php $idx++;
-                endforeach; ?>
-
-                <!-- Slider Dots -->
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                    <?php for ($i = 0; $i < count($heroImages); $i++): ?>
-                        <button class="slider-dot" data-index="<?= e($i) ?>"
-                                style="width:10px; height:10px; border-radius:50%; border:none; cursor:pointer; background:<?= e($i == 0 ? "white" : "rgba(255,255,255,0.5)") ?>; transition: all 0.3s;"></button>
-                    <?php endfor; ?>
+        <div class="hx-art<?= $heroSlider ? ' slider' : '' ?>">
+            <?php if ($heroSlider): ?>
+                <?php foreach ($heroImages as $idx => $img): ?>
+                    <img src="<?= e($img) ?>" alt="<?= $idx === 0 ? 'শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন' : '' ?>" class="hero-slide" style="opacity:<?= $idx === 0 ? '1' : '0' ?>;" data-index="<?= (int)$idx ?>"<?= $idx === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?> />
+                <?php endforeach; ?>
+                <div class="hx-dotsnav">
+                    <?php foreach ($heroImages as $idx => $img): ?><button type="button" class="slider-dot<?= $idx === 0 ? ' on' : '' ?>" data-index="<?= (int)$idx ?>" aria-label="ছবি <?= $idx + 1 ?>"></button><?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <!-- Single Image Mode -->
-                <img src="<?= e($heroImages[0]) ?>"
-                     alt="Learning concept"
-                     class="absolute inset-0 w-full h-full object-cover" />
+                <img src="<?= e($heroImages[0]) ?>" alt="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন" fetchpriority="high" />
             <?php endif; ?>
-
-            <div class="absolute inset-0 pointer-events-none"
-                 style="background: linear-gradient(to bottom, rgba(207,242,252,0.3) 0%, rgba(207,242,252,0) 50%, rgba(207,242,252,0) 100%);">
-            </div>
         </div>
-
     </div>
 </section>
 
-<?php if (count($heroImages) > 1 && $settings->SliderEnabled): ?>
+<?php if ($heroSlider): ?>
     <script>
         (function () {
-            const slides = document.querySelectorAll('.hero-slide');
-            const dots = document.querySelectorAll('.slider-dot');
-            let current = 0;
-            const interval = <?= (int)($settings->SliderIntervalSeconds > 0 ? $settings->SliderIntervalSeconds : 5) ?> * 1000;
-            let timer = null;
-
-            function showSlide(idx) {
-                if (idx === current) return;
-                slides.forEach((s, i) => {
-                    s.style.opacity = i === idx ? '1' : '0';
-                });
-                dots.forEach((d, i) => {
-                    d.style.background = i === idx ? 'white' : 'rgba(255,255,255,0.5)';
-                    d.style.transform = i === idx ? 'scale(1.3)' : 'scale(1)';
-                });
-                current = idx;
-            }
-
-            function startAuto() {
-                stopAuto();
-                timer = setInterval(() => {
-                    const next = (current + 1) % slides.length;
-                    showSlide(next);
-                }, interval);
-            }
-
-            function stopAuto() {
-                if (timer) { clearInterval(timer); timer = null; }
-            }
-
-            startAuto();
-
-            dots.forEach((dot) => {
-                dot.addEventListener('click', () => {
-                    showSlide(parseInt(dot.dataset.index));
-                    startAuto();
-                });
-            });
-
-            const heroContainer = document.querySelector('.hero-slide')?.parentElement;
-            if (heroContainer) {
-                heroContainer.addEventListener('mouseenter', stopAuto);
-                heroContainer.addEventListener('mouseleave', startAuto);
-            }
+            var slides = document.querySelectorAll('.hx-art .hero-slide'), dots = document.querySelectorAll('.hx-dotsnav .slider-dot');
+            var cur = 0, ms = <?= (int)($settings->SliderIntervalSeconds > 0 ? $settings->SliderIntervalSeconds : 5) ?> * 1000, timer = null;
+            function show(i) { if (i === cur) return; slides.forEach(function (s, k) { s.style.opacity = k === i ? '1' : '0'; }); dots.forEach(function (d, k) { d.classList.toggle('on', k === i); }); cur = i; }
+            function start() { stop(); timer = setInterval(function () { show((cur + 1) % slides.length); }, ms); }
+            function stop() { if (timer) { clearInterval(timer); timer = null; } }
+            start();
+            dots.forEach(function (d) { d.addEventListener('click', function () { show(parseInt(d.getAttribute('data-index'), 10)); start(); }); });
+            var box = document.querySelector('.hx-art'); box.addEventListener('mouseenter', stop); box.addEventListener('mouseleave', start);
         })();
     </script>
 <?php endif; ?>
@@ -633,42 +587,43 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                 Key Features
             </h2>
             <p class="mt-3 text-base sm:text-lg" style="color:<?= e($settings->TextColor) ?>;">
-                Everything you need to find the best tuition, all in one place
+                Everything you need to find the right tutor — safely, all in one place
             </p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-7 mt-6 sm:mt-8 md:mt-10">
-
-            <div class="rounded-2xl overflow-hidden border" style="background-color:#FFFFFF; border-color:#DCECF5;">
-                <img src="https://i.ibb.co.com/S40QJtbp/AI-Tutor.webp" alt="Verified Tutors" class="w-full h-36 sm:h-40 md:h-44 object-cover" />
-                <div class="p-4 sm:p-5 md:p-6">
-                    <h3 class="text-base sm:text-lg font-bold" style="color:#08224A;">Verified Tutors</h3>
-                    <p class="mt-1.5 sm:mt-2 text-xs sm:text-sm leading-5 sm:leading-6" style="color:#64748B;">
-                        Connect with admin-verified tutors or submit a request — we'll match the perfect one for you
-                    </p>
+        <!-- ৬টা ফিচার — লেখা core/helpers.php → key_features_defaults(), ছবি Admin → Settings → Home Page থেকে -->
+        <style>
+            .kf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 40px; }
+            .kf-card { background: #fff; border: 1px solid #DCECF5; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: transform .25s ease, box-shadow .25s ease; }
+            .kf-card:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(8,34,74,.10); }
+            .kf-media { position: relative; height: 176px; background: #EAF7FD; overflow: hidden; }
+            .kf-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            .kf-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                background: radial-gradient(circle at 80% 15%, rgba(255,255,255,.35) 0 60px, transparent 61px), linear-gradient(135deg, #E0F7FF 0%, #BDEFFF 55%, #8FE3FB 100%); }
+            .kf-ph i { width: 76px; height: 76px; border-radius: 22px; background: #fff; color: #00B5E0; font-size: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 26px rgba(0,150,200,.18); }
+            .kf-num { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; background: rgba(8,34,74,.85); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 1; }
+            .kf-body { padding: 20px 22px 24px; }
+            .kf-body h3 { margin: 0; font-size: 18px; font-weight: 800; color: #08224A; line-height: 1.3; }
+            .kf-tag { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: #00A8D6; }
+            .kf-desc { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #64748B; }
+            @media (max-width: 1023px) { .kf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } }
+            @media (max-width: 639px) { .kf-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 24px; } .kf-media { height: 160px; } .kf-body { padding: 16px 18px 20px; } }
+        </style>
+        <div class="kf-grid">
+            <?php foreach (key_features() as $kfi => $kf): ?>
+                <div class="kf-card">
+                    <div class="kf-media">
+                        <span class="kf-num"><?= (int)$kfi ?></span>
+                        <div class="kf-ph" aria-hidden="true"><i class="fas <?= e($kf['icon']) ?>"></i></div>
+                        <?php if ($kf['image'] !== ''): ?><img src="<?= e($kf['image']) ?>" alt="<?= e($kf['title']) ?>" loading="lazy" style="position:relative;" onerror="this.remove()" /><?php endif; ?>
+                    </div>
+                    <div class="kf-body">
+                        <h3><?= e($kf['title']) ?></h3>
+                        <p class="kf-tag"><?= e($kf['tagline']) ?></p>
+                        <p class="kf-desc"><?= e($kf['desc']) ?></p>
+                    </div>
                 </div>
-            </div>
-
-            <div class="rounded-2xl overflow-hidden border" style="background-color:#FFFFFF; border-color:#DCECF5;">
-                <img src="https://i.ibb.co.com/dJKpVzDX/Adaptive-Learning.png" alt="Tuition Circular" class="w-full h-36 sm:h-40 md:h-44 object-cover" />
-                <div class="p-4 sm:p-5 md:p-6">
-                    <h3 class="text-base sm:text-lg font-bold" style="color:#08224A;">Tuition Circular</h3>
-                    <p class="mt-1.5 sm:mt-2 text-xs sm:text-sm leading-5 sm:leading-6" style="color:#64748B;">
-                        Browse daily tuition posts. Apply easily and get matched with students in your area.
-                    </p>
-                </div>
-            </div>
-
-            <div class="rounded-2xl overflow-hidden border" style="background-color:#FFFFFF; border-color:#DCECF5;">
-                <img src="https://i.ibb.co.com/pB4DZS31/Progress-Tracking.png" alt="Admin Support" class="w-full h-36 sm:h-40 md:h-44 object-cover" />
-                <div class="p-4 sm:p-5 md:p-6">
-                    <h3 class="text-base sm:text-lg font-bold" style="color:#08224A;">Direct Admin Support</h3>
-                    <p class="mt-1.5 sm:mt-2 text-xs sm:text-sm leading-5 sm:leading-6" style="color:#64748B;">
-                        We handle all the communication and verification so you can learn or teach safely.
-                    </p>
-                </div>
-            </div>
-
+            <?php endforeach; ?>
         </div>
     </div>
 </section>

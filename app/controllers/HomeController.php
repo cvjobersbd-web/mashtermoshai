@@ -1,8 +1,19 @@
 <?php
 class HomeController extends Controller
 {
+    /** নতুন হিরোর ডান পাশের ছবি (শিক্ষক-শিক্ষার্থী) */
+    public const HERO_IMAGE = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png';
+
     public function Index(): void
     {
+        // নতুন হিরো ডিজাইন: একবারই হিরো ছবিটা নতুন ইলাস্ট্রেশনে বদলে দেওয়া হয় (পরে অ্যাডমিন Settings → Home Page → Hero Images থেকে বদলাতে পারবেন)
+        try {
+            if (($this->db->GetSiteContent(['hero_v2' => ''])['hero_v2'] ?? '') === '') {
+                $hs = $this->db->GetSiteSettings();
+                $hs->HeroImageUrls = self::HERO_IMAGE;
+                if ($this->db->SaveSiteSettings($hs)) $this->db->SaveSiteContent(['hero_v2' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[hero_v2] ' . $e->getMessage()); }
         try {
             $settings = $this->db->GetSiteSettings();
             $homeTuitions = $this->db->GetHomePageTuitionPosts(3);

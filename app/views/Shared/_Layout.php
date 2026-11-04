@@ -787,6 +787,42 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 3px; border-radius: 3px;
                 background: var(--primary-color, #02B8F5);
             }
+
+            /* ===== ✅ হালকা নেভবার (হিরোর সাথে মিশে যায়) — ড্রয়ার/ফুটার আগের মতো গাঢ় ===== */
+            .site-header {
+                --navbar-bg: #F4F9FE; --nav-text: #0B1F44;
+                background: rgba(244,249,254,.96); box-shadow: inset 0 -1px 0 #E3ECF6;
+                transition: background .25s ease, box-shadow .25s ease;
+                -webkit-backdrop-filter: saturate(160%) blur(10px); backdrop-filter: saturate(160%) blur(10px);
+            }
+            .site-header.is-home { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+            .site-header.scrolled, .site-header.is-home.scrolled {
+                background: rgba(255,255,255,.94); box-shadow: inset 0 -1px 0 #E3ECF6, 0 6px 24px rgba(11,31,68,.07);
+                -webkit-backdrop-filter: saturate(160%) blur(12px); backdrop-filter: saturate(160%) blur(12px);
+            }
+            .site-header .brand-sep { width: 1.5px; height: 34px; background: #94A3B8; opacity: .55; margin: 0 16px 0 14px; flex-shrink: 0; }
+            .site-header .brand-word { font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: #0B1F44; letter-spacing: .1px; white-space: nowrap; }
+            @media (max-width: 1679px) and (min-width: 1280px) { .site-header .brand-sep, .site-header .brand-word { display: none; } }
+            @media (max-width: 420px) { .site-header .brand-sep { margin: 0 10px; height: 28px; } .site-header .brand-word { font-size: 16px; } }
+            @media (max-width: 359px) { .site-header .brand-sep, .site-header .brand-word { display: none; } }
+            /* লগইন থাকলে মোবাইলে Messages + Bell + মেনু বাটনের জায়গা লাগে — তখন শুধু লোগো */
+            @media (max-width: 560px) { .site-header:has(#notifBell) .brand-sep, .site-header:has(#notifBell) .brand-word { display: none; } }
+            .site-header .nav-desktop-link { color: #0B1F44 !important; opacity: 1; font-weight: 600; border-radius: 9px; }
+            .site-header .nav-desktop-link i { color: #0B1F44; }
+            .site-header .nav-desktop-link:hover { background: none; color: #00A8D6 !important; }
+            .site-header .nav-desktop-link:hover i { color: #00A8D6; }
+            /* ✅ যে পেজে আছেন — বক্স নয়, #00CFFF আন্ডারলাইন */
+            .site-header .nav-desktop-link.active, .site-header .nav-desktop-link.active:hover { background: none; box-shadow: none; color: #0B1F44 !important; font-weight: 700; }
+            .site-header .nav-desktop-link.active i { color: #00CFFF; }
+            .site-header .nav-desktop-link.active::after { display: block; background: #00CFFF; height: 3px; bottom: 0; }
+            .site-header .notification-bell { color: #0B1F44; }
+            .site-header .notification-bell:hover { color: #1677E5; }
+            .site-header .profile-dropdown .nav-av { border-color: #CFE0F2; }
+            .site-header .m-burger { background: rgba(11,31,68,.06); }
+            .site-header .m-burger:hover { background: rgba(11,31,68,.11); }
+            .chat-nav-wrap { margin-right: 4px; }
+            .chat-nav-wrap .notification-bell { display: inline-flex; text-decoration: none; }
+            @media (max-width: 1599px) and (min-width: 1280px) { .chat-nav-wrap { margin-right: 0; } }
             .footer-brand-logo-box img { height: 76px; max-width: 260px; }
             @media (max-width: 640px) { .footer-brand-logo-box img { height: 64px; } }
 
@@ -974,7 +1010,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <!-- ========================================= -->
     <!-- NAVBAR -->
     <!-- ========================================= -->
-    <header class="sticky-top border-b border-black/5" style="background-color:var(--navbar-bg); z-index:1050;">
+    <header class="sticky-top site-header<?= $__isHome ? ' is-home' : '' ?>" id="siteHeader" style="z-index:1050;">
         <nav class="max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8">
             <div class="h-20 flex items-center justify-between gap-4">
 
@@ -983,6 +1019,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/" class="flex items-center" aria-label="<?= e($safeSiteName) ?> — Home" title="<?= e($safeSiteName) ?>">
                         <!-- Logo Box -->
                         <span class="brand-logo-box"><img src="<?= e($navbarLogo) ?>" alt="<?= e($safeSiteName) ?> logo" /></span>
+                        <span class="brand-sep" aria-hidden="true"></span>
+                        <span class="brand-word">Mashtermoshai</span>
 
                     </a>
                 </div>
@@ -1036,6 +1074,19 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                             $frReq = 0; // কতজন নতুন করে প্রোফাইল দেখেছে (শেষবার তালিকা দেখার পর)
                             try { $frReq = db()->CountNewProfileViewers((int)current_user_id()); } catch (Throwable $e) { $frReq = 0; }
                         ?>
+                        <?php endif; ?>
+
+                        <?php if (!$isAdmin):
+                            $chatUnread = 0;
+                            try { $chatUnread = db()->CountUnreadChats((int)current_user_id()); } catch (Throwable $e) { $chatUnread = 0; }
+                        ?>
+                        <!-- Messages (স্টুডেন্ট ↔ টিচার চ্যাট) -->
+                        <div class="notification-wrapper chat-nav-wrap">
+                            <a class="notification-bell" id="chatNav" href="/Chat" title="Messages" aria-label="Messages">
+                                <i class="fas fa-comment-dots"></i>
+                                <span class="notif-badge<?= $chatUnread ? ' show' : '' ?>" id="chatBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span>
+                            </a>
+                        </div>
                         <?php endif; ?>
 
                         <!-- Notification Bell -->
@@ -1119,6 +1170,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     </li>
                                 <?php endif; ?>
                                 <?php if ($isAdmin): ?>
+                                    <li>
+                                        <a class="dropdown-item" href="/Profile/Show/<?= (int)current_user_id() ?>">
+                                            <i class="fas fa-id-card"></i> My Page
+                                        </a>
+                                    </li>
                                     <li>
                                         <a class="dropdown-item" href="/Admin/Dashboard">
                                             <i class="fas fa-shield-alt"></i> Admin Panel
@@ -1213,6 +1269,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <div class="m-label">My Account</div>
                 <nav class="m-nav">
                     <a href="/Profile/Show" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
+                    <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <?php if ($mRole === 'User'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
@@ -1225,6 +1282,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <?php if ($mLoggedIn && $mRole === 'Admin'): ?>
                 <div class="m-label">Admin</div>
                 <nav class="m-nav">
+                    <a href="/Profile/Show/<?= (int)current_user_id() ?>" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Page</span></a>
                     <a href="/Admin/Dashboard" class="<?= $mActive('/Admin') ?>"><i class="fas fa-shield-alt"></i><span>Admin Panel</span></a>
                 </nav>
             <?php endif; ?>
@@ -1678,5 +1736,24 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         })();
     </script>
 
+<script>
+    /* হালকা নেভবার: স্ক্রল করলে সাদা ব্যাকগ্রাউন্ড + হালকা ছায়া */
+    (function () {
+        var h = document.getElementById('siteHeader'); if (!h) return;
+        var on = function () { h.classList.toggle('scrolled', (window.scrollY || document.documentElement.scrollTop) > 8); };
+        on(); window.addEventListener('scroll', on, { passive: true });
+    })();
+</script>
+<script>
+    /* Messages ব্যাজ — কতগুলো চ্যাটে না-পড়া মেসেজ */
+    (function () {
+        var b = document.getElementById('chatBadge'); if (!b || location.pathname.toLowerCase().indexOf('/chat') === 0) return;
+        async function upd() {
+            if (document.hidden) return;
+            try { var r = await (await fetch('/Chat/Unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); var n = r.count || 0; b.textContent = n > 9 ? '9+' : n; b.classList.toggle('show', n > 0); } catch (e) { }
+        }
+        setInterval(upd, 30000);
+    })();
+</script>
 </body>
 </html>

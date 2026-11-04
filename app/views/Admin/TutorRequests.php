@@ -284,6 +284,11 @@ $ViewData['Title'] = 'Tutor Requests';
             color: #155724;
         }
 
+        .status-pill.Accepted { background: #d1fae5; color: #065f46; }
+        .status-pill.Rejected { background: #fee2e2; color: #991b1b; }
+        .req-card.status-Accepted { border-left-color: #10b981; }
+        .req-card.status-Rejected { border-left-color: #ef4444; }
+
         .status-pill.Cancelled {
             background: #f8d7da;
             color: #721c24;
@@ -487,6 +492,8 @@ $ViewData['Title'] = 'Tutor Requests';
                         <option value="Contacted">Contacted</option>
                         <option value="Completed">Completed</option>
                         <option value="Cancelled">Cancelled</option>
+                        <option value="Accepted">Accepted (টিচার গ্রহণ করেছেন)</option>
+                        <option value="Rejected">Rejected (টিচার গ্রহণ করেননি)</option>
                     </select>
                 </div>
                 <div>

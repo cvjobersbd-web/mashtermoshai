@@ -599,8 +599,11 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                 </div>
             <?php else: ?>
                 <div style="display: flex; flex-direction: column; gap: 16px;">
-                    <?php foreach ($Model->TutorRequests as $req): ?>
-                        <div style="background: white; border-radius: 14px; padding: 20px; border-left: 5px solid #FFB300; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                    <?php foreach ($Model->TutorRequests as $req):
+                        $drColor = $req->Status === 'Accepted' ? '#10B981' : ($req->Status === 'Rejected' ? '#EF4444' : '#FFB300');
+                        $drHasChat = (int)($req->StudentUserId ?? 0) > 0;
+                    ?>
+                        <div class="dr-card" id="dr-<?= (int)$req->Id ?>" style="background: white; border-radius: 14px; padding: 20px; border-left: 5px solid <?= $drColor ?>; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
 
                             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -609,7 +612,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                                     </span>
                                     <span style="font-size: 12px; color: #7A8CA0;"><i class="far fa-clock"></i> <?= e(fmt_date($req->CreatedAt, 'd M Y, h:i A')) ?></span>
                                 </div>
-                                <span class="badge <?= $req->Status === 'Pending' ? 'bg-warning' : ($req->Status === 'Contacted' ? 'bg-info' : 'bg-success') ?> text-dark" style="font-size:11px; padding: 5px 12px;">
+                                <span id="dr-status-<?= (int)$req->Id ?>" class="badge <?= $req->Status === 'Pending' ? 'bg-warning text-dark' : ($req->Status === 'Contacted' ? 'bg-info text-dark' : ($req->Status === 'Rejected' ? 'bg-danger text-white' : 'bg-success text-white')) ?>" style="font-size:11px; padding: 5px 12px;">
                                     <?= e($req->Status) ?>
                                 </span>
                             </div>
@@ -639,8 +642,11 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                                 </div>
                             <?php endif; ?>
 
+                            <?php if (!$drHasChat): ?>
+                                <div style="font-size:12.5px; color:#92400E; background:#FEF3C7; border-radius:8px; padding:8px 12px; margin-bottom:4px;"><i class="fas fa-circle-info"></i> এই রিকোয়েস্টটি পুরোনো সিস্টেমে এসেছে — সাইটে চ্যাট করা যাবে না, ফোন / WhatsApp এ যোগাযোগ করুন।</div>
+                            <?php endif; ?>
                             <!-- Contact Actions -->
-                            <div class="d-flex gap-2 flex-wrap mt-3 pt-3 border-top">
+                            <div class="d-flex gap-2 flex-wrap mt-3 pt-3 border-top align-items-center">
                                 <?php if ((string)$req->WhatsAppLink !== ''): ?>
                                     <a href="<?= e($req->WhatsAppLink) ?>" target="_blank" class="btn btn-sm text-white" style="background:#25D366; border-radius:8px; font-weight:600;">
                                         <i class="fab fa-whatsapp"></i> WhatsApp
@@ -656,6 +662,16 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                                         <i class="fas fa-envelope"></i> Email
                                     </a>
                                 <?php endif; ?>
+                                <a href="/Chat?c=r<?= (int)$req->Id ?>" id="dr-chat-<?= (int)$req->Id ?>" class="btn btn-sm text-white" style="background:#00CFFF; border-radius:8px; font-weight:600;<?= $req->Status === 'Accepted' && $drHasChat ? '' : ' display:none;' ?>"><i class="fas fa-comments"></i> Message</a>
+                                <span style="flex:1"></span>
+                                <span class="dr-decide" id="dr-decide-<?= (int)$req->Id ?>" data-chat="<?= $drHasChat ? '1' : '0' ?>">
+                                    <?php if ($req->Status === 'Accepted' || $req->Status === 'Rejected'): ?>
+                                        <button type="button" class="btn btn-sm dr-btn undo" onclick="setDirectReq(<?= (int)$req->Id ?>, 'Pending')"><i class="fas fa-undo"></i> Undo</button>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-sm dr-btn accept" onclick="setDirectReq(<?= (int)$req->Id ?>, 'Accepted')"><i class="fas fa-check"></i> Accept</button>
+                                        <button type="button" class="btn btn-sm dr-btn reject" onclick="setDirectReq(<?= (int)$req->Id ?>, 'Rejected')"><i class="fas fa-times"></i> Reject</button>
+                                    <?php endif; ?>
+                                </span>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -839,8 +855,9 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                             <?php if (!is_blank($ca->Subjects)): ?><span><i class="fas fa-book" style="color:#028EA5;"></i> <?= e($ca->Subjects) ?></span><?php endif; ?>
                             <?php if (!is_blank($ca->Budget)): ?><span><i class="fas fa-money-bill-wave" style="color:#028EA5;"></i> ৳<?= e($ca->Budget) ?></span><?php endif; ?>
                         </div>
-                        <?php if ($ca->Status === 'Accepted' && (!is_blank($ca->OwnerPhone) || !is_blank($ca->OwnerEmail))): ?>
+                        <?php if ($ca->Status === 'Accepted'): ?>
                             <div class="d-flex gap-2 flex-wrap mt-3 pt-3 border-top">
+                                <a href="/Chat?c=<?= (int)$ca->Id ?>" class="btn btn-sm text-white" style="background:#00CFFF; border-radius:8px; font-weight:600;"><i class="fas fa-comments"></i> Message</a>
                                 <?php if (!is_blank($ca->OwnerPhone)):
                                     $d = preg_replace('/\D/', '', (string)$ca->OwnerPhone); if (str_starts_with($d, '01')) $d = '88' . $d; ?>
                                     <a href="https://wa.me/<?= e($d) ?>" target="_blank" rel="noopener" class="btn btn-sm text-white" style="background:#25D366; border-radius:8px; font-weight:600;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
@@ -869,3 +886,39 @@ if ($activeSection === '') { $activeSection = 'overview'; }
 
     </div>
 </div>
+
+<style>
+    .dr-btn { border-radius: 8px; font-weight: 700; font-size: 13px; padding: 6px 14px; border: none; }
+    .dr-btn.accept { background: #10B981; color: #fff; } .dr-btn.accept:hover { background: #059669; color: #fff; }
+    .dr-btn.reject { background: #FEE2E2; color: #B91C1C; } .dr-btn.reject:hover { background: #FECACA; color: #991B1B; }
+    .dr-btn.undo { background: #F1F5F9; color: #334155; } .dr-btn.undo:hover { background: #E2E8F0; }
+    .dr-decide { display: inline-flex; gap: 8px; }
+    @media (max-width: 576px) { .dr-decide { width: 100%; } .dr-decide .dr-btn { flex: 1; } }
+</style>
+<?php section_start('Scripts'); ?>
+<script>
+    /* টিচার Direct Request Accept / Reject করে — Accept করলে স্টুডেন্টের সাথে চ্যাট খোলে */
+    async function setDirectReq(id, status) {
+        if (status === 'Rejected' && !confirm('এই রিকোয়েস্টটি Reject করবেন? স্টুডেন্টকে জানানো হবে।')) return;
+        var box = document.getElementById('dr-decide-' + id);
+        box.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+        var fd = new FormData();
+        fd.append('id', id); fd.append('status', status);
+        fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        try {
+            var r = await (await fetch('/Teacher/UpdateDirectRequest', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            if (!r.success) { alert(r.message || 'Failed'); box.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); return; }
+            var st = document.getElementById('dr-status-' + id);
+            st.textContent = status;
+            st.className = 'badge ' + (status === 'Accepted' ? 'bg-success text-white' : status === 'Rejected' ? 'bg-danger text-white' : 'bg-warning text-dark');
+            document.getElementById('dr-' + id).style.borderLeftColor = status === 'Accepted' ? '#10B981' : status === 'Rejected' ? '#EF4444' : '#FFB300';
+            var chat = document.getElementById('dr-chat-' + id);
+            if (chat) chat.style.display = status === 'Accepted' && box.getAttribute('data-chat') === '1' ? '' : 'none';
+            box.innerHTML = status === 'Pending'
+                ? '<button type="button" class="btn btn-sm dr-btn accept" onclick="setDirectReq(' + id + ', \'Accepted\')"><i class="fas fa-check"></i> Accept</button> '
+                  + '<button type="button" class="btn btn-sm dr-btn reject" onclick="setDirectReq(' + id + ', \'Rejected\')"><i class="fas fa-times"></i> Reject</button>'
+                : '<button type="button" class="btn btn-sm dr-btn undo" onclick="setDirectReq(' + id + ', \'Pending\')"><i class="fas fa-undo"></i> Undo</button>';
+        } catch (e) { alert('Error: ' + e.message); box.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); }
+    }
+</script>
+<?php section_end(); ?>

@@ -348,7 +348,7 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $status = input_str('status');
         if (is_blank($status)) json_response(['success' => false, 'message' => 'Status is required.']);
-        if (!in_array($status, ['Pending', 'Contacted', 'Completed', 'Cancelled'], true)) json_response(['success' => false, 'message' => 'Invalid status value.']);
+        if (!in_array($status, ['Pending', 'Contacted', 'Completed', 'Cancelled', 'Accepted', 'Rejected'], true)) json_response(['success' => false, 'message' => 'Invalid status value.']);
         if ($this->db->UpdateTutorRequestStatus(input_int('id', 0), $status, input_str('adminNote'))) {
             json_response(['success' => true, 'message' => 'Status updated successfully.']);
         }
@@ -799,6 +799,23 @@ class AdminController extends Controller
         $err = null;
         if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
         json_response(['success' => true, 'message' => "$page ব্যানার সেভ হয়েছে।"] + $vals);
+    }
+
+    /** POST /Admin/SaveKeyFeatures (kf_img_1..6, reset) — হোম পেজের Key Features কার্ডের ছবি (খালি = আইকন প্যানেল) */
+    public function SaveKeyFeatures_POST(): void
+    {
+        $this->requireAdminJson();
+        $vals = [];
+        foreach (key_features_defaults() as $i => $d) {
+            $img = input_bool('reset') ? $d[4] : trim((string)input_str('kf_img_' . $i, ''));
+            if ($img !== '' && (mb_strlen($img) > 500 || !(preg_match('#^https?://[^\s"\'<>]+$#i', $img) || preg_match('#^/uploads/[A-Za-z0-9/_.-]+$#', $img)))) {
+                json_response(['success' => false, 'message' => "{$d[0]} — ছবির লিংক ঠিক নেই। https:// দিয়ে শুরু হওয়া লিংক দিন অথবা ছবি আপলোড করুন।"]);
+            }
+            $vals['kf_img_' . $i] = $img;
+        }
+        $err = null;
+        if (!$this->db->SaveSiteContent($vals, $err)) json_response(['success' => false, 'message' => 'সেভ করা যায়নি: ' . $err]);
+        json_response(['success' => true, 'message' => input_bool('reset') ? 'Key Features এর ছবি ডিফল্টে ফেরত নেওয়া হয়েছে।' : 'Key Features এর ছবি সেভ হয়েছে।', 'images' => $vals]);
     }
 
     /** POST /Admin/SaveTuitionOptions (which = locations|classes|subjects, data = JSON, reset) — টিউশনের লোকেশন / ক্লাস / বিষয়ের তালিকা */

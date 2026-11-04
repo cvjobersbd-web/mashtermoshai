@@ -99,6 +99,25 @@ trait EduFeedData
         return $this->decorateEduPosts($rows, $viewer);
     }
 
+    /** একজনের প্রকাশিত (Approved) পোস্ট — প্রোফাইল পেজের জন্য; মালিক নিজে দেখলে Pending/Rejected ও দেখায় */
+    public function GetUserEduPosts(int $authorId, ?int $viewer, ?int $before, int $limit): array
+    {
+        $this->EnsureEduFeedTables();
+        $p = ['u' => $authorId];
+        $w = 'p.`UserId` = :u' . ($viewer === $authorId ? '' : " AND p.`Status` = 'Approved'");
+        if ($before) { $w .= ' AND p.`Id` < :b'; $p['b'] = $before; }
+        return $this->decorateEduPosts($this->all($this->eduSelect() . " WHERE $w ORDER BY p.`Id` DESC LIMIT " . max(1, min(50, $limit)), $p), $viewer);
+    }
+
+    /** ['posts' => প্রকাশিত পোস্ট, 'likes' => মোট লাইক] */
+    public function GetUserEduStats(int $authorId): array
+    {
+        $this->EnsureEduFeedTables();
+        $posts = (int)$this->scalar("SELECT COUNT(*) FROM `EduPosts` WHERE `UserId` = :u AND `Status` = 'Approved'", ['u' => $authorId]);
+        $likes = (int)$this->scalar("SELECT COUNT(*) FROM `EduPostLikes` l INNER JOIN `EduPosts` p ON p.`Id` = l.`PostId` WHERE p.`UserId` = :u AND p.`Status` = 'Approved'", ['u' => $authorId]);
+        return ['posts' => $posts, 'likes' => $likes];
+    }
+
     /** নিজের সব পোস্ট (Pending/Approved/Rejected) */
     public function GetMyEduPosts(int $userId, ?int $before, int $limit): array
     {

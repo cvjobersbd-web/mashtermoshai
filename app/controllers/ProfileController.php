@@ -43,6 +43,12 @@ class ProfileController extends Controller
     public function Show(): void
     {
         $me = current_user_id();
+        // অ্যাডমিন অ্যাকাউন্টের অফিসিয়াল পেজ (যেমন "Mashter Moshai") — লগইন ছাড়াও দেখা যায়
+        $oid = input_int('id', 0) ?: (int)($me ?? 0);
+        if ($oid > 0) {
+            $ou = $this->db->GetUserById($oid);
+            if ($ou && $ou->Role === 'Admin') { $this->showOfficial($ou, $me); return; }
+        }
         if ($me === null) redirect('/Account/Login?returnUrl=' . rawurlencode(strtok($_SERVER['REQUEST_URI'] ?? '/Profile/Show', '#')));
         $id = input_int('id', 0) ?: $me;
         $user = $this->db->GetUserById($id);
@@ -125,6 +131,22 @@ class ProfileController extends Controller
     }
 
     /** টিচার প্রোফাইল (Profile/ShowTeacher) */
+    /** অ্যাডমিনের অফিসিয়াল পেজ — তার Educational Feed পোস্টগুলো (যেগুলো ফিডেও দেখায়) */
+    private function showOfficial(Obj $user, ?int $me): void
+    {
+        $id = (int)$user->Id;
+        $isOwner = $me !== null && $me === $id;
+        if (!(int)$user->IsActive && !is_admin()) not_found('এই প্রোফাইলটি এখন দেখা যাচ্ছে না।');
+        if (!class_exists('FeedController', false)) require_once __DIR__ . '/FeedController.php';
+        $posts = $this->db->GetUserEduPosts($id, $me, null, 10);
+        $name = !is_blank($user->FullName ?? null) ? (string)$user->FullName : (string)$user->UserName;
+        $this->view('Profile/ShowOfficial', $user, [
+            'Name' => $name, 'IsOwner' => $isOwner, 'Posts' => $posts, 'HasMore' => count($posts) === 10,
+            'Stats' => $this->db->GetUserEduStats($id), 'VideoLimit' => FeedController::videoLimit(),
+            'Subjects' => $this->db->GetEduSubjects(),
+        ]);
+    }
+
     private function showTeacher(Obj $user, int $me, bool $isOwner, bool $isAdminViewer, string $relation, bool $suspended, ?Obj $teacherInfo, ?array $ownerViews = null): void
     {
         $id = (int)$user->Id;

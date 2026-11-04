@@ -1390,6 +1390,56 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
         </div>
     </div>
 
+    <!-- ===== ✅ Home — Key Features এর ছবি ===== -->
+    <div class="settings-card" id="kfSettings" data-sg="home">
+        <h5><i class="fas fa-star"></i> Key Features — কার্ডের ছবি</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">
+            হোম পেজের "Key Features" সেকশনের ৬টা কার্ডের উপরের ছবি। প্রতিটার জন্য ছবি আপলোড করুন বা লিংক দিন, তারপর <strong>Save</strong> চাপুন।
+            ছবি না দিলে কার্ডে আইকন সহ রঙিন প্যানেল দেখাবে।
+        </p>
+        <style>
+            .kfa-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+            .kfa-it { border: 1px solid #E3ECF5; border-radius: 14px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+            .kfa-pv { position: relative; height: 130px; background: linear-gradient(135deg, #E0F7FF, #8FE3FB); display: flex; align-items: center; justify-content: center; }
+            .kfa-pv > i { width: 54px; height: 54px; border-radius: 16px; background: #fff; color: #00B5E0; font-size: 22px; display: flex; align-items: center; justify-content: center; }
+            .kfa-pv img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+            .kfa-pv img[hidden] { display: none; }
+            .kfa-pv .n { position: absolute; top: 8px; left: 8px; z-index: 1; width: 26px; height: 26px; border-radius: 8px; background: rgba(8,34,74,.85); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+            .kfa-bd { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+            .kfa-bd b { font-size: 14px; color: #08224A; }
+            .kfa-bd .btns { display: flex; gap: 6px; }
+            .kfa-bd .btns .upload-btn { flex: 1; justify-content: center; font-size: 12.5px; padding: 7px 8px; margin: 0; }
+            .kfa-bd input { font-size: 12.5px; }
+            @media (max-width: 1100px) { .kfa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+            @media (max-width: 600px) { .kfa-grid { grid-template-columns: minmax(0, 1fr); } }
+        </style>
+        <div class="kfa-grid">
+            <?php foreach (key_features() as $kfi => $kf): ?>
+                <div class="kfa-it">
+                    <div class="kfa-pv">
+                        <span class="n"><?= (int)$kfi ?></span>
+                        <i class="fas <?= e($kf['icon']) ?>"></i>
+                        <img id="kfPv<?= (int)$kfi ?>" src="<?= e($kf['image']) ?>" alt=""<?= $kf['image'] === '' ? ' hidden' : '' ?> onerror="this.hidden = true" />
+                    </div>
+                    <div class="kfa-bd">
+                        <b><?= e($kf['title']) ?></b>
+                        <div class="btns">
+                            <label for="kfFile<?= (int)$kfi ?>" class="upload-btn" id="kfUp<?= (int)$kfi ?>"><i class="fas fa-upload"></i> Upload</label>
+                            <input type="file" id="kfFile<?= (int)$kfi ?>" data-kf="<?= (int)$kfi ?>" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
+                            <button type="button" class="upload-btn" data-kf-clear="<?= (int)$kfi ?>"><i class="fas fa-xmark"></i> সরাও</button>
+                        </div>
+                        <input type="text" class="form-control" id="kf_img_<?= (int)$kfi ?>" data-kf-url="<?= (int)$kfi ?>" value="<?= e($kf['image']) ?>" placeholder="অথবা ছবির লিংক — https://..." />
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <span class="info-note mt-2 d-inline-block"><i class="fas fa-info-circle"></i> Max 5MB. JPG, PNG, GIF, WEBP. চওড়া ছবি ভালো দেখায় (যেমন <strong>800×450 px</strong>)।</span>
+        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+            <button type="button" class="upload-btn" onclick="saveKeyFeatures(true)"><i class="fas fa-rotate-left"></i> Default ছবি</button>
+            <button type="button" class="btn-save" id="kfSaveBtn" onclick="saveKeyFeatures(false)"><i class="fas fa-save"></i> Save</button>
+        </div>
+    </div>
+
     <!-- ===== ✅ Tuition Circular / Find Tutor — Banner Image ===== -->
     <?php foreach ([['tc', 'circular', 'Tuition Circular', 'fa-bullhorn', circular_banner()], ['ft', 'findtutor', 'Find Tutor', 'fa-chalkboard-user', findtutor_banner()], ['pk', 'package', 'Package', 'fa-tags', package_banner()], ['hd', 'helpdesk', 'Help Desk', 'fa-headset', helpdesk_banner()]] as [$bk, $bw, $bname, $bicon, $bv]): ?>
     <div class="settings-card" id="<?= $bk ?>bSettings" data-sg="banners">
@@ -2367,6 +2417,45 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
             document.getElementById('optReset').addEventListener('click', function () { send(true); });
             paintLocs(); paintList('classes'); paintList('subjects');
         })();
+
+        // ===== Home → Key Features এর ছবি =====
+        function kfShow(i, url) { var p = document.getElementById('kfPv' + i); if (url) { p.src = url; p.hidden = false; } else { p.hidden = true; p.removeAttribute('src'); } }
+        document.querySelectorAll('input[data-kf-url]').forEach(function (inp) { inp.addEventListener('input', function () { kfShow(inp.getAttribute('data-kf-url'), inp.value.trim()); }); });
+        document.querySelectorAll('[data-kf-clear]').forEach(function (b) { b.addEventListener('click', function () { var i = b.getAttribute('data-kf-clear'); document.getElementById('kf_img_' + i).value = ''; kfShow(i, ''); }); });
+        document.querySelectorAll('input[type=file][data-kf]').forEach(function (inp) {
+            inp.addEventListener('change', function () {
+                var i = inp.getAttribute('data-kf'), f = inp.files[0]; if (!f) return;
+                if (f.size > 5 * 1024 * 1024) { alert('Image must be less than 5MB'); inp.value = ''; return; }
+                var fd = new FormData(); fd.append('promoImage', f); fd.append('__RequestVerificationToken', getToken());
+                var lbl = document.getElementById('kfUp' + i), html = lbl.innerHTML;
+                lbl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                fetch('/Admin/UploadProfilePromo', { method: 'POST', body: fd })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        lbl.innerHTML = html; inp.value = '';
+                        if (!d.success) { alert('❌ ' + (d.message || 'Upload failed')); return; }
+                        document.getElementById('kf_img_' + i).value = d.imageUrl; kfShow(i, d.imageUrl);
+                    })
+                    .catch(function (e) { lbl.innerHTML = html; alert('Error: ' + e.message); });
+            });
+        });
+        function saveKeyFeatures(reset) {
+            if (reset && !confirm('সব Key Features এর ছবি ডিফল্টে ফেরত যাবে?')) return;
+            var fd = new FormData();
+            document.querySelectorAll('input[data-kf-url]').forEach(function (inp) { fd.append('kf_img_' + inp.getAttribute('data-kf-url'), inp.value.trim()); });
+            if (reset) fd.append('reset', 'true');
+            fd.append('__RequestVerificationToken', getToken());
+            var btn = document.getElementById('kfSaveBtn'), html = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; btn.disabled = true;
+            fetch('/Admin/SaveKeyFeatures', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    btn.innerHTML = html; btn.disabled = false;
+                    if (d.success && d.images) Object.keys(d.images).forEach(function (k) { var i = k.replace('kf_img_', ''); document.getElementById(k).value = d.images[k]; kfShow(i, d.images[k]); });
+                    alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+                })
+                .catch(function (e) { btn.innerHTML = html; btn.disabled = false; alert('Error: ' + e.message); });
+        }
 
         // ===== Tuition Circular / Find Tutor banner =====
         document.querySelectorAll('input[type=file][data-banner]').forEach(function (inp) {

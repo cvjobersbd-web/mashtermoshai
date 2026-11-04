@@ -628,6 +628,36 @@ function package_banner(): array
     }
     return $c;
 }
+/**
+ * হোম পেজের Key Features — ৬টা কার্ড। লেখা এখানে ঠিক করা; ছবি Admin → Settings → Home Page থেকে বদলানো যায় (kf_img_1..6)।
+ * ছবি খালি থাকলে কার্ডে আইকন সহ রঙিন প্যানেল দেখায়।
+ */
+function key_features_defaults(): array
+{
+    return [
+        1 => ['Verified Tutors', 'Connect with verified tutors you can trust.', 'Tutor profiles are verified to help students find reliable teachers.', 'fa-user-check', 'https://i.ibb.co.com/S40QJtbp/AI-Tutor.webp'],
+        2 => ['Smart Tutor Search', 'Find tutors based on your needs.', 'Search by subject, class, curriculum, location, schedule and budget.', 'fa-magnifying-glass', ''],
+        3 => ['Tuition Circular', 'Explore available tuition opportunities.', 'Browse tuition posts and find opportunities that match your requirements.', 'fa-bullhorn', 'https://i.ibb.co.com/dJKpVzDX/Adaptive-Learning.png'],
+        4 => ['Post Your Tuition Requirement', 'Tell us what you need.', 'Post your tuition requirements and let suitable tutors discover your request.', 'fa-pen-to-square', ''],
+        5 => ['Mutual Matching', 'Connect only when both sides agree.', 'Students and tutors can show interest, and communication opens after mutual acceptance.', 'fa-handshake', ''],
+        6 => ['Secure Communication & Support', 'Learn and teach with confidence.', 'Get platform support throughout the matching and communication process.', 'fa-shield-halved', 'https://i.ibb.co.com/pB4DZS31/Progress-Tracking.png'],
+    ];
+}
+/** @return array<int, array{title:string, tagline:string, desc:string, icon:string, image:string, defaultImage:string}> */
+function key_features(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $def = key_features_defaults(); $keys = [];
+    foreach ($def as $i => $d) $keys['kf_img_' . $i] = $d[4];
+    try { $saved = db()->GetSiteContent($keys); } catch (Throwable $e) { $saved = $keys; }
+    $c = [];
+    foreach ($def as $i => $d) {
+        $c[$i] = ['title' => $d[0], 'tagline' => $d[1], 'desc' => $d[2], 'icon' => $d[3], 'image' => trim((string)($saved['kf_img_' . $i] ?? $d[4])), 'defaultImage' => $d[4]];
+    }
+    return $c;
+}
+
 /** Help Desk পেজের উপরের ব্যানার (ছবির ভেতরেই "Help Desk" লেখা আর ইলাস্ট্রেশন থাকে; বন্ধ করলে লেখার হেডার দেখায়) */
 function helpdesk_banner_defaults(): array
 {
@@ -1412,7 +1442,7 @@ function admin_settings_groups_all(): array
         'general' => ['title' => 'Branding & Theme', 'short' => 'Branding', 'icon' => 'fa-palette', 'bg' => '#F1EAFE', 'fg' => '#6D28D9',
             'desc' => 'সাইটের নাম, নেভবার ও ফুটারের লোগো, আর পুরো সাইটের থিম কালার।'],
         'home' => ['title' => 'Home Page', 'short' => 'Home Page', 'icon' => 'fa-house', 'bg' => '#E3F6FD', 'fg' => '#028EA5',
-            'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরো ছবি ও স্লাইডার, Become a Tutor আর FAQ।'],
+            'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরো ছবি ও স্লাইডার, Key Features এর ছবি, Become a Tutor আর FAQ।'],
         'banners' => ['title' => 'Page Banners', 'short' => 'Banners', 'icon' => 'fa-panorama', 'bg' => '#FFF4D6', 'fg' => '#B7791F',
             'desc' => 'Tuition Circular, Find Tutor, Package আর Help Desk পেজের উপরের ব্যানার ছবি।'],
         'profile' => ['title' => 'Profile Pages', 'short' => 'Profiles', 'icon' => 'fa-id-card', 'bg' => '#E7F8EF', 'fg' => '#157347',
@@ -1517,7 +1547,7 @@ function admin_action_rule(string $action): string
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
-                'UploadHeroImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo'],
+                'UploadHeroImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
         ];
         foreach ($groups as $k => $acts) foreach ($acts as $a) $map[$a] = $k;
         // বাকি সব (Admins, ActivityLog, Packages, PaymentMethods, Email, DeleteUser ...) শুধু Super Admin
