@@ -308,15 +308,21 @@ class AdminController extends Controller
     /** POST /Admin/DeleteTeacherAccount (id = userId, requestId) */
     public function DeleteTeacherAccount_POST(): void
     {
+        // আর পুরোপুরি ডিলিট করা হয় না — টিচার থেকে সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্টে নামিয়ে দেওয়া হয় (অ্যাকাউন্ট, পোস্ট, মেসেজ সব থাকে)
         $this->requireAdminJson();
         $id = input_int('id', 0);
         $requestId = input_int('requestId', 0);
-        if ($id > 0 && current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot delete your own account']);
-        $userDeleted = $requestDeleted = false;
-        try { if ($id > 0) $userDeleted = $this->db->DeleteUser($id); } catch (Throwable $e) {}
-        try { $requestDeleted = $this->db->DeleteTeacherRequestById($requestId); } catch (Throwable $e) {}
-        if ($userDeleted || $requestDeleted) json_response(['success' => true, 'message' => 'Teacher deleted successfully']);
-        json_response(['success' => false, 'message' => 'Failed to delete: no matching user or request was found']);
+        if ($id > 0 && current_user_id() === $id) json_response(['success' => false, 'message' => 'নিজের অ্যাকাউন্ট বদলানো যাবে না।']);
+        $u = $id > 0 ? $this->db->GetUserById($id) : null;
+        if ($u && $u->Role === 'Admin') json_response(['success' => false, 'message' => 'অ্যাডমিন অ্যাকাউন্ট এখান থেকে বদলানো যায় না।']);
+        if ($u && $u->Role === 'Teacher') $this->db->exec("UPDATE `Users` SET `Role` = 'User' WHERE `Id` = :i AND `Role` = 'Teacher'", ['i' => $id]);
+        if ($requestId > 0) $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Removed', `AdminNote` = :n WHERE `Id` = :i", ['n' => 'অ্যাডমিন টিচার থেকে সরিয়েছেন (' . date('d M Y') . ')', 'i' => $requestId]);
+        if ($u) {
+            $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Removed' WHERE `UserId` = :u AND `Status` IN ('Approved', 'Pending', 'AwaitingPayment')", ['u' => $id]);
+            $this->db->CreateNotification($id, 'টিচার অ্যাকাউন্ট বন্ধ', 'অ্যাডমিন আপনার টিচার অ্যাকাউন্ট বন্ধ করেছেন — আপনার অ্যাকাউন্ট এখন সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্ট। প্রশ্ন থাকলে Helpdesk এ যোগাযোগ করুন।', 'warning', '/Helpdesk', 'fa-user-graduate');
+            json_response(['success' => true, 'message' => "{$u->FullName} এখন সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্ট — অ্যাকাউন্ট মুছে ফেলা হয়নি।"]);
+        }
+        json_response(['success' => false, 'message' => 'ইউজার পাওয়া যায়নি।']);
     }
 
     /** GET /Admin/GetTeacherRequestDetails?id= */
@@ -1378,8 +1384,25 @@ class AdminController extends Controller
         } else {
             $msg = "আপনার “{$p->PackageName}” প্যাকেজ (" . taka($p->Amount) . ") চালু হয়েছে — এখন Tuition Circular-এ পোস্ট করতে পারবেন।";
         }
+        $extra = '';
+        // মেয়াদ শেষ হয়ে ইউজার হয়ে যাওয়া টিচার রিনিউ করলে — পেমেন্ট Accept করলেই আবার টিচার
+        if ($p->Audience === 'Teacher') {
+            $u = $this->db->GetUserById((int)$p->UserId);
+            $tr = $u && $u->Role === 'User' ? $this->db->GetLatestTeacherRequest((int)$p->UserId) : null;
+            if ($tr && $tr->Status === 'Pending' && (int)($tr->PaymentId ?? 0) === (int)$p->Id) {
+                $hadBefore = (int)$this->db->scalar("SELECT COUNT(*) FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = 'Teacher' AND (`PaymentId` IS NULL OR `PaymentId` <> :p)", ['u' => (int)$p->UserId, 'p' => (int)$p->Id]) > 0;
+                if ($hadBefore) {
+                    $this->db->UpdateTeacherRequest((int)$tr->Id, 'Approved', 'রিনিউ — পেমেন্ট Accept');
+                    $this->db->MakeUserTeacher((int)$p->UserId);
+                    $msg .= ' আপনার টিচার অ্যাকাউন্ট আবার চালু হয়েছে।';
+                    $extra = ' — টিচার অ্যাকাউন্টও আবার চালু হয়েছে (রিনিউ)।';
+                } else {
+                    $extra = ' — এটা নতুন টিচার আবেদন, Teacher Requests থেকে ফর্ম দেখে Approve করুন।';
+                }
+            }
+        }
         $this->db->CreateNotification($p->UserId, 'Payment Accepted', $msg, 'success', '/Payment/My', 'fa-circle-check');
-        json_response(['success' => true, 'payment' => $p]);
+        json_response(['success' => true, 'payment' => $p, 'message' => 'Payment accepted' . $extra]);
     }
 
     /** POST /Admin/RejectPayment (id, note) */

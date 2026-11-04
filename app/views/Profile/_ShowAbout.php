@@ -165,7 +165,10 @@ $forms = !$isOwner ? [] : [
                     <?php endif; ?>
                 <?php else: /* নিজের প্রোফাইল, এখনো টিচার না */ ?>
                     <?php $st = $Model->TeacherStatus; ?>
-                    <?php if ($st === 'AwaitingPayment'): ?>
+                    <?php if ($st === 'Expired'): ?>
+                        <div class="ab-tutor"><i class="fas fa-user-clock" style="color:#e74c3c;"></i><div><strong>টিচার প্যাকেজের মেয়াদ শেষ</strong><p>প্যাকেজ রিনিউ করলেই আবার টিচার হয়ে যাবেন — আপনার আগের সব তথ্য রাখা আছে।</p></div></div>
+                        <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-rotate"></i> প্যাকেজ রিনিউ করুন</a>
+                    <?php elseif ($st === 'AwaitingPayment'): ?>
                         <div class="ab-tutor"><i class="fas fa-credit-card" style="color:#f39c12;"></i><div><strong>ফর্ম জমা হয়েছে — এখন প্যাকেজ কিনুন</strong><p>পছন্দের টিচার প্যাকেজ বেছে পেমেন্ট করলে আবেদন অ্যাডমিনের কাছে যাবে।</p></div></div>
                         <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-tags"></i> টিচার প্যাকেজ বেছে নিন</a>
                     <?php elseif ($st === 'Pending'): ?>

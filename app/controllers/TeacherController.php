@@ -13,6 +13,10 @@ class TeacherController extends Controller
         $userId = current_user_id() ?? 0;
 
         $status = $this->db->GetUserTeacherRequestStatus($userId);
+        if ($status === 'Expired') {
+            tempdata_set('Info', 'আপনার টিচার প্যাকেজের মেয়াদ শেষ হয়েছে — প্যাকেজ রিনিউ করলেই আবার টিচার হয়ে যাবেন (আগের সব তথ্য রাখা আছে)।');
+            redirect('/Package?for=teacher&apply=1');
+        }
         if ($status === 'AwaitingPayment') {
             tempdata_set('Info', 'আপনার ফর্ম জমা আছে — এখন একটা টিচার প্যাকেজ কিনে পেমেন্ট করুন, তারপর আবেদন অ্যাডমিনের কাছে যাবে।');
             redirect('/Package?for=teacher&apply=1');

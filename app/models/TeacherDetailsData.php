@@ -183,4 +183,78 @@ trait TeacherDetailsData
         if ($paymentId !== null) $this->exec('UPDATE `TeacherRequests` SET `Status` = :s, `PaymentId` = :p WHERE `Id` = :i', ['s' => $status, 'p' => $paymentId, 'i' => $id]);
         else $this->exec('UPDATE `TeacherRequests` SET `Status` = :s WHERE `Id` = :i', ['s' => $status, 'i' => $id]);
     }
+
+    // ---------- প্যাকেজের মেয়াদ: শেষ হওয়ার ৫ দিন আগে থেকে রিমাইন্ডার, শেষ হলে টিচার → সাধারণ ইউজার ----------
+    private bool $subColsReady = false;
+    private function EnsureSubscriptionReminderCols(): void
+    {
+        if ($this->subColsReady) return;
+        $this->subColsReady = true;
+        $this->EnsurePaymentTables();
+        foreach (['RemindedAt', 'Reminded1At'] as $c) {
+            try { $this->pdo->query("SELECT `$c` FROM `UserSubscriptions` LIMIT 1"); }
+            catch (Throwable $e) { try { $this->pdo->exec("ALTER TABLE `UserSubscriptions` ADD COLUMN `$c` " . ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? 'TEXT' : 'DATETIME') . ' NULL'); } catch (Throwable $e2) { } }
+        }
+    }
+
+    /** এই ইউজারের যে Subscription ৫ দিনের মধ্যে শেষ হবে (আর পরে কোনো নতুন Subscription নেই) — না থাকলে null */
+    public function GetExpiringSubscription(int $userId, int $days = 5): ?Obj
+    {
+        try {
+            $this->EnsurePaymentTables();
+            $now = now(); $lim = date('Y-m-d H:i:s', time() + $days * 86400);
+            foreach (['Teacher', 'Student'] as $aud) {
+                $last = $this->one('SELECT * FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = :a AND `EndsAt` IS NOT NULL AND `EndsAt` > :n ORDER BY `EndsAt` DESC LIMIT 1',
+                    ['u' => $userId, 'a' => $aud, 'n' => $now]);
+                if ($last && $last->EndsAt <= $lim) return $last;
+            }
+        } catch (Throwable $e) { }
+        return null;
+    }
+
+    /**
+     * সাইটে কেউ ঢুকলেই চলে (প্রতি ৩০ মিনিটে একবার) — আলাদা Cron লাগে না:
+     *  1) মেয়াদ শেষের ৫ দিন আগে আর ১ দিন আগে নোটিফিকেশন (রিনিউ করার জন্য)
+     *  2) টিচারের প্যাকেজের মেয়াদ শেষ (আর কোনো চালু প্যাকেজ নেই) → অ্যাকাউন্ট সাধারণ ইউজার / স্টুডেন্ট, টিউটর তালিকা থেকে সরে যায়
+     */
+    public function RunSubscriptionHousekeeping(bool $force = false): void
+    {
+        try {
+            $last = $this->GetSiteContent(['sub_sweep_at' => '0'])['sub_sweep_at'];
+            if (!$force && (int)$last > time() - 1800) return;
+            $this->SaveSiteContent(['sub_sweep_at' => (string)time()]);
+            $this->EnsureSubscriptionReminderCols();
+            $now = now();
+
+            // 1) রিমাইন্ডার — প্রত্যেক ইউজার+ধরনের সবচেয়ে দেরিতে শেষ হওয়া Subscription
+            foreach ([['RemindedAt', 5], ['Reminded1At', 1]] as [$col, $days]) {
+                $rows = $this->all("SELECT s.* FROM `UserSubscriptions` s WHERE s.`EndsAt` IS NOT NULL AND s.`EndsAt` > :n AND s.`EndsAt` <= :l AND s.`$col` IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM `UserSubscriptions` x WHERE x.`UserId` = s.`UserId` AND x.`Audience` = s.`Audience` AND x.`EndsAt` > s.`EndsAt`)",
+                    ['n' => $now, 'l' => date('Y-m-d H:i:s', time() + $days * 86400)]);
+                foreach ($rows as $s) {
+                    $left = max(1, (int)ceil((strtotime((string)$s->EndsAt) - time()) / 86400));
+                    $end = date('d M Y', strtotime((string)$s->EndsAt));
+                    if ($s->Audience === 'Teacher') {
+                        $msg = "আপনার টিচার প্যাকেজ “{$s->PackageName}” এর মেয়াদ আর {$left} দিন ($end) — রিনিউ না করলে মেয়াদ শেষে অ্যাকাউন্টটি সাধারণ ইউজার অ্যাকাউন্টে বদলে যাবে।";
+                        $link = '/Package?for=teacher';
+                    } else {
+                        $msg = "আপনার প্যাকেজ “{$s->PackageName}” এর মেয়াদ আর {$left} দিন ($end) — চালু রাখতে রিনিউ করুন।";
+                        $link = '/Package?for=student';
+                    }
+                    $this->CreateNotification((int)$s->UserId, '⏰ প্যাকেজের মেয়াদ শেষ হচ্ছে', $msg, 'warning', $link, 'fa-clock');
+                    $this->exec("UPDATE `UserSubscriptions` SET `$col` = :t WHERE `Id` = :i", ['t' => $now, 'i' => (int)$s->Id]);
+                }
+            }
+
+            // 2) মেয়াদ শেষ হওয়া টিচার → সাধারণ ইউজার (যাদের কখনো প্যাকেজ ছিল না, তাদের বদলায় না)
+            $expired = $this->all("SELECT u.`Id`, u.`FullName` FROM `Users` u WHERE u.`Role` = 'Teacher'
+                AND EXISTS (SELECT 1 FROM `UserSubscriptions` s WHERE s.`UserId` = u.`Id` AND s.`Audience` = 'Teacher')
+                AND NOT EXISTS (SELECT 1 FROM `UserSubscriptions` s WHERE s.`UserId` = u.`Id` AND s.`Audience` = 'Teacher' AND (s.`EndsAt` IS NULL OR s.`EndsAt` > :n))", ['n' => $now]);
+            foreach ($expired as $u) {
+                $this->exec("UPDATE `Users` SET `Role` = 'User' WHERE `Id` = :u AND `Role` = 'Teacher'", ['u' => (int)$u->Id]);
+                $this->exec("UPDATE `TeacherRequests` SET `Status` = 'Expired', `AdminNote` = :n WHERE `UserId` = :u AND `Status` = 'Approved'", ['u' => (int)$u->Id, 'n' => 'প্যাকেজের মেয়াদ শেষ (' . date('d M Y') . ')']);
+                $this->CreateNotification((int)$u->Id, 'টিচার প্যাকেজের মেয়াদ শেষ', 'আপনার টিচার প্যাকেজের মেয়াদ শেষ হয়েছে — অ্যাকাউন্ট এখন সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্ট। প্যাকেজ রিনিউ করলে আবার টিচার হয়ে যাবেন (আপনার সব তথ্য রাখা আছে)।', 'danger', '/Package?for=teacher', 'fa-user-clock');
+            }
+        } catch (Throwable $e) { error_log('[SubscriptionHousekeeping] ' . $e->getMessage()); }
+    }
 }

@@ -19,7 +19,7 @@ class PaymentController extends Controller
         if ($pkg->Audience === 'Teacher' && $role !== 'Teacher') {
             // টিচার হওয়ার ফর্ম জমা দিয়েছে (পেমেন্ট বাকি / যাচাই চলছে) — প্যাকেজ কিনতে পারবে
             $tr = $this->db->GetLatestTeacherRequest((int)current_user_id());
-            if (!$tr || !in_array($tr->Status, ['AwaitingPayment', 'Pending'], true)) return 'টিচার প্যাকেজ কিনতে আগে “Become a Tutor” ফর্ম পূরণ করুন — তারপর প্যাকেজ বেছে পেমেন্ট করবেন।';
+            if (!$tr || !in_array($tr->Status, ['AwaitingPayment', 'Pending', 'Expired'], true)) return 'টিচার প্যাকেজ কিনতে আগে “Become a Tutor” ফর্ম পূরণ করুন — তারপর প্যাকেজ বেছে পেমেন্ট করবেন।';
         }
         return null;
     }
@@ -95,7 +95,7 @@ class PaymentController extends Controller
         // টিচার হওয়ার আবেদন + পেমেন্ট একসাথে অ্যাডমিনের কাছে
         if ($pkg->Audience === 'Teacher' && session_get('UserRole') !== 'Teacher') {
             $tr = $this->db->GetLatestTeacherRequest($uid);
-            if ($tr && in_array($tr->Status, ['AwaitingPayment', 'Pending'], true)) {
+            if ($tr && in_array($tr->Status, ['AwaitingPayment', 'Pending', 'Expired'], true)) {
                 $this->db->SetTeacherRequestState((int)$tr->Id, 'Pending', $id);
                 foreach ($this->db->GetAdmins() as $a) {
                     $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — যাচাই করে Approve করুন।", 'info', '/Admin/TeacherRequests', 'fa-chalkboard-teacher');

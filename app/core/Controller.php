@@ -11,6 +11,16 @@ abstract class Controller
         $this->db = db();
         // অ্যাডমিনকে বন্ধ করা / অ্যাডমিন থেকে সরানো হলে সাথে সাথে লগআউট
         if (function_exists('validate_admin_session')) validate_admin_session();
+        // প্যাকেজের মেয়াদ: রিমাইন্ডার আর মেয়াদ শেষে টিচার → ইউজার (প্রতি ৩০ মিনিটে একবার)
+        try { $this->db->RunSubscriptionHousekeeping(); } catch (Throwable $e) { }
+        // অ্যাডমিন Approve / সরানো বা মেয়াদ শেষে রোল বদলালে — আবার লগইন ছাড়াই সাথে সাথে কার্যকর
+        $sr = session_get('UserRole');
+        if (($sr === 'Teacher' || $sr === 'User') && ($uid = current_user_id()) !== null) {
+            try {
+                $dbRole = $this->db->scalar('SELECT `Role` FROM `Users` WHERE `Id` = :i', ['i' => (int)$uid]);
+                if (($dbRole === 'Teacher' || $dbRole === 'User') && $dbRole !== $sr) session_set('UserRole', $dbRole);
+            } catch (Throwable $e) { }
+        }
         // রেফারেল লিংক (?ref=CODE) — কোড মনে রাখা হয় (সেশন + ৩০ দিনের কুকি), সাইনআপের সময় রেফারার বোনাস পায়
         $ref = $_GET['ref'] ?? null;
         if (is_string($ref) && preg_match('/^MM[A-Z0-9]{6}$/', strtoupper($ref)) && current_user_id() === null) {

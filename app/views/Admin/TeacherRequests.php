@@ -356,7 +356,7 @@ $ViewData['Title'] = 'Teacher Requests';
                         <h5>
                             <i class="fas fa-user"></i>
                             <?= e($request->FullName) ?>
-                            <span class="<?= e($statusClass) ?>"><?= $request->Status === 'AwaitingPayment' ? 'পেমেন্ট বাকি' : e($request->Status) ?></span>
+                            <span class="<?= e($statusClass) ?>"><?= ['AwaitingPayment' => 'পেমেন্ট বাকি', 'Removed' => 'টিচার থেকে সরানো', 'Expired' => 'প্যাকেজের মেয়াদ শেষ'][$request->Status] ?? e($request->Status) ?></span>
                         </h5>
 
                         <div class="info-line">
@@ -411,13 +411,15 @@ $ViewData['Title'] = 'Teacher Requests';
                                 title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
+                        <?php if (!in_array($request->Status, ['Removed', 'Expired', 'Rejected'], true)): ?>
                         <button class="btn btn-delete-teacher"
                                 data-userid="<?= e($request->UserId) ?>"
                                 data-requestid="<?= e($request->Id) ?>"
                                 data-name="<?= e(substr(json_encode((string)$request->FullName, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES), 1, -1)) ?>"
-                                title="Delete Teacher Account">
-                            <i class="fas fa-trash"></i>
+                                title="টিচার থেকে সরান (ইউজার অ্যাকাউন্ট হয়ে যাবে)">
+                            <i class="fas fa-user-minus"></i>
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -558,7 +560,7 @@ $ViewData['Title'] = 'Teacher Requests';
         });
 
         function deleteTeacher(userId, requestId, name) {
-            if (!confirm('আপনি কি নিশ্চিত যে "' + name + '"-কে স্থায়ীভাবে ডিলিট করতে চান?\n\nএটি ইউজার অ্যাকাউন্টসহ তার সব Teacher Request ডাটাবেস থেকে সম্পূর্ণ মুছে ফেলবে। এই কাজটি আর ফিরিয়ে আনা যাবে না।')) {
+            if (!confirm('"' + name + '"-কে টিচার থেকে সরাবেন?\n\nঅ্যাকাউন্ট মুছে যাবে না — সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্ট হয়ে যাবে। পরে আবার আবেদন করে টিচার হতে পারবেন।')) {
                 return;
             }
 

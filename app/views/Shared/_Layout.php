@@ -1329,6 +1329,30 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         </div>
     </aside>
 
+    <?php
+    // ⏰ প্যাকেজের মেয়াদ ৫ দিনের মধ্যে শেষ হলে উপরে সতর্কবার্তা (রিনিউ করার জন্য)
+    $expSub = null;
+    if (current_user_id() !== null && !$isAdmin) { try { $expSub = db()->GetExpiringSubscription((int)current_user_id()); } catch (Throwable $e) { } }
+    if ($expSub):
+        $expLeft = max(0, (int)ceil((strtotime((string)$expSub->EndsAt) - time()) / 86400));
+        $expKey = 'mmExp' . (int)$expSub->Id . '_' . $expLeft;
+    ?>
+    <div class="exp-bar" id="expBar" data-key="<?= e($expKey) ?>">
+        <i class="fas fa-clock"></i>
+        <span>আপনার <b><?= e($expSub->PackageName) ?></b> প্যাকেজের মেয়াদ <b><?= $expLeft <= 1 ? 'আজ / কাল' : $expLeft . ' দিন পর' ?></b> (<?= e(date('d M Y', strtotime((string)$expSub->EndsAt))) ?>) শেষ হবে<?= $expSub->Audience === 'Teacher' ? ' — রিনিউ না করলে টিচার অ্যাকাউন্টটি সাধারণ ইউজার অ্যাকাউন্টে বদলে যাবে' : '' ?>।</span>
+        <a href="/Package?for=<?= $expSub->Audience === 'Teacher' ? 'teacher' : 'student' ?>">এখনই রিনিউ করুন</a>
+        <button type="button" aria-label="বন্ধ করুন" onclick="try{sessionStorage.setItem(this.parentNode.dataset.key,'1')}catch(e){} this.parentNode.remove()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <style>
+        .exp-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; background: #FFF4E5; border-top: 2px solid #FDBA74; color: #7C2D12; font-size: 14px; padding: 10px 46px 10px 16px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1040; text-align: center; box-shadow: 0 -6px 20px rgba(0,0,0,.08); }
+        .exp-bar > i { color: #EA580C; font-size: 16px; }
+        .exp-bar a { background: #EA580C; color: #fff !important; font-weight: 800; font-size: 13px; padding: 6px 14px; border-radius: 8px; text-decoration: none; white-space: nowrap; }
+        .exp-bar a:hover { background: #C2410C; }
+        .exp-bar button { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; color: #9A3412; font-size: 16px; cursor: pointer; padding: 6px; }
+    </style>
+    <script>try { var _eb = document.getElementById('expBar'); if (_eb && sessionStorage.getItem(_eb.dataset.key)) _eb.remove(); } catch (e) { }</script>
+    <?php endif; ?>
+
     <main>
         <?= $RenderBody ?>
     </main>
