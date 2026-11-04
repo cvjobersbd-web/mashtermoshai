@@ -1890,3 +1890,22 @@ function feed_comments_on(): bool
 {
     return false;
 }
+
+
+/**
+ * টিচারের প্রোফাইলে "চ্যাট" বাটন — প্যাকেজ নেওয়া শিক্ষার্থী চ্যাট আনলক করে, না থাকলে প্যাকেজের লিংক (লক)।
+ * টিচার / অ্যাডমিন / নিজের প্রোফাইলে কিছু দেখায় না। $cls = বাটনের CSS class
+ */
+function teacher_chat_button(int $teacherId, string $cls): string
+{
+    $me = current_user_id();
+    if ($me !== null && ((int)$me === $teacherId || current_role() !== 'User')) return '';
+    if (!viewer_can_contact_teachers()) {
+        return '<a class="' . e($cls) . '" href="' . e(student_package_url()) . '" title="টিচারের সাথে চ্যাট করতে শিক্ষার্থী প্যাকেজ নিন"><i class="fas fa-lock"></i> '
+            . ($me === null ? 'লগইন করে চ্যাট' : 'প্যাকেজ নিয়ে চ্যাট আনলক') . '</a>';
+    }
+    $key = db()->FindDirectChat((int)$me, $teacherId);
+    if ($key) return '<a class="' . e($cls) . '" href="/Chat?c=' . e($key) . '"><i class="fas fa-comment-dots"></i> চ্যাট খুলুন</a>';
+    return '<form method="post" action="/Chat/Start" style="display:inline;margin:0;">' . csrf_field() . '<input type="hidden" name="teacherId" value="' . $teacherId . '" />'
+        . '<button type="submit" class="' . e($cls) . '"><i class="fas fa-comment-dots"></i> চ্যাট আনলক করুন</button></form>';
+}

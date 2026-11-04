@@ -146,7 +146,7 @@ $role = current_role();
             <aside class="ch-list">
                 <div class="ch-lh">
                     <h1>Messages</h1>
-                    <p><?= $role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে এখানে চ্যাট খোলে।' : 'আপনি টিচারের অ্যাপ্লিকেশন Accept করলে এখানে চ্যাট খোলে।' ?></p>
+                    <p><?= $role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'টিচারের অ্যাপ্লিকেশন Accept করলে বা টিচারের প্রোফাইল থেকে চ্যাট আনলক করলে এখানে চ্যাট খোলে।' ?></p>
                 </div>
                 <div class="ch-threads" id="chThreads">
                     <?php if (!$threads): ?>
@@ -189,7 +189,8 @@ $role = current_role();
                     <div class="ch-next" id="chNext" hidden></div>
                     <div class="ch-msgs" id="chMsgs" aria-live="polite">
                         <div class="ch-intro">
-                            <b><?= e($cur->OtherName) ?></b> এর সাথে আপনার টিউশন ঠিক হয়েছে<?= $cur->Topic !== '' ? ' (' . e($cur->Topic) . ')' : '' ?>।<br>
+                            <?php if ($cur->Kind === 'dir'): ?><b><?= e($cur->OtherName) ?></b> এর সাথে সরাসরি চ্যাট — <?= $role === 'Teacher' ? 'শিক্ষার্থী আপনার প্রোফাইল থেকে চ্যাট শুরু করেছেন।' : 'টিউশনের বিষয়, সময় আর বেতন নিয়ে কথা বলুন।' ?><br>
+                            <?php else: ?><b><?= e($cur->OtherName) ?></b> এর সাথে আপনার টিউশন ঠিক হয়েছে<?= $cur->Topic !== '' ? ' (' . e($cur->Topic) . ')' : '' ?>।<br><?php endif; ?>
                             <?= !empty($ViewBag->IsTeacher) ? 'উপরের <b>অনলাইন ক্লাস</b> বাটন দিয়ে Zoom / Google Meet ক্লাস সেট করুন — স্টুডেন্ট Join বাটন পাবে।' : 'টিচার Zoom / Google Meet ক্লাস সেট করলে এখানে <b>Join Class</b> বাটন আসবে।' ?> কেউ খারাপ আচরণ করলে <a href="/Helpdesk">Helpdesk</a> এ জানান।
                         </div>
                     </div>

@@ -113,12 +113,34 @@ class ChatController extends Controller
         json_response(['success' => true, 'count' => $me === null || current_role() === 'Admin' ? 0 : $this->db->CountUnreadChats((int)$me)]);
     }
 
+    /**
+     * POST /Chat/Start (teacherId) — টিচারের প্রোফাইল থেকে "চ্যাট আনলক": প্যাকেজ নেওয়া শিক্ষার্থী সরাসরি চ্যাট শুরু করে
+     */
+    public function Start_POST(): void
+    {
+        $me = $this->me();
+        $tid = input_int('teacherId', 0);
+        $back = '/Tutors/Profile/' . $tid;
+        if (current_role() !== 'User') { tempdata_set('Error', 'শুধু শিক্ষার্থীরা টিচারের সাথে চ্যাট শুরু করতে পারেন।'); redirect($back); }
+        if (!viewer_can_contact_teachers()) {
+            tempdata_set('Error', 'টিচারের সাথে চ্যাট আনলক করতে শিক্ষার্থী প্যাকেজ নিন (১ মাস ৳50, ৩ মাস ৳100)।');
+            redirect('/Package?for=student');
+        }
+        $t = $tid > 0 ? $this->db->GetUserById($tid) : null;
+        if (!$t || $t->Role !== 'Teacher' || !(int)$t->IsActive || $this->db->GetActiveSuspension($tid)) { tempdata_set('Error', 'এই টিচারের সাথে এখন চ্যাট করা যাচ্ছে না।'); redirect($back); }
+        redirect('/Chat?c=' . $this->db->OpenDirectChat($me, $tid));
+    }
+
     /** POST /Chat/Send  (c, body) */
     public function Send_POST(): void
     {
         $me = $this->me(true);
         $t = $this->db->GetChatThread(trim((string)input_str('c', '')), $me);
         if (!$t) json_response(['success' => false, 'closed' => true, 'message' => 'এই চ্যাটটি বন্ধ হয়ে গেছে — আর মেসেজ পাঠানো যাবে না।']);
+        // সরাসরি চ্যাট: শিক্ষার্থীর প্যাকেজের মেয়াদ শেষ হলে শিক্ষার্থী আর মেসেজ পাঠাতে পারবে না (টিচার উত্তর দিতে পারবে)
+        if ($t->Kind === 'dir' && $t->StudentId === $me && !viewer_can_contact_teachers()) {
+            json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'আপনার প্যাকেজের মেয়াদ শেষ — টিচারকে মেসেজ পাঠাতে আবার প্যাকেজ নিন।']);
+        }
         $body = trim(str_replace(["\r\n", "\r"], "\n", (string)input_str('body', '')));
         $body = preg_replace("/\n{4,}/", "\n\n\n", $body);
         if ($body === '') json_response(['success' => false, 'message' => 'কিছু লিখুন।']);

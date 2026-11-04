@@ -46,8 +46,12 @@ class TuitionController extends Controller
         $clean = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
         $title = $clean('title', 150);
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", str_replace("\r", '', (string)input_str('content', ''))));
-        if ($title === '') $this->fail('পোস্টের শিরোনাম লিখুন (যেমন: HSC এর জন্য Mathematics টিউটর প্রয়োজন)।');
-        if ($content === '') $this->fail('টিউশনের বিস্তারিত লিখুন।');
+        if ($title === '') $title = 'পড়াতে চাই পোস্ট';   // শিরোনাম ঐচ্ছিক
+        // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন — Special Request (content) ঐচ্ছিক
+        foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 120) === '') $this->fail($m);
+        if ((int)preg_replace('/[^0-9]/', '', (string)input_str('budget', '')) <= 0) $this->fail('বাজেট (৳/মাস) দিন।');
+        if (!in_array((string)input_str('medium', ''), Db::CIRCULAR_MEDIUMS, true)) $this->fail('মিডিয়াম বাছাই করুন।');
+        if (!in_array((string)input_str('tuitionType', ''), Db::CIRCULAR_TYPES, true)) $this->fail('টিউশনের ধরন বাছাই করুন।');
         if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
         if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
         // পেমেন্টের নিয়ম চালু থাকলে পোস্ট করতে ক্রেডিট লাগবে (অ্যাডমিন বাদে)

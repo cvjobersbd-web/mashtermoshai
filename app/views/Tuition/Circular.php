@@ -980,8 +980,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 <div class="tc-card tc-how">
                     <h3><i class="fas fa-lightbulb"></i> How It Works?</h3>
                     <ol class="tc-steps">
-                        <li><b>1</b><span>আপনার টিউশনের প্রয়োজন বিস্তারিত লিখুন</span></li>
-                        <li><b>2</b><span>লোকেশন, ক্লাস, বিষয় ইত্যাদি দিন</span></li>
+                        <li><b>1</b><span>লোকেশন, ক্লাস, বিষয় আর বাজেট দিন</span></li>
+                        <li><b>2</b><span>মিডিয়াম, টিউশনের ধরন বাছাই করুন — বিশেষ অনুরোধ থাকলে লিখুন</span></li>
                         <li><b>3</b><span>পোস্ট করুন</span></li>
                         <li><b>4</b><span>আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন</span></li>
                     </ol>
@@ -1010,25 +1010,25 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 <div><b style="font-size:15px;"><?= e($userFullName) ?></b><div style="font-size:12.5px;color:#64748B;">সবাই এই পোস্ট দেখতে পাবে</div></div>
             </div>
             <div class="tcm-err" id="tcmErr"></div>
-            <div class="tcm-f"><label for="tcmTitle">শিরোনাম <b>*</b></label>
-                <input type="text" id="tcmTitle" name="title" maxlength="150" placeholder="যেমন: HSC এর জন্য Mathematics টিউটর প্রয়োজন" /></div>
-            <div class="tcm-f"><label for="tcmContent">বিস্তারিত <b>*</b></label>
-                <textarea id="tcmContent" name="content" maxlength="3000" placeholder="সপ্তাহে কয়দিন, কোন সময়, শিক্ষকের কাছে কী আশা করেন ইত্যাদি লিখুন..."></textarea></div>
+            <div class="tcm-f"><label>শিরোনাম</label>
+                <div class="tcm-seg"><label><input type="radio" name="title" value="পড়াতে চাই পোস্ট" id="tcmTitle" /><span><i class="fas fa-chalkboard-user"></i> পড়াতে চাই পোস্ট</span></label></div></div>
+            <div class="tcm-f"><label for="tcmContent">Special Request <small>(কোনো বিশেষ অনুরোধ থাকলে)</small></label>
+                <textarea id="tcmContent" name="content" maxlength="3000" style="min-height:90px;" placeholder="যেমন: মহিলা শিক্ষক হলে ভালো, সন্ধ্যার পরে পড়াতে হবে, সপ্তাহে ৩ দিন..."></textarea></div>
             <div class="tcm-2">
-                <div class="tcm-f"><label for="tcmLoc"><i class="fas fa-location-dot" style="color:#8B5CF6;"></i> লোকেশন</label>
+                <div class="tcm-f"><label for="tcmLoc"><i class="fas fa-location-dot" style="color:#8B5CF6;"></i> লোকেশন <b>*</b></label>
                     <input type="text" id="tcmLoc" name="preferredArea" maxlength="100" list="tcLocList" placeholder="যেমন: Mirpur 10, Dhaka" /></div>
-                <div class="tcm-f"><label for="tcmClass"><i class="fas fa-graduation-cap" style="color:#0F4C5C;"></i> ক্লাস / লেভেল</label>
+                <div class="tcm-f"><label for="tcmClass"><i class="fas fa-graduation-cap" style="color:#0F4C5C;"></i> ক্লাস / লেভেল <b>*</b></label>
                     <input type="text" id="tcmClass" name="classLevel" maxlength="60" list="tcClassList" placeholder="যেমন: HSC" /></div>
             </div>
             <div class="tcm-2">
-                <div class="tcm-f"><label for="tcmSubj"><i class="fas fa-book-open" style="color:#2563EB;"></i> বিষয়</label>
+                <div class="tcm-f"><label for="tcmSubj"><i class="fas fa-book-open" style="color:#2563EB;"></i> বিষয় <b>*</b></label>
                     <input type="text" id="tcmSubj" name="subjects" maxlength="120" list="tcSubjList" placeholder="যেমন: Mathematics, Physics" /></div>
-                <div class="tcm-f"><label for="tcmBudget">বাজেট (৳/মাস) <small>ঐচ্ছিক</small></label>
+                <div class="tcm-f"><label for="tcmBudget">বাজেট (৳/মাস) <b>*</b></label>
                     <input type="number" id="tcmBudget" name="budget" min="0" max="9999999" inputmode="numeric" placeholder="যেমন: 5000" /></div>
             </div>
-            <div class="tcm-f"><label>মিডিয়াম</label>
+            <div class="tcm-f"><label>মিডিয়াম <b>*</b></label>
                 <div class="tcm-seg"><?php foreach (['Bangla' => 'Bangla Medium', 'English' => 'English Medium', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="medium" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
-            <div class="tcm-f"><label>টিউশনের ধরন</label>
+            <div class="tcm-f"><label>টিউশনের ধরন <b>*</b></label>
                 <div class="tcm-seg"><?php foreach (['Home' => 'Home Tuition', 'Online' => 'Online Tuition', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="tuitionType" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
             <div class="tcm-f"><label>ছবি বা ভিডিও <small>(ঐচ্ছিক — ছবি ৫ MB, ভিডিও ২৫ MB পর্যন্ত)</small></label>
                 <div class="tcm-media">
@@ -1411,7 +1411,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 if (what === 'photo') $('#tcmImg').click();
                 else if (what === 'video') $('#tcmVid').click();
                 setTimeout(function () {
-                    var el = target ? $(target) : (!$('#tcmTitle').value.trim() ? $('#tcmTitle') : $('#tcmContent'));
+                    var el = target ? $(target) : $('#tcmLoc');
                     if (el && what !== 'photo' && what !== 'video') el.focus();
                 }, 60);
             }
@@ -1465,8 +1465,14 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 e.preventDefault();
                 var err = $('#tcmErr'), btn = $('#tcmSubmit');
                 err.classList.remove('show');
-                if (!$('#tcmTitle').value.trim()) { err.textContent = 'শিরোনাম লিখুন।'; err.classList.add('show'); $('#tcmTitle').focus(); return; }
-                if (!$('#tcmContent').value.trim()) { err.textContent = 'টিউশনের বিস্তারিত লিখুন।'; err.classList.add('show'); $('#tcmContent').focus(); return; }
+                // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন (শিরোনাম আর Special Request ঐচ্ছিক)
+                var need = [['#tcmLoc', 'লোকেশন দিন।'], ['#tcmClass', 'ক্লাস / লেভেল দিন।'], ['#tcmSubj', 'বিষয় দিন।'], ['#tcmBudget', 'বাজেট (৳/মাস) দিন।']];
+                for (var i = 0; i < need.length; i++) {
+                    var el = $(need[i][0]);
+                    if (!el.value.trim() || (need[i][0] === '#tcmBudget' && !(+el.value > 0))) { err.textContent = need[i][1]; err.classList.add('show'); el.focus(); return; }
+                }
+                if (!form.querySelector('input[name="medium"]:checked')) { err.textContent = 'মিডিয়াম বাছাই করুন।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }
+                if (!form.querySelector('input[name="tuitionType"]:checked')) { err.textContent = 'টিউশনের ধরন বাছাই করুন।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }
                 var fd = new FormData(form);
                 if (img.files[0]) fd.append('imageFile', img.files[0]);
                 if (vid.files[0]) fd.append('videoFile', vid.files[0]);

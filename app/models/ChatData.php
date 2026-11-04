@@ -42,7 +42,36 @@ trait ChatData
                 `Status` VARCHAR(20) NOT NULL DEFAULT 'Scheduled', `CreatedAt` DATETIME NOT NULL, PRIMARY KEY (`Id`), KEY `IX_ChatClass_Thread` (`Kind`, `AppId`, `StartsAt`))
                 ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
+        // সরাসরি চ্যাট: প্যাকেজ নেওয়া শিক্ষার্থী টিচারের প্রোফাইল থেকে চ্যাট আনলক করে (key "d{Id}")
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ChatDirect" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "StudentId" INTEGER NOT NULL, "TeacherId" INTEGER NOT NULL, "CreatedAt" TEXT NOT NULL, UNIQUE ("StudentId", "TeacherId"))');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatDirect` (`Id` INT NOT NULL AUTO_INCREMENT, `StudentId` INT NOT NULL, `TeacherId` INT NOT NULL, `CreatedAt` DATETIME NOT NULL,
+                PRIMARY KEY (`Id`), UNIQUE KEY `UX_ChatDirect` (`StudentId`, `TeacherId`), KEY `IX_ChatDirect_T` (`TeacherId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
         $this->chatReady = true;
+    }
+
+    /** শিক্ষার্থী ↔ টিচার সরাসরি চ্যাট খোলে (আগে থাকলে সেটাই) — চ্যাট key ("d12") ফেরত দেয় */
+    public function OpenDirectChat(int $studentId, int $teacherId): string
+    {
+        $this->EnsureChatTables();
+        $id = (int)$this->scalar('SELECT `Id` FROM `ChatDirect` WHERE `StudentId` = :s AND `TeacherId` = :t', ['s' => $studentId, 't' => $teacherId]);
+        if (!$id) {
+            try { $id = (int)$this->insert('INSERT INTO `ChatDirect` (`StudentId`, `TeacherId`, `CreatedAt`) VALUES (:s, :t, :c)', ['s' => $studentId, 't' => $teacherId, 'c' => now()]); }
+            catch (Throwable $e) { $id = (int)$this->scalar('SELECT `Id` FROM `ChatDirect` WHERE `StudentId` = :s AND `TeacherId` = :t', ['s' => $studentId, 't' => $teacherId]); }
+        }
+        return 'd' . $id;
+    }
+
+    /** এই শিক্ষার্থী আর টিচারের সরাসরি চ্যাট আগে থেকে আছে কিনা — থাকলে key */
+    public function FindDirectChat(int $studentId, int $teacherId): ?string
+    {
+        try {
+            $this->EnsureChatTables();
+            $id = (int)$this->scalar('SELECT `Id` FROM `ChatDirect` WHERE `StudentId` = :s AND `TeacherId` = :t', ['s' => $studentId, 't' => $teacherId]);
+            return $id ? 'd' . $id : null;
+        } catch (Throwable $e) { return null; }
     }
 
     /** TutorRequests এ কোন স্টুডেন্ট (অ্যাকাউন্ট) পাঠিয়েছে আর কোন টিচারের কাছে গেছে — চ্যাটের জন্য দরকার */
@@ -80,6 +109,7 @@ trait ChatData
     {
         if (preg_match('/^\d+$/', $key)) return ['app', (int)$key];
         if (preg_match('/^r(\d+)$/', $key, $m)) return ['req', (int)$m[1]];
+        if (preg_match('/^d(\d+)$/', $key, $m)) return ['dir', (int)$m[1]];
         return null;
     }
 
@@ -100,10 +130,18 @@ trait ChatData
         INNER JOIN `Users` t ON t.`Id` = r.`TeacherUserId`
         INNER JOIN `Users` s ON s.`Id` = r.`StudentUserId`";
 
+    private const CHAT_DIR_SELECT = "SELECT 'dir' AS Kind, d.`Id` AS RefId, d.`TeacherId`, d.`StudentId`, d.`CreatedAt` AS AcceptedAt, d.`CreatedAt` AS StartedAt,
+            '' AS Subj, '' AS Cls, 'সরাসরি চ্যাট' AS Extra,
+            t.`FullName` AS TeacherName, t.`UserName` AS TeacherUser, t.`ProfileImageLink` AS TeacherPhoto,
+            s.`FullName` AS StudentName, s.`UserName` AS StudentUser, s.`ProfileImageLink` AS StudentPhoto
+        FROM `ChatDirect` d
+        INNER JOIN `Users` t ON t.`Id` = d.`TeacherId`
+        INNER JOIN `Users` s ON s.`Id` = d.`StudentId`";
+
     private function mapChatThread(Obj $r, int $me): Obj
     {
         $r->RefId = (int)$r->RefId; $r->TeacherId = (int)$r->TeacherId; $r->StudentId = (int)$r->StudentId;
-        $r->Key = ($r->Kind === 'req' ? 'r' : '') . $r->RefId;
+        $r->Key = ($r->Kind === 'req' ? 'r' : ($r->Kind === 'dir' ? 'd' : '')) . $r->RefId;
         $r->AppId = $r->RefId; // পুরোনো কোডের সাথে মিল রাখতে
         $iAmTeacher = $r->TeacherId === $me;
         $r->OtherId = $iAmTeacher ? $r->StudentId : $r->TeacherId;
@@ -125,6 +163,8 @@ trait ChatData
         if (!$k) return null;
         if ($k[0] === 'app') {
             $r = $this->one(self::CHAT_APP_SELECT . " WHERE a.`Id` = :id AND a.`Status` = 'Accepted' AND (a.`TeacherId` = :me OR p.`UserId` = :me2)", ['id' => $k[1], 'me' => $me, 'me2' => $me]);
+        } elseif ($k[0] === 'dir') {
+            $r = $this->one(self::CHAT_DIR_SELECT . " WHERE d.`Id` = :id AND (d.`TeacherId` = :me OR d.`StudentId` = :me2)", ['id' => $k[1], 'me' => $me, 'me2' => $me]);
         } else {
             $r = $this->one(self::CHAT_REQ_SELECT . " WHERE r.`Id` = :id AND r.`Status` = 'Accepted' AND (r.`TeacherUserId` = :me OR r.`StudentUserId` = :me2)", ['id' => $k[1], 'me' => $me, 'me2' => $me]);
         }
@@ -137,11 +177,12 @@ trait ChatData
         $this->EnsureChatTables();
         $rows = array_merge(
             $this->all(self::CHAT_APP_SELECT . " WHERE a.`Status` = 'Accepted' AND (a.`TeacherId` = :me OR p.`UserId` = :me2)", ['me' => $me, 'me2' => $me]),
-            $this->all(self::CHAT_REQ_SELECT . " WHERE r.`Status` = 'Accepted' AND (r.`TeacherUserId` = :me OR r.`StudentUserId` = :me2)", ['me' => $me, 'me2' => $me])
+            $this->all(self::CHAT_REQ_SELECT . " WHERE r.`Status` = 'Accepted' AND (r.`TeacherUserId` = :me OR r.`StudentUserId` = :me2)", ['me' => $me, 'me2' => $me]),
+            $this->all(self::CHAT_DIR_SELECT . " WHERE d.`TeacherId` = :me OR d.`StudentId` = :me2", ['me' => $me, 'me2' => $me])
         );
         if (!$rows) return [];
         $last = []; $unread = [];
-        foreach (['app', 'req'] as $kind) {
+        foreach (['app', 'req', 'dir'] as $kind) {
             $ids = array_map(fn($r) => (int)$r->RefId, array_filter($rows, fn($r) => $r->Kind === $kind));
             if (!$ids) continue;
             $in = implode(',', $ids);

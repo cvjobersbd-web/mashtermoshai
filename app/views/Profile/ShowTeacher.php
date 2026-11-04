@@ -318,6 +318,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <?php if (current_role() !== 'Teacher'): ?>
                                 <?php if (viewer_can_contact_teachers()): ?><a href="/FindTutor?req=<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-paper-plane"></i> Request Tutor</a>
                                 <?php else: ?><a href="<?= e(student_package_url()) ?>" class="pf-btn primary" title="টিচারের ছবি, মোবাইল নম্বর দেখতে ও রিকোয়েস্ট পাঠাতে প্যাকেজ নিন"><i class="fas fa-lock"></i> <?= current_user_id() === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request' ?></a><?php endif; ?>
+                                <?= teacher_chat_button((int)$u->Id, 'pf-btn') ?>
                             <?php endif; ?>
                             <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn"><i class="fas fa-id-card"></i> Full Details</a>
                             <button type="button" class="pf-btn<?= $Model->TutorSaved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$u->Id ?>">
