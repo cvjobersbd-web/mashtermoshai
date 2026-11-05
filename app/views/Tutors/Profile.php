@@ -174,7 +174,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
             <?php else: ?>
                 <p>পছন্দ হলে সরাসরি রিকোয়েস্ট পাঠান, অথবা পরে দেখার জন্য সেভ করে রাখুন।</p>
                 <div class="tp-acts">
-                    <?php if ($canRequest): ?><?= $canContact ? '<a class="tp-btn pri" href="' . e($reqHref) . '"><i class="fas fa-paper-plane"></i> Direct Request</a>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?><?php endif; ?>
+                    <?php if ($canRequest): ?><?= $canContact ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Direct Request</button>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?><?php endif; ?>
                     <?php if ($me !== null && $role !== 'Admin'): ?>
                         <button type="button" class="tp-btn<?= $ViewBag->Saved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$t->UserId ?>"><i class="<?= $ViewBag->Saved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $ViewBag->Saved ? 'Saved' : 'Bookmark' ?></span></button>
                     <?php elseif ($me === null): ?>
@@ -324,7 +324,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
         <!-- ===== Hire ===== -->
         <?php if (!$isOwner): ?>
             <div class="tp-card tp-hire">
-                <?php if ($canRequest): ?><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><?= $canContact ? '<a class="tp-btn pri" href="' . e($reqHref) . '"><i class="fas fa-paper-plane"></i> Request This Tutor</a>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?></div><?php endif; ?>
+                <?php if ($canRequest): ?><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><?= $canContact ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Request This Tutor</button>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?></div><?php endif; ?>
                 <?php if ($canRequest && !$canContact): ?><p style="margin:8px 0 0;"><i class="fas fa-lock" style="color:#B45309;"></i> টিচারের প্রোফাইল ছবি, মোবাইল নম্বর, ইমেইল দেখতে, সরাসরি রিকোয়েস্ট পাঠাতে আর চ্যাট আনলক করতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন — ১ মাস ৳50, ৩ মাস ৳100।</p><?php endif; ?>
                 <p>এই টিউটর সম্পর্কে আরো জানতে Tutor ID "<b><?= e($t->TutorId) ?></b>" দিয়ে <a href="/Helpdesk">Helpdesk</a> এ যোগাযোগ করুন।</p>
             </div>
@@ -376,3 +376,4 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
 })();
 </script>
 <?php section_end(); ?>
+<?php if ($canRequest && $canContact) partial('Tutors/_RequestModal', ['uid' => (int)$t->UserId, 'name' => (string)$t->FullName]); ?>
