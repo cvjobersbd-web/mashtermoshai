@@ -122,6 +122,26 @@ $role = current_role();
     .ch-dlg .acts button { flex: 1; height: 44px; border-radius: 10px; border: none; font-weight: 800; font-size: 14.5px; cursor: pointer; font-family: inherit; }
     .ch-dlg .acts .ok { background: #00CFFF; color: #fff; } .ch-dlg .acts .ok:hover { background: #00B5E0; } .ch-dlg .acts .ok:disabled { opacity: .6; }
     .ch-dlg .acts .no { background: #F1F5F9; color: #334155; }
+    /* ===== গ্রুপ ===== */
+    .ch-lh .grp-new { margin-top: 10px; width: 100%; height: 38px; border-radius: 10px; border: 1.5px dashed #9BE7FA; background: #F0FCFF; color: #0369A1; font-weight: 800; font-size: 13.5px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+    .ch-lh .grp-new:hover { background: #E0F7FE; }
+    .ch-av.grp { background: linear-gradient(135deg, #7C3AED, #0EA5E9); }
+    .ch-m .from { font-size: 11.5px; font-weight: 700; color: #7C3AED; margin: 0 10px 2px; }
+    .ch-mh .mem-btn { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #DCE5EF; background: #fff; color: #334155; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .gp-list { max-height: 280px; overflow-y: auto; border: 1px solid #E5ECF3; border-radius: 12px; margin-top: 6px; }
+    .gp-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid #F1F5F9; cursor: pointer; }
+    .gp-row:first-child { border-top: none; }
+    .ch-dlg label.gp-row { display: flex; margin: 0; font-size: 14px; font-weight: 600; }
+    .ch-dlg .gp-row input[type=checkbox] { width: 18px; height: 18px; padding: 0; }
+    .gp-row input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; accent-color: #00CFFF; }
+    .gp-row .ch-av { width: 34px; height: 34px; font-size: 12px; }
+    .gp-row b { flex: 1; font-size: 14px; color: #0F172A; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gp-row small { font-size: 11px; font-weight: 800; color: #0369A1; background: #E0F2FE; padding: 2px 8px; border-radius: 999px; }
+    .gp-row .rm { border: none; background: #FEE2E2; color: #B91C1C; border-radius: 8px; height: 30px; padding: 0 10px; font-weight: 700; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .gp-empty { padding: 14px; text-align: center; color: #94A3B8; font-size: 13px; }
+    .gp-sec { font-size: 12.5px; font-weight: 800; color: #64748B; margin: 16px 0 4px; text-transform: uppercase; letter-spacing: .3px; }
+    .gp-danger { margin-top: 16px; width: 100%; height: 40px; border-radius: 10px; border: 1px solid #FECACA; background: #fff; color: #B91C1C; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .gp-rename { display: flex; gap: 8px; } .gp-rename input { flex: 1; } .gp-rename button { height: 44px; padding: 0 14px; border-radius: 10px; border: none; background: #0F172A; color: #fff; font-weight: 700; cursor: pointer; font-family: inherit; }
     @media (max-width: 860px) {
         .ch { padding: 0; }
         .ch-wrap { padding: 0; }
@@ -147,6 +167,7 @@ $role = current_role();
                 <div class="ch-lh">
                     <h1>Messages</h1>
                     <p><?= $role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'টিচারের অ্যাপ্লিকেশন Accept করলে বা টিচারের প্রোফাইল থেকে চ্যাট আনলক করলে এখানে চ্যাট খোলে।' ?></p>
+                    <?php if ($role === 'Teacher'): ?><button type="button" class="grp-new" id="grpNewBtn"><i class="fas fa-users"></i> নতুন গ্রুপ তৈরি করুন</button><?php endif; ?>
                 </div>
                 <div class="ch-threads" id="chThreads">
                     <?php if (!$threads): ?>
@@ -162,7 +183,7 @@ $role = current_role();
                     <?php else: ?>
                         <?php foreach ($threads as $t): ?>
                             <a class="ch-t<?= $cur && $cur->Key === $t->Key ? ' on' : '' ?><?= $t->Unread ? ' unread' : '' ?>" href="/Chat?c=<?= e($t->Key) ?>" data-id="<?= e($t->Key) ?>">
-                                <span class="ch-av"><?= e($t->Initials) ?><?php if ($t->OtherPhoto !== ''): ?><img src="<?= e($t->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                                <span class="ch-av<?= $t->Kind === 'grp' ? ' grp' : '' ?>"><?= $t->Kind === 'grp' ? '<i class="fas fa-users"></i>' : e($t->Initials) ?><?php if ($t->OtherPhoto !== ''): ?><img src="<?= e($t->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
                                 <span class="ch-tm">
                                     <span class="ch-tn"><b><?= e($t->OtherName) ?></b> <span class="ch-tr"><?= e($t->OtherRole) ?></span><small><?= e(time_ago($t->LastAt)) ?></small></span>
                                     <span class="ch-tl"><?= $t->LastBody !== '' ? ($t->LastMine ? 'আপনি: ' : '') . e(str_preview($t->LastBody, 70)) : e($t->Topic !== '' ? $t->Topic : 'চ্যাট শুরু করুন') ?></span>
@@ -178,18 +199,21 @@ $role = current_role();
                 <?php if ($cur): ?>
                     <header class="ch-mh">
                         <a class="ch-back" href="/Chat" aria-label="সব চ্যাট"><i class="fas fa-arrow-left"></i></a>
-                        <span class="ch-av sm"><?= e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                        <?php $isGrp = $cur->Kind === 'grp'; ?>
+                        <span class="ch-av sm<?= $isGrp ? ' grp' : '' ?>"><?= $isGrp ? '<i class="fas fa-users"></i>' : e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
                         <div class="who">
-                            <a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a>
-                            <div><?= e($cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
+                            <?php if ($isGrp): ?><b id="grpTitle"><?= e($cur->OtherName) ?></b><?php else: ?><a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a><?php endif; ?>
+                            <div><?= $isGrp ? 'গ্রুপ' : e($cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
                         </div>
                         <?php if (!empty($ViewBag->IsTeacher)): ?><button type="button" class="cls-btn" id="chClsBtn" title="Zoom / Google Meet ক্লাস সেট করুন"><i class="fas fa-video"></i><span>অনলাইন ক্লাস</span></button><?php endif; ?>
-                        <a class="prof" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i><span>প্রোফাইল</span></a>
+                        <?php if ($isGrp): ?><button type="button" class="mem-btn" id="grpMemBtn"><i class="fas fa-users"></i><span>সদস্য</span></button>
+                        <?php else: ?><a class="prof" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i><span>প্রোফাইল</span></a><?php endif; ?>
                     </header>
                     <div class="ch-next" id="chNext" hidden></div>
                     <div class="ch-msgs" id="chMsgs" aria-live="polite">
                         <div class="ch-intro">
-                            <?php if ($cur->Kind === 'dir'): ?><b><?= e($cur->OtherName) ?></b> এর সাথে সরাসরি চ্যাট — <?= $role === 'Teacher' ? 'শিক্ষার্থী আপনার প্রোফাইল থেকে চ্যাট শুরু করেছেন।' : 'টিউশনের বিষয়, সময় আর বেতন নিয়ে কথা বলুন।' ?><br>
+                            <?php if ($cur->Kind === 'grp'): ?><b><?= e($cur->OtherName) ?></b> গ্রুপ — <?= !empty($ViewBag->IsTeacher) ? 'এখানে মেসেজ দিলে গ্রুপের সব স্টুডেন্ট পাবে।' : 'টিচার এখানে ক্লাসের মেসেজ আর অনলাইন ক্লাসের লিংক দেবেন।' ?><br>
+                            <?php elseif ($cur->Kind === 'dir'): ?><b><?= e($cur->OtherName) ?></b> এর সাথে সরাসরি চ্যাট — <?= $role === 'Teacher' ? 'শিক্ষার্থী আপনার প্রোফাইল থেকে চ্যাট শুরু করেছেন।' : 'টিউশনের বিষয়, সময় আর বেতন নিয়ে কথা বলুন।' ?><br>
                             <?php else: ?><b><?= e($cur->OtherName) ?></b> এর সাথে আপনার টিউশন ঠিক হয়েছে<?= $cur->Topic !== '' ? ' (' . e($cur->Topic) . ')' : '' ?>।<br><?php endif; ?>
                             <?= !empty($ViewBag->IsTeacher) ? 'উপরের <b>অনলাইন ক্লাস</b> বাটন দিয়ে Zoom / Google Meet ক্লাস সেট করুন — স্টুডেন্ট Join বাটন পাবে।' : 'টিচার Zoom / Google Meet ক্লাস সেট করলে এখানে <b>Join Class</b> বাটন আসবে।' ?> কেউ খারাপ আচরণ করলে <a href="/Helpdesk">Helpdesk</a> এ জানান।
                         </div>
@@ -238,6 +262,37 @@ $role = current_role();
     </div>
 </div>
 
+<?php if ($role === 'Teacher'): $contacts = $ViewBag->Contacts ?? []; ?>
+<div class="ch-dlg" id="grpDlg" role="dialog" aria-modal="true" aria-labelledby="grpDlgT">
+    <form id="grpForm" autocomplete="off" novalidate>
+        <h3 id="grpDlgT"><i class="fas fa-users"></i> নতুন গ্রুপ</h3>
+        <p class="sub">আপনার স্টুডেন্টদের নিয়ে গ্রুপ বানান — এক মেসেজে সবাইকে জানাতে আর একসাথে অনলাইন ক্লাসের লিংক দিতে পারবেন।</p>
+        <label for="grpName">গ্রুপের নাম *</label>
+        <input id="grpName" name="name" maxlength="80" placeholder="যেমন: HSC Physics ব্যাচ — সন্ধ্যা ৬টা" required />
+        <label>স্টুডেন্ট বাছাই করুন *</label>
+        <div class="gp-list">
+            <?php if (!$contacts): ?><div class="gp-empty">এখনো কোনো স্টুডেন্টের সাথে চ্যাট নেই — স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা চ্যাট শুরু করলে এখানে আসবে।</div><?php endif; ?>
+            <?php foreach ($contacts as $c): ?>
+                <label class="gp-row"><input type="checkbox" name="members[]" value="<?= (int)$c->Id ?>" />
+                    <span class="ch-av"><?= e($c->Initials) ?><?php if ($c->Photo !== ''): ?><img src="<?= e($c->Photo) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span><b><?= e($c->Name) ?></b></label>
+            <?php endforeach; ?>
+        </div>
+        <div class="err" id="grpErr"></div>
+        <div class="acts"><button type="button" class="no" data-close>বাতিল</button><button type="submit" class="ok" id="grpOk"<?= $contacts ? '' : ' disabled' ?>><i class="fas fa-check"></i> গ্রুপ তৈরি করুন</button></div>
+    </form>
+</div>
+<?php endif; ?>
+<?php if ($cur && $cur->Kind === 'grp'): ?>
+<div class="ch-dlg" id="memDlg" role="dialog" aria-modal="true" aria-labelledby="memDlgT">
+    <form id="memForm" autocomplete="off" novalidate>
+        <h3 id="memDlgT"><i class="fas fa-users"></i> গ্রুপের সদস্য</h3>
+        <div id="memBody"><div class="gp-empty">লোড হচ্ছে...</div></div>
+        <div class="err" id="memErr"></div>
+        <div class="acts"><button type="button" class="no" data-close>বন্ধ করুন</button></div>
+    </form>
+</div>
+<?php endif; ?>
+
 <?php section_start('Scripts'); ?>
 <script>
 (function () {
@@ -251,7 +306,7 @@ $role = current_role();
         if (!list.length) return;
         threadsBox.innerHTML = list.map(function (t) {
             var cls = 'ch-t' + (t.id === CUR ? ' on' : '') + (t.unread && t.id !== CUR ? ' unread' : '');
-            var av = '<span class="ch-av">' + esc(t.initials) + (t.photo ? '<img src="' + esc(t.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span>';
+            var av = t.group ? '<span class="ch-av grp"><i class="fas fa-users"></i></span>' : '<span class="ch-av">' + esc(t.initials) + (t.photo ? '<img src="' + esc(t.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span>';
             var last = t.last ? (t.lastMine ? 'আপনি: ' : '') + esc(t.last) : esc(t.topic || 'চ্যাট শুরু করুন');
             return '<a class="' + cls + '" href="/Chat?c=' + encodeURIComponent(t.id) + '" data-id="' + esc(t.id) + '">' + av + '<span class="ch-tm"><span class="ch-tn"><b>' + esc(t.name) + '</b> <span class="ch-tr">' + esc(t.role)
                 + '</span><small>' + esc(t.ago) + '</small></span><span class="ch-tl">' + last + '</span></span><span class="dot">' + (t.unread || 0) + '</span></a>';
@@ -262,6 +317,60 @@ $role = current_role();
         try { var r = await (await fetch('/Chat/Threads', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); if (r.success) drawThreads(r.threads); } catch (e) { }
     }
     setInterval(refreshThreads, 15000);
+
+    // ===== গ্রুপ: তৈরি / সদস্য =====
+    function gpost(url, fd) { fd.append('__RequestVerificationToken', token()); return fetch(url, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }); }
+    document.querySelectorAll('.ch-dlg [data-close]').forEach(function (b) { b.addEventListener('click', function () { b.closest('.ch-dlg').classList.remove('open'); }); });
+    document.querySelectorAll('.ch-dlg').forEach(function (d) { d.addEventListener('click', function (e) { if (e.target === d) d.classList.remove('open'); }); });
+    var gNew = document.getElementById('grpNewBtn'), gDlg = document.getElementById('grpDlg');
+    if (gNew && gDlg) {
+        gNew.addEventListener('click', function () { gDlg.classList.add('open'); document.getElementById('grpName').focus(); });
+        document.getElementById('grpForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            var f = e.target, err = document.getElementById('grpErr'), ok = document.getElementById('grpOk');
+            if (!f.name.value.trim()) { err.textContent = 'গ্রুপের নাম দিন।'; f.name.focus(); return; }
+            if (!f.querySelector('input[name="members[]"]:checked')) { err.textContent = 'অন্তত একজন স্টুডেন্ট বাছাই করুন।'; return; }
+            ok.disabled = true; err.textContent = '';
+            try { var r = await gpost('/Chat/GroupCreate', new FormData(f)); if (!r.success) { err.textContent = r.message || 'তৈরি করা যায়নি।'; ok.disabled = false; return; } location.href = r.redirect; }
+            catch (x) { err.textContent = 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।'; ok.disabled = false; }
+        });
+    }
+    var mBtn = document.getElementById('grpMemBtn'), mDlg = document.getElementById('memDlg');
+    if (mBtn && mDlg) {
+        var mBody = document.getElementById('memBody'), mErr = document.getElementById('memErr');
+        var av = function (u) { return '<span class="ch-av">' + esc(u.initials) + (u.photo ? '<img src="' + esc(u.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span>'; };
+        var loadMembers = async function () {
+            mErr.textContent = '';
+            var r = await (await fetch('/Chat/GroupInfo?c=' + encodeURIComponent(CUR), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            if (!r.success) { mBody.innerHTML = '<div class="gp-empty">' + esc(r.message || 'পাওয়া যায়নি') + '</div>'; return; }
+            var h = '';
+            if (r.owner) h += '<div class="gp-sec">গ্রুপের নাম</div><div class="gp-rename"><input id="gpNameIn" maxlength="80" value="' + esc(r.name) + '" /><button type="button" id="gpRename">Save</button></div>';
+            h += '<div class="gp-sec">সদস্য (' + r.members.length + ')</div><div class="gp-list">' + r.members.map(function (u) {
+                return '<div class="gp-row">' + av(u) + '<b>' + esc(u.name) + '</b>' + (u.teacher ? '<small>Teacher</small>' : (r.owner ? '<button type="button" class="rm" data-rm="' + u.id + '">সরান</button>' : '')) + '</div>';
+            }).join('') + '</div>';
+            if (r.owner) {
+                h += '<div class="gp-sec">আরো স্টুডেন্ট যোগ করুন</div><div class="gp-list">' + (r.canAdd.length ? r.canAdd.map(function (u) {
+                    return '<label class="gp-row"><input type="checkbox" name="add" value="' + u.id + '" />' + av(u) + '<b>' + esc(u.name) + '</b></label>';
+                }).join('') : '<div class="gp-empty">আপনার সব স্টুডেন্ট এই গ্রুপে আছে।</div>') + '</div>';
+                if (r.canAdd.length) h += '<div class="acts" style="margin-top:10px;"><button type="button" class="ok" id="gpAdd"><i class="fas fa-user-plus"></i> যোগ করুন</button></div>';
+                h += '<button type="button" class="gp-danger" id="gpDel"><i class="fas fa-trash"></i> গ্রুপ মুছে দিন</button>';
+            }
+            mBody.innerHTML = h;
+        };
+        mBtn.addEventListener('click', function () { mDlg.classList.add('open'); loadMembers(); });
+        mBody.addEventListener('click', async function (e) {
+            var fd = new FormData(); fd.append('c', CUR); var r = null;
+            try {
+                if (e.target.closest('#gpRename')) { fd.append('name', document.getElementById('gpNameIn').value); r = await gpost('/Chat/GroupRename', fd); if (r.success) document.getElementById('grpTitle').textContent = document.getElementById('gpNameIn').value.trim(); }
+                else if (e.target.closest('[data-rm]')) { if (!confirm('এই স্টুডেন্টকে গ্রুপ থেকে সরাবেন?')) return; fd.append('userId', e.target.closest('[data-rm]').getAttribute('data-rm')); r = await gpost('/Chat/GroupRemove', fd); }
+                else if (e.target.closest('#gpAdd')) { mBody.querySelectorAll('input[name="add"]:checked').forEach(function (c) { fd.append('members[]', c.value); }); r = await gpost('/Chat/GroupAdd', fd); }
+                else if (e.target.closest('#gpDel')) { if (!confirm('গ্রুপটি আর এর সব মেসেজ মুছে যাবে। নিশ্চিত?')) return; r = await gpost('/Chat/GroupDelete', fd); if (r.success) { location.href = r.redirect; return; } }
+                else return;
+                if (!r.success) { mErr.textContent = r.message || 'হয়নি।'; return; }
+                loadMembers();
+            } catch (x) { mErr.textContent = 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।'; }
+        });
+    }
 
     if (!CUR) return;
 
@@ -337,6 +446,7 @@ $role = current_role();
     function bubble(m) {
         var w = document.createElement('div'); w.className = 'ch-m ' + (m.mine ? 'me' : 'them'); w.setAttribute('data-id', m.id || '');
         if (m.cls && CLASSES[m.cls]) { w.appendChild(card(CLASSES[m.cls])); var tm0 = document.createElement('div'); tm0.className = 'tm'; tm0.textContent = m.time || ''; w.appendChild(tm0); return w; }
+        if (m.from && !m.mine) { var fr = document.createElement('div'); fr.className = 'from'; fr.textContent = m.from; w.appendChild(fr); }
         var b = document.createElement('div'); b.className = 'bb'; fill(b, m.body); w.appendChild(b);
         var tm = document.createElement('div'); tm.className = 'tm'; tm.textContent = m.time || ''; w.appendChild(tm);
         return w;

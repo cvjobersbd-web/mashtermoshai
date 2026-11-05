@@ -24,10 +24,13 @@ class ChatController extends Controller
     }
 
     /** মেসেজ JSON আকারে (লেখা ব্রাউজারে textContent দিয়ে বসে — তাই HTML হিসেবে চলে না) */
-    private function pack(array $msgs, int $me): array
+    private function pack(array $msgs, int $me, ?Obj $t = null): array
     {
+        // গ্রুপে কে পাঠিয়েছে তার নাম দেখাতে হয়
+        $names = [];
+        if ($t && $t->Kind === 'grp') foreach ($this->db->GetChatGroupMembers($t->RefId) as $u) $names[$u->Id] = $u->Name . ($u->IsTeacher ? ' (Teacher)' : '');
         return array_map(fn($m) => [
-            'id' => $m->Id, 'mine' => $m->SenderId === $me, 'body' => (string)$m->Body,
+            'id' => $m->Id, 'mine' => $m->SenderId === $me, 'body' => (string)$m->Body, 'from' => $names ? ($names[$m->SenderId] ?? 'সাবেক সদস্য') : null,
             'at' => date('c', strtotime((string)$m->CreatedAt)), 'time' => date('h:i A', strtotime((string)$m->CreatedAt)),
             'day' => date('Y-m-d', strtotime((string)$m->CreatedAt)), 'cls' => (int)($m->ClassId ?? 0),
         ], $msgs);
@@ -55,11 +58,18 @@ class ChatController extends Controller
         return null;
     }
 
+    /** এই চ্যাটের অন্য সদস্যরা (নোটিফিকেশন পাঠাতে) */
+    private function recipients(Obj $t, int $me): array
+    {
+        if ($t->Kind !== 'grp') return [$t->OtherId];
+        return array_values(array_filter(array_map(fn($u) => $u->Id, $this->db->GetChatGroupMembers($t->RefId)), fn($id) => $id !== $me));
+    }
+
     private function packThreads(array $threads): array
     {
         return array_map(fn($t) => [
-            'id' => $t->Key, 'name' => $t->OtherName, 'photo' => $t->OtherPhoto, 'initials' => $t->Initials, 'role' => $t->OtherRole,
-            'topic' => $t->Topic, 'last' => str_preview($t->LastBody, 70), 'lastMine' => $t->LastMine, 'ago' => time_ago($t->LastAt), 'unread' => $t->Unread,
+            'id' => $t->Key, 'name' => $t->OtherName, 'photo' => $t->OtherPhoto, 'initials' => $t->Initials, 'role' => $t->OtherRole, 'group' => $t->Kind === 'grp',
+            'topic' => $t->Topic, 'last' => $t->LastBody !== '' ? str_preview($t->LastBody, 70) : '', 'lastMine' => $t->LastMine, 'ago' => time_ago($t->LastAt), 'unread' => $t->Unread,
         ], $threads);
     }
 
@@ -79,10 +89,11 @@ class ChatController extends Controller
             foreach ($threads as $t) if ($t->Key === $current->Key) $t->Unread = 0;
         }
         $this->view(null, $threads, [
-            'Current' => $current, 'Closed' => $closed, 'Messages' => $this->pack($msgs, $me), 'HasOlder' => count($msgs) === 50,
+            'Current' => $current, 'Closed' => $closed, 'Messages' => $this->pack($msgs, $me, $current), 'HasOlder' => count($msgs) === 50,
             'SeenUpTo' => $current ? $this->db->GetChatSeenUpTo($current, $me) : 0, 'Me' => $me,
             'ThreadJson' => $this->packThreads($threads),
             'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false,
+            'Contacts' => current_role() === 'Teacher' ? array_values($this->db->TeacherChatContacts($me)) : [],
         ]);
     }
 
@@ -95,7 +106,7 @@ class ChatController extends Controller
         $before = input_int('before', 0);
         $msgs = $this->db->GetChatMessages($t, $before > 0 ? 0 : input_int('after', 0), $before, 50);
         if (input_int('read', 0) === 1) $this->db->MarkChatRead($t, $me);
-        json_response(['success' => true, 'messages' => $this->pack($msgs, $me), 'hasOlder' => $before > 0 && count($msgs) === 50,
+        json_response(['success' => true, 'messages' => $this->pack($msgs, $me, $t), 'hasOlder' => $before > 0 && count($msgs) === 50,
             'seenUpTo' => $this->db->GetChatSeenUpTo($t, $me), 'classes' => $this->packClasses($t)]);
     }
 
@@ -149,12 +160,17 @@ class ChatController extends Controller
 
         $id = $this->db->AddChatMessage($t, $me, $body);
         // অন্যজনকে নোটিফিকেশন — শুধু প্রথম না-পড়া মেসেজে (প্রতিটা মেসেজে নয়)
-        if (!$this->db->HasUnreadFrom($t, $me)) {
-            $myName = (string)(session_get('UserFullName') ?? session_get('UserName') ?? 'User');
+        $myName = (string)(session_get('UserFullName') ?? session_get('UserName') ?? 'User');
+        if ($t->Kind === 'grp') {
+            // গ্রুপ: যার কাছে এটাই প্রথম না-পড়া মেসেজ, শুধু তাকে নোটিফিকেশন
+            foreach ($this->db->GroupUnreadFor($t->RefId, $me) as $uid => $n) {
+                if ($n === 1) $this->db->CreateNotification($uid, 'নতুন গ্রুপ মেসেজ', "$myName — {$t->OtherName}: " . str_preview($body, 60), 'info', '/Chat?c=' . $t->Key, 'fa-users');
+            }
+        } elseif (!$this->db->HasUnreadFrom($t, $me)) {
             $this->db->CreateNotification($t->OtherId, 'নতুন মেসেজ', "$myName আপনাকে মেসেজ পাঠিয়েছেন: " . str_preview($body, 60), 'info', '/Chat?c=' . $t->Key, 'fa-comment-dots');
         }
         $msgs = $this->db->GetChatMessages($t, max(0, input_int('after', 0)), 0, 50);
-        json_response(['success' => true, 'id' => $id, 'messages' => $this->pack($msgs, $me)]);
+        json_response(['success' => true, 'id' => $id, 'messages' => $this->pack($msgs, $me, $t)]);
     }
 
     /** POST /Chat/CreateClass (c, title, link, date, time, duration) — শুধু এই চ্যাটের টিচার */
@@ -182,9 +198,9 @@ class ChatController extends Controller
         $when = $dt->format('d M Y, h:i A');
         $this->db->AddChatMessage($t, $me, "📅 অনলাইন ক্লাস: $title — $when ($platform)\n$link", $cid);
         $myName = (string)(session_get('UserFullName') ?? session_get('UserName') ?? 'Teacher');
-        $this->db->CreateNotification($t->OtherId, 'নতুন অনলাইন ক্লাস 📅', "$myName $when এ \"$title\" ক্লাস সেট করেছেন ($platform)।", 'success', '/Chat?c=' . $t->Key, 'fa-video');
+        foreach ($this->recipients($t, $me) as $uid) $this->db->CreateNotification($uid, 'নতুন অনলাইন ক্লাস 📅', "$myName $when এ \"$title\" ক্লাস সেট করেছেন ($platform)" . ($t->Kind === 'grp' ? " — গ্রুপ: {$t->OtherName}" : '') . '।', 'success', '/Chat?c=' . $t->Key, 'fa-video');
         $msgs = $this->db->GetChatMessages($t, max(0, input_int('after', 0)), 0, 50);
-        json_response(['success' => true, 'messages' => $this->pack($msgs, $me), 'classes' => $this->packClasses($t)]);
+        json_response(['success' => true, 'messages' => $this->pack($msgs, $me, $t), 'classes' => $this->packClasses($t)]);
     }
 
     /** POST /Chat/CancelClass (c, id) — টিচার ক্লাস বাতিল করে */
@@ -199,9 +215,109 @@ class ChatController extends Controller
             $this->db->CancelChatClass($c->Id);
             $when = date('d M Y, h:i A', strtotime((string)$c->StartsAt));
             $this->db->AddChatMessage($t, $me, "❌ ক্লাস বাতিল: {$c->Title} — $when");
-            $this->db->CreateNotification($t->OtherId, 'ক্লাস বাতিল', "$when এর \"{$c->Title}\" ক্লাসটি বাতিল করা হয়েছে।", 'warning', '/Chat?c=' . $t->Key, 'fa-calendar-xmark');
+            foreach ($this->recipients($t, $me) as $uid) $this->db->CreateNotification($uid, 'ক্লাস বাতিল', "$when এর \"{$c->Title}\" ক্লাসটি বাতিল করা হয়েছে।", 'warning', '/Chat?c=' . $t->Key, 'fa-calendar-xmark');
         }
         $msgs = $this->db->GetChatMessages($t, max(0, input_int('after', 0)), 0, 50);
-        json_response(['success' => true, 'messages' => $this->pack($msgs, $me), 'classes' => $this->packClasses($t)]);
+        json_response(['success' => true, 'messages' => $this->pack($msgs, $me, $t), 'classes' => $this->packClasses($t)]);
+    }
+
+    // ============================================================
+    // ===== গ্রুপ চ্যাট — টিচার নিজের স্টুডেন্টদের নিয়ে গ্রুপ বানায় =====
+    // ============================================================
+    private function cleanGroupName(): string
+    {
+        $n = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('name', '')))), 0, 80);
+        if ($n === '') json_response(['success' => false, 'message' => 'গ্রুপের নাম দিন (যেমন: HSC Physics ব্যাচ — সন্ধ্যা ৬টা)।']);
+        return $n;
+    }
+
+    /** শুধু টিচারের নিজের স্টুডেন্ট (যাদের সাথে চ্যাট আছে) */
+    private function pickStudents(int $me): array
+    {
+        $contacts = $this->db->TeacherChatContacts($me);
+        return array_values(array_filter(array_map('intval', (array)($_POST['members'] ?? [])), fn($id) => isset($contacts[$id])));
+    }
+
+    /** গ্রুপটা এই টিচারের কিনা */
+    private function ownGroup(int $me): Obj
+    {
+        $t = $this->db->GetChatThread(trim((string)input_str('c', '')), $me);
+        if (!$t || $t->Kind !== 'grp') json_response(['success' => false, 'message' => 'গ্রুপটি পাওয়া যায়নি।']);
+        if ($t->TeacherId !== $me) json_response(['success' => false, 'message' => 'শুধু গ্রুপের টিচার এটা করতে পারবেন।']);
+        return $t;
+    }
+
+    /** POST /Chat/GroupCreate (name, members[]) */
+    public function GroupCreate_POST(): void
+    {
+        $me = $this->me(true);
+        if (current_role() !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু টিচাররা গ্রুপ বানাতে পারবেন।']);
+        $name = $this->cleanGroupName();
+        $ids = $this->pickStudents($me);
+        if (!$ids) json_response(['success' => false, 'message' => 'অন্তত একজন স্টুডেন্ট বাছাই করুন।']);
+        if ((int)$this->db->scalar('SELECT COUNT(*) FROM `ChatGroups` WHERE `TeacherId` = :t', ['t' => $me]) >= 50) json_response(['success' => false, 'message' => 'সর্বোচ্চ ৫০টি গ্রুপ বানানো যায়।']);
+        $gid = $this->db->CreateChatGroup($me, $name, $ids);
+        $t = $this->db->GetChatThread('g' . $gid, $me);
+        $myName = (string)(session_get('UserFullName') ?? session_get('UserName') ?? 'Teacher');
+        $wid = $this->db->AddChatMessage($t, $me, "👋 $myName গ্রুপটি তৈরি করেছেন। এখানে ক্লাসের মেসেজ আর অনলাইন ক্লাসের লিংক দেওয়া হবে।");
+        // স্বাগত মেসেজটা "পড়া" ধরা — স্টুডেন্টরা আলাদা "গ্রুপে যোগ" নোটিফিকেশন পায়; পরের মেসেজে আবার নোটিফিকেশন যাবে
+        $this->db->exec('UPDATE `ChatGroupMembers` SET `LastReadId` = :l WHERE `GroupId` = :g', ['l' => $wid, 'g' => $gid]);
+        foreach ($ids as $uid) $this->db->CreateNotification($uid, 'নতুন গ্রুপে যোগ করা হয়েছে', "$myName আপনাকে \"$name\" গ্রুপে যোগ করেছেন।", 'info', '/Chat?c=g' . $gid, 'fa-users');
+        json_response(['success' => true, 'redirect' => '/Chat?c=g' . $gid]);
+    }
+
+    /** GET /Chat/GroupInfo?c=g12 — সদস্য তালিকা (+ টিচারের জন্য যোগ করা যায় এমন স্টুডেন্ট) */
+    public function GroupInfo(): void
+    {
+        $me = $this->me(true);
+        $t = $this->db->GetChatThread(trim((string)input_str('c', '')), $me);
+        if (!$t || $t->Kind !== 'grp') json_response(['success' => false, 'message' => 'গ্রুপটি পাওয়া যায়নি।']);
+        $members = $this->db->GetChatGroupMembers($t->RefId);
+        $in = array_flip(array_map(fn($u) => $u->Id, $members));
+        $canAdd = $t->TeacherId === $me ? array_values(array_filter($this->db->TeacherChatContacts($me), fn($c) => !isset($in[$c->Id]))) : [];
+        $map = fn($u) => ['id' => $u->Id, 'name' => $u->Name, 'photo' => $u->Photo, 'initials' => $u->Initials, 'teacher' => !empty($u->IsTeacher)];
+        json_response(['success' => true, 'name' => $t->OtherName, 'owner' => $t->TeacherId === $me, 'members' => array_map($map, $members), 'canAdd' => array_map($map, $canAdd)]);
+    }
+
+    /** POST /Chat/GroupAdd (c, members[]) */
+    public function GroupAdd_POST(): void
+    {
+        $me = $this->me(true);
+        $t = $this->ownGroup($me);
+        $ids = $this->pickStudents($me);
+        if (!$ids) json_response(['success' => false, 'message' => 'যোগ করার জন্য স্টুডেন্ট বাছাই করুন।']);
+        $n = $this->db->AddChatGroupMembers($t->RefId, $ids);
+        $myName = (string)(session_get('UserFullName') ?? session_get('UserName') ?? 'Teacher');
+        foreach ($ids as $uid) $this->db->CreateNotification($uid, 'নতুন গ্রুপে যোগ করা হয়েছে', "$myName আপনাকে \"{$t->OtherName}\" গ্রুপে যোগ করেছেন।", 'info', '/Chat?c=' . $t->Key, 'fa-users');
+        json_response(['success' => true, 'message' => "$n জনকে যোগ করা হয়েছে।"]);
+    }
+
+    /** POST /Chat/GroupRemove (c, userId) */
+    public function GroupRemove_POST(): void
+    {
+        $me = $this->me(true);
+        $t = $this->ownGroup($me);
+        $uid = input_int('userId', 0);
+        if ($uid === $me) json_response(['success' => false, 'message' => 'নিজেকে সরানো যাবে না — গ্রুপ মুছে দিতে পারেন।']);
+        $this->db->RemoveChatGroupMember($t->RefId, $uid);
+        json_response(['success' => true, 'message' => 'সদস্য সরানো হয়েছে।']);
+    }
+
+    /** POST /Chat/GroupRename (c, name) */
+    public function GroupRename_POST(): void
+    {
+        $me = $this->me(true);
+        $t = $this->ownGroup($me);
+        $this->db->RenameChatGroup($t->RefId, $this->cleanGroupName());
+        json_response(['success' => true, 'message' => 'নাম বদলানো হয়েছে।']);
+    }
+
+    /** POST /Chat/GroupDelete (c) */
+    public function GroupDelete_POST(): void
+    {
+        $me = $this->me(true);
+        $t = $this->ownGroup($me);
+        $this->db->DeleteChatGroup($t->RefId);
+        json_response(['success' => true, 'redirect' => '/Chat']);
     }
 }

@@ -49,7 +49,105 @@ trait ChatData
             $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatDirect` (`Id` INT NOT NULL AUTO_INCREMENT, `StudentId` INT NOT NULL, `TeacherId` INT NOT NULL, `CreatedAt` DATETIME NOT NULL,
                 PRIMARY KEY (`Id`), UNIQUE KEY `UX_ChatDirect` (`StudentId`, `TeacherId`), KEY `IX_ChatDirect_T` (`TeacherId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
+        // টিচারের গ্রুপ চ্যাট (key "g{Id}") — টিচার নিজের স্টুডেন্টদের নিয়ে গ্রুপ বানায়; টিচারও সদস্য হিসেবে থাকে
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ChatGroups" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "TeacherId" INTEGER NOT NULL, "Name" TEXT NOT NULL, "CreatedAt" TEXT NOT NULL)');
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ChatGroupMembers" ("GroupId" INTEGER NOT NULL, "UserId" INTEGER NOT NULL, "LastReadId" INTEGER NOT NULL DEFAULT 0, "AddedAt" TEXT NOT NULL, PRIMARY KEY ("GroupId", "UserId"))');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatGroups` (`Id` INT NOT NULL AUTO_INCREMENT, `TeacherId` INT NOT NULL, `Name` VARCHAR(80) NOT NULL, `CreatedAt` DATETIME NOT NULL,
+                PRIMARY KEY (`Id`), KEY `IX_ChatGroups_T` (`TeacherId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatGroupMembers` (`GroupId` INT NOT NULL, `UserId` INT NOT NULL, `LastReadId` INT NOT NULL DEFAULT 0, `AddedAt` DATETIME NOT NULL,
+                PRIMARY KEY (`GroupId`, `UserId`), KEY `IX_ChatGM_U` (`UserId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
         $this->chatReady = true;
+    }
+
+    // ---------- গ্রুপ চ্যাট ----------
+    /** টিচারের যেসব স্টুডেন্টের সাথে চ্যাট আছে (গ্রুপে যোগ করা যায় শুধু এদের) — [Id => Obj(Id, Name, UserName, Photo)] */
+    public function TeacherChatContacts(int $teacherId): array
+    {
+        $this->EnsureChatTables();
+        $out = [];
+        foreach ($this->GetChatThreads($teacherId) as $t) {
+            if ($t->Kind === 'grp' || $t->TeacherId !== $teacherId || $t->StudentId <= 0) continue;
+            $out[$t->StudentId] = obj(['Id' => $t->StudentId, 'Name' => $t->OtherName, 'Photo' => $t->OtherPhoto, 'Initials' => $t->Initials]);
+        }
+        uasort($out, fn($a, $b) => strcasecmp($a->Name, $b->Name));
+        return $out;
+    }
+
+    public function CreateChatGroup(int $teacherId, string $name, array $studentIds): int
+    {
+        $this->EnsureChatTables();
+        $gid = (int)$this->insert('INSERT INTO `ChatGroups` (`TeacherId`, `Name`, `CreatedAt`) VALUES (:t, :n, :c)', ['t' => $teacherId, 'n' => $name, 'c' => now()]);
+        $this->AddChatGroupMembers($gid, array_merge([$teacherId], $studentIds));
+        return $gid;
+    }
+
+    public function AddChatGroupMembers(int $gid, array $userIds): int
+    {
+        $this->EnsureChatTables();
+        $n = 0;
+        foreach (array_unique(array_map('intval', $userIds)) as $u) {
+            if ($u <= 0 || $this->scalar('SELECT 1 FROM `ChatGroupMembers` WHERE `GroupId` = :g AND `UserId` = :u', ['g' => $gid, 'u' => $u])) continue;
+            $last = (int)$this->scalar("SELECT COALESCE(MAX(`Id`), 0) FROM `ChatMessages` WHERE `Kind` = 'grp' AND `AppId` = :g", ['g' => $gid]);
+            $this->exec('INSERT INTO `ChatGroupMembers` (`GroupId`, `UserId`, `LastReadId`, `AddedAt`) VALUES (:g, :u, :l, :c)', ['g' => $gid, 'u' => $u, 'l' => $last, 'c' => now()]);
+            $n++;
+        }
+        return $n;
+    }
+
+    public function RemoveChatGroupMember(int $gid, int $userId): void
+    {
+        $this->exec('DELETE FROM `ChatGroupMembers` WHERE `GroupId` = :g AND `UserId` = :u', ['g' => $gid, 'u' => $userId]);
+    }
+
+    public function RenameChatGroup(int $gid, string $name): void
+    {
+        $this->exec('UPDATE `ChatGroups` SET `Name` = :n WHERE `Id` = :g', ['n' => $name, 'g' => $gid]);
+    }
+
+    public function DeleteChatGroup(int $gid): void
+    {
+        $this->exec('DELETE FROM `ChatGroupMembers` WHERE `GroupId` = :g', ['g' => $gid]);
+        $this->exec("DELETE FROM `ChatMessages` WHERE `Kind` = 'grp' AND `AppId` = :g", ['g' => $gid]);
+        $this->exec("DELETE FROM `ChatClasses` WHERE `Kind` = 'grp' AND `AppId` = :g", ['g' => $gid]);
+        $this->exec('DELETE FROM `ChatGroups` WHERE `Id` = :g', ['g' => $gid]);
+    }
+
+    /** @return Obj[] (Id, Name, Photo, Initials, IsTeacher) — টিচার আগে */
+    public function GetChatGroupMembers(int $gid): array
+    {
+        $this->EnsureChatTables();
+        $tid = (int)$this->scalar('SELECT `TeacherId` FROM `ChatGroups` WHERE `Id` = :g', ['g' => $gid]);
+        $rows = $this->all('SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`ProfileImageLink` FROM `ChatGroupMembers` m INNER JOIN `Users` u ON u.`Id` = m.`UserId` WHERE m.`GroupId` = :g ORDER BY m.`AddedAt`, u.`Id`', ['g' => $gid]);
+        $out = array_map(function ($r) use ($tid) {
+            $n = !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName;
+            return obj(['Id' => (int)$r->Id, 'Name' => $n, 'Photo' => (string)($r->ProfileImageLink ?? ''), 'Initials' => initials($n, 'U'), 'IsTeacher' => (int)$r->Id === $tid]);
+        }, $rows);
+        usort($out, fn($a, $b) => $b->IsTeacher <=> $a->IsTeacher);
+        return $out;
+    }
+
+    /** গ্রুপের থ্রেড অবজেক্ট (অন্য চ্যাটের মতো একই ফিল্ড) — আমি সদস্য না হলে null */
+    private function groupThread(int $gid, int $me): ?Obj
+    {
+        $g = $this->one('SELECT g.*, (SELECT COUNT(*) FROM `ChatGroupMembers` x WHERE x.`GroupId` = g.`Id`) AS N, m.`LastReadId`
+            FROM `ChatGroups` g INNER JOIN `ChatGroupMembers` m ON m.`GroupId` = g.`Id` AND m.`UserId` = :me WHERE g.`Id` = :g', ['g' => $gid, 'me' => $me]);
+        if (!$g) return null;
+        return obj(['Kind' => 'grp', 'RefId' => (int)$g->Id, 'AppId' => (int)$g->Id, 'Key' => 'g' . (int)$g->Id, 'TeacherId' => (int)$g->TeacherId, 'StudentId' => 0, 'OtherId' => 0,
+            'OtherName' => (string)$g->Name, 'OtherPhoto' => '', 'OtherRole' => 'Group', 'Initials' => initials((string)$g->Name, 'G'),
+            'Topic' => bn_num((int)$g->N) . ' জন সদস্য', 'Members' => (int)$g->N, 'LastReadId' => (int)$g->LastReadId,
+            'AcceptedAt' => (string)$g->CreatedAt, 'StartedAt' => (string)$g->CreatedAt]);
+    }
+
+    /** গ্রুপে প্রত্যেক সদস্যের (আমি বাদে) কাছে নতুন মেসেজ কতটা না-পড়া — [UserId => count] */
+    public function GroupUnreadFor(int $gid, int $exceptUser): array
+    {
+        $out = [];
+        foreach ($this->all("SELECT m.`UserId`, (SELECT COUNT(*) FROM `ChatMessages` c WHERE c.`Kind` = 'grp' AND c.`AppId` = m.`GroupId` AND c.`Id` > m.`LastReadId` AND c.`SenderId` <> m.`UserId`) AS N
+            FROM `ChatGroupMembers` m WHERE m.`GroupId` = :g AND m.`UserId` <> :me", ['g' => $gid, 'me' => $exceptUser]) as $r) $out[(int)$r->UserId] = (int)$r->N;
+        return $out;
     }
 
     /** শিক্ষার্থী ↔ টিচার সরাসরি চ্যাট খোলে (আগে থাকলে সেটাই) — চ্যাট key ("d12") ফেরত দেয় */
@@ -110,6 +208,7 @@ trait ChatData
         if (preg_match('/^\d+$/', $key)) return ['app', (int)$key];
         if (preg_match('/^r(\d+)$/', $key, $m)) return ['req', (int)$m[1]];
         if (preg_match('/^d(\d+)$/', $key, $m)) return ['dir', (int)$m[1]];
+        if (preg_match('/^g(\d+)$/', $key, $m)) return ['grp', (int)$m[1]];
         return null;
     }
 
@@ -161,6 +260,7 @@ trait ChatData
         $this->EnsureChatTables();
         $k = self::parseChatKey($key);
         if (!$k) return null;
+        if ($k[0] === 'grp') return $this->groupThread($k[1], $me);
         if ($k[0] === 'app') {
             $r = $this->one(self::CHAT_APP_SELECT . " WHERE a.`Id` = :id AND a.`Status` = 'Accepted' AND (a.`TeacherId` = :me OR p.`UserId` = :me2)", ['id' => $k[1], 'me' => $me, 'me2' => $me]);
         } elseif ($k[0] === 'dir') {
@@ -180,7 +280,18 @@ trait ChatData
             $this->all(self::CHAT_REQ_SELECT . " WHERE r.`Status` = 'Accepted' AND (r.`TeacherUserId` = :me OR r.`StudentUserId` = :me2)", ['me' => $me, 'me2' => $me]),
             $this->all(self::CHAT_DIR_SELECT . " WHERE d.`TeacherId` = :me OR d.`StudentId` = :me2", ['me' => $me, 'me2' => $me])
         );
-        if (!$rows) return [];
+        // গ্রুপ — শেষ মেসেজ আর আমার না-পড়া (LastReadId এর পরে অন্যদের মেসেজ)
+        $groups = [];
+        foreach ($this->all('SELECT `GroupId` FROM `ChatGroupMembers` WHERE `UserId` = :me', ['me' => $me]) as $gm) {
+            $g = $this->groupThread((int)$gm->GroupId, $me);
+            if (!$g) continue;
+            $m = $this->one("SELECT `Body`, `SenderId`, `CreatedAt` FROM `ChatMessages` WHERE `Kind` = 'grp' AND `AppId` = :g ORDER BY `Id` DESC LIMIT 1", ['g' => $g->RefId]);
+            $g->LastBody = $m ? (string)$m->Body : ''; $g->LastMine = $m ? (int)$m->SenderId === $me : false;
+            $g->LastAt = $m ? (string)$m->CreatedAt : $g->AcceptedAt;
+            $g->Unread = (int)$this->scalar("SELECT COUNT(*) FROM `ChatMessages` WHERE `Kind` = 'grp' AND `AppId` = :g AND `Id` > :l AND `SenderId` <> :me", ['g' => $g->RefId, 'l' => $g->LastReadId, 'me' => $me]);
+            $groups[] = $g;
+        }
+        if (!$rows && !$groups) return [];
         $last = []; $unread = [];
         foreach (['app', 'req', 'dir'] as $kind) {
             $ids = array_map(fn($r) => (int)$r->RefId, array_filter($rows, fn($r) => $r->Kind === $kind));
@@ -200,6 +311,7 @@ trait ChatData
             $t->Unread = $unread[$t->Kind . $t->RefId] ?? 0;
             $out[] = $t;
         }
+        $out = array_merge($out, $groups);
         usort($out, fn($a, $b) => strcmp($b->LastAt, $a->LastAt));
         return $out;
     }
@@ -262,12 +374,19 @@ trait ChatData
     /** অন্যজনের পাঠানো মেসেজগুলো পড়া হয়েছে চিহ্নিত করে */
     public function MarkChatRead(Obj $t, int $me): void
     {
+        if ($t->Kind === 'grp') {
+            $this->exec("UPDATE `ChatGroupMembers` SET `LastReadId` = (SELECT COALESCE(MAX(`Id`), 0) FROM `ChatMessages` WHERE `Kind` = 'grp' AND `AppId` = :g) WHERE `GroupId` = :g2 AND `UserId` = :me",
+                ['g' => $t->RefId, 'g2' => $t->RefId, 'me' => $me]);
+            return;
+        }
         $this->exec('UPDATE `ChatMessages` SET `ReadAt` = :t WHERE `Kind` = :k AND `AppId` = :a AND `SenderId` <> :me AND `ReadAt` IS NULL', ['t' => now(), 'k' => $t->Kind, 'a' => $t->RefId, 'me' => $me]);
     }
 
     /** আমার পাঠানো মেসেজের মধ্যে অন্যজন কোনটা পর্যন্ত পড়েছে (Seen দেখানোর জন্য) */
     public function GetChatSeenUpTo(Obj $t, int $me): int
     {
+        // গ্রুপ: সবাই কোন মেসেজ পর্যন্ত পড়েছে (সবচেয়ে কম যতদূর)
+        if ($t->Kind === 'grp') return (int)$this->scalar('SELECT COALESCE(MIN(`LastReadId`), 0) FROM `ChatGroupMembers` WHERE `GroupId` = :g AND `UserId` <> :me', ['g' => $t->RefId, 'me' => $me]);
         return (int)$this->scalar('SELECT COALESCE(MAX(`Id`), 0) FROM `ChatMessages` WHERE `Kind` = :k AND `AppId` = :a AND `SenderId` = :me AND `ReadAt` IS NOT NULL', ['k' => $t->Kind, 'a' => $t->RefId, 'me' => $me]);
     }
 
