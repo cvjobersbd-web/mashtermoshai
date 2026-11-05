@@ -171,6 +171,26 @@ trait PaymentData
         return $m ? $this->decorateMethod($m) : null;
     }
 
+    /** এজেন্ট মেথডের নম্বরের অ্যাকাউন্ট (AccountType = Agent, না থাকলে প্রথমটা) */
+    public function GetAgentAccount(int $methodId): ?Obj
+    {
+        $this->EnsurePaymentTables();
+        $a = $this->one("SELECT * FROM `PaymentAccounts` WHERE `MethodId` = :m ORDER BY CASE WHEN `AccountType` = 'Agent' THEN 0 ELSE 1 END, `IsActive` DESC, `SortOrder`, `Id` LIMIT 1", ['m' => $methodId]);
+        return $a ? $this->decorateAccount($a) : null;
+    }
+
+    /** এজেন্ট নম্বর বদলানো (না থাকলে নতুন অ্যাকাউন্ট) + মেথড চালু/বন্ধ */
+    public function SetAgentNumber(int $methodId, string $number, bool $active): void
+    {
+        $m = $this->GetPaymentMethod($methodId);
+        if (!$m) return;
+        $a = $this->GetAgentAccount($methodId);
+        if ($a) $this->exec("UPDATE `PaymentAccounts` SET `AccountNumber` = :n, `AccountType` = 'Agent', `IsActive` = 1 WHERE `Id` = :i", ['n' => $number, 'i' => $a->Id]);
+        else $this->insert("INSERT INTO `PaymentAccounts` (`MethodId`, `Title`, `AccountNumber`, `AccountType`, `IsActive`, `SortOrder`, `CreatedAt`) VALUES (:m, :t, :n, 'Agent', 1, 0, :d)",
+            ['m' => $methodId, 't' => $m->Name . ' এজেন্ট নম্বর', 'n' => $number, 'd' => now()]);
+        $this->exec('UPDATE `PaymentMethods` SET `IsActive` = :a WHERE `Id` = :i', ['a' => $active ? 1 : 0, 'i' => $methodId]);
+    }
+
     public function GetPaymentAccount(int $id): ?Obj
     {
         $this->EnsurePaymentTables();

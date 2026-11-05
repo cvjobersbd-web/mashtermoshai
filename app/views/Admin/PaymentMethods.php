@@ -94,6 +94,42 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
     </div>
     <?= csrf_field() ?>
 
+    <?php $agents = array_values(array_filter($methods, fn($m) => $m->Kind === 'agent')); ?>
+    <?php if ($agents): ?>
+    <div class="pm-card" id="pmAgents">
+        <h5 style="margin:0 0 4px;color:#08224A;font-weight:700;"><i class="fas fa-mobile-screen-button" style="color:#E2136E;"></i> এজেন্ট নম্বর (Cash Out)</h5>
+        <p style="color:#64748B;font-size:13.5px;margin:0 0 14px;">ইউজাররা পেমেন্ট পেজে এই নম্বরগুলোতে Cash Out করে। নম্বর বদলে <b>Save</b> চাপুন — সাথে সাথে পেমেন্ট পেজে নতুন নম্বর দেখাবে। সুইচ বন্ধ করলে ওই ওয়ালেট পেমেন্ট পেজে দেখাবে না।</p>
+        <form id="agForm" class="ag-grid" novalidate>
+            <?php foreach ($agents as $m): $ac = db()->GetAgentAccount((int)$m->Id); ?>
+                <div class="ag-item" style="--wc:<?= e($m->Color) ?>;" data-ag="<?= (int)$m->Id ?>">
+                    <div class="ag-top">
+                        <span class="ag-logo"><?php if (!is_blank($m->LogoUrl ?? null)): ?><img src="<?= e($m->LogoUrl) ?>" alt="<?= e($m->Name) ?>" onerror="this.replaceWith(document.createTextNode(<?= e(js($m->Name)) ?>))" /><?php else: ?><?= e($m->Name) ?><?php endif; ?></span>
+                        <label class="ag-on" title="পেমেন্ট পেজে দেখাবে"><input type="checkbox" class="pm-sw" name="on[<?= (int)$m->Id ?>]" value="1"<?= $m->IsActive ? ' checked' : '' ?> /></label>
+                    </div>
+                    <label class="ag-lbl" for="ag<?= (int)$m->Id ?>"><?= e($m->Name) ?> এজেন্ট নম্বর</label>
+                    <input class="ag-in" id="ag<?= (int)$m->Id ?>" type="text" inputmode="numeric" maxlength="14" name="num[<?= (int)$m->Id ?>]" value="<?= e((string)($ac->AccountNumber ?? '')) ?>" placeholder="01XXXXXXXXX" />
+                </div>
+            <?php endforeach; ?>
+            <div class="ag-foot"><button type="submit" class="pm-btn pri" id="agSave"><i class="fas fa-save"></i> Save</button><span id="agMsg" role="status"></span></div>
+        </form>
+    </div>
+    <style>
+        .ag-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .ag-item { border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 12px 14px; background: #fff; border-top: 4px solid var(--wc, #1D7FE5); }
+        .ag-item.bad { border-color: #DC2626; }
+        .ag-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 32px; }
+        .ag-logo { font-weight: 800; color: var(--wc); font-size: 16px; display: flex; align-items: center; height: 100%; }
+        .ag-logo img { height: 28px; width: auto; max-width: 110px; object-fit: contain; }
+        .ag-lbl { display: block; font-size: 12.5px; font-weight: 700; color: #475569; margin: 10px 0 5px; }
+        .ag-in { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 11px; font-size: 16px; font-weight: 700; letter-spacing: .4px; color: #0F172A; font-family: inherit; background: #F8FBFE; }
+        .ag-in:focus { outline: none; border-color: var(--wc, #1D7FE5); background: #fff; }
+        .ag-foot { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        #agMsg { font-size: 13.5px; font-weight: 600; } #agMsg.ok { color: #15803D; } #agMsg.err { color: #B91C1C; }
+        @media (max-width: 900px) { .ag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 480px) { .ag-grid { grid-template-columns: minmax(0, 1fr); } }
+    </style>
+    <?php endif; ?>
+
     <div class="pm-card pm-rules" id="pmRules">
         <h5><i class="fas fa-scale-balanced" style="color:#F59E0B;"></i> পেমেন্ট বাধ্যতামূলক করার নিয়ম</h5>
         <p>বন্ধ থাকলে সবাই আগের মতো ফ্রিতে ব্যবহার করতে পারবে। পেমেন্ট নেওয়া শুরু করতে চাইলে চালু করুন।</p>
@@ -209,6 +245,22 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
         return r.json();
     }
     function findM(id) { return M.find(function (m) { return m.Id === id; }); }
+    // এজেন্ট নম্বর সেভ
+    var ag = document.getElementById('agForm');
+    if (ag) ag.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = document.getElementById('agSave'), msg = document.getElementById('agMsg');
+        ag.querySelectorAll('.ag-item').forEach(function (x) { x.classList.remove('bad'); });
+        btn.disabled = true; msg.className = ''; msg.textContent = 'সেভ হচ্ছে...';
+        try {
+            var fd = new FormData(ag); fd.delete('__RequestVerificationToken');
+            var d = await post('/Admin/SaveAgentNumbers', fd);
+            msg.className = d.success ? 'ok' : 'err'; msg.textContent = (d.success ? '✓ ' : '') + (d.message || '');
+            if (!d.success && d.methodId) { var it = ag.querySelector('[data-ag="' + d.methodId + '"]'); if (it) { it.classList.add('bad'); it.querySelector('input.ag-in').focus(); } }
+            if (d.success) setTimeout(function () { location.reload(); }, 900);
+        } catch (x) { msg.className = 'err'; msg.textContent = 'সেভ করা যায়নি — আবার চেষ্টা করুন।'; }
+        btn.disabled = false;
+    });
     function findA(id) { var o = null; M.forEach(function (m) { (m.Accounts || []).forEach(function (a) { if (a.Id === id) o = a; }); }); return o; }
     function pv(el, url, icon) { el.innerHTML = url ? '<img src="' + String(url).replace(/"/g, '&quot;') + '" alt="" />' : '<i class="fas ' + icon + '"></i>'; }
     function preview(input, el, icon) { input.addEventListener('change', function () { var f = input.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { pv(el, r.result, icon); }; r.readAsDataURL(f); }); }

@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -1564,6 +1564,25 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SavePaymentAccount — id, methodId, title, accountName, accountNumber, bankName, branch, routingNumber, accountType, isActive, qr(file) / qrUrl / removeQr */
+    /** POST /Admin/SaveAgentNumbers (num[{methodId}], on[{methodId}]) — bKash / Nagad / Rocket / Upay এর এজেন্ট নম্বর */
+    public function SaveAgentNumbers_POST(): void
+    {
+        $this->requireAdminJson();
+        $nums = (array)($_POST['num'] ?? []); $ons = (array)($_POST['on'] ?? []);
+        $bn = ['০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9'];
+        $save = [];
+        foreach ($this->db->GetPaymentMethods() as $m) {
+            if ($m->Kind !== 'agent' || !array_key_exists((string)$m->Id, $nums)) continue;
+            $n = preg_replace('/\D/', '', strtr((string)$nums[(string)$m->Id], $bn));
+            if (str_starts_with($n, '880')) $n = substr($n, 2);
+            if (!preg_match('/^01[3-9]\d{8}$/', $n)) json_response(['success' => false, 'message' => "{$m->Name} এর এজেন্ট নম্বর সঠিক নয় — ১১ ডিজিটের নম্বর দিন (যেমন 01791619101)।", 'methodId' => $m->Id]);
+            $save[$m->Id] = [$n, !empty($ons[(string)$m->Id])];
+        }
+        if (!$save) json_response(['success' => false, 'message' => 'কোনো এজেন্ট মেথড পাওয়া যায়নি।']);
+        foreach ($save as $mid => [$n, $on]) $this->db->SetAgentNumber((int)$mid, $n, $on);
+        json_response(['success' => true, 'message' => 'এজেন্ট নম্বর সেভ হয়েছে — পেমেন্ট পেজে এখনই নতুন নম্বর দেখাবে।']);
+    }
+
     public function SavePaymentAccount_POST(): void
     {
         $this->requireAdminJson();
