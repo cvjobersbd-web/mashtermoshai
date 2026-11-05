@@ -191,15 +191,24 @@ trait TeacherDetailsData
         if ($this->subColsReady) return;
         $this->subColsReady = true;
         $this->EnsurePaymentTables();
-        foreach (['RemindedAt', 'Reminded1At'] as $c) {
+        foreach (['RemindedAt', 'Reminded1At', 'EndNotifiedAt'] as $c) {
             try { $this->pdo->query("SELECT `$c` FROM `UserSubscriptions` LIMIT 1"); }
             catch (Throwable $e) { try { $this->pdo->exec("ALTER TABLE `UserSubscriptions` ADD COLUMN `$c` " . ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? 'TEXT' : 'DATETIME') . ' NULL'); } catch (Throwable $e2) { } }
         }
     }
 
-    /** এই ইউজারের যে Subscription ৫ দিনের মধ্যে শেষ হবে (আর পরে কোনো নতুন Subscription নেই) — না থাকলে null */
-    public function GetExpiringSubscription(int $userId, int $days = 5): ?Obj
+    /** মেয়াদ শেষের কত দিন আগে থেকে সতর্ক করা হবে (Admin → Subscriptions, ডিফল্ট ৫) */
+    public function SubAlertDays(): int
     {
+        static $d = null;
+        if ($d === null) $d = max(1, min(30, (int)($this->GetSiteContent(['sub_alert_days' => '5'])['sub_alert_days'] ?? 5) ?: 5));
+        return $d;
+    }
+
+    /** এই ইউজারের যে Subscription সতর্ক করার দিনের মধ্যে শেষ হবে (আর পরে কোনো নতুন Subscription নেই) — না থাকলে null */
+    public function GetExpiringSubscription(int $userId, ?int $days = null): ?Obj
+    {
+        $days ??= $this->SubAlertDays();
         try {
             $this->EnsurePaymentTables();
             $now = now(); $lim = date('Y-m-d H:i:s', time() + $days * 86400);
@@ -227,7 +236,8 @@ trait TeacherDetailsData
             $now = now();
 
             // 1) রিমাইন্ডার — প্রত্যেক ইউজার+ধরনের সবচেয়ে দেরিতে শেষ হওয়া Subscription
-            foreach ([['RemindedAt', 5], ['Reminded1At', 1]] as [$col, $days]) {
+            $alert = $this->SubAlertDays();
+            foreach ($alert > 1 ? [['RemindedAt', $alert], ['Reminded1At', 1]] : [['Reminded1At', 1]] as [$col, $days]) {
                 $rows = $this->all("SELECT s.* FROM `UserSubscriptions` s WHERE s.`EndsAt` IS NOT NULL AND s.`EndsAt` > :n AND s.`EndsAt` <= :l AND s.`$col` IS NULL
                     AND NOT EXISTS (SELECT 1 FROM `UserSubscriptions` x WHERE x.`UserId` = s.`UserId` AND x.`Audience` = s.`Audience` AND x.`EndsAt` > s.`EndsAt`)",
                     ['n' => $now, 'l' => date('Y-m-d H:i:s', time() + $days * 86400)]);
@@ -246,6 +256,15 @@ trait TeacherDetailsData
                 }
             }
 
+            // 1b) শিক্ষার্থীর প্যাকেজের মেয়াদ শেষ (পরে নতুন প্যাকেজ নেই) — একবার জানানো
+            $ended = $this->all("SELECT s.* FROM `UserSubscriptions` s WHERE s.`Audience` = 'Student' AND s.`EndsAt` IS NOT NULL AND s.`EndsAt` <= :n AND s.`EndsAt` > :old AND s.`EndNotifiedAt` IS NULL
+                AND NOT EXISTS (SELECT 1 FROM `UserSubscriptions` x WHERE x.`UserId` = s.`UserId` AND x.`Audience` = 'Student' AND (x.`EndsAt` IS NULL OR x.`EndsAt` > s.`EndsAt`))",
+                ['n' => $now, 'old' => date('Y-m-d H:i:s', time() - 7 * 86400)]);
+            foreach ($ended as $s) {
+                $this->CreateNotification((int)$s->UserId, 'প্যাকেজের মেয়াদ শেষ', "আপনার প্যাকেজ “{$s->PackageName}” এর মেয়াদ শেষ হয়েছে — টিচারের ছবি / যোগাযোগের তথ্য, Direct Request, চ্যাট আর Tuition পোস্ট বন্ধ। চালু রাখতে প্যাকেজ রিনিউ করুন।", 'danger', '/Package?for=student', 'fa-hourglass-end');
+                $this->exec('UPDATE `UserSubscriptions` SET `EndNotifiedAt` = :t WHERE `Id` = :i', ['t' => $now, 'i' => (int)$s->Id]);
+            }
+
             // 2) মেয়াদ শেষ হওয়া টিচার → সাধারণ ইউজার (যাদের কখনো প্যাকেজ ছিল না, তাদের বদলায় না)
             $expired = $this->all("SELECT u.`Id`, u.`FullName` FROM `Users` u WHERE u.`Role` = 'Teacher'
                 AND EXISTS (SELECT 1 FROM `UserSubscriptions` s WHERE s.`UserId` = u.`Id` AND s.`Audience` = 'Teacher')
@@ -256,5 +275,41 @@ trait TeacherDetailsData
                 $this->CreateNotification((int)$u->Id, 'টিচার প্যাকেজের মেয়াদ শেষ', 'আপনার টিচার প্যাকেজের মেয়াদ শেষ হয়েছে — অ্যাকাউন্ট এখন সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্ট। প্যাকেজ রিনিউ করলে আবার টিচার হয়ে যাবেন (আপনার সব তথ্য রাখা আছে)।', 'danger', '/Package?for=teacher', 'fa-user-clock');
             }
         } catch (Throwable $e) { error_log('[SubscriptionHousekeeping] ' . $e->getMessage()); }
+    }
+
+    /**
+     * Admin → Subscriptions: প্রত্যেক ইউজার (টিচার / শিক্ষার্থী আলাদা) — শেষ প্যাকেজ, তার দাম, মোট কতবার কিনেছে, মোট কত টাকা, মেয়াদ
+     * @return Obj[] (Audience, UserId, Name, UserName, Role, Photo, Package, Price, Bought, StartsAt, EndsAt, Count, Total, DaysLeft, State: active|expiring|expired|credit)
+     */
+    public function GetSubscriptionOverview(): array
+    {
+        try {
+            $this->EnsurePaymentTables();
+            $rows = $this->all('SELECT s.`Id`, s.`UserId`, s.`Audience`, s.`PackageName`, s.`StartsAt`, s.`EndsAt`, s.`PostsTotal`, s.`PostsUsed`, s.`CreatedAt`,
+                    p.`Amount`, u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
+                FROM `UserSubscriptions` s LEFT JOIN `PaymentRequests` p ON p.`Id` = s.`PaymentId` LEFT JOIN `Users` u ON u.`Id` = s.`UserId`
+                ORDER BY s.`Id` ASC');
+            $alert = $this->SubAlertDays(); $now = time(); $by = [];
+            foreach ($rows as $r) {
+                $k = $r->Audience . ':' . $r->UserId;
+                $o = $by[$k] ?? obj(['Audience' => (string)$r->Audience, 'UserId' => (int)$r->UserId, 'Name' => !is_blank($r->FullName) ? (string)$r->FullName : ((string)$r->UserName ?: 'Deleted user'),
+                    'UserName' => (string)$r->UserName, 'Role' => (string)$r->Role, 'Photo' => (string)($r->ProfileImageLink ?? ''), 'Count' => 0, 'Total' => 0, 'EndsAt' => null, 'Credit' => false]);
+                $o->Count++; $o->Total += (int)($r->Amount ?? 0);
+                // সবচেয়ে দেরিতে শেষ হওয়াটাই "বর্তমান" প্যাকেজ (মেয়াদহীন ক্রেডিট হলে সবশেষ কেনাটা)
+                if ($o->EndsAt === null || ($r->EndsAt !== null && $r->EndsAt >= $o->EndsAt) || $r->EndsAt === null) {
+                    $o->Package = (string)$r->PackageName; $o->Price = (int)($r->Amount ?? 0); $o->Bought = (string)$r->CreatedAt; $o->StartsAt = (string)$r->StartsAt;
+                    if ($r->EndsAt !== null) $o->EndsAt = (string)$r->EndsAt; else $o->Credit = (int)$r->PostsTotal === 0 || (int)$r->PostsUsed < (int)$r->PostsTotal;
+                }
+                $by[$k] = $o;
+            }
+            foreach ($by as $o) {
+                $left = $o->EndsAt ? (int)ceil((strtotime($o->EndsAt) - $now) / 86400) : null;
+                $o->DaysLeft = $left;
+                $o->State = $o->EndsAt === null ? ($o->Credit ? 'credit' : 'expired') : ($left <= 0 ? 'expired' : ($left <= $alert ? 'expiring' : 'active'));
+            }
+            $out = array_values($by);
+            usort($out, fn($a, $b) => [$a->State === 'expired', $b->Bought] <=> [$b->State === 'expired', $a->Bought]);
+            return $out;
+        } catch (Throwable $e) { error_log('[GetSubscriptionOverview] ' . $e->getMessage()); return []; }
     }
 }

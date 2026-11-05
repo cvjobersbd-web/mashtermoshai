@@ -306,7 +306,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'MetaPixel' => 'Meta Pixel',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -434,6 +434,13 @@ try {
                 <?php if ($pendingPayments > 0): ?>
                     <span class="badge-sidebar warning"><?= e($pendingPayments) ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Subscriptions'))): ?>
+        <li>
+            <a href="/Admin/Subscriptions" class="<?= $currentAction === 'Subscriptions' ? 'active' : '' ?>">
+                <i class="fas fa-id-card-clip"></i> Subscriptions
             </a>
         </li>
         <?php endif; ?>

@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -1564,6 +1564,34 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SavePaymentAccount — id, methodId, title, accountName, accountNumber, bankName, branch, routingNumber, accountType, isActive, qr(file) / qrUrl / removeQr */
+    /** GET /Admin/Subscriptions?aud=all|Teacher|Student&st=all|active|expiring|expired — কে কোন প্যাকেজ, কত টাকা, মেয়াদ কবে শেষ */
+    public function Subscriptions(): void
+    {
+        $this->requireAdminPage();
+        $all = $this->db->GetSubscriptionOverview();
+        $aud = (string)input_str('aud', 'all'); if (!in_array($aud, ['all', 'Teacher', 'Student'], true)) $aud = 'all';
+        $st = (string)input_str('st', 'all'); if (!in_array($st, ['all', 'active', 'expiring', 'expired'], true)) $st = 'all';
+        $stats = [];
+        foreach (['Teacher', 'Student'] as $a) {
+            $l = array_filter($all, fn($o) => $o->Audience === $a);
+            $stats[$a] = ['users' => count($l), 'active' => count(array_filter($l, fn($o) => in_array($o->State, ['active', 'expiring', 'credit'], true))),
+                'expiring' => count(array_filter($l, fn($o) => $o->State === 'expiring')), 'revenue' => array_sum(array_map(fn($o) => $o->Total, $l))];
+        }
+        $list = array_values(array_filter($all, fn($o) => ($aud === 'all' || $o->Audience === $aud)
+            && ($st === 'all' || $o->State === $st || ($st === 'active' && in_array($o->State, ['expiring', 'credit'], true)))));
+        $this->view(null, $list, ['Stats' => $stats, 'Aud' => $aud, 'St' => $st, 'AlertDays' => $this->db->SubAlertDays()]);
+    }
+
+    /** POST /Admin/SaveSubAlertDays (days) — মেয়াদ শেষের কত দিন আগে থেকে সতর্ক করা হবে */
+    public function SaveSubAlertDays_POST(): void
+    {
+        $this->requireAdminJson();
+        $d = input_int('days', 0);
+        if ($d < 1 || $d > 30) json_response(['success' => false, 'message' => '১ থেকে ৩০ দিনের মধ্যে দিন।']);
+        $this->db->SaveSiteContent(['sub_alert_days' => (string)$d]);
+        json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে মেয়াদ শেষের {$d} দিন আগে থেকে টিচার আর শিক্ষার্থীকে সতর্ক করা হবে।"]);
+    }
+
     /** POST /Admin/SaveAgentNumbers (num[{methodId}], on[{methodId}]) — bKash / Nagad / Rocket / Upay এর এজেন্ট নম্বর */
     public function SaveAgentNumbers_POST(): void
     {
