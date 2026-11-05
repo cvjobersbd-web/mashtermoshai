@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -1564,6 +1564,55 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SavePaymentAccount — id, methodId, title, accountName, accountNumber, bankName, branch, routingNumber, accountType, isActive, qr(file) / qrUrl / removeQr */
+    // ============================================================
+    // ===== এক ডিভাইসে লগইন — নতুন ডিভাইসের অনুরোধ, চালু ডিভাইস লগআউট =====
+    // ============================================================
+    /** GET /Admin/Devices?st=Pending|Active|all&q= */
+    public function Devices(): void
+    {
+        $this->requireAdminPage();
+        $st = (string)input_str('st', 'Pending'); if (!in_array($st, ['Pending', 'Active', 'all'], true)) $st = 'Pending';
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
+        $this->view(null, $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'On' => $this->db->DeviceLockOn(), 'Pending' => $this->db->CountPendingDevices()]);
+    }
+
+    /** POST /Admin/ApproveDevice (id) — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট */
+    public function ApproveDevice_POST(): void
+    {
+        $this->requireAdminJson();
+        $d = $this->db->ApproveDevice(input_int('id', 0), (int)current_user_id());
+        if (!$d) json_response(['success' => false, 'message' => 'অনুরোধটি পাওয়া যায়নি বা আগেই সিদ্ধান্ত হয়েছে।']);
+        $this->db->CreateNotification((int)$d->UserId, 'নতুন ডিভাইস চালু হয়েছে', "আপনার অনুরোধ Accept হয়েছে — এখন {$d->Label} থেকে লগইন করতে পারবেন। আগের ডিভাইস থেকে লগআউট করা হয়েছে।", 'success', '/Account/Login', 'fa-mobile-screen');
+        json_response(['success' => true, 'message' => 'Accept হয়েছে — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট হয়ে গেছে।']);
+    }
+
+    /** POST /Admin/RejectDevice (id) */
+    public function RejectDevice_POST(): void
+    {
+        $this->requireAdminJson();
+        $d = $this->db->RejectDevice(input_int('id', 0), (int)current_user_id());
+        if (!$d) json_response(['success' => false, 'message' => 'অনুরোধটি পাওয়া যায়নি বা আগেই সিদ্ধান্ত হয়েছে।']);
+        json_response(['success' => true, 'message' => 'অনুরোধ বাতিল করা হয়েছে — আগের ডিভাইস চালু থাকবে।']);
+    }
+
+    /** POST /Admin/RevokeDevice (id) — চালু ডিভাইস থেকে লগআউট */
+    public function RevokeDevice_POST(): void
+    {
+        $this->requireAdminJson();
+        $d = $this->db->RevokeDevice(input_int('id', 0), (int)current_user_id());
+        if (!$d) json_response(['success' => false, 'message' => 'ডিভাইসটি পাওয়া যায়নি বা আগেই লগআউট করা হয়েছে।']);
+        json_response(['success' => true, 'message' => 'লগআউট করা হয়েছে — এরপর যে ডিভাইসে লগইন করবেন সেটাই চালু হবে।']);
+    }
+
+    /** POST /Admin/SaveDeviceLock (on) — এক ডিভাইসের নিয়ম চালু / বন্ধ */
+    public function SaveDeviceLock_POST(): void
+    {
+        $this->requireAdminJson();
+        $on = input_bool('on');
+        $this->db->SaveSiteContent(['dev_lock' => $on ? '1' : '0']);
+        json_response(['success' => true, 'message' => $on ? 'চালু — শিক্ষার্থী আর টিচার একবারে একটা ডিভাইসেই লগইন থাকতে পারবেন।' : 'বন্ধ — যেকোনো ডিভাইসে লগইন করা যাবে।']);
+    }
+
     /** Subscriptions রিপোর্টের ফিল্টার (aud, st, from, to) পড়া */
     private function subFilters(): array
     {

@@ -31,6 +31,11 @@ class AccountController extends Controller
             else tempdata_set('Error', 'লগইনের আগে ইমেইল ভেরিফাই করুন। ' . $err);
             $this->redirectToAction('VerifyEmail');
         }
+        if ($user && device_lock_applies($user->Role)) {
+            // ✅ এক ডিভাইসে লগইন — অন্য ডিভাইসে চালু থাকলে অ্যাডমিনের অনুমতি লাগবে
+            $st = $this->db->CheckLoginDevice((int)$user->Id, device_hash(), device_label(), client_ip());
+            if ($st !== 'ok') { session_set('dev_uid', (int)$user->Id); $this->redirectToAction('Device'); }
+        }
         if ($user) {
             $this->db->UpdateLastLogin($user->UserName);
             session_regenerate_id(true);
@@ -307,5 +312,46 @@ class AccountController extends Controller
         if ($this->sendOtp((int)$u->Id, $err)) tempdata_set('Success', 'নতুন কোড পাঠানো হয়েছে। আগের কোডটা আর কাজ করবে না।');
         else tempdata_set('Error', $err);
         $this->redirectToAction('VerifyEmail');
+    }
+
+    // ============================================================
+    // ===== এক ডিভাইসে লগইন — নতুন ডিভাইসের জন্য অ্যাডমিনের কাছে অনুরোধ =====
+    // ============================================================
+    private function deviceUser(): Obj
+    {
+        $uid = (int)(session_get('dev_uid') ?? 0);
+        $u = $uid ? $this->db->GetUserById($uid) : null;
+        if (!$u || !device_lock_applies($u->Role)) { unset($_SESSION['dev_uid']); $this->redirectToAction('Login'); }
+        return $u;
+    }
+
+    /** GET /Account/Device */
+    public function Device(): void
+    {
+        if (session_get('UserName') !== null) $this->redirectToAction('Index', 'Home');
+        $u = $this->deviceUser();
+        $st = $this->db->CheckLoginDevice((int)$u->Id, device_hash(), device_label(), client_ip());
+        if ($st === 'ok') {
+            unset($_SESSION['dev_uid']);
+            tempdata_set('Success', 'এই ডিভাইস চালু করা হয়েছে — এখন লগইন করুন।');
+            $this->redirectToAction('Login');
+        }
+        $act = $this->db->GetActiveDevice((int)$u->Id);
+        $this->view(null, null, ['State' => $st, 'Name' => (string)($u->FullName ?: $u->UserName), 'This' => device_label(),
+            'Other' => $act ? (string)$act->Label : '', 'OtherSeen' => $act ? (string)($act->LastSeenAt ?: $act->CreatedAt) : '']);
+    }
+
+    /** POST /Account/Device (note) — অ্যাডমিনের কাছে অনুরোধ */
+    public function Device_POST(): void
+    {
+        $u = $this->deviceUser();
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        $this->db->RequestDevice((int)$u->Id, device_hash(), device_label(), client_ip(), $note);
+        $name = (string)($u->FullName ?: $u->UserName);
+        foreach ($this->db->GetAdmins() as $a) {
+            $this->db->CreateNotification((int)$a->Id, '📱 নতুন ডিভাইসে লগইনের অনুরোধ', "$name ({$u->Role}) " . device_label() . ' থেকে লগইন করতে চান' . ($note !== '' ? " — \"$note\"" : '') . '।', 'info', '/Admin/Devices', 'fa-mobile-screen');
+        }
+        tempdata_set('Success', 'অনুরোধ পাঠানো হয়েছে। অ্যাডমিন Accept করলে এই ডিভাইস থেকে লগইন করতে পারবেন — আগের ডিভাইস থেকে তখন লগআউট হয়ে যাবে।');
+        $this->redirectToAction('Device');
     }
 }

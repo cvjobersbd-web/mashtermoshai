@@ -306,7 +306,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -434,6 +434,14 @@ try {
                 <?php if ($pendingPayments > 0): ?>
                     <span class="badge-sidebar warning"><?= e($pendingPayments) ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Devices'))): $pendDev = 0; try { $pendDev = db()->CountPendingDevices(); } catch (Throwable $e) { } ?>
+        <li>
+            <a href="/Admin/Devices" class="<?= $currentAction === 'Devices' ? 'active' : '' ?>">
+                <i class="fas fa-mobile-screen"></i> Devices
+                <?php if ($pendDev > 0): ?><span class="badge-sidebar warning"><?= (int)$pendDev ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>

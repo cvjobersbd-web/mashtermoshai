@@ -1539,7 +1539,7 @@ function admin_action_rule(string $action): string
     if ($map === null) {
         $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
         $groups = [
-            'users' => ['TeacherOverview', 'UserOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword'],
+            'users' => ['TeacherOverview', 'UserOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
             'teachers' => ['TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
             'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
@@ -1908,4 +1908,50 @@ function teacher_chat_button(int $teacherId, string $cls): string
     if ($key) return '<a class="' . e($cls) . '" href="/Chat?c=' . e($key) . '"><i class="fas fa-comment-dots"></i> চ্যাট খুলুন</a>';
     return '<form method="post" action="/Chat/Start" style="display:inline;margin:0;">' . csrf_field() . '<input type="hidden" name="teacherId" value="' . $teacherId . '" />'
         . '<button type="submit" class="' . e($cls) . '"><i class="fas fa-comment-dots"></i> চ্যাট আনলক করুন</button></form>';
+}
+
+
+// ============================================================
+// ===== এক ডিভাইসে লগইন (শিক্ষার্থী / টিচার) =====
+// ============================================================
+/** এই ব্রাউজারের গোপন ডিভাইস কোড (কুকি mm_dev, ৫ বছর) — না থাকলে নতুন বানায় */
+function device_token(): string
+{
+    static $tok = null;
+    if ($tok !== null) return $tok;
+    $c = (string)($_COOKIE['mm_dev'] ?? '');
+    if (!preg_match('/^[a-f0-9]{48}$/', $c)) {
+        $c = bin2hex(random_bytes(24));
+        if (!headers_sent()) setcookie('mm_dev', $c, ['expires' => time() + 5 * 365 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax',
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+        $_COOKIE['mm_dev'] = $c;
+    }
+    return $tok = $c;
+}
+
+function device_hash(): string { return hash('sha256', 'mm-device:' . device_token()); }
+
+/** "Chrome · Windows" এর মতো ডিভাইসের নাম (User-Agent থেকে) */
+function device_label(?string $ua = null): string
+{
+    $ua = (string)($ua ?? ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    $b = 'Browser';
+    foreach (['Edg/' => 'Edge', 'OPR/' => 'Opera', 'SamsungBrowser' => 'Samsung Internet', 'UCBrowser' => 'UC Browser', 'Firefox/' => 'Firefox', 'CriOS' => 'Chrome', 'Chrome/' => 'Chrome', 'Safari/' => 'Safari'] as $k => $v) {
+        if (stripos($ua, $k) !== false) { $b = $v; break; }
+    }
+    $o = 'Unknown OS';
+    foreach (['Android' => 'Android', 'iPhone' => 'iPhone', 'iPad' => 'iPad', 'Windows' => 'Windows', 'Mac OS X' => 'Mac', 'CrOS' => 'Chromebook', 'Linux' => 'Linux'] as $k => $v) {
+        if (stripos($ua, $k) !== false) { $o = $v; break; }
+    }
+    if ($o === 'Android' && preg_match('/Android [\d.]+; ([^;)]+?)(?: Build|\))/', $ua, $m) && strlen(trim($m[1])) > 1 && strtoupper(trim($m[1])) !== 'K') $o = 'Android · ' . trim($m[1]);
+    return mb_substr($b . ' · ' . $o, 0, 120);
+}
+
+function client_ip(): string { return mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64); }
+
+/** এই রোলে এক ডিভাইসের নিয়ম খাটে কিনা */
+function device_lock_applies(?string $role): bool
+{
+    if ($role !== 'User' && $role !== 'Teacher') return false;
+    try { return db()->DeviceLockOn(); } catch (Throwable $e) { return false; }
 }

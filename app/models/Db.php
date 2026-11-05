@@ -20,6 +20,7 @@ require_once __DIR__ . '/ChatData.php';
 require_once __DIR__ . '/TeacherDetailsData.php';
 require_once __DIR__ . '/ReferralData.php';
 require_once __DIR__ . '/EmailVerifyData.php';
+require_once __DIR__ . '/DeviceData.php';
 
 class Db
 {
@@ -36,6 +37,7 @@ class Db
     use TeacherDetailsData;
     use ReferralData;
     use EmailVerifyData;
+    use DeviceData;
 
     private PDO $pdo;
 

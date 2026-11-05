@@ -21,6 +21,20 @@ abstract class Controller
                 if (($dbRole === 'Teacher' || $dbRole === 'User') && $dbRole !== $sr) session_set('UserRole', $dbRole);
             } catch (Throwable $e) { }
         }
+        // এক ডিভাইসে লগইন: অ্যাডমিন এই ডিভাইস লগআউট করলে / অন্য ডিভাইস Accept করলে সাথে সাথে লগআউট
+        if (($uid = current_user_id()) !== null && device_lock_applies(session_get('UserRole'))) {
+            try {
+                if (!$this->db->IsDeviceStillActive((int)$uid, device_hash(), device_label(), client_ip())) {
+                    session_clear();
+                    tempdata_set('Error', 'আপনার অ্যাকাউন্ট এই ডিভাইস থেকে লগআউট করা হয়েছে — অন্য ডিভাইসে চালু আছে বা অ্যাডমিন লগআউট করেছেন। এই ডিভাইসে চালাতে আবার লগইন করে অনুরোধ পাঠান।');
+                    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) || str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+                    if ($isAjax) json_response(['success' => false, 'message' => 'আপনি এই ডিভাইস থেকে লগআউট হয়ে গেছেন।', 'login' => true]);
+                    redirect('/Account/Login');
+                }
+            } catch (Throwable $e) { error_log('[device check] ' . $e->getMessage()); }
+        } elseif ($uid === null && !headers_sent()) {
+            device_token();   // লগইনের আগেই ডিভাইস কুকি বসে যায়
+        }
         // রেফারেল লিংক (?ref=CODE) — কোড মনে রাখা হয় (সেশন + ৩০ দিনের কুকি), সাইনআপের সময় রেফারার বোনাস পায়
         $ref = $_GET['ref'] ?? null;
         if (is_string($ref) && preg_match('/^MM[A-Z0-9]{6}$/', strtoupper($ref)) && current_user_id() === null) {
