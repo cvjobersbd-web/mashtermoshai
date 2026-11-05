@@ -1564,22 +1564,83 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SavePaymentAccount — id, methodId, title, accountName, accountNumber, bankName, branch, routingNumber, accountType, isActive, qr(file) / qrUrl / removeQr */
-    /** GET /Admin/Subscriptions?aud=all|Teacher|Student&st=all|active|expiring|expired — কে কোন প্যাকেজ, কত টাকা, মেয়াদ কবে শেষ */
+    /** Subscriptions রিপোর্টের ফিল্টার (aud, st, from, to) পড়া */
+    private function subFilters(): array
+    {
+        $aud = (string)input_str('aud', 'all'); if (!in_array($aud, ['all', 'Teacher', 'Student'], true)) $aud = 'all';
+        $st = (string)input_str('st', 'all'); if (!in_array($st, ['all', 'Approved', 'Pending', 'Rejected', 'never'], true)) $st = 'all';
+        $d = function (string $k): ?string { $v = trim((string)input_str($k, '')); $x = DateTime::createFromFormat('!Y-m-d', $v); return $x && $x->format('Y-m-d') === $v ? $v : null; };
+        $from = $d('from'); $to = $d('to');
+        if ($from && $to && $from > $to) [$from, $to] = [$to, $from];
+        return [$aud, $st, $from, $to];
+    }
+
+    /**
+     * GET /Admin/Subscriptions?aud=all|Teacher|Student&st=all|Approved|Pending|Rejected|never&from=Y-m-d&to=Y-m-d
+     * কে কোন প্যাকেজ কিনেছে / অপেক্ষমাণ / বাতিল / এখনো কেনেনি — তারিখ অনুযায়ী, মেয়াদ সহ
+     */
     public function Subscriptions(): void
     {
         $this->requireAdminPage();
+        [$aud, $st, $from, $to] = $this->subFilters();
         $all = $this->db->GetSubscriptionOverview();
-        $aud = (string)input_str('aud', 'all'); if (!in_array($aud, ['all', 'Teacher', 'Student'], true)) $aud = 'all';
-        $st = (string)input_str('st', 'all'); if (!in_array($st, ['all', 'active', 'expiring', 'expired'], true)) $st = 'all';
         $stats = [];
         foreach (['Teacher', 'Student'] as $a) {
             $l = array_filter($all, fn($o) => $o->Audience === $a);
             $stats[$a] = ['users' => count($l), 'active' => count(array_filter($l, fn($o) => in_array($o->State, ['active', 'expiring', 'credit'], true))),
                 'expiring' => count(array_filter($l, fn($o) => $o->State === 'expiring')), 'revenue' => array_sum(array_map(fn($o) => $o->Total, $l))];
         }
-        $list = array_values(array_filter($all, fn($o) => ($aud === 'all' || $o->Audience === $aud)
-            && ($st === 'all' || $o->State === $st || ($st === 'active' && in_array($o->State, ['expiring', 'credit'], true)))));
-        $this->view(null, $list, ['Stats' => $stats, 'Aud' => $aud, 'St' => $st, 'AlertDays' => $this->db->SubAlertDays()]);
+        // এই তারিখের মধ্যে সব পেমেন্ট — সারাংশ আর দিনভিত্তিক হিসাব (স্ট্যাটাস ফিল্টার ছাড়া)
+        $range = $this->db->GetPurchaseReport($aud, 'all', $from, $to);
+        $sum = ['Approved' => [0, 0], 'Pending' => [0, 0], 'Rejected' => [0, 0]];
+        $daily = [];
+        foreach ($range as $r) {
+            if (!isset($sum[$r->Status])) continue;
+            $sum[$r->Status][0]++; $sum[$r->Status][1] += $r->Amount;
+            $day = substr($r->Date, 0, 10);
+            $daily[$day] ??= ['Approved' => [0, 0], 'Pending' => [0, 0], 'Rejected' => [0, 0]];
+            $daily[$day][$r->Status][0]++; $daily[$day][$r->Status][1] += $r->Amount;
+        }
+        krsort($daily);
+        $list = $st === 'never' ? $this->db->GetNeverBoughtUsers($aud, $from, $to) : ($st === 'all' ? $range : array_values(array_filter($range, fn($r) => $r->Status === $st)));
+        $this->view(null, $list, ['Stats' => $stats, 'Aud' => $aud, 'St' => $st, 'From' => $from, 'To' => $to, 'Sum' => $sum, 'Daily' => $daily,
+            'NeverCount' => count($this->db->GetNeverBoughtUsers($aud, $from, $to)), 'AlertDays' => $this->db->SubAlertDays()]);
+    }
+
+    /** GET /Admin/SubscriptionsCsv?(একই ফিল্টার) — Excel এ খোলা যায় এমন CSV (UTF-8, বাংলা ঠিক থাকে) */
+    public function SubscriptionsCsv(): void
+    {
+        $this->requireAdminPage();
+        [$aud, $st, $from, $to] = $this->subFilters();
+        $audBn = ['Teacher' => 'Teacher', 'Student' => 'Student'];
+        $stBn = ['Approved' => 'Approved (কিনেছে)', 'Pending' => 'Pending (অপেক্ষমাণ)', 'Rejected' => 'Rejected (বাতিল)'];
+        $name = 'subscriptions_' . ($st === 'never' ? 'not-bought' : strtolower($st)) . '_' . ($aud === 'all' ? 'all' : strtolower($aud)) . '_' . ($from ?: 'start') . '_to_' . ($to ?: date('Y-m-d')) . '.csv';
+        $safe = fn($v) => is_string($v) && preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;   // Excel formula injection থেকে রক্ষা
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $name . '"');
+        header('Cache-Control: no-store');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");   // BOM — Excel এ বাংলা ঠিকমতো দেখায়
+        if ($st === 'never') {
+            fputcsv($out, ['#', 'Name', 'Username', 'Type', 'Phone', 'Email', 'Account Created', 'Last Login', 'Pending Payments', 'Rejected Payments']);
+            foreach ($this->db->GetNeverBoughtUsers($aud, $from, $to) as $i => $u) {
+                fputcsv($out, array_map($safe, [$i + 1, $u->Name, $u->UserName, $audBn[$u->Audience], $u->Phone, $u->Email, fmt_date($u->Joined, 'Y-m-d H:i'), $u->LastLogin ? fmt_date($u->LastLogin, 'Y-m-d H:i') : 'Never', $u->Pending, $u->Rejected]));
+            }
+        } else {
+            fputcsv($out, ['#', 'Payment Date', 'Name', 'Username', 'Type', 'Phone', 'Package', 'Amount (BDT)', 'Duration (Months)', 'Duration (Days)', 'Status', 'Method', 'Transaction ID', 'Starts', 'Ends', 'Days Left', 'User Total Bought (BDT)']);
+            $rows = $this->db->GetPurchaseReport($aud, $st === 'all' ? 'all' : $st, $from, $to);
+            $tot = 0;
+            foreach ($rows as $i => $r) {
+                if ($r->Status === 'Approved') $tot += $r->Amount;
+                fputcsv($out, array_map($safe, [$i + 1, fmt_date($r->Date, 'Y-m-d H:i'), $r->Name, $r->UserName, $audBn[$r->Audience] ?? $r->Audience, $r->Phone, $r->Package, $r->Amount, $r->Months, $r->Days,
+                    $stBn[$r->Status] ?? $r->Status, $r->Method, $r->Txn, $r->StartsAt ? fmt_date($r->StartsAt, 'Y-m-d') : '', $r->EndsAt ? fmt_date($r->EndsAt, 'Y-m-d') : '',
+                    $r->DaysLeft === null ? '' : max(0, $r->DaysLeft), $r->UserTotal]));
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['', 'Total rows', count($rows), '', '', '', 'Approved total (BDT)', $tot]);
+        }
+        fclose($out);
+        exit;
     }
 
     /** POST /Admin/SaveSubAlertDays (days) — মেয়াদ শেষের কত দিন আগে থেকে সতর্ক করা হবে */

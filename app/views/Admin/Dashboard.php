@@ -314,41 +314,6 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         </div>
     </div>
 
-    <!-- ===== Quick Actions ===== -->
-    <div class="card shadow mb-4">
-        <div class="card-header" style="background-color:#F5FBFF; color:#08224A;">
-            <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3 col-sm-6">
-                    <a href="/Admin/AddTuitionPost" class="btn w-100 d-flex align-items-center justify-content-center gap-2"
-                       style="background:#02B8F5; color:white; padding:14px; border-radius:10px; font-weight:600;">
-                        <i class="fas fa-plus-circle"></i> Add Tuition Post
-                    </a>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <a href="/Admin/TuitionApplications" class="btn w-100 d-flex align-items-center justify-content-center gap-2"
-                       style="background:#0d6efd; color:white; padding:14px; border-radius:10px; font-weight:600;">
-                        <i class="fas fa-user-check"></i> Applications
-                    </a>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <a href="/Admin/TeacherRequests" class="btn w-100 d-flex align-items-center justify-content-center gap-2"
-                       style="background:#8e63d9; color:white; padding:14px; border-radius:10px; font-weight:600;">
-                        <i class="fas fa-user-graduate"></i> Teacher Requests
-                    </a>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <a href="/Helpdesk" class="btn w-100 d-flex align-items-center justify-content-center gap-2"
-                       style="background:#2ecc71; color:white; padding:14px; border-radius:10px; font-weight:600;">
-                        <i class="fas fa-headset"></i> Helpdesk
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- ===== All Users ===== -->
     <div class="card shadow">
         <div class="card-header" style="background-color:#134856; color:white;">

@@ -3,8 +3,11 @@
 $ViewData['Title'] = 'Subscriptions';
 $list = is_array($Model) ? $Model : [];
 $st = $ViewBag->Stats; $aud = (string)$ViewBag->Aud; $fs = (string)$ViewBag->St; $days = (int)$ViewBag->AlertDays;
-$q = fn(array $p) => '/Admin/Subscriptions?' . http_build_query(array_merge(['aud' => $aud, 'st' => $fs], $p));
-$stLbl = ['active' => ['চালু', 'ok'], 'expiring' => ['শেষ হচ্ছে', 'warn'], 'expired' => ['মেয়াদ শেষ', 'no'], 'credit' => ['পোস্ট ক্রেডিট', 'ok']];
+$from = $ViewBag->From; $to = $ViewBag->To; $sum = $ViewBag->Sum; $daily = $ViewBag->Daily ?? [];
+$params = array_filter(['aud' => $aud, 'st' => $fs, 'from' => $from, 'to' => $to], fn($v) => $v !== null && $v !== '' && $v !== 'all');
+$csvUrl = '/Admin/SubscriptionsCsv' . ($params ? '?' . http_build_query($params) : '');
+$payLbl = ['Approved' => ['কিনেছে (Approved)', 'ok'], 'Pending' => ['অপেক্ষমাণ', 'warn'], 'Rejected' => ['বাতিল (Rejected)', 'no']];
+$dur = fn(int $m, int $d) => $m > 0 ? bn_num($m) . ' মাস' . ($d > 0 ? ' <small style="color:#64748B;">(' . $d . ' দিন)</small>' : '') : ($d > 0 ? $d . ' দিন' : 'মেয়াদহীন');
 ?>
 <style>
     .admin-main-content { margin-left: 250px; padding: 20px; min-height: calc(100vh - 80px); }
@@ -44,6 +47,21 @@ $stLbl = ['active' => ['চালু', 'ok'], 'expiring' => ['শেষ হচ�
     .sb-pill { font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
     .sb-pill.ok { background: #DCFCE7; color: #166534; } .sb-pill.warn { background: #FEF3C7; color: #92400E; } .sb-pill.no { background: #FEE2E2; color: #991B1B; }
     .sb-money { font-weight: 800; color: #0F172A; white-space: nowrap; }
+    .sb-flt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; margin-top: 10px; }
+    .sb-flt label { display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+    .sb-flt select, .sb-flt input { width: 100%; height: 42px; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 0 10px; font-size: 14px; font-family: inherit; background: #fff; color: #0F172A; }
+    .sb-flt-b { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+    .sb-btn.ghost { background: #F1F5F9; color: #334155; text-decoration: none; }
+    .sb-btn.green { background: #15803D; text-decoration: none; margin-left: auto; }
+    .sb-quick { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; font-size: 12.5px; }
+    .sb-quick span { color: #94A3B8; font-weight: 700; }
+    .sb-quick a { padding: 4px 11px; border-radius: 999px; background: #EFF6FF; color: #1D4ED8; font-weight: 700; text-decoration: none; }
+    .sb-range { margin: 16px 0 8px; font-size: 13.5px; font-weight: 700; color: #334155; }
+    .sb-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .sb-sum > div { border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 14px; border-left: 4px solid #94A3B8; }
+    .sb-sum .ok { border-left-color: #16A34A; } .sb-sum .warn { border-left-color: #F59E0B; } .sb-sum .no { border-left-color: #DC2626; }
+    .sb-sum small { display: block; color: #64748B; font-size: 12px; font-weight: 700; } .sb-sum b { font-size: 20px; color: #0F172A; display: block; } .sb-sum span { font-size: 13px; color: #475569; font-weight: 700; }
+    @media (max-width: 760px) { .sb-flt, .sb-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sb-btn.green { margin-left: 0; } }
     .sb-empty { text-align: center; color: #94A3B8; padding: 26px 0; }
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 14px; } .sb-stats { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 520px) { .sb-st .g { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -80,26 +98,86 @@ $stLbl = ['active' => ['চালু', 'ok'], 'expiring' => ['শেষ হচ�
     </div>
 
     <div class="sb-card">
-        <div class="sb-tabs">
-            <?php foreach (['all' => 'সবাই', 'Teacher' => 'শিক্ষক', 'Student' => 'শিক্ষার্থী'] as $k => $l): ?><a href="<?= e($q(['aud' => $k])) ?>" class="<?= $aud === $k ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?>
+        <h3><i class="fas fa-filter" style="color:#00B5E0;"></i> রিপোর্ট</h3>
+        <form class="sb-flt" method="get" action="/Admin/Subscriptions">
+            <div><label for="fAud">কার</label><select id="fAud" name="aud">
+                <?php foreach (['all' => 'সবাই (টিচার + শিক্ষার্থী)', 'Teacher' => 'শিক্ষক', 'Student' => 'শিক্ষার্থী'] as $k => $l): ?><option value="<?= $k ?>"<?= $aud === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?></select></div>
+            <div><label for="fSt">অবস্থা</label><select id="fSt" name="st">
+                <?php foreach (['all' => 'সব পেমেন্ট', 'Approved' => 'প্যাকেজ কিনেছে (Approved)', 'Pending' => 'অপেক্ষমাণ (Pending)', 'Rejected' => 'বাতিল (Rejected)', 'never' => 'এখনো কোনো প্যাকেজ কেনেনি'] as $k => $l): ?><option value="<?= $k ?>"<?= $fs === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?></select></div>
+            <div><label for="fFrom">From</label><input type="date" id="fFrom" name="from" value="<?= e((string)$from) ?>" max="<?= date('Y-m-d') ?>" /></div>
+            <div><label for="fTo">To</label><input type="date" id="fTo" name="to" value="<?= e((string)$to) ?>" max="<?= date('Y-m-d') ?>" /></div>
+            <div class="sb-flt-b">
+                <button type="submit" class="sb-btn"><i class="fas fa-magnifying-glass"></i> দেখুন</button>
+                <a class="sb-btn ghost" href="/Admin/Subscriptions">Reset</a>
+                <a class="sb-btn green" href="<?= e($csvUrl) ?>"><i class="fas fa-file-csv"></i> Export CSV</a>
+            </div>
+        </form>
+        <div class="sb-quick">
+            <?php $qd = fn($f, $t) => '/Admin/Subscriptions?' . http_build_query(array_filter(['aud' => $aud !== 'all' ? $aud : null, 'st' => $fs !== 'all' ? $fs : null, 'from' => $f, 'to' => $t])); ?>
+            <span>দ্রুত:</span>
+            <a href="<?= e($qd(date('Y-m-d'), date('Y-m-d'))) ?>">আজ</a>
+            <a href="<?= e($qd(date('Y-m-d', strtotime('-6 days')), date('Y-m-d'))) ?>">গত ৭ দিন</a>
+            <a href="<?= e($qd(date('Y-m-01'), date('Y-m-d'))) ?>">এই মাস</a>
+            <a href="<?= e($qd(date('Y-m-01', strtotime('first day of last month')), date('Y-m-t', strtotime('last day of last month')))) ?>">গত মাস</a>
+            <a href="<?= e($qd(date('Y-01-01'), date('Y-m-d'))) ?>">এই বছর</a>
         </div>
-        <div class="sb-tabs">
-            <?php foreach (['all' => 'সব অবস্থা', 'active' => 'চালু', 'expiring' => 'শিগগির শেষ হবে', 'expired' => 'মেয়াদ শেষ'] as $k => $l): ?><a href="<?= e($q(['st' => $k])) ?>" class="<?= $fs === $k ? 'on' : '' ?>" style="font-size:12.5px;"><?= $l ?></a><?php endforeach; ?>
+
+        <p class="sb-range"><i class="far fa-calendar"></i> <?= $from || $to ? e(($from ? fmt_date($from, 'd M Y') : 'শুরু থেকে') . ' — ' . ($to ? fmt_date($to, 'd M Y') : 'আজ পর্যন্ত')) : 'সব সময়ের হিসাব' ?> · <?= ['all' => 'টিচার + শিক্ষার্থী', 'Teacher' => 'শুধু শিক্ষক', 'Student' => 'শুধু শিক্ষার্থী'][$aud] ?></p>
+        <div class="sb-sum">
+            <div class="ok"><small>প্যাকেজ কিনেছে</small><b><?= (int)$sum['Approved'][0] ?> টি</b><span>৳<?= number_format($sum['Approved'][1]) ?></span></div>
+            <div class="warn"><small>অপেক্ষমাণ</small><b><?= (int)$sum['Pending'][0] ?> টি</b><span>৳<?= number_format($sum['Pending'][1]) ?></span></div>
+            <div class="no"><small>বাতিল</small><b><?= (int)$sum['Rejected'][0] ?> টি</b><span>৳<?= number_format($sum['Rejected'][1]) ?></span></div>
+            <div><small>এখনো কেনেনি</small><b><?= (int)$ViewBag->NeverCount ?> জন</b><span><?= $from || $to ? 'এই সময়ে অ্যাকাউন্ট খোলা' : 'সব অ্যাকাউন্ট' ?></span></div>
         </div>
-        <?php if (!$list): ?><div class="sb-empty">এই তালিকায় কেউ নেই।</div><?php else: ?>
+    </div>
+
+    <?php if ($fs !== 'never' && $daily): ?>
+    <div class="sb-card">
+        <h3><i class="fas fa-calendar-days" style="color:#8B5CF6;"></i> তারিখ অনুযায়ী</h3>
+        <div class="sb-tw"><table class="sb-tbl" style="min-width:560px;">
+            <tr><th>তারিখ</th><th>কিনেছে</th><th>আয়</th><th>অপেক্ষমাণ</th><th>বাতিল</th></tr>
+            <?php foreach (array_slice($daily, 0, 62, true) as $day => $x): ?>
+                <tr><td><b><?= e(fmt_date($day, 'd M Y')) ?></b> <small style="color:#94A3B8;"><?= e(fmt_date($day, 'l')) ?></small></td>
+                    <td><?= $x['Approved'][0] ? '<span class="sb-pill ok">' . (int)$x['Approved'][0] . ' জন</span>' : '—' ?></td>
+                    <td class="sb-money"><?= $x['Approved'][1] ? '৳' . number_format($x['Approved'][1]) : '—' ?></td>
+                    <td><?= $x['Pending'][0] ? '<span class="sb-pill warn">' . (int)$x['Pending'][0] . '</span>' : '—' ?></td>
+                    <td><?= $x['Rejected'][0] ? '<span class="sb-pill no">' . (int)$x['Rejected'][0] . '</span>' : '—' ?></td></tr>
+            <?php endforeach; ?>
+        </table></div>
+    </div>
+    <?php endif; ?>
+
+    <div class="sb-card">
+        <h3><i class="fas fa-list" style="color:#0EA5E9;"></i> <?= $fs === 'never' ? 'যারা এখনো কোনো প্যাকেজ কেনেননি' : 'পেমেন্ট / প্যাকেজের তালিকা' ?> <small style="font-weight:600;color:#94A3B8;font-size:13px;">(<?= count($list) ?>)</small></h3>
+        <?php if (!$list): ?><div class="sb-empty">এই ফিল্টারে কিছু পাওয়া যায়নি।</div>
+        <?php elseif ($fs === 'never'): ?>
         <div class="sb-tw"><table class="sb-tbl">
-            <tr><th>ইউজার</th><th>ধরন</th><th>বর্তমান / শেষ প্যাকেজ</th><th>প্যাকেজের দাম</th><th>কেনার তারিখ</th><th>মেয়াদ শেষ</th><th>অবস্থা</th><th>মোট কেনা</th></tr>
-            <?php foreach ($list as $o): [$sl, $sc] = $stLbl[$o->State]; ?>
+            <tr><th>ইউজার</th><th>ধরন</th><th>মোবাইল</th><th>অ্যাকাউন্ট খোলা</th><th>শেষ লগইন</th><th>পেমেন্টের চেষ্টা</th></tr>
+            <?php foreach ($list as $u): ?>
                 <tr>
-                    <td><div class="sb-who"><span class="sb-av"><?php if ($o->Photo !== ''): ?><img src="<?= e($o->Photo) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?><?= e(initials($o->Name, 'U')) ?></span>
-                        <div><a href="/Profile/Show/<?= (int)$o->UserId ?>" target="_blank" rel="noopener"><?= e($o->Name) ?></a><small>@<?= e($o->UserName) ?><?= $o->Role === 'User' && $o->Audience === 'Teacher' ? ' · এখন সাধারণ ইউজার' : '' ?></small></div></div></td>
-                    <td><span class="sb-aud <?= $o->Audience === 'Teacher' ? 't' : 's' ?>"><?= $o->Audience === 'Teacher' ? 'শিক্ষক' : 'শিক্ষার্থী' ?></span></td>
-                    <td><b><?= e($o->Package) ?></b></td>
-                    <td class="sb-money">৳<?= number_format((int)$o->Price) ?></td>
-                    <td><?= e(fmt_date($o->Bought, 'd M Y')) ?></td>
-                    <td><?= $o->EndsAt ? e(fmt_date($o->EndsAt, 'd M Y')) . ($o->DaysLeft > 0 ? '<br><small style="color:#64748B;">আর ' . (int)$o->DaysLeft . ' দিন</small>' : '') : '—' ?></td>
-                    <td><span class="sb-pill <?= $sc ?>"><?= $sl ?></span></td>
-                    <td class="sb-money">৳<?= number_format((int)$o->Total) ?><br><small style="color:#64748B;font-weight:600;"><?= (int)$o->Count ?> বার</small></td>
+                    <td><div class="sb-who"><span class="sb-av"><?= e(initials($u->Name, 'U')) ?></span><div><a href="/Profile/Show/<?= (int)$u->UserId ?>" target="_blank" rel="noopener"><?= e($u->Name) ?></a><small>@<?= e($u->UserName) ?><?= $u->Email !== '' ? ' · ' . e($u->Email) : '' ?></small></div></div></td>
+                    <td><span class="sb-aud <?= $u->Audience === 'Teacher' ? 't' : 's' ?>"><?= $u->Audience === 'Teacher' ? 'শিক্ষক' : 'শিক্ষার্থী' ?></span></td>
+                    <td><?= $u->Phone !== '' ? e($u->Phone) : '—' ?></td>
+                    <td><?= e(fmt_date($u->Joined, 'd M Y')) ?></td>
+                    <td><?= $u->LastLogin ? e(fmt_date($u->LastLogin, 'd M Y')) : '<span style="color:#94A3B8;">কখনো না</span>' ?></td>
+                    <td><?= $u->Pending ? '<span class="sb-pill warn">' . $u->Pending . ' অপেক্ষমাণ</span> ' : '' ?><?= $u->Rejected ? '<span class="sb-pill no">' . $u->Rejected . ' বাতিল</span>' : '' ?><?= !$u->Pending && !$u->Rejected ? '<span style="color:#94A3B8;">কোনো চেষ্টা নেই</span>' : '' ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </table></div>
+        <?php else: ?>
+        <div class="sb-tw"><table class="sb-tbl">
+            <tr><th>তারিখ</th><th>ইউজার</th><th>ধরন</th><th>প্যাকেজ</th><th>দাম</th><th>মেয়াদ</th><th>অবস্থা</th><th>মেয়াদ শেষ</th><th>মোট কেনা</th></tr>
+            <?php foreach ($list as $r): [$pl, $pc] = $payLbl[$r->Status] ?? [$r->Status, '']; ?>
+                <tr>
+                    <td style="white-space:nowrap;"><?= e(fmt_date($r->Date, 'd M Y')) ?><br><small style="color:#94A3B8;"><?= e(fmt_date($r->Date, 'h:i A')) ?></small></td>
+                    <td><div class="sb-who"><span class="sb-av"><?= e(initials($r->Name, 'U')) ?></span><div><a href="/Profile/Show/<?= (int)$r->UserId ?>" target="_blank" rel="noopener"><?= e($r->Name) ?></a><small>@<?= e($r->UserName) ?><?= $r->Phone !== '' ? ' · ' . e($r->Phone) : '' ?></small></div></div></td>
+                    <td><span class="sb-aud <?= $r->Audience === 'Teacher' ? 't' : 's' ?>"><?= $r->Audience === 'Teacher' ? 'শিক্ষক' : 'শিক্ষার্থী' ?></span></td>
+                    <td><b><?= e($r->Package) ?></b><br><small style="color:#94A3B8;"><?= e($r->Method) ?></small></td>
+                    <td class="sb-money">৳<?= number_format($r->Amount) ?></td>
+                    <td style="white-space:nowrap;"><?= $dur($r->Months, $r->Days) ?></td>
+                    <td><span class="sb-pill <?= $pc ?>"><?= $pl ?></span></td>
+                    <td style="white-space:nowrap;"><?php if ($r->EndsAt): ?><?= e(fmt_date($r->EndsAt, 'd M Y')) ?><br><small style="color:<?= $r->DaysLeft > 0 ? '#64748B' : '#B91C1C' ?>;"><?= $r->DaysLeft > 0 ? 'আর ' . (int)$r->DaysLeft . ' দিন' : 'মেয়াদ শেষ' ?></small><?php else: ?>—<?php endif; ?></td>
+                    <td class="sb-money">৳<?= number_format($r->UserTotal) ?></td>
                 </tr>
             <?php endforeach; ?>
         </table></div>

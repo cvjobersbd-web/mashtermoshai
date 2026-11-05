@@ -312,4 +312,66 @@ trait TeacherDetailsData
             return $out;
         } catch (Throwable $e) { error_log('[GetSubscriptionOverview] ' . $e->getMessage()); return []; }
     }
+
+    /**
+     * Admin → Subscriptions রিপোর্ট: প্যাকেজ কেনার প্রতিটা পেমেন্ট (Approved / Pending / Rejected)
+     * $aud = all|Teacher|Student, $status = all|Approved|Pending|Rejected, $from/$to = Y-m-d (পেমেন্ট জমার তারিখ, দুই দিনসহ)
+     * @return Obj[] (Id, Date, UserId, Name, UserName, Role, Phone, Email, Audience, Package, Amount, Months, Days, Status, Method, Txn, StartsAt, EndsAt, DaysLeft, UserTotal)
+     */
+    public function GetPurchaseReport(string $aud, string $status, ?string $from, ?string $to): array
+    {
+        try {
+            $this->EnsurePaymentTables();
+            $w = []; $a = [];
+            if ($aud !== 'all') { $w[] = 'p.`Audience` = :aud'; $a['aud'] = $aud; }
+            if ($status !== 'all') { $w[] = 'p.`Status` = :st'; $a['st'] = $status; }
+            if ($from) { $w[] = 'p.`CreatedAt` >= :f'; $a['f'] = $from . ' 00:00:00'; }
+            if ($to) { $w[] = 'p.`CreatedAt` < :t'; $a['t'] = date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00'; }
+            $rows = $this->all('SELECT p.`Id`, p.`CreatedAt`, p.`UserId`, p.`Audience`, p.`PackageName`, p.`Amount`, p.`DurationMonths`, p.`Status`, p.`MethodName`, p.`TxnId`, p.`ReviewedAt`,
+                    u.`FullName`, u.`UserName`, u.`Role`, u.`MobileNumber`, u.`Email`, s.`StartsAt`, s.`EndsAt`
+                FROM `PaymentRequests` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId` LEFT JOIN `UserSubscriptions` s ON s.`PaymentId` = p.`Id`'
+                . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY p.`CreatedAt` DESC, p.`Id` DESC LIMIT 5000', $a);
+            $tot = [];
+            foreach ($this->all("SELECT `UserId`, `Audience`, SUM(`Amount`) AS T FROM `PaymentRequests` WHERE `Status` = 'Approved' GROUP BY `UserId`, `Audience`") as $r) $tot[$r->Audience . ':' . $r->UserId] = (int)$r->T;
+            $now = time();
+            return array_map(function ($r) use ($tot, $now) {
+                $days = ($r->StartsAt && $r->EndsAt) ? (int)round((strtotime((string)$r->EndsAt) - strtotime((string)$r->StartsAt)) / 86400) : ((int)$r->DurationMonths * 30);
+                return obj([
+                    'Id' => (int)$r->Id, 'Date' => (string)$r->CreatedAt, 'UserId' => (int)$r->UserId,
+                    'Name' => !is_blank($r->FullName) ? (string)$r->FullName : ((string)$r->UserName ?: 'Deleted user'), 'UserName' => (string)$r->UserName,
+                    'Role' => (string)$r->Role, 'Phone' => (string)($r->MobileNumber ?? ''), 'Email' => (string)($r->Email ?? ''),
+                    'Audience' => (string)$r->Audience, 'Package' => (string)$r->PackageName, 'Amount' => (int)$r->Amount, 'Months' => (int)$r->DurationMonths, 'Days' => $days,
+                    'Status' => (string)$r->Status, 'Method' => (string)$r->MethodName, 'Txn' => (string)($r->TxnId ?? ''),
+                    'StartsAt' => $r->StartsAt ? (string)$r->StartsAt : null, 'EndsAt' => $r->EndsAt ? (string)$r->EndsAt : null,
+                    'DaysLeft' => $r->EndsAt ? (int)ceil((strtotime((string)$r->EndsAt) - $now) / 86400) : null,
+                    'UserTotal' => $tot[$r->Audience . ':' . $r->UserId] ?? 0,
+                ]);
+            }, $rows);
+        } catch (Throwable $e) { error_log('[GetPurchaseReport] ' . $e->getMessage()); return []; }
+    }
+
+    /** যারা এখনো কোনো প্যাকেজ কেনেননি (Approve হয়নি) — টিচার = Role Teacher, শিক্ষার্থী = Role User; $from/$to = অ্যাকাউন্ট খোলার তারিখ */
+    public function GetNeverBoughtUsers(string $aud, ?string $from, ?string $to): array
+    {
+        try {
+            $this->EnsurePaymentTables();
+            $out = [];
+            foreach (['Teacher' => 'Teacher', 'Student' => 'User'] as $audience => $role) {
+                if ($aud !== 'all' && $aud !== $audience) continue;
+                $w = ['u.`Role` = :r']; $a = ['r' => $role, 'au' => $audience];
+                if ($from) { $w[] = 'u.`CreatedAt` >= :f'; $a['f'] = $from . ' 00:00:00'; }
+                if ($to) { $w[] = 'u.`CreatedAt` < :t'; $a['t'] = date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00'; }
+                $rows = $this->all('SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`MobileNumber`, u.`CreatedAt`, u.`LastLoginAt`,
+                        (SELECT COUNT(*) FROM `PaymentRequests` x WHERE x.`UserId` = u.`Id` AND x.`Audience` = :au2 AND x.`Status` = \'Pending\') AS Pend,
+                        (SELECT COUNT(*) FROM `PaymentRequests` x WHERE x.`UserId` = u.`Id` AND x.`Audience` = :au3 AND x.`Status` = \'Rejected\') AS Rej
+                    FROM `Users` u WHERE ' . implode(' AND ', $w) . ' AND NOT EXISTS (SELECT 1 FROM `PaymentRequests` p WHERE p.`UserId` = u.`Id` AND p.`Audience` = :au AND p.`Status` = \'Approved\')
+                    ORDER BY u.`CreatedAt` DESC LIMIT 5000', $a + ['au2' => $audience, 'au3' => $audience]);
+                foreach ($rows as $r) $out[] = obj(['UserId' => (int)$r->Id, 'Name' => !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName, 'UserName' => (string)$r->UserName,
+                    'Email' => (string)($r->Email ?? ''), 'Phone' => (string)($r->MobileNumber ?? ''), 'Audience' => $audience, 'Joined' => (string)$r->CreatedAt,
+                    'LastLogin' => $r->LastLoginAt ? (string)$r->LastLoginAt : null, 'Pending' => (int)$r->Pend, 'Rejected' => (int)$r->Rej]);
+            }
+            usort($out, fn($x, $y) => strcmp($y->Joined, $x->Joined));
+            return $out;
+        } catch (Throwable $e) { error_log('[GetNeverBoughtUsers] ' . $e->getMessage()); return []; }
+    }
 }
