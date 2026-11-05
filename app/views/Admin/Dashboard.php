@@ -222,6 +222,23 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         }
     }
 
+    /* ===== All Users টেবিল — এক লাইনে পরিষ্কার ===== */
+    .admin-cards-table { margin-bottom: 0; }
+    .admin-cards-table th { font-size: 12px; text-transform: uppercase; letter-spacing: .3px; color: #64748B; white-space: nowrap; vertical-align: middle; }
+    .admin-cards-table td { vertical-align: middle; }
+    .admin-cards-table .au-id { color: #94A3B8; font-weight: 700; width: 44px; }
+    .admin-cards-table .au-user { min-width: 220px; }
+    .admin-cards-table .au-user b { display: block; color: #0F172A; font-size: 14.5px; line-height: 1.3; }
+    .admin-cards-table .au-user small { display: block; color: #64748B; font-size: 12.5px; line-height: 1.4; }
+    .admin-cards-table .au-user small.em { word-break: break-all; }
+    .admin-cards-table .au-dt { white-space: nowrap; font-size: 13.5px; }
+    .admin-cards-table .au-dt small { display: block; color: #94A3B8; font-size: 12px; }
+    .admin-cards-table td .badge { white-space: nowrap; }
+    .admin-cards-table .jv-badge { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+    .au-acts { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
+    .au-acts .btn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; }
+    @media (max-width: 992px) { .au-acts { flex-wrap: wrap; justify-content: flex-start; } .admin-cards-table .au-user { min-width: 0; } .au-u { text-align: right; min-width: 0; max-width: 70%; } }
+
     /* ===== Suspend ===== */
     .susp-badge { background: #08224A; color: #fff; margin-left: 4px; }
     .susp-until { display: block; font-size: 11px; color: #e74c3c; margin-top: 3px; white-space: nowrap; }
@@ -332,9 +349,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Username</th>
-                            <th>Full Name</th>
-                            <th>Email</th>
+                            <th>User</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Joined via</th>
@@ -346,10 +361,8 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                     <tbody>
                         <?php foreach ($Model as $user): $jvRef = $refMap[(int)$user->Id] ?? null; ?>
                             <tr data-jv="<?= $jvRef ? 'ref' : 'direct' ?>">
-                                <td data-label="ID"><?= e($user->Id) ?></td>
-                                <td data-label="Username"><strong><?= e($user->UserName) ?></strong></td>
-                                <td data-label="Full Name"><?= e($user->FullName) ?></td>
-                                <td data-label="Email"><?= e($user->Email) ?></td>
+                                <td data-label="ID" class="au-id"><?= e($user->Id) ?></td>
+                                <td data-label="User" class="au-user"><div class="au-u"><b><?= e(!is_blank($user->FullName) ? $user->FullName : $user->UserName) ?></b><small>@<?= e($user->UserName) ?></small><small class="em"><?= e($user->Email) ?></small></div></td>
                                 <td data-label="Role">
                                     <?php
                                         $roleClass = $user->Role === 'Admin' ? 'bg-warning' : ($user->Role === 'Teacher' ? 'bg-info' : 'bg-secondary');
@@ -371,9 +384,9 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                     <?php endif; ?>
                                 </td>
                                 <td data-label="Joined via"><?= joined_via_html($jvRef) ?></td>
-                                <td data-label="Created"><?= e(fmt_date($user->CreatedAt, 'd/m/Y')) ?></td>
-                                <td data-label="Last Login"><?= e(fmt_date($user->LastLoginAt, 'd/m/Y H:i', 'Never')) ?></td>
-                                <td class="td-actions">
+                                <td data-label="Created" class="au-dt"><?= e(fmt_date($user->CreatedAt, 'd M Y')) ?></td>
+                                <td data-label="Last Login" class="au-dt"><?php if ($user->LastLoginAt): ?><div class="au-u"><?= e(fmt_date($user->LastLoginAt, 'd M Y')) ?><small><?= e(fmt_date($user->LastLoginAt, 'h:i A')) ?></small></div><?php else: ?><span style="color:#94A3B8;">Never</span><?php endif; ?></td>
+                                <td class="td-actions"><div class="au-acts">
                                     <button class="btn btn-sm btn-info text-white" onclick="viewUser(<?= (int)$user->Id ?>)" title="View Full Profile">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -406,7 +419,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     <?php endif; ?>
-                                </td>
+                                </div></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
