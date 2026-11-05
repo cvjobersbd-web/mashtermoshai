@@ -77,6 +77,13 @@ class PaymentController extends Controller
         } elseif (@getimagesize($file['tmp_name']) === false) $this->fail('ছবিটি সঠিক নয়।', ['field' => 'receipt']);
 
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 500);
+        // এজেন্ট নম্বরে Cash Out: কোন নম্বর থেকে পাঠিয়েছে — অ্যাডমিন রসিদের সাথে মিলিয়ে দেখেন (নোটের শুরুতে থাকে)
+        if ($method->Kind === 'agent') {
+            $sender = preg_replace('/\D/', '', strtr((string)input_str('senderNumber', ''), ['০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9']));
+            if (str_starts_with($sender, '880')) $sender = substr($sender, 2);
+            if (!preg_match('/^01[3-9]\d{8}$/', $sender)) $this->fail('যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন (যেমন 01712345678)।', ['field' => 'sender']);
+            $note = mb_substr('যে নম্বর থেকে পাঠিয়েছেন: ' . $sender . ($note !== '' ? ' · ' . $note : ''), 0, 500);
+        }
         $info = implode(' · ', array_filter([$acc->Title, $acc->BankName, $acc->AccountNumber]));
         // অনুমান করা যায় না এমন নাম, যাতে অন্য কেউ রিসিট খুঁজে না পায়
         $url = save_upload($file, 'payments', 'rcpt_' . $uid . '_' . bin2hex(random_bytes(12)), $ext);

@@ -12,6 +12,7 @@ $pending = (int)($ViewBag->PendingCount ?? 0);
 $today = date('Y-m-d');
 $jsMethods = array_map(function ($m) {
     return ['id' => $m->Id, 'name' => $m->Name, 'kind' => $m->Kind, 'txnRequired' => $m->TxnRequired, 'instructions' => (string)$m->Instructions,
+        'logo' => (string)($m->LogoUrl ?? ''), 'color' => (string)$m->Color,
         'accounts' => array_map(fn($a) => ['id' => $a->Id, 'title' => $a->Title, 'accountName' => (string)$a->AccountName, 'accountNumber' => (string)$a->AccountNumber,
             'bankName' => (string)$a->BankName, 'branch' => (string)$a->Branch, 'routing' => (string)$a->RoutingNumber, 'accountType' => (string)$a->AccountType,
             'qr' => (string)$a->QrImageUrl], $m->Accounts)];
@@ -36,6 +37,26 @@ $jsMethods = array_map(function ($m) {
     .co-m.on { border-color: #1D7FE5; box-shadow: 0 0 0 4px rgba(29,127,229,.12); }
     .co-m.on::after { content: '\f00c'; font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free'; font-weight: 900; position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: #1D7FE5; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; }
 
+    /* এজেন্ট নম্বর (Cash Out) ওয়ালেট */
+    .co-methods.has-agent { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .co-m.agent { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; padding: 14px 14px 12px; min-height: 118px; text-align: left; }
+    .co-m.agent .lg { height: 34px; display: flex; align-items: center; }
+    .co-m.agent .lg img { height: 100%; width: auto; max-width: 130px; object-fit: contain; }
+    .co-m.agent .num { font-size: 15.5px; font-weight: 800; color: #0F172A; letter-spacing: .3px; font-family: var(--font-heading); }
+    .co-m.agent small { font-size: 12px; color: #64748B; margin-top: -6px; }
+    .co-m.agent.on { border-color: var(--wc, #1D7FE5); background: color-mix(in srgb, var(--wc, #1D7FE5) 7%, #fff); box-shadow: 0 0 0 4px color-mix(in srgb, var(--wc, #1D7FE5) 14%, transparent); }
+    .co-m.agent.on::after { background: var(--wc, #1D7FE5); }
+    .co-m.plain { grid-column: span 2; min-height: 64px; }
+    .co-agent { border-radius: 16px; padding: 18px; background: #FBF7F3; border: 1px solid #EFE3D6; }
+    .co-agent .lg img { height: 34px; width: auto; max-width: 150px; object-fit: contain; display: block; }
+    .co-agent .lbl { margin-top: 10px; font-size: 13.5px; font-weight: 700; color: #334155; }
+    .co-agent .big { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
+    .co-agent .big b { font-size: clamp(24px, 4vw, 30px); font-weight: 800; color: #0F172A; letter-spacing: .5px; font-family: var(--font-heading); }
+    .co-agent .big .co-copy { background: #fff; border: 1px solid #E2E8F0; padding: 7px 12px; }
+    .co-agent ol { margin: 0; padding-left: 24px; list-style: decimal; display: flex; flex-direction: column; gap: 8px; color: #334155; font-size: 14px; line-height: 1.6; }
+    .co-agent ol li { display: list-item; padding-left: 4px; }
+    .co-agent ol li::marker { font-weight: 800; color: #0F172A; }
+    .co-agent ol b { color: #0F172A; }
     .co-pay { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 20px; align-items: start; }
     .co-qr { text-align: center; }
     .co-qr-img { display: block; width: 100%; aspect-ratio: 1; border-radius: 16px; border: 1px solid #DCECF5; background: #fff; padding: 8px; cursor: zoom-in; overflow: hidden; }
@@ -116,14 +137,15 @@ $jsMethods = array_map(function ($m) {
         .co-qr { max-width: 260px; margin: 0 auto; width: 100%; }
         .co-f { grid-template-columns: 1fr; }
         .co-row span { min-width: 90px; }
-        .co-methods { grid-template-columns: repeat(2, 1fr); }
+        .co-methods, .co-methods.has-agent { grid-template-columns: repeat(2, 1fr); }
+        .co-agent { padding: 14px; }
     }
 </style>
 
 <div class="co-wrap">
     <a class="co-back" href="/Package?for=<?= $pkg->Audience === 'Student' ? 'student' : 'teacher' ?>"><i class="fas fa-arrow-left"></i> সব প্যাকেজ</a>
     <h1 class="co-h1">পেমেন্ট করুন</h1>
-    <p class="co-lead">QR কোড স্ক্যান করে টাকা পাঠান, তারপর পেমেন্টের প্রমাণ জমা দিন — অ্যাডমিন যাচাই করে Accept করলেই প্যাকেজ চালু হবে।</p>
+    <p class="co-lead">bKash, Nagad, Rocket বা Upay এর এজেন্ট নম্বরে Cash Out করুন অথবা Bank Transfer এর QR স্ক্যান করুন — তারপর রসিদ জমা দিন। অ্যাডমিন যাচাই করে Accept করলেই প্যাকেজ চালু হবে।</p>
 
     <?php if ($block): ?>
         <div class="co-alert warn"><i class="fas fa-exclamation-triangle" style="margin-top:3px;"></i><span><?= e($block) ?>
@@ -146,9 +168,17 @@ $jsMethods = array_map(function ($m) {
 
                 <div class="co-card">
                     <h2 class="co-step"><b>1</b> পেমেন্ট মেথড বাছাই করুন</h2>
-                    <div class="co-methods" role="radiogroup" aria-label="Payment method">
-                        <?php foreach ($methods as $i => $m): ?>
-                            <button type="button" class="co-m" role="radio" aria-checked="false" data-method="<?= (int)$m->Id ?>" title="<?= e($m->Name) ?>"><?= payment_logo_html($m, 36) ?></button>
+                    <?php $hasAgent = (bool)array_filter($methods, fn($m) => $m->Kind === 'agent'); ?>
+                    <div class="co-methods<?= $hasAgent ? ' has-agent' : '' ?>" role="radiogroup" aria-label="Payment method">
+                        <?php foreach ($methods as $i => $m): $acc0 = $m->Accounts[0] ?? null; ?>
+                            <?php if ($m->Kind === 'agent'): ?>
+                                <button type="button" class="co-m agent" style="--wc:<?= e($m->Color) ?>;" role="radio" aria-checked="false" data-method="<?= (int)$m->Id ?>" title="<?= e($m->Name) ?>">
+                                    <span class="lg"><?php if (!is_blank($m->LogoUrl ?? null)): ?><img src="<?= e($m->LogoUrl) ?>" alt="<?= e($m->Name) ?>" loading="lazy" onerror="this.parentNode.innerHTML='<?= e(addslashes(strip_tags($m->Name))) ?>'" /><?php else: ?><?= payment_logo_html($m, 30) ?><?php endif; ?></span>
+                                    <span class="num"><?= e(bn_num((string)($acc0->AccountNumber ?? ''))) ?></span><small>এজেন্ট নম্বর</small>
+                                </button>
+                            <?php else: ?>
+                                <button type="button" class="co-m<?= $hasAgent ? ' plain' : '' ?>" role="radio" aria-checked="false" data-method="<?= (int)$m->Id ?>" title="<?= e($m->Name) ?>"><?= payment_logo_html($m, 36) ?><?= $hasAgent && $m->Kind === 'bank' ? '<small style="margin-left:10px;color:#64748B;font-size:12.5px;">QR স্ক্যান করে</small>' : '' ?></button>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -156,7 +186,8 @@ $jsMethods = array_map(function ($m) {
                 <div class="co-card" id="coPayCard" hidden>
                     <h2 class="co-step"><b>2</b> <span id="coPayTitle">QR স্ক্যান করে টাকা পাঠান</span></h2>
                     <div class="co-accsel" id="coAccSel" hidden></div>
-                    <div class="co-pay">
+                    <div class="co-agent" id="coAgent" hidden></div>
+                    <div class="co-pay" id="coPayQr">
                         <div class="co-qr" id="coQr"></div>
                         <div>
                             <div class="co-amount"><div><small>এই পরিমাণ টাকা পাঠান</small><b><?= e(taka($pkg->Price)) ?></b></div>
@@ -174,6 +205,10 @@ $jsMethods = array_map(function ($m) {
                             <label for="coTxn">Transaction ID<span class="req" id="coTxnReq">*</span></label>
                             <input type="text" id="coTxn" name="txnId" maxlength="40" autocomplete="off" placeholder="যেমন: DJU8RDNST8" />
                             <div class="co-hint warn" id="coTxnBank" hidden><i class="fas fa-info-circle"></i> Bank Transfer-এ Transaction ID না থাকলে খালি রাখতে পারেন — deposit slip / receipt অবশ্যই upload করুন।</div>
+                        </div>
+                        <div class="full" data-f="sender" id="coSenderBox" hidden>
+                            <label for="coSender">যে নম্বর থেকে পাঠিয়েছেন<span class="req">*</span></label>
+                            <input type="text" id="coSender" name="senderNumber" maxlength="14" inputmode="numeric" autocomplete="tel" placeholder="01XXXXXXXXX" />
                         </div>
                         <div data-f="payDate">
                             <label for="coDate">Payment date<span class="req">*</span></label>
@@ -205,7 +240,7 @@ $jsMethods = array_map(function ($m) {
         <aside class="co-card co-sum">
             <h3>অর্ডার সারাংশ</h3>
             <div class="co-pkg">
-                <div class="aud"><?= $pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী · Tuition Post' ?></div>
+                <div class="aud"><?= $pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ' ?></div>
                 <div class="nm"><?= e($pkg->Name) ?></div>
                 <div class="du"><i class="far fa-clock"></i> <?= e($pkg->DurationLabel) ?></div>
             </div>
@@ -215,9 +250,9 @@ $jsMethods = array_map(function ($m) {
             <?php endif; ?>
             <div class="co-line tot"><span>মোট</span><span><?= e(taka($pkg->Price)) ?></span></div>
             <ul class="co-how">
-                <li><i class="fas fa-qrcode"></i><span>অ্যাপ দিয়ে QR স্ক্যান করে ঠিক <?= e(taka($pkg->Price)) ?> পাঠান</span></li>
+                <li><i class="fas fa-mobile-screen-button"></i><span>এজেন্ট নম্বরে Cash Out করে (বা Bank QR স্ক্যান করে) ঠিক <?= e(taka($pkg->Price)) ?> পাঠান</span></li>
                 <li><i class="fas fa-camera"></i><span>পেমেন্ট সফল হওয়ার স্ক্রিনশট নিন</span></li>
-                <li><i class="fas fa-file-arrow-up"></i><span>Transaction ID, তারিখ ও স্ক্রিনশট জমা দিন</span></li>
+                <li><i class="fas fa-file-arrow-up"></i><span>যে নম্বর থেকে পাঠিয়েছেন আর স্ক্রিনশট জমা দিন</span></li>
                 <li><i class="fas fa-circle-check"></i><span>অ্যাডমিন যাচাই করে Accept করলে নোটিফিকেশন পাবেন</span></li>
             </ul>
         </aside>
@@ -231,7 +266,8 @@ $jsMethods = array_map(function ($m) {
 (function () {
     var form = document.getElementById('coForm'); if (!form) return;
     var METHODS = <?= js($jsMethods) ?>;
-    var cur = null, curAcc = null, file = null;
+    var cur = null, curAcc = null, file = null, AMOUNT = <?= js(taka($pkg->Price)) ?>;
+    function toBn(s) { return String(s).replace(/[0-9]/g, function (d) { return '০১২৩৪৫৬৭৮৯'[d]; }); }
     function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
     function pickMethod(id) {
@@ -242,12 +278,15 @@ $jsMethods = array_map(function ($m) {
         sel.hidden = cur.accounts.length < 2;
         sel.innerHTML = cur.accounts.map(function (a, i) { return '<button type="button" data-acc="' + a.id + '">' + esc(a.title) + '</button>'; }).join('');
         pickAccount(cur.accounts[0].id);
+        var agent = cur.kind === 'agent';
         var ins = document.getElementById('coIns');
-        ins.hidden = !cur.instructions; ins.querySelector('span').textContent = cur.instructions;
-        document.getElementById('coPayTitle').textContent = cur.name + ' দিয়ে টাকা পাঠান';
-        var bank = cur.kind === 'bank' || !cur.txnRequired;
+        ins.hidden = agent || !cur.instructions; ins.querySelector('span').textContent = cur.instructions;
+        document.getElementById('coPayTitle').textContent = agent ? 'আমাদের এজেন্ট নম্বরে Cash Out করুন' : cur.name + ' দিয়ে টাকা পাঠান';
+        var bank = cur.kind === 'bank';
         document.getElementById('coTxnReq').hidden = !cur.txnRequired;
         document.getElementById('coTxnBank').hidden = !bank;
+        document.getElementById('coSenderBox').hidden = !agent;
+        document.querySelector('label[for="coTxn"]').firstChild.textContent = agent ? 'Transaction ID (ঐচ্ছিক)' : 'Transaction ID';
         document.getElementById('coPayCard').hidden = false; document.getElementById('coDetails').hidden = false;
     }
     function row(label, val) {
@@ -258,6 +297,21 @@ $jsMethods = array_map(function ($m) {
         curAcc = cur.accounts.find(function (a) { return a.id === id; });
         document.getElementById('coAccountId').value = id;
         document.querySelectorAll('#coAccSel [data-acc]').forEach(function (b) { b.classList.toggle('on', +b.getAttribute('data-acc') === id); });
+        var agentBox = document.getElementById('coAgent'), qrBox = document.getElementById('coPayQr');
+        if (cur.kind === 'agent') {
+            // এজেন্ট নম্বর + ধাপগুলো (অ্যাডমিনের লেখা নিয়ম, প্রতি লাইন একটা ধাপ)
+            var num = curAcc.accountNumber || '', bnNum = toBn(num);
+            var steps = (cur.instructions || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+            agentBox.innerHTML = '<div class="lg">' + (cur.logo ? '<img src="' + esc(cur.logo) + '" alt="' + esc(cur.name) + '" />' : '<b>' + esc(cur.name) + '</b>') + '</div>'
+                + '<div class="lbl">' + esc(cur.name) + ' এজেন্ট নম্বর</div>'
+                + '<div class="big"><b>' + esc(bnNum) + '</b><button type="button" class="co-copy" data-copy="' + esc(num) + '"><i class="far fa-copy"></i> নম্বর কপি</button></div>'
+                + (steps.length ? '<ol>' + steps.map(function (s) {
+                    return '<li>' + esc(s).replace(/\{number\}/g, '<b>' + esc(bnNum) + '</b>').replace(/\{amount\}/g, '<b>' + esc(AMOUNT) + '</b>') + '</li>';
+                }).join('') + '</ol>' : '');
+            agentBox.hidden = false; qrBox.hidden = true;
+            return;
+        }
+        agentBox.hidden = true; qrBox.hidden = false;
         var q = document.getElementById('coQr');
         q.innerHTML = curAcc.qr
             ? '<a class="co-qr-img" href="' + esc(curAcc.qr) + '" data-zoom><img src="' + esc(curAcc.qr) + '" alt="Scan to pay" /></a>'
@@ -314,6 +368,7 @@ $jsMethods = array_map(function ($m) {
         if (!cur) return showErr('পেমেন্ট মেথড বাছাই করুন।');
         var txn = form.txnId.value.trim();
         if (cur.txnRequired && !txn) return showErr('Transaction ID দিন।', 'txnId');
+        if (cur.kind === 'agent' && !/^01[3-9]\d{8}$/.test(form.senderNumber.value.replace(/[^0-9]/g, ''))) return showErr('যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন (যেমন 01712345678)।', 'sender');
         if (!form.payDate.value) return showErr('পেমেন্টের তারিখ দিন।', 'payDate');
         if (!file) return showErr('পেমেন্টের রিসিট / স্ক্রিনশট আপলোড করুন।', 'receipt');
         if (file.size > 5 * 1024 * 1024) return showErr('রিসিট ৫ MB এর কম হতে হবে।', 'receipt');

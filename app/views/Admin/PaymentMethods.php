@@ -6,7 +6,7 @@
 $ViewData['Title'] = 'Payment Methods';
 $methods = is_array($Model) ? $Model : [];
 $rules = $ViewBag->Rules ?? ['teacher' => false, 'student' => false];
-$kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব্যাংকিং', 'other' => 'অন্যান্য'];
+$kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব্যাংকিং (QR)', 'agent' => 'এজেন্ট নম্বর (Cash Out)', 'other' => 'অন্যান্য'];
 ?>
 <?= payment_logo_css() ?>
 <style>
@@ -157,14 +157,14 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
         <input type="hidden" name="id" value="0" />
         <div class="pm-f">
             <div><label>নাম</label><input type="text" name="name" maxlength="40" placeholder="যেমন: Upay" /></div>
-            <div><label>ধরন</label><select name="kind"><option value="mobile">মোবাইল ব্যাংকিং</option><option value="bank">ব্যাংক</option><option value="other">অন্যান্য</option></select></div>
+            <div><label>ধরন</label><select name="kind"><option value="agent">এজেন্ট নম্বর (Cash Out)</option><option value="mobile">মোবাইল ব্যাংকিং (QR)</option><option value="bank">ব্যাংক</option><option value="other">অন্যান্য</option></select></div>
             <div><label>রঙ <small>— লোগো না থাকলে এই রঙে নাম দেখায়</small></label><input type="color" name="color" value="#1D7FE5" /></div>
             <div class="chk" style="align-items:flex-end;"><label><input type="checkbox" class="pm-sw" name="txnRequired" checked /> Transaction ID বাধ্যতামূলক</label></div>
             <div class="full"><label>লোগো <small>— PNG/JPG/WEBP, ৩ MB এর কম</small></label>
                 <div class="pm-img"><span class="pv logo" id="mLogoPv"><i class="fas fa-image"></i></span>
                     <div class="r"><input type="file" name="logo" accept="image/*" id="mLogoFile" /><input type="text" name="logoUrl" placeholder="অথবা ছবির লিংক (https://...)" style="font-size:13px;" />
                         <label style="font-weight:600;margin:0;"><input type="checkbox" name="removeLogo" /> লোগো সরিয়ে দিন</label></div></div></div>
-            <div class="full"><label>পেমেন্ট করার নিয়ম <small>— পেমেন্ট পেজে দেখাবে</small></label><textarea name="instructions" maxlength="1000"></textarea></div>
+            <div class="full"><label>পেমেন্ট করার নিয়ম <small>— পেমেন্ট পেজে দেখাবে। এজেন্ট মেথডে প্রতি লাইন একটা ধাপ হয়; {number} = এজেন্ট নম্বর, {amount} = টাকার পরিমাণ</small></label><textarea name="instructions" maxlength="1000"></textarea></div>
             <div class="full chk"><label><input type="checkbox" class="pm-sw" name="isActive" checked /> চালু (পেমেন্ট পেজে দেখাবে)</label></div>
             <div class="pm-err" hidden></div>
         </div>

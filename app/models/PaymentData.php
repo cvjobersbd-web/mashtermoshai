@@ -11,7 +11,16 @@ trait PaymentData
 {
     private bool $paymentReady = false;
 
-    public const PAYMENT_KINDS = ['bank', 'mobile', 'other'];
+    public const PAYMENT_KINDS = ['bank', 'mobile', 'agent', 'other'];   // agent = এজেন্ট নম্বরে Cash Out
+    /** এজেন্ট নম্বরে Cash Out এর ধাপ — {number} আর {amount} পেমেন্ট পেজে বসে যায় */
+    public const AGENT_STEPS = "{app} অ্যাপ খুলুন (বা ডায়াল করুন {ussd}), তারপর “Cash Out” চাপুন।\nএজেন্ট নম্বর দিন: {number}\nটাকার পরিমাণ: {amount}। Cash Out চার্জ আপনার ওয়ালেট থেকে আলাদা করে কাটবে।\nপেমেন্ট হলে সফল হওয়ার স্ক্রিনটির স্ক্রিনশট নিন — এটিই আপনার রসিদ।";
+    private const AGENT_WALLETS = [
+        // নাম, রঙ, লোগো, এজেন্ট নম্বর, USSD
+        ['bKash', '#E2136E', 'https://jobersbd.com/wp-content/themes/jobersbd/assets/img/wallets/bkash.png', '01791619101', '*247#'],
+        ['Nagad', '#EC1C24', 'https://jobersbd.com/wp-content/themes/jobersbd/assets/img/wallets/nagad.png', '01829191916', '*167#'],
+        ['Rocket', '#8C3494', 'https://jobersbd.com/wp-content/themes/jobersbd/assets/img/wallets/rocket.png', '01819027978', '*322#'],
+        ['Upay', '#0B4EA2', 'https://jobersbd.com/wp-content/themes/jobersbd/assets/img/wallets/upay.png', '01829191916', '*268#'],
+    ];
     public const PAYMENT_STATUSES = ['Pending', 'Approved', 'Rejected'];
     public const DEFAULT_QR = 'https://i.ibb.co.com/nsPT0f9y/Pubali-Qr-code.png';
     public const DEFAULT_BANK = ['Title' => 'Pubali Bank — Khatunganj Branch', 'BankName' => 'PUBALI BANK PLC.', 'AccountName' => 'BENGOL BAY',
@@ -71,7 +80,33 @@ trait PaymentData
                     ['t' => $b['Title'], 'b' => $b['BankName'], 'a' => $b['AccountName'], 'n' => $b['AccountNumber'], 'br' => $b['Branch'], 'r' => $b['RoutingNumber'], 'old' => 'Bangla QR — স্ক্যান করে পেমেন্ট']);
                 $this->SaveSiteContent(['pay_bank_v2' => '1']);
             }
+            if (($this->GetSiteContent(['pay_agent_v1' => ''])['pay_agent_v1'] ?? '') === '') $this->migrateAgentWallets();
         } catch (Throwable $e) { error_log('[payment seed] ' . $e->getMessage()); }
+    }
+
+    /**
+     * একবারই: bKash / Nagad / Rocket / Upay — এজেন্ট নম্বরে Cash Out (লোগো সহ), Bank Transfer আগের মতো QR,
+     * "Other" বন্ধ (অ্যাডমিন চাইলে আবার চালু করতে পারবেন)। আগের QR অ্যাকাউন্টগুলো মুছে না, বন্ধ করে রাখে।
+     */
+    private function migrateAgentWallets(): void
+    {
+        foreach (self::AGENT_WALLETS as $i => [$name, $color, $logo, $num, $ussd]) {
+            $ins = strtr(self::AGENT_STEPS, ['{app}' => $name, '{ussd}' => $ussd]);
+            $mid = (int)$this->scalar('SELECT `Id` FROM `PaymentMethods` WHERE LOWER(`Name`) = LOWER(:n) ORDER BY `Id` LIMIT 1', ['n' => $name]);
+            if ($mid) {
+                $this->exec("UPDATE `PaymentMethods` SET `Kind` = 'agent', `Color` = :c, `LogoUrl` = :l, `TxnRequired` = 0, `Instructions` = :i, `IsActive` = 1, `SortOrder` = :s WHERE `Id` = :id",
+                    ['c' => $color, 'l' => $logo, 'i' => $ins, 's' => $i + 1, 'id' => $mid]);
+                $this->exec('UPDATE `PaymentAccounts` SET `IsActive` = 0 WHERE `MethodId` = :m', ['m' => $mid]);
+            } else {
+                $mid = (int)$this->insert("INSERT INTO `PaymentMethods` (`Name`, `Kind`, `Color`, `LogoUrl`, `TxnRequired`, `Instructions`, `IsActive`, `SortOrder`, `CreatedAt`) VALUES (:n, 'agent', :c, :l, 0, :i, 1, :s, :d)",
+                    ['n' => $name, 'c' => $color, 'l' => $logo, 'i' => $ins, 's' => $i + 1, 'd' => now()]);
+            }
+            $this->insert("INSERT INTO `PaymentAccounts` (`MethodId`, `Title`, `AccountName`, `AccountNumber`, `AccountType`, `IsActive`, `SortOrder`, `CreatedAt`) VALUES (:m, :t, NULL, :n, 'Agent', 1, 0, :d)",
+                ['m' => $mid, 't' => $name . ' এজেন্ট নম্বর', 'n' => $num, 'd' => now()]);
+        }
+        $this->exec("UPDATE `PaymentMethods` SET `SortOrder` = 5 WHERE `Kind` = 'bank'");
+        $this->exec("UPDATE `PaymentMethods` SET `IsActive` = 0, `SortOrder` = 6 WHERE LOWER(`Name`) = 'other'");
+        $this->SaveSiteContent(['pay_agent_v1' => '1']);
     }
 
     private function seedPaymentMethods(): void
