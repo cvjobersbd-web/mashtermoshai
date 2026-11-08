@@ -71,16 +71,17 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     @media (prefers-reduced-motion: reduce) { .hx-mq-track { animation: none; } }
     @media (max-width: 640px) { .hx-mq { font-size: 14.5px; } .hx-mq-track span { padding-right: 60px; } }
 </style>
-<section class="hx" aria-label="Find the Right Tutor in Bangladesh">
+<?php $hx = hero_texts(); $hxTitle = trim($hx['hx_title1'] . ' ' . $hx['hx_title2'] . ' ' . $hx['hx_title_hl']); ?>
+<section class="hx" aria-label="<?= e($hxTitle) ?>">
     <div class="hx-in">
         <div class="hx-text">
-            <h1>Find the Right Tutor<br>in <span class="bd">Bangladesh</span></h1>
-            <p class="hx-p">Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.</p>
+            <h1><?= nl2br(e($hx['hx_title1'])) ?><?php if ($hx['hx_title2'] !== '' || $hx['hx_title_hl'] !== ''): ?><br><?= e($hx['hx_title2']) ?><?= $hx['hx_title2'] !== '' && $hx['hx_title_hl'] !== '' ? ' ' : '' ?><?php if ($hx['hx_title_hl'] !== ''): ?><span class="bd"><?= e($hx['hx_title_hl']) ?></span><?php endif; ?><?php endif; ?></h1>
+            <p class="hx-p"><?= nl2br(e($hx['hx_desc'])) ?></p>
             <div class="hx-search">
-                <a class="fld" href="/FindTutor" aria-label="Your Right Tutor, Just a Click Away.">
-                    <span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span>Your Right Tutor, Just a Click Away.</span><span>Your Right Tutor, Just a Click Away.</span></span></span>
+                <a class="fld" href="<?= e($hx['hx_btn_link']) ?>" aria-label="<?= e($hx['hx_marquee'] !== '' ? $hx['hx_marquee'] : $hx['hx_btn']) ?>">
+                    <?php if ($hx['hx_marquee'] !== ''): ?><span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span><?= e($hx['hx_marquee']) ?></span><span><?= e($hx['hx_marquee']) ?></span></span></span><?php endif; ?>
                 </a>
-                <a class="hx-btn" href="/FindTutor">Find a Tutor</a>
+                <a class="hx-btn" href="<?= e($hx['hx_btn_link']) ?>"><?= e($hx['hx_btn']) ?></a>
             </div>
         </div>
 

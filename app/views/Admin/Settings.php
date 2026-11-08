@@ -979,6 +979,80 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
     })();
     </script>
 
+    <!-- ===== Hero Text (হোম পেজের বড় লেখা) ===== -->
+    <?php $hxT = hero_texts(); ?>
+    <style>
+        .hxt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+        .hxt-grid label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+        .hxt-grid label small { font-weight: 500; color: #94A3B8; }
+        .hxt-grid input, .hxt-grid textarea { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none; background: #fff; }
+        .hxt-grid input:focus, .hxt-grid textarea:focus { border-color: #02B8F5; }
+        .hxt-grid textarea { min-height: 84px; resize: vertical; }
+        .hxt-grid .full { grid-column: 1 / -1; } .hxt-grid .two { grid-column: span 2; }
+        .hxt-grid .bad input, .hxt-grid .bad textarea { border-color: #DC2626; }
+        .hxt-prev { margin-top: 16px; border: 1px dashed #CBD5E1; border-radius: 14px; padding: 20px 22px; background: linear-gradient(180deg, #F8FBFF, #EEF6FD); }
+        .hxt-prev small.l { display: block; font-size: 11.5px; font-weight: 800; color: #94A3B8; letter-spacing: .5px; margin-bottom: 8px; }
+        .hxt-prev h2 { margin: 0; font-size: 30px; font-weight: 800; color: #0F172A; line-height: 1.15; }
+        .hxt-prev h2 span { color: #00B5E0; }
+        .hxt-prev p { margin: 10px 0 0; color: #475569; font-size: 14.5px; line-height: 1.6; max-width: 620px; white-space: pre-line; }
+        .hxt-prev .sb { display: flex; gap: 8px; margin-top: 14px; max-width: 520px; background: #fff; border-radius: 12px; padding: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+        .hxt-prev .sb span { flex: 1; border: 1px solid #E2E8F0; border-radius: 8px; padding: 9px 12px; color: #6B7280; font-size: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .hxt-prev .sb b { background: #00B5E0; color: #fff; border-radius: 8px; padding: 9px 16px; font-size: 14px; white-space: nowrap; }
+        @media (max-width: 992px) { .hxt-grid { grid-template-columns: minmax(0, 1fr); } .hxt-grid .two { grid-column: auto; } }
+    </style>
+    <div class="settings-card" data-sg="home" id="heroTextCard">
+        <h5><i class="fas fa-heading"></i> Hero Text (হোম পেজের উপরের লেখা)</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">হোম পেজের একদম উপরের বড় শিরোনাম, বর্ণনা, সার্চ বক্সের চলমান লেখা আর বাটন — এখান থেকে লিখে Save চাপুন। নিচে সাথে সাথে প্রিভিউ দেখাবে।</p>
+        <div class="hxt-grid" id="hxtForm">
+            <div data-f="hx_title1"><label for="hx_title1">শিরোনাম — ১ম লাইন *</label><input id="hx_title1" maxlength="80" value="<?= e($hxT['hx_title1']) ?>" /></div>
+            <div data-f="hx_title2"><label for="hx_title2">শিরোনাম — ২য় লাইন <small>(সাধারণ রঙ)</small></label><input id="hx_title2" maxlength="60" value="<?= e($hxT['hx_title2']) ?>" /></div>
+            <div data-f="hx_title_hl"><label for="hx_title_hl">২য় লাইনের রঙিন শব্দ <small>(নীল রঙে)</small></label><input id="hx_title_hl" maxlength="60" value="<?= e($hxT['hx_title_hl']) ?>" /></div>
+            <div class="full" data-f="hx_desc"><label for="hx_desc">বর্ণনা *</label><textarea id="hx_desc" maxlength="500"><?= e($hxT['hx_desc']) ?></textarea></div>
+            <div data-f="hx_marquee"><label for="hx_marquee">সার্চ বক্সের চলমান লেখা <small>(খালি = কিছু চলবে না)</small></label><input id="hx_marquee" maxlength="120" value="<?= e($hxT['hx_marquee']) ?>" /></div>
+            <div data-f="hx_btn"><label for="hx_btn">বাটনের লেখা *</label><input id="hx_btn" maxlength="40" value="<?= e($hxT['hx_btn']) ?>" /></div>
+            <div data-f="hx_btn_link"><label for="hx_btn_link">বাটন / বক্সে ক্লিক করলে যাবে</label><input id="hx_btn_link" maxlength="300" value="<?= e($hxT['hx_btn_link']) ?>" placeholder="/FindTutor" /></div>
+        </div>
+        <div class="hxt-prev" aria-hidden="true">
+            <small class="l">প্রিভিউ</small>
+            <h2><span id="pvT1"></span><br id="pvBr"><em id="pvT2" style="font-style:normal;color:#0F172A;"></em> <span id="pvHl"></span></h2>
+            <p id="pvDesc"></p>
+            <div class="sb"><span id="pvMq"></span><b id="pvBtn"></b></div>
+        </div>
+        <div class="d-flex gap-2 mt-3 flex-wrap align-items-center">
+            <button type="button" class="btn btn-primary" id="hxtSave"><i class="fas fa-floppy-disk me-1"></i> Save Hero Text</button>
+            <button type="button" class="btn btn-outline-secondary" id="hxtReset"><i class="fas fa-rotate-left me-1"></i> আগের লেখায় ফেরত</button>
+            <a href="/" target="_blank" rel="noopener" class="btn btn-link">হোম পেজ খুলে দেখুন <i class="fas fa-arrow-up-right-from-square"></i></a>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var keys = ['hx_title1', 'hx_title2', 'hx_title_hl', 'hx_desc', 'hx_marquee', 'hx_btn', 'hx_btn_link'];
+        function $(i) { return document.getElementById(i); }
+        function prev() {
+            $('pvT1').textContent = $('hx_title1').value; $('pvT1').style.color = '#0F172A';
+            $('pvT2').textContent = $('hx_title2').value; $('pvHl').textContent = $('hx_title_hl').value;
+            $('pvBr').style.display = ($('hx_title2').value + $('hx_title_hl').value).trim() ? '' : 'none';
+            $('pvDesc').textContent = $('hx_desc').value; $('pvMq').textContent = $('hx_marquee').value || ' '; $('pvBtn').textContent = $('hx_btn').value;
+        }
+        keys.forEach(function (k) { $(k).addEventListener('input', function () { $(k).closest('[data-f]').classList.remove('bad'); prev(); }); });
+        prev();
+        function send(reset) {
+            var fd = new FormData(), t = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (t) fd.append('__RequestVerificationToken', t.value);
+            if (reset) fd.append('reset', 'true'); else keys.forEach(function (k) { fd.append(k, $(k).value); });
+            var b = $(reset ? 'hxtReset' : 'hxtSave'); b.disabled = true;
+            fetch('/Admin/SaveHeroText', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }).then(function (d) {
+                b.disabled = false;
+                if (d.success && reset) { keys.forEach(function (k) { if (d[k] !== undefined) $(k).value = d[k]; }); prev(); }
+                if (!d.success && d.field && $(d.field)) { $(d.field).closest('[data-f]').classList.add('bad'); $(d.field).focus(); }
+                alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+            }).catch(function () { b.disabled = false; alert('❌ সার্ভারে সমস্যা — আবার চেষ্টা করুন।'); });
+        }
+        $('hxtSave').addEventListener('click', function () { send(false); });
+        $('hxtReset').addEventListener('click', function () { if (confirm('হিরোর লেখা আগের (ডিফল্ট) অবস্থায় ফেরত নেবেন?')) send(true); });
+    })();
+    </script>
+
     <!-- ============================================================ -->
     <!-- ===== Hero Images Section ===== -->
     <div class="settings-card" data-sg="home">

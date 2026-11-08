@@ -593,6 +593,32 @@ function profile_promo(): array
     return $c;
 }
 
+/** হোম পেজের হিরো সেকশনের লেখা — অ্যাডমিন → Settings → Home Page থেকে বদলানো যায় */
+function hero_text_defaults(): array
+{
+    return [
+        'hx_title1' => 'Find the Right Tutor',
+        'hx_title2' => 'in',
+        'hx_title_hl' => 'Bangladesh',
+        'hx_desc' => 'Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.',
+        'hx_marquee' => 'Your Right Tutor, Just a Click Away.',
+        'hx_btn' => 'Find a Tutor',
+        'hx_btn_link' => '/FindTutor',
+    ];
+}
+
+/** হিরোর লেখা (খালি রাখা ঘরে ডিফল্ট — শুধু "দ্বিতীয় লাইন" খালি রাখা যায়) */
+function hero_texts(): array
+{
+    static $t = null;
+    if ($t !== null) return $t;
+    $d = hero_text_defaults();
+    try { $c = db()->GetSiteContent($d); } catch (Throwable $e) { $c = $d; }
+    foreach ($d as $k => $v) { $c[$k] = trim((string)($c[$k] ?? '')); if ($c[$k] === '' && !in_array($k, ['hx_title2', 'hx_title_hl', 'hx_marquee'], true)) $c[$k] = $v; }
+    if (!preg_match('#^(/[^/\\\\]|https?://)#i', $c['hx_btn_link']) && $c['hx_btn_link'] !== '/') $c['hx_btn_link'] = $d['hx_btn_link'];
+    return $t = $c;
+}
+
 /** Tuition Circular পেজের উপরের ব্যানার ছবি (অ্যাডমিন সেটিংস থেকে বদলানো যায়) */
 function circular_banner_defaults(): array
 {
@@ -1445,7 +1471,7 @@ function admin_settings_groups_all(): array
         'general' => ['title' => 'Branding & Theme', 'short' => 'Branding', 'icon' => 'fa-palette', 'bg' => '#F1EAFE', 'fg' => '#6D28D9',
             'desc' => 'সাইটের নাম, নেভবার ও ফুটারের লোগো, আর পুরো সাইটের থিম কালার।'],
         'home' => ['title' => 'Home Page', 'short' => 'Home Page', 'icon' => 'fa-house', 'bg' => '#E3F6FD', 'fg' => '#028EA5',
-            'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরো ছবি ও স্লাইডার, Key Features এর ছবি, Become a Tutor আর FAQ।'],
+            'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরোর লেখা, হিরো ছবি ও স্লাইডার, Key Features এর ছবি, Become a Tutor আর FAQ।'],
         'banners' => ['title' => 'Page Banners', 'short' => 'Banners', 'icon' => 'fa-panorama', 'bg' => '#FFF4D6', 'fg' => '#B7791F',
             'desc' => 'Tuition Circular, Find Tutor, Package আর Help Desk পেজের উপরের ব্যানার ছবি।'],
         'profile' => ['title' => 'Profile Pages', 'short' => 'Profiles', 'icon' => 'fa-id-card', 'bg' => '#E7F8EF', 'fg' => '#157347',
@@ -1551,7 +1577,7 @@ function admin_action_rule(string $action): string
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
-                'UploadHeroImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
+                'UploadHeroImage', 'SaveHeroText', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
         ];
         foreach ($groups as $k => $acts) foreach ($acts as $a) $map[$a] = $k;
         // বাকি সব (Admins, ActivityLog, Packages, PaymentMethods, Email, DeleteUser ...) শুধু Super Admin
