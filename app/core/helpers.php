@@ -1859,10 +1859,9 @@ function partner_link(string $code, string $src = ''): string
 function partner_badge_html(?object $ps): string
 {
     if (!$ps) return '';
-    [$sn] = Db::partnerSource((string)$ps->Source);
-    $via = $ps->Via === 'code' ? 'কোড' : 'লিংক · ' . $sn;
-    return '<span class="jv-badge jv-partner" title="' . e('পার্টনার: ' . $ps->PartnerName . ' (' . $ps->Code . ') — ' . $via) . '"><i class="fas fa-handshake"></i> '
-        . '<a href="/Admin/Partner/' . (int)$ps->PartnerId . '">' . e((string)$ps->PartnerName) . '</a></span>';
+    $via = $ps->Via === 'code' ? 'এজেন্সি কোড' : 'এজেন্সি লিংক';
+    return '<span class="jv-badge jv-partner" title="' . e($via . ' দিয়ে সাইনআপ করেছেন (' . $ps->Code . ')') . '"><i class="fas fa-handshake"></i> '
+        . '<a href="/Admin/Partners">' . $via . '</a></span>';
 }
 
 

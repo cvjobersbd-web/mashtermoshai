@@ -347,7 +347,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
             <div class="jv-filter" id="jvFilter">
                 <button type="button" class="on" data-jv="all">সব (<?= count($Model) ?>)</button>
                 <button type="button" data-jv="ref"><i class="fas fa-gift"></i> রেফারেলে এসেছে (<?= (int)$refCount ?>)</button>
-                <?php if ($ptMap): ?><button type="button" data-jv="partner"><i class="fas fa-handshake"></i> পার্টনার / এজেন্সি থেকে (<?= count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]))) ?>)</button><?php endif; ?>
+                <?php if ($ptMap): ?><button type="button" data-jv="partner"><i class="fas fa-handshake"></i> এজেন্সি লিংক / কোড থেকে (<?= count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]))) ?>)</button><?php endif; ?>
                 <button type="button" data-jv="direct"><i class="fas fa-user-plus"></i> ডাইরেক্ট সাইনআপ (<?= count($Model) - (int)$refCount - (int)$ptCount ?>)</button>
             </div>
             <div class="table-responsive">

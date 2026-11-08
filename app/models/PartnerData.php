@@ -120,6 +120,24 @@ trait PartnerData
         $this->exec('DELETE FROM `Partners` WHERE `Id` = :i', ['i' => $id]);
     }
 
+    /**
+     * একটাই স্থায়ী এজেন্সি লিংক + কোড — প্রথম পার্টনারটা (না থাকলে তৈরি হয়, কোড: MASHTER)।
+     * এটা সবসময় চালু থাকে; যেকোনো এজেন্সিকে এই লিংক / কোড দেওয়া হয়।
+     */
+    public function GetDefaultPartner(): Obj
+    {
+        $this->EnsurePartnerTables();
+        $p = $this->one('SELECT * FROM `Partners` ORDER BY `Id` LIMIT 1');
+        if (!$p) {
+            $code = 'MASHTER';
+            if ($this->PartnerCodeTaken($code)) $code = $this->GeneratePartnerCode('MASHTER');
+            try { $this->CreatePartner('Agency', $code, '', '', 'register', 0); } catch (Throwable $e) { error_log('[default partner] ' . $e->getMessage()); }
+            $p = $this->one('SELECT * FROM `Partners` ORDER BY `Id` LIMIT 1');
+        }
+        if (!(int)$p->IsActive) { $this->SetPartnerActive((int)$p->Id, true); $p->IsActive = 1; }
+        return $p;
+    }
+
     public function GetPartner(int $id): ?Obj
     {
         $this->EnsurePartnerTables();

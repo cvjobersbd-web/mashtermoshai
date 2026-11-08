@@ -889,11 +889,13 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
     }
 
-    /** GET /Admin/Partners — সব পার্টনার, নতুন পার্টনার তৈরি */
+    /** GET /Admin/Partners?from=&to= — একটাই স্থায়ী এজেন্সি লিংক + কোড, আর তা থেকে কত জন সাইনআপ / প্যাকেজ কিনেছে (তারিখ অনুযায়ী) */
     public function Partners(): void
     {
         $this->requireAdminPage();
-        $this->view(null, $this->db->GetPartnersWithTotals(), ['Suggest' => $this->db->GeneratePartnerCode('AGENCY')]);
+        $p = $this->db->GetDefaultPartner();
+        [$from, $to] = $this->partnerDates();
+        $this->view(null, $p, ['Report' => $this->db->GetPartnerReport((int)$p->Id, $from, $to), 'From' => $from, 'To' => $to]);
     }
 
     private function partnerDates(): array
@@ -904,14 +906,11 @@ class AdminController extends Controller
         return [$from, $to];
     }
 
-    /** GET /Admin/Partner/{id}?from=&to= — একটা পার্টনারের লিংক, কোড, শেয়ার, প্ল্যাটফর্ম অনুযায়ী ক্লিক / সাইনআপ / কেনা */
+    /** GET /Admin/Partner/{id} — পুরোনো লিংক; এখন একটাই পেজ */
     public function Partner(): void
     {
         $this->requireAdminPage();
-        $p = $this->db->GetPartner((int)input_int('id', 0));
-        if (!$p) { tempdata_set('Error', 'পার্টনার পাওয়া যায়নি।'); $this->redirectToAction('Partners'); }
-        [$from, $to] = $this->partnerDates();
-        $this->view(null, $p, ['Report' => $this->db->GetPartnerReport((int)$p->Id, $from, $to), 'From' => $from, 'To' => $to]);
+        $this->redirectToAction('Partners');
     }
 
     /** POST /Admin/SavePartner (id = 0 হলে নতুন) */
@@ -973,28 +972,29 @@ class AdminController extends Controller
     public function PartnerCsv(): void
     {
         $this->requireAdminPage();
-        $p = $this->db->GetPartner((int)input_int('id', 0));
-        if (!$p) $this->redirectToAction('Partners');
+        $p = $this->db->GetDefaultPartner();
         [$from, $to] = $this->partnerDates();
         $r = $this->db->GetPartnerReport((int)$p->Id, $from, $to);
         $safe = fn($v) => is_string($v) && preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
-        $name = 'partner_' . preg_replace('/[^A-Za-z0-9_-]/', '', (string)$p->Code) . '_' . ($from ?: 'start') . '_to_' . ($to ?: date('Y-m-d')) . '.csv';
+        $name = 'agency_' . preg_replace('/[^A-Za-z0-9_-]/', '', (string)$p->Code) . '_' . ($from ?: 'start') . '_to_' . ($to ?: date('Y-m-d')) . '.csv';
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $name . '"');
         header('Cache-Control: no-store');
         $out = fopen('php://output', 'w');
         fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['Partner', $p->Name, 'Code', $p->Code, 'From', $from ?: 'Start', 'To', $to ?: date('Y-m-d')]);
-        fputcsv($out, []);
-        fputcsv($out, ['Platform', 'Clicks', 'Unique Visitors', 'Signups', 'Email Verified', 'Buyers', 'Orders', 'Revenue (BDT)', 'Pending Payments']);
-        foreach ($r['sources'] as $s => $x) fputcsv($out, [Db::partnerSource($s)[0], $x['clicks'], $x['visitors'], $x['signups'], $x['verified'], $x['buyers'], $x['orders'], $x['revenue'], $x['pending']]);
         $t = $r['totals'];
-        fputcsv($out, ['TOTAL', $t['clicks'], $t['visitors'], $t['signups'], $t['verified'], $t['buyers'], $t['orders'], $t['revenue'], $t['pending']]);
+        fputcsv($out, ['Agency Link', partner_link((string)$p->Code), 'Code', $p->Code, 'From', $from ?: 'Start', 'To', $to ?: date('Y-m-d')]);
         fputcsv($out, []);
-        fputcsv($out, ['#', 'Signup Date', 'Name', 'Username', 'Email', 'Phone', 'Role', 'Joined Via', 'Platform', 'Email Verified', 'Packages Bought', 'Total Paid (BDT)', 'Last Package', 'Pending Payments']);
+        fputcsv($out, ['SUMMARY', 'Link Clicks', 'Signups', 'Email Verified', 'Bought Package (people)', 'Packages Sold', 'Revenue (BDT)', 'Pending Payments']);
+        fputcsv($out, ['Total', $t['clicks'], $t['signups'], $t['verified'], $t['buyers'], $t['orders'], $t['revenue'], $t['pending']]);
+        fputcsv($out, []);
+        fputcsv($out, ['DATE', 'Link Clicks', 'Signups', 'Bought Package (people)', 'Packages Sold', 'Revenue (BDT)', 'Pending Payments']);
+        foreach ($r['daily'] as $d => $x) fputcsv($out, [$d, $x['clicks'], $x['signups'], $x['buyers'], $x['orders'], $x['revenue'], $x['pending']]);
+        fputcsv($out, []);
+        fputcsv($out, ['#', 'Signup Date', 'Name', 'Username', 'Email', 'Phone', 'Role', 'Joined Via', 'Email Verified', 'Packages Bought', 'Total Paid (BDT)', 'Last Package', 'Pending Payments']);
         foreach ($r['users'] as $i => $u) {
             fputcsv($out, array_map($safe, [$i + 1, fmt_date($u->SignedUp, 'Y-m-d H:i'), (string)$u->FullName, (string)$u->UserName, (string)$u->Email, (string)($u->MobileNumber ?? ''), $u->Role === 'Teacher' ? 'Teacher' : ($u->Role === 'Admin' ? 'Admin' : 'Student'),
-                $u->Via === 'code' ? 'Code' : 'Link', Db::partnerSource((string)$u->Source)[0], $u->Verified ? 'Yes' : 'No', $u->Orders, $u->Paid, $u->LastPackage, $u->Pending]));
+                $u->Via === 'code' ? 'Code' : 'Link', $u->Verified ? 'Yes' : 'No', $u->Orders, $u->Paid, $u->LastPackage, $u->Pending]));
         }
         fclose($out);
         exit;
