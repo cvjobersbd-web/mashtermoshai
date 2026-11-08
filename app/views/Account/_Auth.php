@@ -9,7 +9,8 @@ $mode = ($mode ?? 'login') === 'register' ? 'register' : 'login';
 $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
 $susp = is_array($ViewBag->Suspension ?? null) ? $ViewBag->Suspension : null;
 $err = $ViewBag->Error ?? null;
-$authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png';
+$authT = auth_page_texts();
+$authImg = $authT['auth_img'];
 ?>
 <style>
     .au { --au-blue: #1677E5; --au-cyan: #00CFFF; --au-ink: #0B1F44; --au-dur: .75s; --au-ease: cubic-bezier(.65,.05,.25,1);
@@ -34,6 +35,7 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
     @keyframes auFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
     .au-copy { max-width: 560px; margin: 8px auto 0; width: 100%; transition: text-align .3s; }
     .au-copy h2 { margin: 0; font-family: var(--font-heading); font-weight: 600; color: var(--au-ink); font-size: clamp(30px, 2.6vw, 44px); line-height: 1.1; }
+    .au-copy h2.rich b { display: inline; font-weight: 800; color: inherit; font-size: inherit; letter-spacing: inherit; margin: 0; }
     .au-copy h2 b { display: block; font-weight: 800; color: var(--au-blue); font-size: 1.18em; letter-spacing: -.5px; margin-top: 4px; }
     .au-copy p { margin: 14px 0 0; color: #475569; font-size: 16.5px; line-height: 1.55; max-width: 520px; }
     /* তিনটা আইকন সমান চওড়া কলামে — আইকন আর লেখা একই লাইনে */
@@ -115,13 +117,15 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
         <div class="au-art" aria-hidden="true">
             <img class="au-pic" src="<?= e($authImg) ?>" alt="" />
             <div class="au-copy">
-                <h2>Welcome to <b>Mashtermoshai</b></h2>
-                <p>Find the right tutor, post your tuition requirement, and manage your learning — all in one place.</p>
+                <h2 class="rich"><?= $authT['auth_title_html'] /* sanitize_rich_html করা */ ?></h2>
+                <?php if ($authT['auth_desc_html'] !== ''): ?><p><?= $authT['auth_desc_html'] ?></p><?php endif; ?>
+                <?php if ($authT['auth_feats'] !== '0'): ?>
                 <div class="au-feats">
                     <span class="au-feat"><i class="fas fa-magnifying-glass"></i>Find Tutor</span>
                     <span class="au-feat"><i class="far fa-calendar-check"></i>Post Requirement</span>
                     <span class="au-feat"><i class="fas fa-graduation-cap"></i>Tuition Circular</span>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 

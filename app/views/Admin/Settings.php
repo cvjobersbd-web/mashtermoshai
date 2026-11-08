@@ -979,44 +979,31 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
     })();
     </script>
 
-    <!-- ===== Hero Text (হোম পেজের বড় লেখা) ===== -->
+    <!-- ===== Hero Text (হোম পেজের বড় লেখা) — নিজের মতো সাজানো ===== -->
     <?php $hxT = hero_texts(); ?>
     <style>
         .hxt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-        .hxt-grid label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 5px; }
-        .hxt-grid label small { font-weight: 500; color: #94A3B8; }
-        .hxt-grid input, .hxt-grid textarea { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none; background: #fff; }
-        .hxt-grid input:focus, .hxt-grid textarea:focus { border-color: #02B8F5; }
-        .hxt-grid textarea { min-height: 84px; resize: vertical; }
-        .hxt-grid .full { grid-column: 1 / -1; } .hxt-grid .two { grid-column: span 2; }
-        .hxt-grid .bad input, .hxt-grid .bad textarea { border-color: #DC2626; }
-        .hxt-prev { margin-top: 16px; border: 1px dashed #CBD5E1; border-radius: 14px; padding: 20px 22px; background: linear-gradient(180deg, #F8FBFF, #EEF6FD); }
-        .hxt-prev small.l { display: block; font-size: 11.5px; font-weight: 800; color: #94A3B8; letter-spacing: .5px; margin-bottom: 8px; }
-        .hxt-prev h2 { margin: 0; font-size: 30px; font-weight: 800; color: #0F172A; line-height: 1.15; }
-        .hxt-prev h2 span { color: #00B5E0; }
-        .hxt-prev p { margin: 10px 0 0; color: #475569; font-size: 14.5px; line-height: 1.6; max-width: 620px; white-space: pre-line; }
-        .hxt-prev .sb { display: flex; gap: 8px; margin-top: 14px; max-width: 520px; background: #fff; border-radius: 12px; padding: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
-        .hxt-prev .sb span { flex: 1; border: 1px solid #E2E8F0; border-radius: 8px; padding: 9px 12px; color: #6B7280; font-size: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .hxt-prev .sb b { background: #00B5E0; color: #fff; border-radius: 8px; padding: 9px 16px; font-size: 14px; white-space: nowrap; }
-        @media (max-width: 992px) { .hxt-grid { grid-template-columns: minmax(0, 1fr); } .hxt-grid .two { grid-column: auto; } }
+        .hxt-grid label, .hxt-l { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+        .hxt-grid label small, .hxt-l small { font-weight: 500; color: #94A3B8; }
+        .hxt-grid input { width: 100%; border: 1.5px solid #DCECF5; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none; background: #fff; }
+        .hxt-grid input:focus { border-color: #02B8F5; }
+        .hxt-grid .bad input { border-color: #DC2626; }
+        .hxt-blk { margin-bottom: 14px; }
+        @media (max-width: 992px) { .hxt-grid { grid-template-columns: minmax(0, 1fr); } }
     </style>
     <div class="settings-card" data-sg="home" id="heroTextCard">
         <h5><i class="fas fa-heading"></i> Hero Text (হোম পেজের উপরের লেখা)</h5>
-        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">হোম পেজের একদম উপরের বড় শিরোনাম, বর্ণনা, সার্চ বক্সের চলমান লেখা আর বাটন — এখান থেকে লিখে Save চাপুন। নিচে সাথে সাথে প্রিভিউ দেখাবে।</p>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">শিরোনাম আর বর্ণনা নিজের মতো সাজান — লেখা মাউস দিয়ে বাছাই (select) করে উপরের বাটন থেকে <b>বোল্ড</b>, <i>ইটালিক</i>, সাইজ, রঙ বা হাইলাইট দিন। Enter চাপলে নতুন লাইন। যেমন দেখাচ্ছে, হোম পেজে প্রায় তেমনই দেখাবে।</p>
+        <div class="hxt-blk"><span class="hxt-l">শিরোনাম *</span>
+            <?php partial('Admin/_RichEditor', ['id' => 'hx_title_html', 'html' => $hxT['hx_title_html'], 'ph' => 'যেমন: Find the Right Tutor in Bangladesh',
+                'box' => 'font-size:38px;font-weight:600;line-height:1.22;color:#1F2937;letter-spacing:-.3px;']); ?></div>
+        <div class="hxt-blk"><span class="hxt-l">বর্ণনা *</span>
+            <?php partial('Admin/_RichEditor', ['id' => 'hx_desc_html', 'html' => $hxT['hx_desc_html'], 'ph' => 'শিরোনামের নিচের লেখা',
+                'box' => 'font-size:16px;line-height:1.65;color:#4B5563;']); ?></div>
         <div class="hxt-grid" id="hxtForm">
-            <div data-f="hx_title1"><label for="hx_title1">শিরোনাম — ১ম লাইন *</label><input id="hx_title1" maxlength="80" value="<?= e($hxT['hx_title1']) ?>" /></div>
-            <div data-f="hx_title2"><label for="hx_title2">শিরোনাম — ২য় লাইন <small>(সাধারণ রঙ)</small></label><input id="hx_title2" maxlength="60" value="<?= e($hxT['hx_title2']) ?>" /></div>
-            <div data-f="hx_title_hl"><label for="hx_title_hl">২য় লাইনের রঙিন শব্দ <small>(নীল রঙে)</small></label><input id="hx_title_hl" maxlength="60" value="<?= e($hxT['hx_title_hl']) ?>" /></div>
-            <div class="full" data-f="hx_desc"><label for="hx_desc">বর্ণনা *</label><textarea id="hx_desc" maxlength="500"><?= e($hxT['hx_desc']) ?></textarea></div>
             <div data-f="hx_marquee"><label for="hx_marquee">সার্চ বক্সের চলমান লেখা <small>(খালি = কিছু চলবে না)</small></label><input id="hx_marquee" maxlength="120" value="<?= e($hxT['hx_marquee']) ?>" /></div>
             <div data-f="hx_btn"><label for="hx_btn">বাটনের লেখা *</label><input id="hx_btn" maxlength="40" value="<?= e($hxT['hx_btn']) ?>" /></div>
             <div data-f="hx_btn_link"><label for="hx_btn_link">বাটন / বক্সে ক্লিক করলে যাবে</label><input id="hx_btn_link" maxlength="300" value="<?= e($hxT['hx_btn_link']) ?>" placeholder="/FindTutor" /></div>
-        </div>
-        <div class="hxt-prev" aria-hidden="true">
-            <small class="l">প্রিভিউ</small>
-            <h2><span id="pvT1"></span><br id="pvBr"><em id="pvT2" style="font-style:normal;color:#0F172A;"></em> <span id="pvHl"></span></h2>
-            <p id="pvDesc"></p>
-            <div class="sb"><span id="pvMq"></span><b id="pvBtn"></b></div>
         </div>
         <div class="d-flex gap-2 mt-3 flex-wrap align-items-center">
             <button type="button" class="btn btn-primary" id="hxtSave"><i class="fas fa-floppy-disk me-1"></i> Save Hero Text</button>
@@ -1025,31 +1012,92 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
         </div>
     </div>
     <script>
+    // পেজ রেডি হওয়ার আগেই চালু — নিচের Save কোড এগুলো ব্যবহার করে
+    window.mmRichSave = function (url, data, btn, onOk) {
+        var fd = new FormData(), t = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (t) fd.append('__RequestVerificationToken', t.value);
+        Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });
+        document.querySelectorAll('.rte.bad, [data-f].bad').forEach(function (x) { x.classList.remove('bad'); });
+        btn.disabled = true;
+        fetch(url, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }).then(function (d) {
+            btn.disabled = false;
+            if (d.success && onOk) onOk(d);
+            if (!d.success && d.field) { var el = document.getElementById(d.field); if (el) { (el.closest('.rte') || el.closest('[data-f]') || el).classList.add('bad'); el.focus(); } }
+            alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
+        }).catch(function () { btn.disabled = false; alert('❌ সার্ভারে সমস্যা — আবার চেষ্টা করুন।'); });
+    };
     (function () {
-        var keys = ['hx_title1', 'hx_title2', 'hx_title_hl', 'hx_desc', 'hx_marquee', 'hx_btn', 'hx_btn_link'];
         function $(i) { return document.getElementById(i); }
-        function prev() {
-            $('pvT1').textContent = $('hx_title1').value; $('pvT1').style.color = '#0F172A';
-            $('pvT2').textContent = $('hx_title2').value; $('pvHl').textContent = $('hx_title_hl').value;
-            $('pvBr').style.display = ($('hx_title2').value + $('hx_title_hl').value).trim() ? '' : 'none';
-            $('pvDesc').textContent = $('hx_desc').value; $('pvMq').textContent = $('hx_marquee').value || ' '; $('pvBtn').textContent = $('hx_btn').value;
+        var plain = ['hx_marquee', 'hx_btn', 'hx_btn_link'];
+        function fill(d) { ['hx_title_html', 'hx_desc_html'].forEach(function (k) { if (d[k] !== undefined) $(k).innerHTML = d[k]; }); plain.forEach(function (k) { if (d[k] !== undefined) $(k).value = d[k]; }); }
+        $('hxtSave').addEventListener('click', function () {
+            var data = { hx_title_html: $('hx_title_html').innerHTML, hx_desc_html: $('hx_desc_html').innerHTML };
+            plain.forEach(function (k) { data[k] = $(k).value; });
+            mmRichSave('/Admin/SaveHeroText', data, this, fill);
+        });
+        $('hxtReset').addEventListener('click', function () { if (confirm('হিরোর লেখা আগের (ডিফল্ট) অবস্থায় ফেরত নেবেন?')) mmRichSave('/Admin/SaveHeroText', { reset: 'true' }, this, fill); });
+    })();
+    </script>
+
+    <!-- ===== Login / Signup পেজের ছবি আর লেখা ===== -->
+    <?php $auT = auth_page_texts(); ?>
+    <div class="settings-card" data-sg="auth" id="authPageCard">
+        <h5><i class="fas fa-right-to-bracket"></i> Login / Signup পেজ — ছবি আর লেখা</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">লগইন আর সাইনআপ পেজের পাশের কার্টুন ছবি আর "Welcome to ..." লেখা। ছবি আপলোড করুন বা লিংক দিন, লেখা নিজের মতো সাজান, তারপর Save।</p>
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <span class="hxt-l">ছবি</span>
+                <div style="border:1.5px dashed #CBD5E1;border-radius:14px;padding:10px;background:#F8FAFC;text-align:center;">
+                    <img id="auImgPrev" src="<?= e($auT['auth_img']) ?>" alt="" style="max-width:100%;max-height:220px;border-radius:10px;" onerror="this.style.opacity=.3" />
+                </div>
+                <div class="d-flex gap-2 mt-2 flex-wrap">
+                    <label for="auImgFile" class="btn btn-outline-primary btn-sm mb-0"><i class="fas fa-upload me-1"></i> ছবি আপলোড</label>
+                    <input type="file" id="auImgFile" accept="image/*" style="display:none;" />
+                </div>
+                <div class="hxt-grid" style="grid-template-columns:1fr;margin-top:8px;"><div data-f="auth_img"><input id="auth_img" value="<?= e($auT['auth_img']) ?>" placeholder="অথবা ছবির লিংক (https://...)" /></div></div>
+                <small style="color:#94A3B8;">সাদা / স্বচ্ছ ব্যাকগ্রাউন্ডের ছবি সবচেয়ে ভালো দেখায়। সর্বোচ্চ ৫ MB।</small>
+            </div>
+            <div class="col-lg-8">
+                <div class="hxt-blk"><span class="hxt-l">শিরোনাম *</span>
+                    <?php partial('Admin/_RichEditor', ['id' => 'auth_title_html', 'html' => $auT['auth_title_html'], 'ph' => 'যেমন: Welcome to Mashtermoshai',
+                        'box' => 'font-size:34px;font-weight:600;line-height:1.15;color:#0B1F44;']); ?></div>
+                <div class="hxt-blk"><span class="hxt-l">বর্ণনা <small>(ঐচ্ছিক)</small></span>
+                    <?php partial('Admin/_RichEditor', ['id' => 'auth_desc_html', 'html' => $auT['auth_desc_html'], 'ph' => 'শিরোনামের নিচের ছোট লেখা',
+                        'box' => 'font-size:16px;line-height:1.55;color:#475569;']); ?></div>
+                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="auth_feats" <?= $auT['auth_feats'] !== '0' ? 'checked' : '' ?> /><label class="form-check-label fw-semibold" for="auth_feats">নিচের তিনটা আইকন দেখাবে (Find Tutor · Post Requirement · Tuition Circular)</label></div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3 flex-wrap align-items-center">
+            <button type="button" class="btn btn-primary" id="auSave"><i class="fas fa-floppy-disk me-1"></i> Save</button>
+            <button type="button" class="btn btn-outline-secondary" id="auReset"><i class="fas fa-rotate-left me-1"></i> আগের ছবি ও লেখায় ফেরত</button>
+            <a href="/Account/Login" target="_blank" rel="noopener" class="btn btn-link">লগইন পেজ খুলে দেখুন <i class="fas fa-arrow-up-right-from-square"></i></a>
+        </div>
+    </div>
+    <script>
+    (function () {
+        function $(i) { return document.getElementById(i); }
+        function fill(d) {
+            ['auth_title_html', 'auth_desc_html'].forEach(function (k) { if (d[k] !== undefined) $(k).innerHTML = d[k]; });
+            if (d.auth_img) { $('auth_img').value = d.auth_img; $('auImgPrev').src = d.auth_img; $('auImgPrev').style.opacity = 1; }
+            if (d.auth_feats !== undefined) $('auth_feats').checked = d.auth_feats !== '0';
         }
-        keys.forEach(function (k) { $(k).addEventListener('input', function () { $(k).closest('[data-f]').classList.remove('bad'); prev(); }); });
-        prev();
-        function send(reset) {
+        $('auth_img').addEventListener('change', function () { $('auImgPrev').src = this.value; $('auImgPrev').style.opacity = 1; });
+        $('auImgFile').addEventListener('change', function () {
+            var f = this.files[0]; if (!f) return;
+            if (f.size > 5 * 1024 * 1024) { alert('ছবি ৫ MB এর কম হতে হবে।'); this.value = ''; return; }
             var fd = new FormData(), t = document.querySelector('input[name="__RequestVerificationToken"]');
-            if (t) fd.append('__RequestVerificationToken', t.value);
-            if (reset) fd.append('reset', 'true'); else keys.forEach(function (k) { fd.append(k, $(k).value); });
-            var b = $(reset ? 'hxtReset' : 'hxtSave'); b.disabled = true;
-            fetch('/Admin/SaveHeroText', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }).then(function (d) {
-                b.disabled = false;
-                if (d.success && reset) { keys.forEach(function (k) { if (d[k] !== undefined) $(k).value = d[k]; }); prev(); }
-                if (!d.success && d.field && $(d.field)) { $(d.field).closest('[data-f]').classList.add('bad'); $(d.field).focus(); }
+            fd.append('authImage', f); if (t) fd.append('__RequestVerificationToken', t.value);
+            var lb = document.querySelector('label[for="auImgFile"]'), h = lb.innerHTML; lb.innerHTML = '<i class="fas fa-spinner fa-spin"></i> আপলোড হচ্ছে...';
+            fetch('/Admin/UploadAuthImage', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }).then(function (d) {
+                lb.innerHTML = h; $('auImgFile').value = '';
+                if (d.success) { $('auth_img').value = d.imageUrl; $('auImgPrev').src = d.imageUrl; $('auImgPrev').style.opacity = 1; }
                 alert((d.success ? '✅ ' : '❌ ') + (d.message || ''));
-            }).catch(function () { b.disabled = false; alert('❌ সার্ভারে সমস্যা — আবার চেষ্টা করুন।'); });
-        }
-        $('hxtSave').addEventListener('click', function () { send(false); });
-        $('hxtReset').addEventListener('click', function () { if (confirm('হিরোর লেখা আগের (ডিফল্ট) অবস্থায় ফেরত নেবেন?')) send(true); });
+            }).catch(function () { lb.innerHTML = h; alert('❌ আপলোড হয়নি।'); });
+        });
+        $('auSave').addEventListener('click', function () {
+            mmRichSave('/Admin/SaveAuthPage', { auth_img: $('auth_img').value, auth_title_html: $('auth_title_html').innerHTML, auth_desc_html: $('auth_desc_html').innerHTML, auth_feats: $('auth_feats').checked ? 'true' : 'false' }, this, fill);
+        });
+        $('auReset').addEventListener('click', function () { if (confirm('লগইন / সাইনআপ পেজের ছবি আর লেখা আগের (ডিফল্ট) অবস্থায় ফেরত নেবেন?')) mmRichSave('/Admin/SaveAuthPage', { reset: 'true' }, this, fill); });
     })();
     </script>
 

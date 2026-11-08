@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -833,27 +833,57 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SaveCircularBanner (which = circular|findtutor, banner, enabled, reset) — পেজের উপরের ব্যানার ছবি */
-    /** POST /Admin/SaveHeroText — হোম পেজের হিরো সেকশনের লেখা (reset=1 হলে আগের লেখায় ফেরত) */
+    /** এডিটরের HTML পরিষ্কার করে; বেশি লম্বা হলে থামায় */
+    private function richInput(string $k, int $maxText, string $label, bool $required = true): string
+    {
+        $h = sanitize_rich_html((string)input_str($k, ''));
+        $plain = trim(html_entity_decode(strip_tags($h), ENT_QUOTES, 'UTF-8'));
+        if ($required && $plain === '') json_response(['success' => false, 'message' => "{$label} খালি রাখা যাবে না।", 'field' => $k]);
+        if (mb_strlen($plain) > $maxText || strlen($h) > $maxText * 12) json_response(['success' => false, 'message' => "{$label} বেশি লম্বা — {$maxText} অক্ষরের মধ্যে রাখুন।", 'field' => $k]);
+        return $h;
+    }
+
+    /** POST /Admin/SaveHeroText — হোম পেজের হিরো: নিজের মতো সাজানো শিরোনাম + বর্ণনা, চলমান লেখা, বাটন (reset=1 হলে ডিফল্ট) */
     public function SaveHeroText_POST(): void
     {
         $this->requireAdminJson();
         $d = hero_text_defaults();
-        if (input_bool('reset')) { $this->db->SaveSiteContent($d); json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) লেখায় ফেরত নেওয়া হয়েছে।'] + $d); }
-        $max = ['hx_title1' => 80, 'hx_title2' => 60, 'hx_title_hl' => 60, 'hx_desc' => 500, 'hx_marquee' => 120, 'hx_btn' => 40, 'hx_btn_link' => 300];
-        $v = [];
-        foreach ($max as $k => $n) {
+        $old = ['hx_title1' => '', 'hx_title2' => '', 'hx_title_hl' => '', 'hx_desc' => ''];
+        if (input_bool('reset')) { $this->db->SaveSiteContent($d + $old); json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) লেখায় ফেরত নেওয়া হয়েছে।'] + $d); }
+        $v = ['hx_title_html' => $this->richInput('hx_title_html', 120, 'শিরোনাম'), 'hx_desc_html' => $this->richInput('hx_desc_html', 600, 'বর্ণনা')];
+        foreach (['hx_marquee' => 120, 'hx_btn' => 40, 'hx_btn_link' => 300] as $k => $n) {
             $x = trim(strip_tags((string)input_str($k, '')));
             if (mb_strlen($x) > $n) json_response(['success' => false, 'message' => "লেখা বেশি লম্বা ({$n} অক্ষরের মধ্যে রাখুন)।", 'field' => $k]);
             $v[$k] = $x;
         }
-        if ($v['hx_title1'] === '') json_response(['success' => false, 'message' => 'শিরোনামের প্রথম লাইন খালি রাখা যাবে না।', 'field' => 'hx_title1']);
-        if ($v['hx_desc'] === '') json_response(['success' => false, 'message' => 'বর্ণনা খালি রাখা যাবে না।', 'field' => 'hx_desc']);
         if ($v['hx_btn'] === '') json_response(['success' => false, 'message' => 'বাটনের লেখা খালি রাখা যাবে না।', 'field' => 'hx_btn']);
         if ($v['hx_btn_link'] === '') $v['hx_btn_link'] = $d['hx_btn_link'];
         if (!preg_match('#^(/[^/\\\\]|https?://)#i', $v['hx_btn_link']) && $v['hx_btn_link'] !== '/') json_response(['success' => false, 'message' => 'বাটনের লিংক / দিয়ে শুরু হবে (যেমন /FindTutor) অথবা https:// দিয়ে।', 'field' => 'hx_btn_link']);
         $err = null;
+        if (!$this->db->SaveSiteContent($v + $old, $err)) json_response(['success' => false, 'message' => 'সেভ হয়নি: ' . $err]);
+        json_response(['success' => true, 'message' => 'হিরো সেকশনের লেখা সেভ হয়েছে — হোম পেজে দেখুন।'] + $v);
+    }
+
+    /** POST /Admin/SaveAuthPage — লগইন / সাইনআপ পেজের ছবি, শিরোনাম, বর্ণনা, তিনটা আইকন দেখাবে কিনা (reset=1 হলে ডিফল্ট) */
+    public function SaveAuthPage_POST(): void
+    {
+        $this->requireAdminJson();
+        $d = auth_page_defaults();
+        if (input_bool('reset')) { $this->db->SaveSiteContent($d); json_response(['success' => true, 'message' => 'আগের (ডিফল্ট) ছবি আর লেখায় ফেরত নেওয়া হয়েছে।'] + $d); }
+        $img = trim((string)input_str('auth_img', ''));
+        if ($img === '') $img = $d['auth_img'];
+        if (!preg_match('#^(https?://|/uploads/)\S+$#i', $img) || mb_strlen($img) > 500) json_response(['success' => false, 'message' => 'ছবির লিংক সঠিক নয় — ছবি আপলোড করুন বা https:// দিয়ে শুরু লিংক দিন।', 'field' => 'auth_img']);
+        $v = ['auth_img' => $img, 'auth_title_html' => $this->richInput('auth_title_html', 120, 'শিরোনাম'),
+            'auth_desc_html' => $this->richInput('auth_desc_html', 400, 'বর্ণনা', false), 'auth_feats' => input_bool('auth_feats') ? '1' : '0'];
+        $err = null;
         if (!$this->db->SaveSiteContent($v, $err)) json_response(['success' => false, 'message' => 'সেভ হয়নি: ' . $err]);
-        json_response(['success' => true, 'message' => 'হিরো সেকশনের লেখা সেভ হয়েছে — হোম পেজে দেখুন।']);
+        json_response(['success' => true, 'message' => 'লগইন / সাইনআপ পেজ সেভ হয়েছে।'] + $v);
+    }
+
+    public function UploadAuthImage_POST(): void
+    {
+        $this->uploadImage('authImage', 'hero', 'auth_', self::IMAGE_EXTS, 5 * 1024 * 1024,
+            'ছবি ৫ MB এর কম হতে হবে।', 'শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।', 'ছবি আপলোড হয়েছে — এখন Save চাপুন।');
     }
 
     public function SaveCircularBanner_POST(): void

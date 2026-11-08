@@ -71,12 +71,12 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     @media (prefers-reduced-motion: reduce) { .hx-mq-track { animation: none; } }
     @media (max-width: 640px) { .hx-mq { font-size: 14.5px; } .hx-mq-track span { padding-right: 60px; } }
 </style>
-<?php $hx = hero_texts(); $hxTitle = trim($hx['hx_title1'] . ' ' . $hx['hx_title2'] . ' ' . $hx['hx_title_hl']); ?>
+<?php $hx = hero_texts(); $hxTitle = trim(html_entity_decode(strip_tags(str_replace('<br>', ' ', $hx['hx_title_html'])), ENT_QUOTES, 'UTF-8')); ?>
 <section class="hx" aria-label="<?= e($hxTitle) ?>">
     <div class="hx-in">
         <div class="hx-text">
-            <h1><?= nl2br(e($hx['hx_title1'])) ?><?php if ($hx['hx_title2'] !== '' || $hx['hx_title_hl'] !== ''): ?><br><?= e($hx['hx_title2']) ?><?= $hx['hx_title2'] !== '' && $hx['hx_title_hl'] !== '' ? ' ' : '' ?><?php if ($hx['hx_title_hl'] !== ''): ?><span class="bd"><?= e($hx['hx_title_hl']) ?></span><?php endif; ?><?php endif; ?></h1>
-            <p class="hx-p"><?= nl2br(e($hx['hx_desc'])) ?></p>
+            <h1><?= $hx['hx_title_html'] /* sanitize_rich_html করা */ ?></h1>
+            <p class="hx-p"><?= $hx['hx_desc_html'] /* sanitize_rich_html করা */ ?></p>
             <div class="hx-search">
                 <a class="fld" href="<?= e($hx['hx_btn_link']) ?>" aria-label="<?= e($hx['hx_marquee'] !== '' ? $hx['hx_marquee'] : $hx['hx_btn']) ?>">
                     <?php if ($hx['hx_marquee'] !== ''): ?><span class="hx-mq" aria-hidden="true"><span class="hx-mq-track"><span><?= e($hx['hx_marquee']) ?></span><span><?= e($hx['hx_marquee']) ?></span></span></span><?php endif; ?>

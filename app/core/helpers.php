@@ -593,29 +593,152 @@ function profile_promo(): array
     return $c;
 }
 
-/** হোম পেজের হিরো সেকশনের লেখা — অ্যাডমিন → Settings → Home Page থেকে বদলানো যায় */
+// ============================================================
+// ===== নিজের মতো সাজানো লেখা (অ্যাডমিন এডিটর) — নিরাপদ HTML =====
+// ============================================================
+/**
+ * অ্যাডমিনের এডিটর থেকে আসা HTML পরিষ্কার করে — শুধু এগুলো থাকে:
+ * b, i, u, s, br আর span (style: color, background-color, font-size, font-weight, font-style, text-decoration)
+ * বাকি সব ট্যাগ / অ্যাট্রিবিউট / স্ক্রিপ্ট বাদ। div/p → লাইন ব্রেক।
+ */
+function sanitize_rich_html(?string $html): string
+{
+    $html = trim((string)$html);
+    if ($html === '') return '';
+    $doc = new DOMDocument();
+    $prev = libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="utf-8"?><div>' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET);
+    libxml_clear_errors(); libxml_use_internal_errors($prev);
+    $root = null;
+    foreach ($doc->childNodes as $c) if ($c instanceof DOMElement) { $root = $c; break; }
+    if (!$root) return '';
+    $out = rte_walk($root);
+    $out = preg_replace('#(<br>\s*){3,}#', '<br><br>', $out);
+    $out = preg_replace('#^(\s|<br>|&nbsp;)+|(\s|<br>|&nbsp;)+$#u', '', $out);
+    return trim((string)$out);
+}
+
+function rte_style(DOMElement $el): string
+{
+    $ok = [];
+    $css = (string)$el->getAttribute('style');
+    if (strtolower($el->tagName) === 'font') {
+        if (preg_match('/^#[0-9a-f]{3,8}$|^[a-z]{3,20}$/i', $c = trim((string)$el->getAttribute('color')))) $ok['color'] = $c;
+        $sz = (int)$el->getAttribute('size');
+        if ($sz >= 1 && $sz <= 7) $ok['font-size'] = ['0.7em', '0.82em', '1em', '1.15em', '1.35em', '1.6em', '2em'][$sz - 1];
+    }
+    if (strtolower($el->tagName) === 'mark') $ok['background-color'] = '#FEF08A';
+    foreach (explode(';', $css) as $decl) {
+        if (!str_contains($decl, ':')) continue;
+        [$k, $v] = array_map('trim', explode(':', $decl, 2));
+        $k = strtolower($k); $v = trim(preg_replace('/\s*!important\s*$/i', '', $v));
+        if ($v === '' || preg_match('/url\s*\(|expression|javascript|[<>"\\\\]/i', $v)) continue;
+        $color = '/^(#[0-9a-f]{3,8}|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(,\s*[\d.]+\s*)?\)|[a-z]{3,20})$/i';
+        switch ($k) {
+            case 'color': case 'background-color':
+                if (preg_match($color, $v) && !in_array(strtolower($v), ['inherit', 'initial', 'unset', 'transparent'], true)) $ok[$k] = $v; break;
+            case 'font-size':
+                if (preg_match('/^(\d{1,3}(?:\.\d{1,3})?)(px|em|rem|%)$/i', $v, $m)) {
+                    $n = (float)$m[1]; $u = strtolower($m[2]);
+                    $lim = ['px' => [8, 120], 'em' => [0.4, 4], 'rem' => [0.4, 6], '%' => [40, 400]][$u];
+                    $ok[$k] = max($lim[0], min($lim[1], $n)) . $u;
+                } elseif (preg_match('/^(x{0,2}-small|small|medium|large|x{1,3}-large|smaller|larger)$/i', $v)) $ok[$k] = strtolower($v);
+                break;
+            case 'font-weight': if (preg_match('/^(normal|bold|bolder|lighter|[1-9]00)$/i', $v)) $ok[$k] = strtolower($v); break;
+            case 'font-style': if (preg_match('/^(normal|italic)$/i', $v)) $ok[$k] = strtolower($v); break;
+            case 'text-decoration': case 'text-decoration-line':
+                if (preg_match('/^(none|underline|line-through)(\s+(underline|line-through))?$/i', $v)) $ok['text-decoration'] = strtolower($v); break;
+        }
+    }
+    $s = '';
+    foreach ($ok as $k => $v) $s .= $k . ':' . $v . ';';
+    return $s;
+}
+
+function rte_walk(DOMNode $n): string
+{
+    $s = '';
+    foreach ($n->childNodes as $c) {
+        if ($c instanceof DOMText) { $s .= htmlspecialchars($c->nodeValue, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); continue; }
+        if (!$c instanceof DOMElement) continue;
+        $t = strtolower($c->tagName);
+        if (in_array($t, ['script', 'style', 'iframe', 'object', 'embed', 'svg', 'math', 'template', 'noscript', 'head', 'title', 'meta', 'link'], true)) continue;
+        if ($t === 'br') { $s .= '<br>'; continue; }
+        $in = rte_walk($c);
+        switch ($t) {
+            case 'b': case 'strong': $s .= $in !== '' ? '<b>' . $in . '</b>' : ''; break;
+            case 'i': case 'em': $s .= $in !== '' ? '<i>' . $in . '</i>' : ''; break;
+            case 'u': $s .= $in !== '' ? '<u>' . $in . '</u>' : ''; break;
+            case 's': case 'strike': case 'del': $s .= $in !== '' ? '<s>' . $in . '</s>' : ''; break;
+            case 'div': case 'p': case 'li': case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+                if ($s !== '' && !str_ends_with($s, '<br>')) $s .= '<br>';
+                $st = rte_style($c);
+                $s .= ($st !== '' && $in !== '' ? '<span style="' . $st . '">' . $in . '</span>' : $in) . '<br>';
+                break;
+            case 'span': case 'font': case 'mark': case 'small': case 'big': case 'sup': case 'sub':
+                $st = rte_style($c);
+                if ($t === 'small' && !str_contains($st, 'font-size')) $st .= 'font-size:0.82em;';
+                if ($t === 'big' && !str_contains($st, 'font-size')) $st .= 'font-size:1.2em;';
+                $s .= $st !== '' && $in !== '' ? '<span style="' . $st . '">' . $in . '</span>' : $in;
+                break;
+            default: $s .= $in;   // a, img ইত্যাদি — শুধু ভেতরের লেখা থাকে
+        }
+    }
+    return $s;
+}
+
+/** হোম পেজের হিরো সেকশনের লেখা — অ্যাডমিন → Settings → Home Page থেকে নিজের মতো সাজানো যায় */
 function hero_text_defaults(): array
 {
     return [
-        'hx_title1' => 'Find the Right Tutor',
-        'hx_title2' => 'in',
-        'hx_title_hl' => 'Bangladesh',
-        'hx_desc' => 'Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.',
+        'hx_title_html' => 'Find the Right Tutor<br>in <span style="color:#00CFFF;">Bangladesh</span>',
+        'hx_desc_html' => 'Find suitable home tutors and private tutors for school, college, university and professional subjects. Search by subject, class, curriculum and location, and connect with the right teacher.',
         'hx_marquee' => 'Your Right Tutor, Just a Click Away.',
         'hx_btn' => 'Find a Tutor',
         'hx_btn_link' => '/FindTutor',
     ];
 }
 
-/** হিরোর লেখা (খালি রাখা ঘরে ডিফল্ট — শুধু "দ্বিতীয় লাইন" খালি রাখা যায়) */
+/** হিরোর লেখা — title_html / desc_html নিরাপদ HTML (খালি হলে আগের সাধারণ লেখা বা ডিফল্ট) */
 function hero_texts(): array
 {
     static $t = null;
     if ($t !== null) return $t;
     $d = hero_text_defaults();
-    try { $c = db()->GetSiteContent($d); } catch (Throwable $e) { $c = $d; }
-    foreach ($d as $k => $v) { $c[$k] = trim((string)($c[$k] ?? '')); if ($c[$k] === '' && !in_array($k, ['hx_title2', 'hx_title_hl', 'hx_marquee'], true)) $c[$k] = $v; }
+    $old = ['hx_title1' => '', 'hx_title2' => '', 'hx_title_hl' => '', 'hx_desc' => ''];
+    try { $c = db()->GetSiteContent(['hx_title_html' => '', 'hx_desc_html' => ''] + $d + $old); } catch (Throwable $e) { $c = []; }
+    $c = array_map(fn($v) => trim((string)$v), $c + $d + $old);
+    // আগের ভার্সনে সাধারণ ঘরে লেখা থাকলে সেটাই
+    if ($c['hx_title_html'] === '' && $c['hx_title1'] !== '') {
+        $c['hx_title_html'] = e($c['hx_title1']) . (($c['hx_title2'] . $c['hx_title_hl']) !== '' ? '<br>' . e($c['hx_title2']) . ($c['hx_title_hl'] !== '' ? ' <span style="color:#00CFFF;">' . e($c['hx_title_hl']) . '</span>' : '') : '');
+    }
+    if ($c['hx_desc_html'] === '' && $c['hx_desc'] !== '') $c['hx_desc_html'] = nl2br(e($c['hx_desc']), false);
+    foreach (['hx_title_html', 'hx_desc_html'] as $k) { $c[$k] = sanitize_rich_html($c[$k]); if ($c[$k] === '') $c[$k] = $d[$k]; }
+    foreach (['hx_btn', 'hx_btn_link'] as $k) if ($c[$k] === '') $c[$k] = $d[$k];
     if (!preg_match('#^(/[^/\\\\]|https?://)#i', $c['hx_btn_link']) && $c['hx_btn_link'] !== '/') $c['hx_btn_link'] = $d['hx_btn_link'];
+    return $t = $c;
+}
+
+/** লগইন / সাইনআপ পেজের বাম পাশের ছবি আর লেখা — অ্যাডমিন → Settings → Login / Signup থেকে বদলানো যায় */
+function auth_page_defaults(): array
+{
+    return [
+        'auth_img' => 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png',
+        'auth_title_html' => 'Welcome to<br><span style="color:#1677E5;font-size:1.18em;font-weight:800;">Mashtermoshai</span>',
+        'auth_desc_html' => 'Find the right tutor, post your tuition requirement, and manage your learning — all in one place.',
+        'auth_feats' => '1',
+    ];
+}
+
+function auth_page_texts(): array
+{
+    static $t = null;
+    if ($t !== null) return $t;
+    $d = auth_page_defaults();
+    try { $c = db()->GetSiteContent($d); } catch (Throwable $e) { $c = $d; }
+    $c = array_map(fn($v) => trim((string)$v), $c + $d);
+    foreach (['auth_title_html', 'auth_desc_html'] as $k) { $c[$k] = sanitize_rich_html($c[$k]); if ($c[$k] === '') $c[$k] = $d[$k]; }
+    if (!preg_match('#^(https?://|/uploads/)#i', $c['auth_img'])) $c['auth_img'] = $d['auth_img'];
     return $t = $c;
 }
 
@@ -1472,6 +1595,8 @@ function admin_settings_groups_all(): array
             'desc' => 'সাইটের নাম, নেভবার ও ফুটারের লোগো, আর পুরো সাইটের থিম কালার।'],
         'home' => ['title' => 'Home Page', 'short' => 'Home Page', 'icon' => 'fa-house', 'bg' => '#E3F6FD', 'fg' => '#028EA5',
             'desc' => 'কোন সেকশন দেখাবে (চালু/বন্ধ), Explore Categories এ কোন ক্যাটাগরি, হিরোর লেখা, হিরো ছবি ও স্লাইডার, Key Features এর ছবি, Become a Tutor আর FAQ।'],
+        'auth' => ['title' => 'Login / Signup Page', 'short' => 'Login / Signup', 'icon' => 'fa-right-to-bracket', 'bg' => '#E0E7FF', 'fg' => '#3730A3',
+            'desc' => 'লগইন আর সাইনআপ পেজের পাশের ছবি আর "Welcome to ..." লেখা — নিজের মতো সাজানো যায়।'],
         'banners' => ['title' => 'Page Banners', 'short' => 'Banners', 'icon' => 'fa-panorama', 'bg' => '#FFF4D6', 'fg' => '#B7791F',
             'desc' => 'Tuition Circular, Find Tutor, Package আর Help Desk পেজের উপরের ব্যানার ছবি।'],
         'profile' => ['title' => 'Profile Pages', 'short' => 'Profiles', 'icon' => 'fa-id-card', 'bg' => '#E7F8EF', 'fg' => '#157347',
@@ -1577,7 +1702,7 @@ function admin_action_rule(string $action): string
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
-                'UploadHeroImage', 'SaveHeroText', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
+                'UploadHeroImage', 'SaveHeroText', 'SaveAuthPage', 'UploadAuthImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
         ];
         foreach ($groups as $k => $acts) foreach ($acts as $a) $map[$a] = $k;
         // বাকি সব (Admins, ActivityLog, Packages, PaymentMethods, Email, DeleteUser ...) শুধু Super Admin
