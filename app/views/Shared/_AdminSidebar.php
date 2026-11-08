@@ -310,7 +310,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Withdrawals' => 'Withdraw', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Withdrawals' => 'Withdraw', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -516,6 +516,11 @@ try {
         <li>
             <a href="/Admin/ActivityLog" class="<?= $currentAction === 'ActivityLog' ? 'active' : '' ?>">
                 <i class="fas fa-clock-rotate-left"></i> Activity Log
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/DeleteUsers" class="<?= $currentAction === 'DeleteUsers' ? 'active' : '' ?>">
+                <i class="fas fa-user-xmark"></i> Delete User
             </a>
         </li>
         <?php endif; ?>

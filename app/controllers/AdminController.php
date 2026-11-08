@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -218,6 +218,41 @@ class AdminController extends Controller
             if ($this->db->DeleteUser($id)) json_response(['success' => true, 'message' => 'ইউজার আর তার সব ডাটা পুরোপুরি মুছে ফেলা হয়েছে।']);
         } catch (Throwable $e) {}
         json_response(['success' => false, 'message' => 'Failed to delete user']);
+    }
+
+    /**
+     * GET /Admin/DeleteUsers?q= — শুধু Super Admin:
+     *  ১) মুছে ফেলা ইউজারদের রয়ে যাওয়া ডাটা ("Deleted user") — পুরোপুরি মুছে ফেলা
+     *  ২) ইউজার খুঁজে অ্যাকাউন্ট + সব ডাটা মুছে ফেলা
+     */
+    public function DeleteUsers(): void
+    {
+        $this->requireAdminPage();
+        $q = trim((string)input_str('q', ''));
+        $found = [];
+        if ($q !== '') {
+            $like = '%' . mb_strtolower($q) . '%';
+            $found = $this->db->all("SELECT `Id`, `UserName`, `FullName`, `Email`, `Role`, `CreatedAt`, `MobileNumber` FROM `Users` WHERE `Role` <> 'Admin' AND (LOWER(`UserName`) LIKE :l OR LOWER(`FullName`) LIKE :l2 OR LOWER(`Email`) LIKE :l3 OR `MobileNumber` LIKE :l4 OR CAST(`Id` AS CHAR) = :id) ORDER BY `Id` DESC LIMIT 30",
+                ['l' => $like, 'l2' => $like, 'l3' => $like, 'l4' => '%' . $q . '%', 'id' => $q]);
+        }
+        $this->view(null, $this->db->FindOrphanUsers(), ['Q' => $q, 'Found' => $found]);
+    }
+
+    /** POST /Admin/PurgeOrphanUser (id | all=1) — মুছে ফেলা ইউজারের বাকি সব ডাটা মোছে (Users এ থাকলে কিছু করে না) */
+    public function PurgeOrphanUser_POST(): void
+    {
+        $this->requireAdminJson();
+        if (!admin_is_super()) json_response(['success' => false, 'message' => 'এটা শুধু Super Admin করতে পারেন।']);
+        $orph = $this->db->FindOrphanUsers();
+        $ids = input_bool('all') ? array_keys($orph) : [(int)input_int('id', 0)];
+        $done = 0; $rows = 0;
+        foreach ($ids as $id) {
+            if ($id <= 0 || !isset($orph[$id])) continue;
+            if ($this->db->scalar('SELECT COUNT(*) FROM `Users` WHERE `Id` = :i', ['i' => $id])) continue;   // আসল ইউজার — এখান থেকে না
+            $rows += $this->db->PurgeUserData($id); $done++;
+        }
+        if (!$done) json_response(['success' => false, 'message' => 'মোছার মতো কিছু পাওয়া যায়নি।']);
+        json_response(['success' => true, 'message' => "{$done} জন মুছে ফেলা ইউজারের সব ডাটা ({$rows}টা রেকর্ড) পুরোপুরি মুছে ফেলা হয়েছে।"]);
     }
 
     /** POST /Admin/ToggleUserStatus */
