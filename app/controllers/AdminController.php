@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -79,6 +79,7 @@ class AdminController extends Controller
             'Suspensions' => $this->db->GetActiveSuspensionsMap(),
             'RefMap' => $this->db->GetReferralSourceMap(),
             'PartnerMap' => $this->db->GetPartnerSignupMap(),
+            'HowMap' => $this->db->GetHowHeardMap(),
             'UserCount' => count($users),
             'PendingCount' => $this->db->GetPendingTeacherRequestCount(),
         ]);
@@ -855,6 +856,39 @@ class AdminController extends Controller
     // ============================================================
     // ===== পার্টনার / এজেন্সি রেফারেল (লিংক + কোড) =====
     // ============================================================
+    /** GET /Admin/References?from=&to= — ইউজাররা কার রেফারেন্সে / কোথা থেকে এসেছে (সাইনআপ আর প্যাকেজ কেনার সময় যা বেছেছে) */
+    public function References(): void
+    {
+        $this->requireAdminPage();
+        [$from, $to] = $this->partnerDates();
+        $this->view(null, $this->db->GetReferenceReport($from, $to), ['Options' => $this->db->ReferenceOptions(), 'From' => $from, 'To' => $to]);
+    }
+
+    /** POST /Admin/SaveReferenceOptions — off[] = বন্ধ অপশন, custom = JSON {key: label}, add = নতুন অপশনের নাম */
+    public function SaveReferenceOptions_POST(): void
+    {
+        $this->requireAdminJson();
+        $all = $this->db->ReferenceOptions();
+        $custom = [];
+        foreach ($all as $k => $o) if ($o['custom']) $custom[$k] = $o['label'];
+        $remove = (string)input_str('remove', '');
+        if ($remove !== '' && isset($custom[$remove])) unset($custom[$remove]);
+        $add = trim(strip_tags((string)input_str('add', '')));
+        if ($add !== '') {
+            if (mb_strlen($add) > 40) json_response(['success' => false, 'message' => 'নাম ৪০ অক্ষরের মধ্যে দিন।']);
+            foreach ($all as $o) if (mb_strtolower($o['label']) === mb_strtolower($add)) json_response(['success' => false, 'message' => "“{$add}” আগেই আছে।"]);
+            if (count($custom) >= 30) json_response(['success' => false, 'message' => 'সর্বোচ্চ ৩০টা নতুন অপশন যোগ করা যায়।']);
+            $custom['c_' . bin2hex(random_bytes(4))] = $add;
+        }
+        $offIn = $_POST['off'] ?? null;
+        $off = [];
+        if (is_array($offIn)) { foreach ($offIn as $k) if (is_string($k) && $k !== 'other' && (isset($all[$k]) || isset($custom[$k]))) $off[] = $k; }
+        else { foreach ($all as $k => $o) if (!$o['on'] && $k !== 'other') $off[] = $k; }   // শুধু যোগ/মোছা — আগের চালু/বন্ধ ঠিক থাকে
+        $off = array_values(array_intersect($off, array_merge(array_keys(Db::REFERENCE_DEFAULTS), array_keys($custom))));
+        $this->db->SaveReferenceOptions($off, $custom);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
+    }
+
     /** GET /Admin/Partners — সব পার্টনার, নতুন পার্টনার তৈরি */
     public function Partners(): void
     {

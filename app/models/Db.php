@@ -22,6 +22,7 @@ require_once __DIR__ . '/ReferralData.php';
 require_once __DIR__ . '/EmailVerifyData.php';
 require_once __DIR__ . '/DeviceData.php';
 require_once __DIR__ . '/PartnerData.php';
+require_once __DIR__ . '/ReferenceData.php';
 
 class Db
 {
@@ -40,6 +41,7 @@ class Db
     use EmailVerifyData;
     use DeviceData;
     use PartnerData;
+    use ReferenceData;
 
     private PDO $pdo;
 

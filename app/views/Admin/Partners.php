@@ -1,6 +1,6 @@
 <?php
 /** Admin → Partners: এজেন্সি / পার্টনারদের রেফারেল লিংক + কোড, আর কে কত জন এনেছে */
-$ViewData['Title'] = 'Partner Referrals';
+$ViewData['Title'] = 'Agency Link & Code';
 $list = is_array($Model) ? $Model : [];
 $sum = ['clicks' => 0, 'signups' => 0, 'buyers' => 0, 'revenue' => 0];
 foreach ($list as $p) { $sum['clicks'] += $p->Clicks; $sum['signups'] += $p->Signups; $sum['buyers'] += $p->Buyers; $sum['revenue'] += $p->Revenue; }
@@ -52,8 +52,9 @@ foreach ($list as $p) { $sum['clicks'] += $p->Clicks; $sum['signups'] += $p->Sig
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content pt">
     <?= csrf_field() ?>
-    <h2><i class="fas fa-handshake" style="color:#7C3AED;"></i> Partner Referrals</h2>
-    <p class="sub">প্রতিটা এজেন্সি / পার্টনারের জন্য একটা স্পেশাল আইডি, একটা রেফারেল লিংক আর একটা রেফারেল কোড। লিংকে কত জন ক্লিক করেছে (কোন প্ল্যাটফর্ম থেকে), কত জন সাইনআপ করেছে আর কত জন প্যাকেজ কিনেছে — সব এখানে দেখা যাবে। ইউজারদের নিজের রেফারেল (বোনাস) থেকে এটা আলাদা।</p>
+    <?php partial('Admin/_RefTabs'); ?>
+    <h2><i class="fas fa-handshake" style="color:#7C3AED;"></i> এজেন্সির লিংক ও কোড</h2>
+    <p class="sub">এজেন্সির নাম দিয়ে তৈরি করুন — একটা লিংক আর একটা কোড পাবেন। সেটা এজেন্সিকে দিন। ঐ লিংক দিয়ে বা কোড লিখে যে সাইনআপ করবে আর যে প্যাকেজ কিনবে — সব এখানে দেখা যাবে।</p>
 
     <?php if ($TempData['Error'] !== null): ?><div class="alert alert-danger"><?= e($TempData['Error']) ?></div><?php endif; ?>
 

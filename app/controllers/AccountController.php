@@ -82,6 +82,14 @@ class AccountController extends Controller
         if ($this->db->UsernameExists($username)) $fail('Username already exists');
         if ($this->db->EmailExists($email)) $fail('Email already registered');
 
+        // কার রেফারেন্সে / কোথা থেকে জেনেছেন (Facebook, LinkedIn ...) — বাধ্যতামূলক
+        $how = null;
+        if ($this->db->ReferenceOptions(true)) {
+            $howKey = (string)input_str('howHeard', '');
+            $how = $this->db->CleanReference($howKey, (string)input_str('howHeardNote', ''));
+            if ($how === null) $fail($howKey === 'other' ? 'কোথা থেকে জেনেছেন সেটা লিখে দিন।' : 'আপনি কার রেফারেন্সে / কোথা থেকে জেনে এসেছেন সেটা বাছাই করুন।');
+        }
+
         // রেফারেল / পার্টনার কোড (ঐচ্ছিক) — এজেন্সির কোড হলে পার্টনার, MMxxxxxx হলে ইউজার রেফারেল
         $typed = strtoupper(trim((string)input_str('refCode', '')));
         $partner = null; $pVia = 'link'; $pSrc = 'direct'; $userRef = '';
@@ -104,6 +112,7 @@ class AccountController extends Controller
                 $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]);
                 $code = $userRef !== '' ? $userRef : (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
                 if (!preg_match('/^MM[A-Z0-9]{6}$/', $code)) $code = '';
+                if ($newId && $how) { try { $this->db->SetUserHowHeard($newId, $how[0], $how[1]); } catch (Throwable $e) { error_log('[howHeard] ' . $e->getMessage()); } }
                 if ($newId && $partner) { $this->db->RecordPartnerSignup($newId, (int)$partner->Id, $pVia, $pSrc); partner_forget(); }
                 unset($_SESSION['ref_code']);
                 if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);

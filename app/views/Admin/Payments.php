@@ -122,6 +122,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     <div class="txn"><small>Transaction ID</small><b><?= e($p->TxnId ?: '—') ?></b></div>
                     <div><small>Payment date</small><b><?= e(date('d M Y', strtotime($p->PayDate))) ?></b></div>
                     <div><small>জমা দিয়েছেন</small><b><?= e($fmt($p->CreatedAt)) ?></b></div>
+                    <?php if (!empty($p->Reference)): $ro = db()->ReferenceInfo((string)$p->Reference); ?><div><small>কার রেফারেন্সে</small><b><i class="<?= e($ro['icon']) ?>" style="color:<?= e($ro['color']) ?>;"></i> <?= e($ro['label']) ?><?= !empty($p->ReferenceNote) ? ' — ' . e($p->ReferenceNote) : '' ?></b></div><?php endif; ?>
                     <?php if ($p->AccountInfo): ?><div style="grid-column:1/-1;"><small>যে অ্যাকাউন্টে পাঠিয়েছেন</small><b><?= e($p->AccountInfo) ?></b></div><?php endif; ?>
                 </div>
                 <?php if ($p->Note): ?><div class="ap-note"><i class="fas fa-comment"></i> <?= e($p->Note) ?></div><?php endif; ?>

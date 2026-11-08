@@ -1547,7 +1547,7 @@ function admin_action_rule(string $action): string
             'edufeed' => ['EduFeed', 'EduFeedStatus'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
             'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'ProcessWithdrawal', 'SetReferralStatus',
-                'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
+                'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',

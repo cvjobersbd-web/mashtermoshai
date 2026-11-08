@@ -59,6 +59,11 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
     .au-in { position: relative; display: flex; align-items: center; }
     .au-in > i { position: absolute; left: 16px; color: #334155; font-size: 16px; pointer-events: none; }
     .au-in input { width: 100%; height: 50px; border: 1.5px solid #D7E2EE; border-radius: 12px; padding: 0 46px 0 46px; font-size: 15px; font-family: inherit; color: var(--au-ink); background: #fff; outline: none; transition: border-color .2s, box-shadow .2s; }
+    .au-in select { width: 100%; height: 50px; border: 1.5px solid #D7E2EE; border-radius: 12px; padding: 0 40px 0 46px; font-size: 15px; font-family: inherit; color: var(--au-ink); background: #fff; outline: none; appearance: auto; cursor: pointer; }
+    .au-in select:focus { border-color: var(--au-blue); box-shadow: 0 0 0 4px rgba(22,119,229,.10); }
+    .au-in select.is-invalid, .au-in input.is-invalid { border-color: #E5484D; }
+    .au-in select.is-invalid ~ .au-fb, .au-f.err .au-fb { display: block; }
+    [hidden].au-f { display: none !important; }
     .au-in input::placeholder { color: #7B8798; }
     .au-in input:focus { border-color: var(--au-blue); box-shadow: 0 0 0 4px rgba(22,119,229,.10); }
     .au-in input.is-invalid { border-color: #E5484D; box-shadow: 0 0 0 4px rgba(229,72,77,.08); }
@@ -201,6 +206,24 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
                         <?php $pfRef = ''; if (function_exists('partner_pending') && ($pp = partner_pending())) $pfRef = $pp[0];
                             elseif (preg_match('/^MM[A-Z0-9]{6}$/', (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? '')))) $pfRef = (string)($_SESSION['ref_code'] ?? $_COOKIE['mm_ref']);
                             $pfRef = (string)(input_str('refCode', '') ?: $pfRef); ?>
+                        <?php $refOpts = []; try { $refOpts = db()->ReferenceOptions(true); } catch (Throwable $e) { }
+                            $hhSel = (string)input_str('howHeard', '') ?: ((function_exists('partner_pending') && partner_pending()) ? 'agency' : '');
+                            if (!isset($refOpts[$hhSel])) $hhSel = ''; ?>
+                        <?php if ($refOpts): ?>
+                        <div class="au-f" id="hhBox">
+                            <label for="howHeard">আপনি কার রেফারেন্সে / কোথা থেকে জেনে এসেছেন?</label>
+                            <div class="au-in"><i class="fas fa-bullhorn"></i><select name="howHeard" id="howHeard" required>
+                                <option value="">— বাছাই করুন —</option>
+                                <?php foreach ($refOpts as $k => $o): ?><option value="<?= e($k) ?>"<?= $hhSel === $k ? ' selected' : '' ?>><?= e($o['label']) ?></option><?php endforeach; ?>
+                            </select></div>
+                            <div class="au-fb">কোথা থেকে জেনেছেন সেটা বাছাই করুন।</div>
+                        </div>
+                        <div class="au-f" id="hhOtherBox"<?= $hhSel === 'other' ? '' : ' hidden' ?>>
+                            <label for="howHeardNote">কোথা থেকে / কার কাছ থেকে জেনেছেন?</label>
+                            <div class="au-in"><i class="fas fa-pen"></i><input name="howHeardNote" id="howHeardNote" type="text" maxlength="100" placeholder="যেমন: কোচিং সেন্টার, সেমিনার, অমুক ভাই" autocomplete="off" value="<?= e((string)input_str('howHeardNote', '')) ?>" /></div>
+                            <div class="au-fb">একটু লিখে দিন কোথা থেকে জেনেছেন।</div>
+                        </div>
+                        <?php endif; ?>
                         <div class="au-f">
                             <label for="refCode">Referral Code <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
                             <div class="au-in"><i class="fas fa-ticket"></i><input name="refCode" id="refCode" type="text" maxlength="20" placeholder="কোড থাকলে লিখুন (না থাকলে খালি রাখুন)" autocomplete="off" value="<?= e($pfRef) ?>" style="text-transform:uppercase;" /></div>
@@ -265,8 +288,12 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
     [[fullName, vName], [username, vUser], [email, vEmail], [password, function () { vPass(); if (confirmPassword.value) vConf(); }], [confirmPassword, vConf]].forEach(function (p) {
         p[0].addEventListener('input', function () { formError.style.display = 'none'; p[1](); fit(); });
     });
+    var hh = document.getElementById('howHeard'), hhNote = document.getElementById('howHeardNote'), hhOther = document.getElementById('hhOtherBox');
+    function vHow() { if (!hh) return true; var ok = hh.value !== ''; setState(hh, ok); hhOther.hidden = hh.value !== 'other'; return ok; }
+    function vHowNote() { if (!hh || hh.value !== 'other') return true; var ok = hhNote.value.trim().length > 0; setState(hhNote, ok); return ok; }
+    if (hh) { hh.addEventListener('change', function () { formError.style.display = 'none'; vHow(); if (hh.value === 'other') hhNote.focus(); fit(); }); hhNote.addEventListener('input', function () { vHowNote(); fit(); }); }
     rf.addEventListener('submit', function (e) {
-        var ok = [vName(), vUser(), vEmail(), vPass(), vConf()].every(Boolean);
+        var ok = [vName(), vUser(), vEmail(), vPass(), vConf(), vHow(), vHowNote()].every(Boolean);
         if (!ok) { e.preventDefault(); formError.innerHTML = '<i class="fas fa-circle-exclamation"></i><span>Please fix the highlighted fields before creating an account.</span>'; formError.style.display = 'flex'; fit(); }
     });
 

@@ -85,6 +85,10 @@ $jsMethods = array_map(function ($m) {
     .co-f label { display: block; font-size: 13.5px; font-weight: 700; color: #1E293B; margin-bottom: 6px; }
     .co-f label .req { color: #DC2626; }
     .co-f input[type=text], .co-f input[type=date], .co-f textarea { width: 100%; border: 1.5px solid #DCECF5; border-radius: 12px; padding: 11px 14px; font-size: 14.5px; outline: none; background: #F8FBFE; font-family: inherit; }
+    .co-f .co-sel { width: 100%; border: 1.5px solid #DCECF5; border-radius: 12px; padding: 11px 14px; font-size: 14.5px; outline: none; background: #F8FBFE; font-family: inherit; cursor: pointer; }
+    .co-f .co-sel:focus { border-color: #1D7FE5; background: #fff; }
+    .co-f .bad .co-sel { border-color: #DC2626 !important; }
+    .co-f input[hidden] { display: none; }
     .co-f input:focus, .co-f textarea:focus { border-color: #1D7FE5; background: #fff; box-shadow: 0 0 0 3px rgba(29,127,229,.10); }
     .co-f .bad input, .co-f .bad .co-drop { border-color: #DC2626 !important; }
     .co-f textarea { min-height: 80px; resize: vertical; }
@@ -225,6 +229,17 @@ $jsMethods = array_map(function ($m) {
                             <div class="co-prev" id="coPrev" hidden></div>
                             <div class="co-hint"><i class="fas fa-eye"></i> Transaction amount ও ID যেন পরিষ্কার দেখা যায়।</div>
                         </div>
+                        <?php $refOpts = $ViewBag->RefOptions ?? []; [$rk, $rn] = $ViewBag->RefSel ?? ['', '']; if (!isset($refOpts[$rk])) { $rk = ''; $rn = ''; } ?>
+                        <?php if ($refOpts): ?>
+                        <div class="full" data-f="reference">
+                            <label for="coRef">কার রেফারেন্সে / কোথা থেকে জেনে প্যাকেজ কিনছেন?<span class="req">*</span></label>
+                            <select id="coRef" name="reference" class="co-sel">
+                                <option value="">— বাছাই করুন —</option>
+                                <?php foreach ($refOpts as $k => $o): ?><option value="<?= e($k) ?>"<?= $rk === $k ? ' selected' : '' ?>><?= e($o['label']) ?></option><?php endforeach; ?>
+                            </select>
+                            <input type="text" id="coRefNote" name="referenceNote" maxlength="100" placeholder="কোথা থেকে / কার কাছ থেকে জেনেছেন লিখুন" value="<?= e($rn) ?>" style="margin-top:8px;"<?= $rk === 'other' ? '' : ' hidden' ?> />
+                        </div>
+                        <?php endif; ?>
                         <div class="full">
                             <label for="coNote">Note</label>
                             <textarea id="coNote" name="note" maxlength="500" placeholder="যে নম্বর/অ্যাকাউন্ট থেকে টাকা পাঠিয়েছেন বা অন্য কিছু জানাতে চাইলে লিখুন (ঐচ্ছিক)"></textarea>
@@ -370,6 +385,8 @@ $jsMethods = array_map(function ($m) {
         if (cur.txnRequired && !txn) return showErr('Transaction ID দিন।', 'txnId');
         if (cur.kind === 'agent' && !/^01[3-9]\d{8}$/.test(form.senderNumber.value.replace(/[^0-9]/g, ''))) return showErr('যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন (যেমন 01712345678)।', 'sender');
         if (!form.payDate.value) return showErr('পেমেন্টের তারিখ দিন।', 'payDate');
+        if (form.reference && !form.reference.value) return showErr('কার রেফারেন্সে / কোথা থেকে জেনে প্যাকেজ কিনছেন সেটা বাছাই করুন।', 'reference');
+        if (form.reference && form.reference.value === 'other' && !form.referenceNote.value.trim()) return showErr('কার রেফারেন্সে কিনছেন সেটা লিখে দিন।', 'reference');
         if (!file) return showErr('পেমেন্টের রিসিট / স্ক্রিনশট আপলোড করুন।', 'receipt');
         if (file.size > 5 * 1024 * 1024) return showErr('রিসিট ৫ MB এর কম হতে হবে।', 'receipt');
         var fd = new FormData(form); fd.set('receipt', file);
@@ -381,6 +398,8 @@ $jsMethods = array_map(function ($m) {
             location.href = d.redirect;
         } catch (x) { showErr('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); btn.disabled = false; btn.innerHTML = h; }
     });
+    var coRef = document.getElementById('coRef');
+    if (coRef) coRef.addEventListener('change', function () { var n = document.getElementById('coRefNote'); n.hidden = coRef.value !== 'other'; if (!n.hidden) n.focus(); markBad(null); });
     if (METHODS.length) pickMethod(METHODS[0].id);
 })();
 </script>

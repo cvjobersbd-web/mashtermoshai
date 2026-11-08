@@ -36,6 +36,8 @@ class PaymentController extends Controller
             'Methods' => $this->db->GetPaymentMethods(true),
             'BlockReason' => $this->packageBlockReason($pkg),
             'PendingCount' => $this->db->CountUserPendingPayments($uid),
+            'RefOptions' => $this->db->ReferenceOptions(true),
+            'RefSel' => $this->db->GetUserHowHeard($uid),
         ]);
     }
 
@@ -63,6 +65,14 @@ class PaymentController extends Controller
         $today = new DateTime('today');
         if ($d > (clone $today)->modify('+1 day')) $this->fail('পেমেন্টের তারিখ ভবিষ্যতের হতে পারে না।', ['field' => 'payDate']);
         if ($d < (clone $today)->modify('-90 days')) $this->fail('৯০ দিনের বেশি পুরোনো পেমেন্ট জমা দেওয়া যায় না — Helpdesk-এ যোগাযোগ করুন।', ['field' => 'payDate']);
+
+        // কার রেফারেন্সে প্যাকেজ কিনছেন — বাধ্যতামূলক
+        $ref = null;
+        if ($this->db->ReferenceOptions(true)) {
+            $refKey = (string)input_str('reference', '');
+            $ref = $this->db->CleanReference($refKey, (string)input_str('referenceNote', ''));
+            if ($ref === null) $this->fail($refKey === 'other' ? 'কার রেফারেন্সে কিনছেন সেটা লিখে দিন।' : 'কার রেফারেন্সে / কোথা থেকে জেনে প্যাকেজ কিনছেন সেটা বাছাই করুন।', ['field' => 'reference']);
+        }
 
         if ($this->db->CountUserPendingPayments($uid) >= 5) $this->fail('আপনার ৫টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। অ্যাডমিন যাচাই করার পর আবার চেষ্টা করুন।');
 
@@ -98,6 +108,7 @@ class PaymentController extends Controller
             delete_upload($url); error_log('[payment submit] ' . $e->getMessage());
             $this->fail('জমা দেওয়া যায়নি। আবার চেষ্টা করুন।');
         }
+        if ($ref) { try { $this->db->SetPaymentReference($id, $ref[0], $ref[1]); } catch (Throwable $e) { error_log('[payment ref] ' . $e->getMessage()); } }
         $who = (string)(session_get('UserFullName') ?? session_get('UserName'));
         // টিচার হওয়ার আবেদন + পেমেন্ট একসাথে অ্যাডমিনের কাছে
         if ($pkg->Audience === 'Teacher' && session_get('UserRole') !== 'Teacher') {

@@ -236,6 +236,8 @@ $ViewBag->PendingCount = $pendingTeacherCount;
     .admin-cards-table td .badge { white-space: nowrap; }
     .admin-cards-table .jv-badge { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
     .jv-stack { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .jv-how { font-size: 12px; color: #475569; font-weight: 600; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 992px) { .jv-stack { align-items: flex-end; } }
     .au-acts { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
     .au-acts .btn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; }
     @media (max-width: 992px) { .au-acts { flex-wrap: wrap; justify-content: flex-start; } .admin-cards-table .au-user { min-width: 0; } .au-u { text-align: right; min-width: 0; max-width: 70%; } }
@@ -339,6 +341,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         </div>
         <div class="card-body">
             <?php $refMap = $ViewBag->RefMap ?? []; $refCount = count(array_filter($Model, fn($u) => isset($refMap[(int)$u->Id])));
+                $howMap = $ViewBag->HowMap ?? [];
                 $ptMap = $ViewBag->PartnerMap ?? []; $ptCount = count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]) && !isset($refMap[(int)$u->Id])));
                 echo joined_via_css(); ?>
             <div class="jv-filter" id="jvFilter">
@@ -386,7 +389,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                         <small class="susp-until"><?= $sp->IsPermanent ? 'Permanent' : 'till ' . e(fmt_date($sp->SuspendedUntil, 'd M, h:i A')) ?></small>
                                     <?php endif; ?>
                                 </td>
-                                <td data-label="Joined via"><?= $jvPt && !$jvRef ? partner_badge_html($jvPt) : '<div class="jv-stack">' . joined_via_html($jvRef) . partner_badge_html($jvPt) . '</div>' ?></td>
+                                <td data-label="Joined via"><div class="jv-stack"><?= $jvPt && !$jvRef ? partner_badge_html($jvPt) : joined_via_html($jvRef) . partner_badge_html($jvPt) ?><?php $hw = $howMap[(int)$user->Id] ?? null; if ($hw): $ho = db()->ReferenceInfo((string)$hw->HowHeard); ?><span class="jv-how" title="<?= e('সাইনআপে বেছেছে: ' . $ho['label'] . ($hw->HowHeardNote ? ' — ' . $hw->HowHeardNote : '')) ?>"><i class="<?= e($ho['icon']) ?>" style="color:<?= e($ho['color']) ?>;"></i> <?= e($hw->HowHeard === 'other' && $hw->HowHeardNote ? $hw->HowHeardNote : $ho['label']) ?></span><?php endif; ?></div></td>
                                 <td data-label="Created" class="au-dt"><?= e(fmt_date($user->CreatedAt, 'd M Y')) ?></td>
                                 <td data-label="Last Login" class="au-dt"><?php if ($user->LastLoginAt): ?><div class="au-u"><?= e(fmt_date($user->LastLoginAt, 'd M Y')) ?><small><?= e(fmt_date($user->LastLoginAt, 'h:i A')) ?></small></div><?php else: ?><span style="color:#94A3B8;">Never</span><?php endif; ?></td>
                                 <td class="td-actions"><div class="au-acts">

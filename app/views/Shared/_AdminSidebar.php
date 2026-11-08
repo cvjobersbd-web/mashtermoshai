@@ -306,7 +306,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Partners' => 'Partner Referrals', 'Partner' => 'Partner Referrals', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -461,10 +461,10 @@ try {
             </a>
         </li>
         <?php endif; ?>
-        <?php if (admin_can(admin_action_rule('Partners'))): ?>
+        <?php if (admin_can(admin_action_rule('References'))): ?>
         <li>
-            <a href="/Admin/Partners" class="<?= in_array($currentAction, ['Partners', 'Partner'], true) ? 'active' : '' ?>">
-                <i class="fas fa-handshake"></i> Partner Referrals
+            <a href="/Admin/References" class="<?= in_array($currentAction, ['References', 'Partners', 'Partner'], true) ? 'active' : '' ?>">
+                <i class="fas fa-bullhorn"></i> Reference / Agency
             </a>
         </li>
         <?php endif; ?>

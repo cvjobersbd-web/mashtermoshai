@@ -82,6 +82,7 @@ $roleLbl = fn($r) => $r === 'Teacher' ? ['Teacher', 't'] : ($r === 'Admin' ? ['A
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content">
     <?= csrf_field() ?>
+    <?php partial('Admin/_RefTabs'); ?>
     <a class="pd-back" href="/Admin/Partners"><i class="fas fa-arrow-left"></i> সব পার্টনার</a>
     <div class="pd-head">
         <div class="pd-av"><i class="fas fa-building"></i></div>
