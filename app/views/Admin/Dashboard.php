@@ -235,6 +235,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
     .admin-cards-table .au-dt small { display: block; color: #94A3B8; font-size: 12px; }
     .admin-cards-table td .badge { white-space: nowrap; }
     .admin-cards-table .jv-badge { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+    .jv-stack { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
     .au-acts { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
     .au-acts .btn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; }
     @media (max-width: 992px) { .au-acts { flex-wrap: wrap; justify-content: flex-start; } .admin-cards-table .au-user { min-width: 0; } .au-u { text-align: right; min-width: 0; max-width: 70%; } }
@@ -338,11 +339,13 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         </div>
         <div class="card-body">
             <?php $refMap = $ViewBag->RefMap ?? []; $refCount = count(array_filter($Model, fn($u) => isset($refMap[(int)$u->Id])));
+                $ptMap = $ViewBag->PartnerMap ?? []; $ptCount = count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]) && !isset($refMap[(int)$u->Id])));
                 echo joined_via_css(); ?>
             <div class="jv-filter" id="jvFilter">
                 <button type="button" class="on" data-jv="all">সব (<?= count($Model) ?>)</button>
                 <button type="button" data-jv="ref"><i class="fas fa-gift"></i> রেফারেলে এসেছে (<?= (int)$refCount ?>)</button>
-                <button type="button" data-jv="direct"><i class="fas fa-user-plus"></i> ডাইরেক্ট সাইনআপ (<?= count($Model) - (int)$refCount ?>)</button>
+                <?php if ($ptMap): ?><button type="button" data-jv="partner"><i class="fas fa-handshake"></i> পার্টনার / এজেন্সি থেকে (<?= count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]))) ?>)</button><?php endif; ?>
+                <button type="button" data-jv="direct"><i class="fas fa-user-plus"></i> ডাইরেক্ট সাইনআপ (<?= count($Model) - (int)$refCount - (int)$ptCount ?>)</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-striped table-hover admin-cards-table">
@@ -359,8 +362,8 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($Model as $user): $jvRef = $refMap[(int)$user->Id] ?? null; ?>
-                            <tr data-jv="<?= $jvRef ? 'ref' : 'direct' ?>">
+                        <?php foreach ($Model as $user): $jvRef = $refMap[(int)$user->Id] ?? null; $jvPt = $ptMap[(int)$user->Id] ?? null; ?>
+                            <tr data-jv="<?= trim(($jvRef ? 'ref ' : '') . ($jvPt ? 'partner' : '')) ?: 'direct' ?>">
                                 <td data-label="ID" class="au-id"><?= e($user->Id) ?></td>
                                 <td data-label="User" class="au-user"><div class="au-u"><b><?= e(!is_blank($user->FullName) ? $user->FullName : $user->UserName) ?></b><small>@<?= e($user->UserName) ?></small><small class="em"><?= e($user->Email) ?></small></div></td>
                                 <td data-label="Role">
@@ -383,7 +386,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                         <small class="susp-until"><?= $sp->IsPermanent ? 'Permanent' : 'till ' . e(fmt_date($sp->SuspendedUntil, 'd M, h:i A')) ?></small>
                                     <?php endif; ?>
                                 </td>
-                                <td data-label="Joined via"><?= joined_via_html($jvRef) ?></td>
+                                <td data-label="Joined via"><?= $jvPt && !$jvRef ? partner_badge_html($jvPt) : '<div class="jv-stack">' . joined_via_html($jvRef) . partner_badge_html($jvPt) . '</div>' ?></td>
                                 <td data-label="Created" class="au-dt"><?= e(fmt_date($user->CreatedAt, 'd M Y')) ?></td>
                                 <td data-label="Last Login" class="au-dt"><?php if ($user->LastLoginAt): ?><div class="au-u"><?= e(fmt_date($user->LastLoginAt, 'd M Y')) ?><small><?= e(fmt_date($user->LastLoginAt, 'h:i A')) ?></small></div><?php else: ?><span style="color:#94A3B8;">Never</span><?php endif; ?></td>
                                 <td class="td-actions"><div class="au-acts">
@@ -823,7 +826,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
             var b = e.target.closest('button[data-jv]'); if (!b) return;
             box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
             var v = b.getAttribute('data-jv');
-            document.querySelectorAll('tr[data-jv]').forEach(function (tr) { tr.style.display = v === 'all' || tr.getAttribute('data-jv') === v ? '' : 'none'; });
+            document.querySelectorAll('tr[data-jv]').forEach(function (tr) { tr.style.display = v === 'all' || tr.getAttribute('data-jv').split(' ').indexOf(v) !== -1 ? '' : 'none'; });
         });
     })();
 </script>

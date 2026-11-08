@@ -42,6 +42,11 @@ abstract class Controller
             $_SESSION['ref_code'] = $ref;
             if (!headers_sent()) setcookie('mm_ref', $ref, ['expires' => time() + 30 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
         }
+        // পার্টনার / এজেন্সি লিংক (?p=CODE&src=facebook) — ক্লিক গোনা হয়, কোড ৩০ দিন মনে থাকে, তারপর পরিষ্কার URL এ পাঠায়
+        $pc = $_GET['p'] ?? null;
+        if (is_string($pc) && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$/', $pc)) {
+            try { partner_capture($this->db, strtoupper($pc)); } catch (Throwable $e) { error_log('[partner link] ' . $e->getMessage()); }
+        }
     }
 
     /** View রেন্ডার করে। $view না দিলে বর্তমান Controller/Action ব্যবহার হয় */

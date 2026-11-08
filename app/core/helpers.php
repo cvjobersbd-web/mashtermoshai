@@ -1546,7 +1546,8 @@ function admin_action_rule(string $action): string
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
-            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'ProcessWithdrawal', 'SetReferralStatus'],
+            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'ProcessWithdrawal', 'SetReferralStatus',
+                'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
@@ -1797,9 +1798,71 @@ function joined_via_html(?object $ref, bool $long = false): string
 function joined_via_css(): string
 {
     return '<style>.jv-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap;line-height:1.5}'
-        . '.jv-badge i{font-size:11px}.jv-direct{background:#F1F5F9;color:#475569}.jv-ref{background:#FEF3C7;color:#92400E}.jv-ref a{color:#92400E;text-decoration:underline}.jv-ref small{font-weight:600;opacity:.85}'
+        . '.jv-badge i{font-size:11px}.jv-direct{background:#F1F5F9;color:#475569}.jv-ref{background:#FEF3C7;color:#92400E}.jv-ref a{color:#92400E;text-decoration:underline}.jv-ref small{font-weight:600;opacity:.85}.jv-partner{background:#EDE9FE;color:#5B21B6}.jv-partner a{color:#5B21B6;text-decoration:underline}'
         . '.jv-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.jv-filter button{border:1.5px solid #DCE5EE;background:#fff;color:#334155;border-radius:999px;padding:6px 14px;font-weight:700;font-size:13px;cursor:pointer}'
         . '.jv-filter button.on{background:#134856;border-color:#134856;color:#fff}</style>';
+}
+
+
+// ============================================================
+// ===== পার্টনার / এজেন্সি রেফারেল লিংক =====
+// ============================================================
+/** লিংক প্রিভিউ বানানো বট (Facebook, WhatsApp ...) — এদের ক্লিক গোনা হয় না */
+function is_link_bot(): bool
+{
+    $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+    return $ua === '' || (bool)preg_match('/bot|crawl|spider|slurp|facebookexternalhit|facebookcatalog|WhatsApp|TelegramBot|Twitterbot|LinkedInBot|Discordbot|Slackbot|SkypeUriPreview|vkShare|redditbot|Pinterest|curl|wget|python-requests/i', $ua);
+}
+
+/** ?p=CODE&src=... এলে: ক্লিক গোনে, কোড মনে রাখে (সেশন + ৩০ দিনের কুকি), পরিষ্কার URL এ পাঠায় */
+function partner_capture(Db $db, string $code): void
+{
+    $p = $db->GetPartnerByCode($code);
+    if (!$p) return;
+    $src = strtolower(trim((string)($_GET['src'] ?? '')));
+    if (!preg_match('/^[a-z0-9_-]{1,20}$/', $src) || $src === 'code') $src = 'direct';
+    $loggedIn = current_user_id() !== null;
+    if (!$loggedIn) {
+        $_SESSION['partner_ref'] = $p->Code . '|' . $src;
+        if (!headers_sent()) setcookie('mm_pref', $p->Code . '|' . $src, ['expires' => time() + 30 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax',
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+    }
+    if (!is_link_bot()) $db->RecordPartnerClick((int)$p->Id, $src, device_hash(), client_ip());
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
+    $q = $_GET; unset($q['p'], $q['src'], $q['fbclid'], $q['url']);
+    $path = (string)(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
+    if (!$loggedIn && $p->Landing === 'register' && is_link_bot() === false) { $path = '/Account/Register'; $q = []; }
+    redirect($path . ($q ? '?' . http_build_query($q) : ''));
+}
+
+/** মনে রাখা পার্টনার লিংক: [Code, src] অথবা null */
+function partner_pending(): ?array
+{
+    $v = (string)($_SESSION['partner_ref'] ?? ($_COOKIE['mm_pref'] ?? ''));
+    if (!preg_match('/^([A-Za-z0-9][A-Za-z0-9_-]{2,19})\|([a-z0-9_-]{1,20})$/', $v, $m)) return null;
+    return [strtoupper($m[1]), $m[2]];
+}
+
+function partner_forget(): void
+{
+    unset($_SESSION['partner_ref']);
+    if (!headers_sent()) setcookie('mm_pref', '', ['expires' => time() - 3600, 'path' => '/']);
+}
+
+/** পার্টনারের শেয়ার লিংক — $src দিলে প্ল্যাটফর্ম অনুযায়ী আলাদা গোনা হয় */
+function partner_link(string $code, string $src = ''): string
+{
+    return site_public_url() . '/?p=' . rawurlencode($code) . ($src !== '' && $src !== 'direct' ? '&src=' . rawurlencode($src) : '');
+}
+
+/** অ্যাডমিন ড্যাশবোর্ডের "Joined via" — পার্টনার ব্যাজ */
+function partner_badge_html(?object $ps): string
+{
+    if (!$ps) return '';
+    [$sn] = Db::partnerSource((string)$ps->Source);
+    $via = $ps->Via === 'code' ? 'কোড' : 'লিংক · ' . $sn;
+    return '<span class="jv-badge jv-partner" title="' . e('পার্টনার: ' . $ps->PartnerName . ' (' . $ps->Code . ') — ' . $via) . '"><i class="fas fa-handshake"></i> '
+        . '<a href="/Admin/Partner/' . (int)$ps->PartnerId . '">' . e((string)$ps->PartnerName) . '</a></span>';
 }
 
 

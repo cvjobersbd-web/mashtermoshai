@@ -198,6 +198,13 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
                             </div>
                         </div>
                         <p class="au-hint">Minimum 6 characters.</p>
+                        <?php $pfRef = ''; if (function_exists('partner_pending') && ($pp = partner_pending())) $pfRef = $pp[0];
+                            elseif (preg_match('/^MM[A-Z0-9]{6}$/', (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? '')))) $pfRef = (string)($_SESSION['ref_code'] ?? $_COOKIE['mm_ref']);
+                            $pfRef = (string)(input_str('refCode', '') ?: $pfRef); ?>
+                        <div class="au-f">
+                            <label for="refCode">Referral Code <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
+                            <div class="au-in"><i class="fas fa-ticket"></i><input name="refCode" id="refCode" type="text" maxlength="20" placeholder="কোড থাকলে লিখুন (না থাকলে খালি রাখুন)" autocomplete="off" value="<?= e($pfRef) ?>" style="text-transform:uppercase;" /></div>
+                        </div>
                         <div id="formError" class="au-alert err" style="display:none;"></div>
                         <button type="submit" class="au-btn"><i class="fas fa-user-plus"></i> Create Account</button>
                     </form>

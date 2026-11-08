@@ -306,7 +306,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Partners' => 'Partner Referrals', 'Partner' => 'Partner Referrals', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -458,6 +458,13 @@ try {
             <a href="/Admin/Referrals" class="<?= $currentAction === 'Referrals' ? 'active' : '' ?>">
                 <i class="fas fa-gift"></i> Referrals
                 <?php if ($pendingWd > 0): ?><span class="badge-sidebar warning"><?= (int)$pendingWd ?></span><?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Partners'))): ?>
+        <li>
+            <a href="/Admin/Partners" class="<?= in_array($currentAction, ['Partners', 'Partner'], true) ? 'active' : '' ?>">
+                <i class="fas fa-handshake"></i> Partner Referrals
             </a>
         </li>
         <?php endif; ?>

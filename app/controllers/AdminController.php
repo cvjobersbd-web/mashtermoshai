@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -78,6 +78,7 @@ class AdminController extends Controller
         $this->view(null, $users, [
             'Suspensions' => $this->db->GetActiveSuspensionsMap(),
             'RefMap' => $this->db->GetReferralSourceMap(),
+            'PartnerMap' => $this->db->GetPartnerSignupMap(),
             'UserCount' => count($users),
             'PendingCount' => $this->db->GetPendingTeacherRequestCount(),
         ]);
@@ -849,6 +850,120 @@ class AdminController extends Controller
         if ($min < 1 || $min > 100000) json_response(['success' => false, 'message' => 'সর্বনিম্ন উইথড্র ঠিক নেই।']);
         $this->db->SaveSiteContent(['ref_bonus' => (string)$bonus, 'ref_min_withdraw' => (string)$min, 'ref_enabled' => input_bool('enabled') ? '1' : '0']);
         json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে রেফার করা কেউ প্যাকেজ কিনলে ৳{$bonus}।"]);
+    }
+
+    // ============================================================
+    // ===== পার্টনার / এজেন্সি রেফারেল (লিংক + কোড) =====
+    // ============================================================
+    /** GET /Admin/Partners — সব পার্টনার, নতুন পার্টনার তৈরি */
+    public function Partners(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetPartnersWithTotals(), ['Suggest' => $this->db->GeneratePartnerCode('AGENCY')]);
+    }
+
+    private function partnerDates(): array
+    {
+        $d = function (string $k): ?string { $v = trim((string)input_str($k, '')); $x = DateTime::createFromFormat('!Y-m-d', $v); return $x && $x->format('Y-m-d') === $v ? $v : null; };
+        $from = $d('from'); $to = $d('to');
+        if ($from && $to && $from > $to) [$from, $to] = [$to, $from];
+        return [$from, $to];
+    }
+
+    /** GET /Admin/Partner/{id}?from=&to= — একটা পার্টনারের লিংক, কোড, শেয়ার, প্ল্যাটফর্ম অনুযায়ী ক্লিক / সাইনআপ / কেনা */
+    public function Partner(): void
+    {
+        $this->requireAdminPage();
+        $p = $this->db->GetPartner((int)input_int('id', 0));
+        if (!$p) { tempdata_set('Error', 'পার্টনার পাওয়া যায়নি।'); $this->redirectToAction('Partners'); }
+        [$from, $to] = $this->partnerDates();
+        $this->view(null, $p, ['Report' => $this->db->GetPartnerReport((int)$p->Id, $from, $to), 'From' => $from, 'To' => $to]);
+    }
+
+    /** POST /Admin/SavePartner (id = 0 হলে নতুন) */
+    public function SavePartner_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $name = trim((string)input_str('name', ''));
+        $code = strtoupper(trim((string)input_str('code', '')));
+        $contact = mb_substr(trim((string)input_str('contact', '')), 0, 150);
+        $note = mb_substr(trim((string)input_str('note', '')), 0, 300);
+        $landing = input_str('landing', 'register') === 'home' ? 'home' : 'register';
+        if ($name === '' || mb_strlen($name) > 100) json_response(['success' => false, 'message' => 'এজেন্সি / পার্টনারের নাম দিন (১০০ অক্ষরের মধ্যে)।']);
+        if ($id > 0 && !$this->db->GetPartner($id)) json_response(['success' => false, 'message' => 'পার্টনার পাওয়া যায়নি।']);
+        if ($code === '') $code = $this->db->GeneratePartnerCode($name);
+        if (($err = $this->db->ValidPartnerCode($code)) !== null) json_response(['success' => false, 'message' => $err]);
+        if ($this->db->PartnerCodeTaken($code, $id)) json_response(['success' => false, 'message' => "{$code} কোডটি আগেই ব্যবহার হয়েছে — অন্য কোড দিন।"]);
+        if ($id > 0) {
+            $this->db->UpdatePartner($id, $name, $code, $contact, $note, $landing);
+            json_response(['success' => true, 'message' => 'সেভ হয়েছে।', 'id' => $id]);
+        }
+        $id = $this->db->CreatePartner($name, $code, $contact, $note, $landing, (int)current_user_id());
+        json_response(['success' => true, 'message' => "পার্টনার তৈরি হয়েছে — কোড: {$code}", 'id' => $id]);
+    }
+
+    /** POST /Admin/TogglePartner (id, on) — বন্ধ থাকলে লিংক / কোড কাজ করে না, পুরোনো হিসাব থাকে */
+    public function TogglePartner_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetPartner($id)) json_response(['success' => false, 'message' => 'পার্টনার পাওয়া যায়নি।']);
+        $on = input_bool('on');
+        $this->db->SetPartnerActive($id, $on);
+        json_response(['success' => true, 'message' => $on ? 'চালু হয়েছে — লিংক আর কোড এখন কাজ করবে।' : 'বন্ধ হয়েছে — লিংক আর কোড আর কাজ করবে না (পুরোনো হিসাব থাকবে)।']);
+    }
+
+    /** POST /Admin/DeletePartner (id) — শুধু Super Admin */
+    public function DeletePartner_POST(): void
+    {
+        $this->requireAdminJson();
+        if (!admin_is_super()) json_response(['success' => false, 'message' => 'পার্টনার মুছতে পারেন শুধু Super Admin — চাইলে "বন্ধ" করে রাখুন।']);
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetPartner($id)) json_response(['success' => false, 'message' => 'পার্টনার পাওয়া যায়নি।']);
+        $this->db->DeletePartner($id);
+        json_response(['success' => true, 'message' => 'পার্টনার মুছে ফেলা হয়েছে।']);
+    }
+
+    /** POST /Admin/ResetPartnerToken (id) — এজেন্সির রিপোর্ট লিংক বদলায় (পুরোনোটা আর খুলবে না) */
+    public function ResetPartnerToken_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        if (!$this->db->GetPartner($id)) json_response(['success' => false, 'message' => 'পার্টনার পাওয়া যায়নি।']);
+        $t = $this->db->ResetPartnerToken($id);
+        json_response(['success' => true, 'message' => 'নতুন রিপোর্ট লিংক তৈরি হয়েছে — পুরোনো লিংক আর খুলবে না।', 'url' => site_public_url() . '/Partner/Report?t=' . $t]);
+    }
+
+    /** GET /Admin/PartnerCsv/{id}?from=&to= — এই পার্টনার থেকে আসা ইউজারদের তালিকা (CSV) */
+    public function PartnerCsv(): void
+    {
+        $this->requireAdminPage();
+        $p = $this->db->GetPartner((int)input_int('id', 0));
+        if (!$p) $this->redirectToAction('Partners');
+        [$from, $to] = $this->partnerDates();
+        $r = $this->db->GetPartnerReport((int)$p->Id, $from, $to);
+        $safe = fn($v) => is_string($v) && preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
+        $name = 'partner_' . preg_replace('/[^A-Za-z0-9_-]/', '', (string)$p->Code) . '_' . ($from ?: 'start') . '_to_' . ($to ?: date('Y-m-d')) . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $name . '"');
+        header('Cache-Control: no-store');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Partner', $p->Name, 'Code', $p->Code, 'From', $from ?: 'Start', 'To', $to ?: date('Y-m-d')]);
+        fputcsv($out, []);
+        fputcsv($out, ['Platform', 'Clicks', 'Unique Visitors', 'Signups', 'Email Verified', 'Buyers', 'Orders', 'Revenue (BDT)', 'Pending Payments']);
+        foreach ($r['sources'] as $s => $x) fputcsv($out, [Db::partnerSource($s)[0], $x['clicks'], $x['visitors'], $x['signups'], $x['verified'], $x['buyers'], $x['orders'], $x['revenue'], $x['pending']]);
+        $t = $r['totals'];
+        fputcsv($out, ['TOTAL', $t['clicks'], $t['visitors'], $t['signups'], $t['verified'], $t['buyers'], $t['orders'], $t['revenue'], $t['pending']]);
+        fputcsv($out, []);
+        fputcsv($out, ['#', 'Signup Date', 'Name', 'Username', 'Email', 'Phone', 'Role', 'Joined Via', 'Platform', 'Email Verified', 'Packages Bought', 'Total Paid (BDT)', 'Last Package', 'Pending Payments']);
+        foreach ($r['users'] as $i => $u) {
+            fputcsv($out, array_map($safe, [$i + 1, fmt_date($u->SignedUp, 'Y-m-d H:i'), (string)$u->FullName, (string)$u->UserName, (string)$u->Email, (string)($u->MobileNumber ?? ''), $u->Role === 'Teacher' ? 'Teacher' : ($u->Role === 'Admin' ? 'Admin' : 'Student'),
+                $u->Via === 'code' ? 'Code' : 'Link', Db::partnerSource((string)$u->Source)[0], $u->Verified ? 'Yes' : 'No', $u->Orders, $u->Paid, $u->LastPackage, $u->Pending]));
+        }
+        fclose($out);
+        exit;
     }
 
     // ============================================================

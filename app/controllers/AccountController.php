@@ -82,11 +82,29 @@ class AccountController extends Controller
         if ($this->db->UsernameExists($username)) $fail('Username already exists');
         if ($this->db->EmailExists($email)) $fail('Email already registered');
 
+        // রেফারেল / পার্টনার কোড (ঐচ্ছিক) — এজেন্সির কোড হলে পার্টনার, MMxxxxxx হলে ইউজার রেফারেল
+        $typed = strtoupper(trim((string)input_str('refCode', '')));
+        $partner = null; $pVia = 'link'; $pSrc = 'direct'; $userRef = '';
+        $pend = partner_pending();
+        if ($typed !== '') {
+            if (($partner = $this->db->GetPartnerByCode($typed)) !== null) {
+                if ($pend && $pend[0] === strtoupper((string)$partner->Code)) $pSrc = $pend[1];   // লিংক থেকে এসে কোডটাই দিয়েছেন
+                else { $pVia = 'code'; $pSrc = 'code'; }
+            } elseif (preg_match('/^MM[A-Z0-9]{6}$/', $typed) && $this->db->GetUserIdByReferralCode($typed)) {
+                $userRef = $typed;
+            } else {
+                $fail('রেফারেল কোডটি সঠিক নয় — আবার দেখে লিখুন, অথবা ঘরটি খালি রাখুন।');
+            }
+        } elseif ($pend && ($partner = $this->db->GetPartnerByCode($pend[0])) !== null) {
+            $pSrc = $pend[1];
+        }
+
         try {
             if ($this->db->RegisterUser(obj(['UserName' => $username, 'Password' => $password, 'FullName' => $fullName, 'Email' => $email]))) {
                 $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]);
-                $code = (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
+                $code = $userRef !== '' ? $userRef : (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
                 if (!preg_match('/^MM[A-Z0-9]{6}$/', $code)) $code = '';
+                if ($newId && $partner) { $this->db->RecordPartnerSignup($newId, (int)$partner->Id, $pVia, $pSrc); partner_forget(); }
                 unset($_SESSION['ref_code']);
                 if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);
 
