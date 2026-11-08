@@ -23,6 +23,7 @@ require_once __DIR__ . '/EmailVerifyData.php';
 require_once __DIR__ . '/DeviceData.php';
 require_once __DIR__ . '/PartnerData.php';
 require_once __DIR__ . '/ReferenceData.php';
+require_once __DIR__ . '/UserPurgeData.php';
 
 class Db
 {
@@ -42,6 +43,7 @@ class Db
     use DeviceData;
     use PartnerData;
     use ReferenceData;
+    use UserPurgeData;
 
     private PDO $pdo;
 
@@ -373,12 +375,17 @@ class Db
 
     public function DeleteUser(int $userId): bool
     {
+        $img = (string)($this->scalar('SELECT `ProfileImageLink` FROM `Users` WHERE `Id` = :id', ['id' => $userId]) ?? '');
         $this->pdo->beginTransaction();
         try {
             $this->exec('DELETE FROM `TeacherRequests` WHERE `UserId` = :id', ['id' => $userId]);
             $n = $this->exec('DELETE FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
             $this->pdo->commit();
-            if ($n > 0) { $this->DeleteFriendshipsOfUser($userId); $this->DeleteProfileViewsOfUser($userId); $this->DeleteProfileContentOfUser($userId); $this->DeleteTeacherDataOf($userId); }
+            if ($n > 0) {
+                foreach (['DeleteFriendshipsOfUser', 'DeleteProfileViewsOfUser', 'DeleteProfileContentOfUser', 'DeleteTeacherDataOf'] as $fn) { try { $this->$fn($userId); } catch (Throwable $e) { error_log("[DeleteUser $fn] " . $e->getMessage()); } }
+                // বাকি সব ডাটা (পোস্ট, পেমেন্ট, চ্যাট, রেফারেল ...) + আপলোড করা ফাইল
+                try { $this->PurgeUserData($userId, $img !== '' ? [$img] : []); } catch (Throwable $e) { error_log('[PurgeUserData] ' . $e->getMessage()); }
+            }
             return $n > 0;
         } catch (Throwable $e) {
             $this->pdo->rollBack();

@@ -150,7 +150,7 @@ class AdminController extends Controller
         $out['LastLoginAt'] = $u->LastLoginAt ? fmt_date($u->LastLoginAt, 'Y-m-d H:i') : 'Never';
         // পেজের JS এগুলো সরাসরি innerHTML এ বসায় — তাই HTML-escape (XSS প্রতিরোধ)
         $out = array_map(fn($v) => is_string($v) ? e($v) : $v, $out);
-        $out['JoinedVia'] = joined_via_html($this->db->GetReferralSource((int)$u->Id), true);   // নিজেই escape করা HTML
+        $out['JoinedVia'] = joined_via_full((int)$u->Id);   // নিজেই escape করা HTML
         json_camel(['success' => true, 'user' => $out]);
     }
 
@@ -212,9 +212,10 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $this->guardAdminTarget((int)input_int('id', 0));
         $id = input_int('id', 0);
+        if (!admin_is_super()) json_response(['success' => false, 'message' => 'ইউজার মুছতে পারেন শুধু Super Admin।']);
         if (current_user_id() === $id) json_response(['success' => false, 'message' => 'Cannot delete your own account']);
         try {
-            if ($this->db->DeleteUser($id)) json_response(['success' => true, 'message' => 'User deleted successfully']);
+            if ($this->db->DeleteUser($id)) json_response(['success' => true, 'message' => 'ইউজার আর তার সব ডাটা পুরোপুরি মুছে ফেলা হয়েছে।']);
         } catch (Throwable $e) {}
         json_response(['success' => false, 'message' => 'Failed to delete user']);
     }
@@ -839,7 +840,21 @@ class AdminController extends Controller
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => $this->db->GetWithdrawalsAdmin($w), 'Referrals' => $this->db->GetReferralsAdmin(100)]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(100)]);
+    }
+
+    /** GET /Admin/Withdrawals?w=Pending|Paid|Rejected|all — রেফারেল বোনাসের উইথড্র আবেদন: দেখে টাকা পাঠিয়ে Paid / বাতিল */
+    public function Withdrawals(): void
+    {
+        $this->requireAdminPage();
+        $w = (string)input_str('w', 'Pending');
+        if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
+        $list = $this->db->GetWithdrawalsAdmin($w, 300);
+        $bal = [];
+        foreach ($list as $x) $bal[(int)$x->UserId] ??= $this->db->GetReferralSummary((int)$x->UserId);
+        $counts = [];
+        foreach (['Pending', 'Paid', 'Rejected'] as $s) $counts[$s] = (int)$this->db->scalar('SELECT COUNT(*) FROM `ReferralWithdrawals` WHERE `Status` = :s', ['s' => $s]);
+        $this->view(null, $list, ['Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w, 'Balances' => $bal, 'Counts' => $counts]);
     }
 
     /** POST /Admin/SaveReferralSettings (bonus, min, enabled) */

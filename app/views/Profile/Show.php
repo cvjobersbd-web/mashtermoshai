@@ -107,6 +107,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                         <?php if ($location !== ''): ?><span><i class="fas fa-location-dot"></i> <span id="pfLoc"><?= e($location) ?></span></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></span>
                     </div>
+                    <?php if (is_admin()): ?><div class="pf-joined" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:12px;padding:8px 12px;font-size:13px;"><span style="color:#64748B;font-weight:700;"><i class="fas fa-user-shield"></i> কিভাবে এসেছে <small style="font-weight:600;">(শুধু অ্যাডমিন দেখেন)</small>:</span><?= joined_via_full((int)$u->Id) ?></div><?php endif; ?>
                     <?php if ($intro->Bio !== ''): ?>
                         <div class="pf-bio"><span id="pfBio">“<?= e($intro->Bio) ?>”</span><?php if ($isOwner): ?><button type="button" class="pf-pen" data-intro="bio" aria-label="Edit bio"><i class="fas fa-pen"></i></button><?php endif; ?></div>
                     <?php elseif ($isOwner): ?>

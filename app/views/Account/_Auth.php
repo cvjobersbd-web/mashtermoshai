@@ -245,7 +245,12 @@ $authImg = 'https://i.ibb.co.com/tMC8kk2L/Teacher-and-Student-Study-Session.png'
     var titles = { login: 'Login', register: 'Register' };
     var urls = { login: '/Account/Login' + <?= js($returnUrl !== '' ? '?returnUrl=' . rawurlencode($returnUrl) : '') ?>, register: '/Account/Register' };
 
-    function fit() { var cur = forms[au.getAttribute('data-mode')]; card.style.height = (cur.offsetHeight + parseFloat(getComputedStyle(card).paddingTop) + parseFloat(getComputedStyle(card).paddingBottom)) + 'px'; }
+    function fit() {
+        var cur = forms[au.getAttribute('data-mode')], h = cur.offsetHeight + parseFloat(getComputedStyle(card).paddingTop) + parseFloat(getComputedStyle(card).paddingBottom);
+        card.style.height = h + 'px';
+        // ফর্ম লম্বা হলে পুরো অংশটাও লম্বা হয় — উপরের হেডারের নিচে ঢুকে যায় না
+        var st = au.querySelector('.au-stage'); if (st) st.style.minHeight = window.matchMedia('(max-width: 960px)').matches ? '' : Math.max(640, Math.ceil(h) + 24) + 'px';
+    }
     // লগইন ↔ সাইনআপ — ছবি আর ফর্ম জায়গা বদলায়, ফর্মের লেখা স্মুথলি বদলায়
     function go(mode, push) {
         if (au.getAttribute('data-mode') === mode) return;

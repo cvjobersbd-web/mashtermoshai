@@ -355,7 +355,7 @@ $ViewData['Title'] = 'Teacher Requests';
                     <div style="flex:1; min-width:250px;">
                         <h5>
                             <i class="fas fa-user"></i>
-                            <?= e($request->FullName) ?>
+                            <a href="/Profile/Show/<?= (int)$request->UserId ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="প্রোফাইল দেখুন"><?= e($request->FullName) ?></a>
                             <span class="<?= e($statusClass) ?>"><?= ['AwaitingPayment' => 'পেমেন্ট বাকি', 'Removed' => 'টিচার থেকে সরানো', 'Expired' => 'প্যাকেজের মেয়াদ শেষ'][$request->Status] ?? e($request->Status) ?></span>
                         </h5>
 

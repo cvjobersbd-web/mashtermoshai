@@ -184,6 +184,14 @@ trait PartnerData
         } catch (Throwable $e) { error_log('[RecordPartnerSignup] ' . $e->getMessage()); }
     }
 
+    public function GetPartnerSignup(int $userId): ?Obj
+    {
+        try {
+            $this->EnsurePartnerTables();
+            return $this->one('SELECT s.`UserId`, s.`PartnerId`, s.`Via`, s.`Source`, p.`Name` AS PartnerName, p.`Code` FROM `PartnerSignups` s JOIN `Partners` p ON p.`Id` = s.`PartnerId` WHERE s.`UserId` = :u', ['u' => $userId]);
+        } catch (Throwable $e) { return null; }
+    }
+
     /** [UserId => Obj(PartnerId, PartnerName, Code, Via, Source)] — অ্যাডমিন ড্যাশবোর্ডের "Joined via" */
     public function GetPartnerSignupMap(): array
     {

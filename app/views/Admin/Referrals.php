@@ -41,7 +41,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content rfa">
     <h2><i class="fas fa-gift" style="color:#F59E0B;"></i> Referrals</h2>
-    <p class="sub">ইউজাররা নিজের লিংক শেয়ার করে — কেউ সেই লিংক দিয়ে সাইনআপ করে প্যাকেজ কিনলে (পেমেন্ট Approve হলে) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই। উইথড্র আবেদন দেখে টাকা পাঠান, তারপর <b>Paid</b> চাপুন।</p>
+    <p class="sub">ইউজাররা নিজের লিংক শেয়ার করে — কেউ সেই লিংক দিয়ে সাইনআপ করে প্যাকেজ কিনলে (পেমেন্ট Approve হলে) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই। উইথড্র আবেদন দেখতে ও টাকা পাঠাতে বাম মেনুর <a href="/Admin/Withdrawals"><b>Withdraw</b></a> পেজে যান।</p>
 
     <div class="rfa-stats">
         <div class="rfa-stat"><small>মোট রেফারেল · প্যাকেজ কিনেছে</small><b><?= number_format($st['referrals']) ?> · <?= number_format($st['bought'] ?? 0) ?></b></div>
@@ -61,36 +61,12 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <p style="font-size:12.5px; color:#64748B; margin:10px 0 0;">বোনাস বদলালে এরপর যারা প্যাকেজ কিনবে তাদের রেফারার নতুন পরিমাণ পাবে — আগে দেওয়া বোনাস যেমন আছে তেমন থাকবে।</p>
     </div>
 
-    <div class="rfa-card">
-        <h3><i class="fas fa-money-bill-transfer" style="color:#16A34A;"></i> উইথড্র আবেদন</h3>
-        <div class="rfa-tabs">
-            <?php foreach (['Pending' => 'অপেক্ষমাণ', 'Paid' => 'Paid', 'Rejected' => 'বাতিল', 'all' => 'সব'] as $k => $l): ?><a href="/Admin/Referrals?w=<?= $k ?>" class="<?= $tab === $k ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?>
-        </div>
-        <?php if (!$ViewBag->Withdrawals): ?><div class="rfa-empty">কোনো আবেদন নেই।</div><?php endif; ?>
-        <?php foreach ($ViewBag->Withdrawals as $w): $nm = !is_blank($w->FullName) ? $w->FullName : ($w->UserName ?: 'User'); ?>
-            <div class="rfa-w" id="rfw-<?= (int)$w->Id ?>">
-                <div>
-                    <div class="who"><b><?= e($nm) ?></b> <span class="rfa-pill <?= $sc[$w->Status] ?? 'p' ?>"><?= e($w->Status) ?></span>
-                        <small><?= $w->Role === 'Teacher' ? 'Teacher' : 'Student' ?> · আবেদন: <?= e(fmt_date($w->CreatedAt, 'd M Y, h:i A')) ?><?= !is_blank($w->ProcessedAt) ? ' · প্রক্রিয়া: ' . e(fmt_date($w->ProcessedAt, 'd M Y')) : '' ?></small></div>
-                    <div class="acc"><?= e($w->Method) ?>: <b><?= e($w->AccountNumber) ?></b>
-                        <?php if (!is_blank($w->AccountName)): ?> · <?= e($w->AccountName) ?><?php endif; ?>
-                        <?php if (!is_blank($w->BankName)): ?><br><?= e($w->BankName) ?><?= !is_blank($w->Branch) ? ', ' . e($w->Branch) : '' ?><?php endif; ?>
-                        <?php if (!is_blank($w->TxnId)): ?><br>TxnID: <?= e($w->TxnId) ?><?php endif; ?>
-                        <?php if (!is_blank($w->AdminNote)): ?><br><small style="color:#64748B;">নোট: <?= e($w->AdminNote) ?></small><?php endif; ?>
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <div class="amt">৳<?= number_format((int)$w->Amount) ?></div>
-                    <?php if ($w->Status === 'Pending'): ?>
-                        <div class="acts" style="margin-top:8px;">
-                            <button type="button" class="rfa-btn g" data-wd="<?= (int)$w->Id ?>" data-st="Paid"><i class="fas fa-check"></i> Paid</button>
-                            <button type="button" class="rfa-btn r" data-wd="<?= (int)$w->Id ?>" data-st="Rejected"><i class="fas fa-xmark"></i> বাতিল</button>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
+    <?php if ((int)$st['pendingCount'] > 0): ?>
+    <a class="rfa-card" href="/Admin/Withdrawals" style="display:flex;align-items:center;gap:12px;text-decoration:none;border:1.5px solid #FDE68A;background:#FFFBEB;">
+        <i class="fas fa-money-bill-transfer" style="font-size:22px;color:#B45309;"></i>
+        <span style="color:#92400E;font-weight:700;"><?= (int)$st['pendingCount'] ?>টা উইথড্র আবেদন অপেক্ষায় আছে (৳<?= number_format($st['pendingAmount']) ?>) — টাকা পাঠাতে <u>Withdraw পেজে যান</u></span>
+    </a>
+    <?php endif; ?>
 
     <div class="rfa-card">
         <h3><i class="fas fa-users" style="color:#00B5E0;"></i> সাম্প্রতিক রেফারেল</h3>

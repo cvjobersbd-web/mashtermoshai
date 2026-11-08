@@ -370,13 +370,13 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                     <img src="<?= e(is_blank($selected->ProfileImageLink) ? 'https://ui-avatars.com/api/?name=' . rawurlencode((string)$selected->FullName) . '&background=1F3B2C&color=fff&size=100' : $selected->ProfileImageLink) ?>"
                          style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 4px solid #CFF2FC;" />
                     <div style="flex: 1; min-width: 200px;">
-                        <h3 style="margin: 0 0 6px; color: #08224A; font-weight: 800;"><?= e($selected->FullName) ?></h3>
+                        <h3 style="margin: 0 0 6px; color: #08224A; font-weight: 800;"><a href="/Profile/Show/<?= (int)$selected->Id ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;" title="প্রোফাইল দেখুন"><?= e($selected->FullName) ?> <i class="fas fa-arrow-up-right-from-square" style="font-size:13px;color:#0EA5E9;"></i></a></h3>
                         <div style="font-size: 13.5px; color: #64748B; display: flex; gap: 15px; flex-wrap: wrap;">
                             <span><i class="fas fa-envelope me-1 text-muted"></i> <?= e($selected->Email) ?></span>
                             <span><i class="fas fa-phone me-1 text-muted"></i> <?= e(is_blank($selected->MobileNumber) ? '—' : $selected->MobileNumber) ?></span>
                             <span><i class="far fa-calendar me-1 text-muted"></i> Joined: <?= e(fmt_date($selected->CreatedAt, 'M Y')) ?></span>
                         </div>
-                        <div class="mt-2"><?= joined_via_css() . joined_via_html($ViewBag->RefSource ?? null, true) ?></div>
+                        <div class="mt-2"><?= joined_via_full((int)$selected->Id) ?></div>
                         <div class="mt-2">
                             <span class="badge bg-success" style="font-size: 11px; padding: 5px 12px;"><?= e($selected->Role) ?></span>
                             <?php if ($selected->IsActive): ?>
@@ -495,7 +495,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                                                 <?php endif; ?>
                                             </div>
                                             <div style="flex: 1; min-width: 0;">
-                                                <div style="font-size: 13px; font-weight: 700; color: #08224A;"><?= e($t->FullName) ?></div>
+                                                <div style="font-size: 13px; font-weight: 700; color: #08224A;"><a href="/Profile/Show/<?= (int)$t->TeacherId ?>" target="_blank" rel="noopener" style="color:inherit;"><?= e($t->FullName) ?></a></div>
                                                 <div style="font-size: 11px; color: #7A8CA0;">
                                                     <i class="fas fa-comment me-1"></i><?= e($t->ResponseCount) ?> response(s) • <?= e($t->LastResponseAgo) ?>
                                                 </div>

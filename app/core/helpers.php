@@ -1546,7 +1546,7 @@ function admin_action_rule(string $action): string
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
-            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'ProcessWithdrawal', 'SetReferralStatus',
+            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'Withdrawals', 'ProcessWithdrawal', 'SetReferralStatus',
                 'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
@@ -1853,6 +1853,29 @@ function partner_forget(): void
 function partner_link(string $code, string $src = ''): string
 {
     return site_public_url() . '/?p=' . rawurlencode($code) . ($src !== '' && $src !== 'direct' ? '&src=' . rawurlencode($src) : '');
+}
+
+/**
+ * অ্যাডমিনের জন্য পুরো "কিভাবে এসেছে": কার রেফারেলে / এজেন্সি লিংক-কোডে / ডাইরেক্ট সাইনআপ + সাইনআপে বাছাই করা রেফারেন্স (Facebook ...)
+ * নিজেই escape করা HTML (স্টাইল সহ)
+ */
+function joined_via_full(int $userId): string
+{
+    $db = db();
+    $ref = null; $pt = null; $how = ['', ''];
+    try { $ref = $db->GetReferralSource($userId); } catch (Throwable $e) { }
+    try { $pt = $db->GetPartnerSignup($userId); } catch (Throwable $e) { }
+    try { $how = $db->GetUserHowHeard($userId); } catch (Throwable $e) { }
+    $h = joined_via_css() . '<style>.jv-full{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.jv-how2{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;background:#ECFEFF;color:#155E75;white-space:nowrap}</style>';
+    $h .= '<div class="jv-full">';
+    if ($ref) $h .= joined_via_html($ref, true);
+    if ($pt) $h .= partner_badge_html($pt);
+    if (!$ref && !$pt) $h .= joined_via_html(null);
+    if ($how[0] !== '') {
+        $o = $db->ReferenceInfo($how[0]);
+        $h .= '<span class="jv-how2" title="সাইনআপের সময় নিজে বেছেছে"><i class="' . e($o['icon']) . '" style="color:' . e($o['color']) . ';"></i> রেফারেন্স: ' . e($how[0] === 'other' && $how[1] !== '' ? $how[1] : $o['label']) . '</span>';
+    }
+    return $h . '</div>';
 }
 
 /** অ্যাডমিন ড্যাশবোর্ডের "Joined via" — পার্টনার ব্যাজ */

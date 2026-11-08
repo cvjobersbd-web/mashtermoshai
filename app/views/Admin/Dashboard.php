@@ -235,6 +235,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
     .admin-cards-table .au-dt small { display: block; color: #94A3B8; font-size: 12px; }
     .admin-cards-table td .badge { white-space: nowrap; }
     .admin-cards-table .jv-badge { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+    .au-plink { color: inherit; text-decoration: none; } .au-plink:hover { text-decoration: underline; color: #0369A1; }
     .jv-stack { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
     .jv-how { font-size: 12px; color: #475569; font-weight: 600; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
     @media (max-width: 992px) { .jv-stack { align-items: flex-end; } }
@@ -341,7 +342,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         </div>
         <div class="card-body">
             <?php $refMap = $ViewBag->RefMap ?? []; $refCount = count(array_filter($Model, fn($u) => isset($refMap[(int)$u->Id])));
-                $howMap = $ViewBag->HowMap ?? [];
+                $howMap = $ViewBag->HowMap ?? []; $isSuperAdm = admin_is_super();
                 $ptMap = $ViewBag->PartnerMap ?? []; $ptCount = count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]) && !isset($refMap[(int)$u->Id])));
                 echo joined_via_css(); ?>
             <div class="jv-filter" id="jvFilter">
@@ -368,7 +369,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                         <?php foreach ($Model as $user): $jvRef = $refMap[(int)$user->Id] ?? null; $jvPt = $ptMap[(int)$user->Id] ?? null; ?>
                             <tr data-jv="<?= trim(($jvRef ? 'ref ' : '') . ($jvPt ? 'partner' : '')) ?: 'direct' ?>">
                                 <td data-label="ID" class="au-id"><?= e($user->Id) ?></td>
-                                <td data-label="User" class="au-user"><div class="au-u"><b><?= e(!is_blank($user->FullName) ? $user->FullName : $user->UserName) ?></b><small>@<?= e($user->UserName) ?></small><small class="em"><?= e($user->Email) ?></small></div></td>
+                                <td data-label="User" class="au-user"><div class="au-u"><b><a href="/Profile/Show/<?= (int)$user->Id ?>" target="_blank" rel="noopener" class="au-plink" title="প্রোফাইল দেখুন"><?= e(!is_blank($user->FullName) ? $user->FullName : $user->UserName) ?></a></b><small>@<?= e($user->UserName) ?></small><small class="em"><?= e($user->Email) ?></small></div></td>
                                 <td data-label="Role">
                                     <?php
                                         $roleClass = $user->Role === 'Admin' ? 'bg-warning' : ($user->Role === 'Teacher' ? 'bg-info' : 'bg-secondary');
@@ -420,8 +421,8 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                                             </button>
                                         <?php endif; ?>
                                     <?php endif; ?>
-                                    <?php if ($user->UserName !== 'admin'): ?>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteUser(<?= (int)$user->Id ?>)" title="Delete">
+                                    <?php if ($user->UserName !== 'admin' && $isSuperAdm && (int)$user->Id !== (int)current_user_id()): ?>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteUser(<?= (int)$user->Id ?>, <?= e(js($user->FullName ?: $user->UserName)) ?>)" title="পুরোপুরি মুছুন (শুধু Super Admin)">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     <?php endif; ?>
@@ -790,8 +791,10 @@ $ViewBag->PendingCount = $pendingTeacherCount;
         }
 
         // ===== Delete User =====
-        function deleteUser(id) {
-            if (!confirm('Delete this user permanently? This action cannot be undone!')) { return; }
+        function deleteUser(id, name) {
+            if (!confirm('⚠️ "' + (name || 'এই ইউজার') + '" কে পুরোপুরি মুছে ফেলবেন?\n\nতার অ্যাকাউন্ট, পোস্ট, কমেন্ট, পেমেন্ট ও রিসিট, প্যাকেজ, চ্যাট, রেফারেল, উইথড্র, নোটিফিকেশন — সব ডাটা চিরতরে মুছে যাবে। আর ফেরত আনা যাবে না।')) { return; }
+            var typed = prompt('নিশ্চিত করতে DELETE লিখুন:', '');
+            if (typed === null || typed.trim().toUpperCase() !== 'DELETE') { alert('মোছা হয়নি।'); return; }
 
             var formData = new FormData();
             formData.append('id', id);

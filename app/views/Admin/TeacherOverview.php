@@ -313,13 +313,13 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                     <img src="<?= e(is_blank($selectedTeacher->ProfileImageLink) ? 'https://ui-avatars.com/api/?name=' . rawurlencode((string)$selectedTeacher->FullName) . '&background=1F3B2C&color=fff&size=100' : $selectedTeacher->ProfileImageLink) ?>"
                          style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 4px solid #CFF2FC;" />
                     <div style="flex: 1; min-width: 200px;">
-                        <h3 style="margin: 0 0 6px; color: #08224A; font-weight: 800;"><?= e($selectedTeacher->FullName) ?></h3>
+                        <h3 style="margin: 0 0 6px; color: #08224A; font-weight: 800;"><a href="/Profile/Show/<?= (int)$selectedTeacher->Id ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;" title="প্রোফাইল দেখুন"><?= e($selectedTeacher->FullName) ?> <i class="fas fa-arrow-up-right-from-square" style="font-size:13px;color:#0EA5E9;"></i></a></h3>
                         <div style="font-size: 13.5px; color: #64748B; display: flex; gap: 15px; flex-wrap: wrap;">
                             <span><i class="fas fa-envelope me-1 text-muted"></i> <?= e($selectedTeacher->Email) ?></span>
                             <span><i class="fas fa-phone me-1 text-muted"></i> <?= e($selectedTeacher->MobileNumber) ?></span>
                             <span><i class="far fa-calendar me-1 text-muted"></i> Joined: <?= e(fmt_date($selectedTeacher->CreatedAt, 'M Y')) ?></span>
                         </div>
-                        <div class="mt-2"><?= joined_via_css() . joined_via_html($ViewBag->RefSource ?? null, true) ?></div>
+                        <div class="mt-2"><?= joined_via_full((int)$selectedTeacher->Id) ?></div>
                         <div class="mt-2">
                             <span class="badge bg-success" style="font-size: 11px; padding: 5px 12px;">Teacher</span>
                             <?php if ($selectedTeacher->IsActive): ?>

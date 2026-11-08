@@ -325,6 +325,7 @@ $ViewData['Title'] = 'Tutor Requests';
             grid-template-columns: 1fr;
         }
     }
+    .tr-plink { color: inherit; text-decoration: none; } .tr-plink:hover { text-decoration: underline; color: #0369A1; }
 </style>
 
 <?php partial('Shared/_AdminSidebar'); ?>
@@ -393,7 +394,7 @@ $ViewData['Title'] = 'Tutor Requests';
 
                 <h5>
                     <i class="fas fa-user-graduate" style="color:#08224A;"></i>
-                    <?= e($r->StudentName) ?>
+                    <?php if (!empty($r->StudentUserId)): ?><a href="/Profile/Show/<?= (int)$r->StudentUserId ?>" target="_blank" rel="noopener" class="tr-plink" title="প্রোফাইল দেখুন"><?= e($r->StudentName) ?></a><?php else: ?><?= e($r->StudentName) ?><?php endif; ?>
                     <span class="status-pill <?= e($r->Status) ?>"><?= e($r->Status) ?></span>
                 </h5>
 
@@ -410,7 +411,7 @@ $ViewData['Title'] = 'Tutor Requests';
 
                 <div class="req-tags">
                     <?php if (!is_blank($r->TutorName)): ?>
-                        <span class="req-tag"><i class="fas fa-chalkboard-teacher"></i>Tutor: <?= e($r->TutorName) ?></span>
+                        <?php if (!empty($r->TeacherUserId)): ?><a class="req-tag tr-plink" href="/Profile/Show/<?= (int)$r->TeacherUserId ?>" target="_blank" rel="noopener" title="টিচারের প্রোফাইল দেখুন"><i class="fas fa-chalkboard-teacher"></i>Tutor: <?= e($r->TutorName) ?></a><?php else: ?><span class="req-tag"><i class="fas fa-chalkboard-teacher"></i>Tutor: <?= e($r->TutorName) ?></span><?php endif; ?>
                     <?php endif; ?>
                     <?php if (!is_blank($r->TutorId)): ?>
                         <span class="req-tag"><i class="fas fa-id-badge"></i><?= e($r->TutorId) ?></span>

@@ -8,12 +8,16 @@ $currentControllerSidebar = (string)($GLOBALS['__route']['controller'] ?? '');
 $pendingTeacherRequests = 0;
 $pendingTuitionApps = 0;
 
+// টিচার আবেদন: Approve এর অপেক্ষায় (পেমেন্ট দিয়েছে) + পেমেন্ট বাকি — দুটোই অ্যাডমিনের দেখার মতো
+$awaitTeacherPay = 0;
 try {
-    if ($ViewBag->PendingCount !== null)
-        $pendingTeacherRequests = (int)$ViewBag->PendingCount;
-    else
-        $pendingTeacherRequests = db()->GetPendingTeacherRequestCount();
+    $pendingTeacherRequests = (int)db()->scalar("SELECT COUNT(*) FROM `TeacherRequests` WHERE `Status` = 'Pending'");
+    $awaitTeacherPay = (int)db()->scalar("SELECT COUNT(*) FROM `TeacherRequests` WHERE `Status` = 'AwaitingPayment'");
 } catch (Throwable $e) { }
+$pendingTutorReq = 0;
+try { $pendingTutorReq = (int)db()->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `Status` = 'Pending'"); } catch (Throwable $e) { }
+$openHelpdesk = 0;
+try { $openHelpdesk = (int)db()->scalar("SELECT COUNT(*) FROM `HelpdeskPosts` WHERE `Status` IS NULL OR `Status` = 'Open'"); } catch (Throwable $e) { }
 
 $pendingReviews = 0;
 try { $pendingReviews = db()->CountReviews('Pending'); } catch (Throwable $e) { }
@@ -306,7 +310,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Withdrawals' => 'Withdraw', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -346,8 +350,8 @@ try {
         <li>
             <a href="/Admin/TeacherRequests" class="<?= $currentAction === 'TeacherRequests' ? 'active' : '' ?>">
                 <i class="fas fa-user-graduate"></i> Teacher Requests
-                <?php if ($pendingTeacherRequests > 0): ?>
-                    <span class="badge-sidebar warning"><?= e($pendingTeacherRequests) ?></span>
+                <?php if ($pendingTeacherRequests + $awaitTeacherPay > 0): ?>
+                    <span class="badge-sidebar warning" title="<?= e($pendingTeacherRequests . 'টা Approve এর অপেক্ষায় · ' . $awaitTeacherPay . 'টা পেমেন্ট বাকি') ?>"><?= (int)($pendingTeacherRequests + $awaitTeacherPay) ?></span>
                 <?php endif; ?>
             </a>
         </li>
@@ -392,12 +396,14 @@ try {
         <li>
             <a href="/Admin/TutorRequests" class="<?= $currentAction === 'TutorRequests' ? 'active' : '' ?>">
                 <i class="fas fa-envelope-open-text"></i> Tutor Requests
+                <?php if ($pendingTutorReq > 0): ?><span class="badge-sidebar warning"><?= (int)$pendingTutorReq ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>
         <li>
             <a href="/Helpdesk" class="<?= $currentControllerSidebar === 'Helpdesk' ? 'active' : '' ?>">
                 <i class="fas fa-headset"></i> Helpdesk
+                <?php if ($openHelpdesk > 0): ?><span class="badge-sidebar warning"><?= (int)$openHelpdesk ?></span><?php endif; ?>
             </a>
         </li>
         <?php if (admin_can(admin_action_rule('ManageNotices'))): ?>
@@ -457,6 +463,11 @@ try {
         <li>
             <a href="/Admin/Referrals" class="<?= $currentAction === 'Referrals' ? 'active' : '' ?>">
                 <i class="fas fa-gift"></i> Referrals
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/Withdrawals" class="<?= $currentAction === 'Withdrawals' ? 'active' : '' ?>">
+                <i class="fas fa-money-bill-transfer"></i> Withdraw
                 <?php if ($pendingWd > 0): ?><span class="badge-sidebar warning"><?= (int)$pendingWd ?></span><?php endif; ?>
             </a>
         </li>
