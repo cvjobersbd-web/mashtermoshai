@@ -18,6 +18,14 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     .ap-stat.g { border-left-color: #22C55E; } .ap-stat.r { border-left-color: #EF4444; } .ap-stat.b { border-left-color: #1D7FE5; }
     .ap-stat .n { font-size: 26px; font-weight: 800; color: #08224A; line-height: 1.2; }
     .ap-stat .l { font-size: 13px; color: #64748B; }
+    .ap-aud { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .ap-au { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 12px; font-weight: 800; font-size: 14.5px; text-decoration: none; background: #fff; color: #334155; border: 2px solid #E2E8F0; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+    .ap-au .c { background: rgba(0,0,0,.07); border-radius: 999px; padding: 0 9px; font-size: 12px; }
+    .ap-au .pend { background: #F59E0B; color: #fff; border-radius: 999px; padding: 1px 9px; font-size: 11.5px; }
+    .ap-au.on { background: #08224A; border-color: #08224A; color: #fff; } .ap-au.on .c { background: rgba(255,255,255,.2); }
+    .ap-au.student.on { background: #7E22CE; border-color: #7E22CE; } .ap-au.teacher.on { background: #0369A1; border-color: #0369A1; }
+    .ap-joined { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 13px; }
+    .ap-jl { color: #64748B; font-weight: 700; white-space: nowrap; }
     .ap-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
     .ap-tab { padding: 9px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; text-decoration: none; border: 1.5px solid #DCECF5; color: #475569; background: #fff; display: inline-flex; gap: 7px; align-items: center; }
     .ap-tab.on { background: #1D7FE5; border-color: #1D7FE5; color: #fff; }
@@ -88,9 +96,15 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
         <div class="ap-stat b"><div class="n"><?= e(taka($stats['Revenue'])) ?></div><div class="l"><i class="fas fa-sack-dollar"></i> মোট আয় (Accepted)</div></div>
     </div>
 
+    <?php $for = (string)($ViewBag->For ?? 'all'); $cnt = $ViewBag->Counts ?? []; ?>
+    <div class="ap-aud">
+        <?php foreach (['all' => ['সব পেমেন্ট', 'fa-layer-group'], 'Student' => ['শিক্ষার্থী', 'fa-user-graduate'], 'Teacher' => ['শিক্ষক', 'fa-chalkboard-user']] as $k => [$lbl, $ic]): $pc = (int)($cnt[$k]['Pending'] ?? 0); ?>
+            <a class="ap-au<?= $for === $k ? ' on' : '' ?> <?= strtolower($k) ?>" href="/Admin/Payments?<?= e(http_build_query(['for' => $k, 'status' => $st])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= (int)($cnt[$k]['all'] ?? 0) ?></span><?php if ($pc > 0): ?><span class="pend" title="যাচাই বাকি"><?= $pc ?> নতুন</span><?php endif; ?></a>
+        <?php endforeach; ?>
+    </div>
     <div class="ap-tabs">
         <?php foreach ($tabs as $k => [$lbl, $ic]): ?>
-            <a class="ap-tab<?= $st === $k ? ' on' : '' ?>" href="/Admin/Payments?status=<?= e($k) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= e($k === 'all' ? $stats['Total'] : $stats[$k]) ?></span></a>
+            <a class="ap-tab<?= $st === $k ? ' on' : '' ?>" href="/Admin/Payments?<?= e(http_build_query(['for' => $for, 'status' => $k])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= e($k === 'all' ? $stats['Total'] : $stats[$k]) ?></span></a>
         <?php endforeach; ?>
     </div>
 
@@ -115,6 +129,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     <?php if ($p->Role): ?><span class="ap-role <?= e($p->Role) ?>"><?= e($p->Role === 'User' ? 'Student' : $p->Role) ?></span><?php endif; ?>
                     <span class="ap-pill <?= e($p->Status) ?>"><?= e($p->Status === 'Approved' ? 'Accepted' : $p->Status) ?></span>
                 </div>
+                <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
                 <div class="ap-grid">
                     <div class="amt"><small>Amount</small><b><?= e(taka($p->Amount)) ?></b></div>
                     <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span style="font-size:12px;color:#64748B;">(<?= $p->Audience === 'Teacher' ? 'শিক্ষক' : 'শিক্ষার্থী' ?>)</span></div>

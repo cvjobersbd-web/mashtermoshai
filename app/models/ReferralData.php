@@ -219,8 +219,11 @@ trait ReferralData
         } catch (Throwable $e) { error_log('[GetReferralSourceMap] ' . $e->getMessage()); return []; }
     }
 
+    private ?array $refSrcCache = null;
+
     public function GetReferralSource(int $userId): ?Obj
     {
-        return $this->GetReferralSourceMap()[$userId] ?? null;
+        $this->refSrcCache ??= $this->GetReferralSourceMap();   // এক পেজে অনেকবার ডাকলেও একবারই পড়ে
+        return $this->refSrcCache[$userId] ?? null;
     }
 }

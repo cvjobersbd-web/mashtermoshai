@@ -1634,7 +1634,20 @@ class AdminController extends Controller
         $this->requireAdminPage();
         $st = input_str('status', 'Pending');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
-        $this->view(null, $this->db->GetPaymentRequests($st === 'all' ? null : $st), ['Status' => $st, 'Stats' => $this->db->PaymentStats()]);
+        // শিক্ষার্থী / শিক্ষক আলাদা সেকশন
+        $for = (string)input_str('for', 'all'); if (!in_array($for, ['all', 'Student', 'Teacher'], true)) $for = 'all';
+        $all = $this->db->GetPaymentRequests(null);
+        $cnt = []; $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
+        foreach ($all as $x) {
+            $a = $x->Audience === 'Teacher' ? 'Teacher' : 'Student';
+            foreach (['all', $a] as $k) { $cnt[$k][$x->Status] = ($cnt[$k][$x->Status] ?? 0) + 1; $cnt[$k]['all'] = ($cnt[$k]['all'] ?? 0) + 1; }
+            if ($for !== 'all' && $a !== $for) continue;
+            if (isset($stats[$x->Status])) $stats[$x->Status]++;
+            $stats['Total']++;
+            if ($x->Status === 'Approved') $stats['Revenue'] += (int)$x->Amount;
+        }
+        $list = array_values(array_filter($all, fn($x) => ($st === 'all' || $x->Status === $st) && ($for === 'all' || ($x->Audience === 'Teacher' ? 'Teacher' : 'Student') === $for)));
+        $this->view(null, $list, ['Status' => $st, 'For' => $for, 'Counts' => $cnt, 'Stats' => $stats]);
     }
 
     /** POST /Admin/ApprovePayment (id, note?) */

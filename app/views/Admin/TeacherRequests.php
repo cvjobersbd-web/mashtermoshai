@@ -308,6 +308,8 @@ $ViewData['Title'] = 'Teacher Requests';
     .tr-pay a { font-weight: 700; color: #0284C7; text-decoration: none; margin-left: 4px; }
     .tr-pst { font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; margin-left: 4px; }
     .tr-full { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 700; color: #0284C7; text-decoration: none; }
+    .tr-joined { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 10px; font-size: 13px; }
+    .tr-jl { color: #64748B; font-weight: 700; white-space: nowrap; }
 </style>
 
 <!-- ===== Admin Sidebar (Partial) ===== -->
@@ -366,6 +368,8 @@ $ViewData['Title'] = 'Teacher Requests';
                             <span class="sep">|</span>
                             <i class="fas fa-calendar"></i><?= e(fmt_date($request->RequestDate, 'd M Y')) ?>
                         </div>
+
+                        <div class="tr-joined"><span class="tr-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= joined_via_full((int)$request->UserId) ?></div>
 
                         <div class="tag-group">
                             <?php if (!is_blank($request->SubjectExpertise)): ?>
