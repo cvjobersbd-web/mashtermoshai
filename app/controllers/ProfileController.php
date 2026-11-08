@@ -144,7 +144,7 @@ class ProfileController extends Controller
         $this->view('Profile/ShowOfficial', $user, [
             'Name' => $name, 'IsOwner' => $isOwner, 'Posts' => $posts, 'HasMore' => count($posts) === 10,
             'Stats' => $this->db->GetUserEduStats($id), 'VideoLimit' => FeedController::videoLimit(),
-            'Subjects' => $this->db->GetEduSubjects(),
+            'Subjects' => $this->db->GetEduSubjects(), 'Extras' => $this->db->GetProfileExtras($id),
         ]);
     }
 
@@ -415,7 +415,7 @@ class ProfileController extends Controller
     public function SaveCover_POST(): void
     {
         $me = current_user_id();
-        if ($me === null || current_role() === 'Admin') json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        if ($me === null) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);   // অ্যাডমিনের অফিসিয়াল পেজেও কভার দেওয়া যায়
         $posY = max(0, min(100, input_int('posY', 50) ?? 50));
         $extras = $this->db->GetProfileExtras($me);
         $file = upload_file('cover');

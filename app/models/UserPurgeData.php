@@ -91,7 +91,7 @@ trait UserPurgeData
         // ---- আপলোড করা ফাইল (মোছার আগে লিংকগুলো নিয়ে রাখা) ----
         foreach (['SELECT `ReceiptUrl` FROM `PaymentRequests` WHERE `UserId` = :u', 'SELECT `ImageUrl` FROM `TeacherCertificates` WHERE `TeacherId` = :u',
                   'SELECT `FileUrl` FROM `TeacherCertificates` WHERE `TeacherId` = :u', 'SELECT `MediaUrl` FROM `HelpdeskComments` WHERE `UserId` = :u',
-                  'SELECT `ImageUrl` FROM `EduPosts` WHERE `UserId` = :u', 'SELECT `CoverImageLink` FROM `UserProfileExtras` WHERE `UserId` = :u'] as $q)
+                  'SELECT `ImageUrl` FROM `EduPosts` WHERE `UserId` = :u', 'SELECT `CoverImageUrl` FROM `UserProfileExtras` WHERE `UserId` = :u'] as $q)
             foreach ($this->purgeCol($q, $p) as $f) if (is_string($f)) $files[] = $f;
 
         // ---- পোস্টের নিচের সব (কমেন্ট / লাইক / আবেদন) — অন্যদেরগুলোও, কারণ পোস্টই থাকছে না ----

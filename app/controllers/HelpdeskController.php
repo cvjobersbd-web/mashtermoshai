@@ -29,6 +29,12 @@ class HelpdeskController extends Controller
         ]);
     }
 
+    /** GET /Helpdesk/Contact — মাষ্টার মশাই এর মোবাইল নম্বর, WhatsApp, ইমেইল (লগইন ছাড়াই দেখা যায়) */
+    public function Contact(): void
+    {
+        $this->view('Contact', null, ['Info' => contact_info()]);
+    }
+
     /** GET /Helpdesk/GetPostComments?postId= */
     public function GetPostComments(): void
     {

@@ -719,6 +719,29 @@ function hero_texts(): array
     return $t = $c;
 }
 
+/** যোগাযোগের তথ্য — Help Desk এর Contact পেজে দেখায় (অ্যাডমিন → Settings → Footer & Social থেকে বদলানো যায়) */
+function contact_info_defaults(): array
+{
+    return ['ct_phone' => '01805843825', 'ct_whatsapp' => '', 'ct_email' => 'promashtermoshai@gmail.com', 'ct_hours' => '', 'ct_address' => '', 'ct_note' => ''];
+}
+
+function contact_info(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    $d = contact_info_defaults();
+    try { $c = db()->GetSiteContent($d); } catch (Throwable $e) { $c = $d; }
+    $c = array_map(fn($v) => trim((string)$v), $c + $d);
+    // tel: আর wa.me লিংকের জন্য শুধু সংখ্যা (বাংলা সংখ্যাও চলে)
+    $digits = fn($v) => preg_replace('/\D/', '', strtr($v, ['০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9']));
+    $c['tel'] = $c['ct_phone'] !== '' ? '+' . (str_starts_with($digits($c['ct_phone']), '880') ? '' : '88') . $digits($c['ct_phone']) : '';
+    $wa = $c['ct_whatsapp'] !== '' ? $c['ct_whatsapp'] : $c['ct_phone'];
+    $wd = $digits($wa);
+    $c['wa'] = $wd !== '' ? 'https://wa.me/' . (str_starts_with($wd, '880') ? $wd : (str_starts_with($wd, '0') ? '88' . $wd : $wd)) : '';
+    $c['wa_label'] = $wa;
+    return $c;
+}
+
 /** লগইন / সাইনআপ পেজের বাম পাশের ছবি আর লেখা — অ্যাডমিন → Settings → Login / Signup থেকে বদলানো যায় */
 function auth_page_defaults(): array
 {
@@ -1605,8 +1628,8 @@ function admin_settings_groups_all(): array
             'desc' => 'টিউশন পোস্ট আর Find Tutor এর লোকেশন, ক্লাস ও বিষয়ের তালিকা।'],
         'email' => ['title' => 'Email (SMTP)', 'short' => 'Email', 'icon' => 'fa-envelope', 'bg' => '#FEE2E2', 'fg' => '#B91C1C',
             'desc' => 'Forgot Password এর ইমেইল পাঠানোর SMTP সেটআপ আর টেস্ট ইমেইল।'],
-        'social' => ['title' => 'Footer & Social Links', 'short' => 'Social Links', 'icon' => 'fa-share-nodes', 'bg' => '#EEF2FF', 'fg' => '#4F46E5',
-            'desc' => 'ফুটারে দেখানো Facebook, YouTube, WhatsApp ইত্যাদি সোশ্যাল মিডিয়া লিংক।'],
+        'social' => ['title' => 'Contact, Footer & Social Links', 'short' => 'Contact & Social', 'icon' => 'fa-share-nodes', 'bg' => '#EEF2FF', 'fg' => '#4F46E5',
+            'desc' => 'Help Desk এর Contact পেজের মোবাইল নম্বর ও ইমেইল, আর ফুটারে দেখানো Facebook, YouTube, WhatsApp ইত্যাদি সোশ্যাল মিডিয়া লিংক।'],
     ];
 }
 
@@ -1621,6 +1644,7 @@ function home_section_list(): array
         'how'         => ['How It Works', 'ধাপে ধাপে কীভাবে টিউটর পাওয়া যায়', 'fa-shoe-prints'],
         'categories'  => ['Explore Categories', 'বাছাই করা ক্যাটাগরির কার্ড', 'fa-layer-group'],
         'tuitions'    => ['Latest Tuition Circulars', 'হোমে দেখানোর জন্য বাছাই করা টিউশন পোস্ট', 'fa-clipboard-list'],
+        'notice'      => ['Notice', 'সর্বশেষ ৩টা নোটিশ আর "সব নোটিশ দেখুন" বাটন', 'fa-bullhorn'],
         'feed'        => ['Educational Feed', 'সর্বশেষ ৩টা Approve হওয়া পোস্ট', 'fa-graduation-cap'],
         'become'      => ['Become a Tutor', 'শিক্ষক হওয়ার আহ্বান — নিচের "Become a Tutor" কার্ডেও একই সুইচ', 'fa-chalkboard-user'],
         'features'    => ['Key Features', 'প্ল্যাটফর্মের মূল সুবিধাগুলো', 'fa-star'],
@@ -1702,7 +1726,7 @@ function admin_action_rule(string $action): string
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
-                'UploadHeroImage', 'SaveHeroText', 'SaveAuthPage', 'UploadAuthImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
+                'UploadHeroImage', 'SaveContactInfo', 'SaveHeroText', 'SaveAuthPage', 'UploadAuthImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
         ];
         foreach ($groups as $k => $acts) foreach ($acts as $a) $map[$a] = $k;
         // বাকি সব (Admins, ActivityLog, Packages, PaymentMethods, Email, DeleteUser ...) শুধু Super Admin

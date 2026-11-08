@@ -395,6 +395,64 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     </section>
 <?php endif; ?>
 
+<?php if (home_section_on('notice')): $homeNotices = []; try { $homeNotices = array_slice(db()->GetAllNotices(), 0, 3); } catch (Throwable $e) { } ?>
+<!-- ========================================= -->
+<!-- ✅ NOTICE — সর্বশেষ নোটিশ, ক্লিক করলে Notice পেজ -->
+<!-- ========================================= -->
+<style>
+    .hn { padding: 56px 0; background: #fff; }
+    .hn-in { max-width: 1152px; margin: 0 auto; padding: 0 20px; }
+    .hn-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+    .hn-head h2 { margin: 0; font-family: var(--font-heading); font-size: clamp(28px, 3.2vw, 44px); color: #08224A; display: flex; align-items: center; gap: 12px; }
+    .hn-head h2 i { width: 50px; height: 50px; border-radius: 14px; background: #FFF4D6; color: #D97706; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; }
+    .hn-head p { margin: 8px 0 0; color: #64748B; font-size: 16px; }
+    .hn-all { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: 999px; background: #08224A; color: #fff; font-weight: 700; font-size: 14.5px; text-decoration: none; box-shadow: 0 8px 20px rgba(8,34,74,.18); }
+    .hn-all:hover { background: #0A3A6B; color: #fff; }
+    .hn-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    .hn-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #E5EDF5; border-radius: 18px; overflow: hidden; text-decoration: none; color: inherit; box-shadow: 0 6px 22px rgba(15,52,103,.06); transition: transform .2s, box-shadow .2s; min-width: 0; }
+    .hn-card:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(15,52,103,.12); color: inherit; }
+    .hn-img { aspect-ratio: 16 / 8; background: linear-gradient(135deg, #E0F7FE, #FFF4D6); display: flex; align-items: center; justify-content: center; color: #F59E0B; font-size: 38px; overflow: hidden; }
+    .hn-img img { width: 100%; height: 100%; object-fit: cover; }
+    .hn-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .hn-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: #64748B; }
+    .hn-cat { font-weight: 800; font-size: 11.5px; padding: 3px 10px; border-radius: 999px; background: #E0F2FE; color: #0369A1; }
+    .hn-cat.ann { background: #FEE2E2; color: #B91C1C; }
+    .hn-card h3 { margin: 0; font-size: 17px; font-weight: 800; color: #0F172A; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hn-card p { margin: 0; color: #475569; font-size: 14px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hn-more { margin-top: auto; padding-top: 6px; color: #0EA5E9; font-weight: 700; font-size: 13.5px; }
+    .hn-empty { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: linear-gradient(120deg, #FFF8E6, #E8F7FE); border: 1px solid #F3E3B5; border-radius: 18px; padding: 22px 26px; text-decoration: none; color: #0F172A; }
+    .hn-empty i { font-size: 30px; color: #D97706; } .hn-empty b { font-size: 17px; display: block; } .hn-empty span { flex: 1; min-width: 200px; color: #475569; }
+    .hn-mob { display: none; margin-top: 18px; text-align: center; }
+    @media (max-width: 900px) { .hn-grid { grid-template-columns: minmax(0, 1fr); } .hn-head .hn-all { display: none; } .hn-mob { display: block; } .hn { padding: 40px 0; } }
+</style>
+<section class="hn" id="notice">
+    <div class="hn-in">
+        <div class="hn-head">
+            <div><h2><i class="fas fa-bullhorn"></i> Notice</h2><p>মাষ্টার মশাই এর সর্বশেষ নোটিশ, খবর আর ঘোষণা।</p></div>
+            <a class="hn-all" href="/Notice">সব নোটিশ দেখুন <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <?php if ($homeNotices): ?>
+            <div class="hn-grid">
+                <?php foreach ($homeNotices as $n): $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string)$n->Content), ENT_QUOTES, 'UTF-8'))); ?>
+                    <a class="hn-card" href="/Notice/Details/<?= (int)$n->Id ?>">
+                        <div class="hn-img"><?php if (!is_blank($n->ImageUrl)): ?><img src="<?= e($n->ImageUrl) ?>" alt="" loading="lazy" onerror="this.insertAdjacentHTML('afterend','<i class=&quot;fas fa-bullhorn&quot;></i>');this.remove()" /><?php else: ?><i class="fas fa-bullhorn"></i><?php endif; ?></div>
+                        <div class="hn-body">
+                            <div class="hn-meta"><span class="hn-cat<?= $n->IsAnnouncement ? ' ann' : '' ?>"><?= e($n->IsAnnouncement ? 'Announcement' : ($n->Category ?: 'News')) ?></span><span><i class="far fa-calendar"></i> <?= e(fmt_date($n->PublishedDate ?? $n->CreatedAt ?? null, 'd M Y')) ?></span></div>
+                            <h3><?= e($n->Title) ?></h3>
+                            <?php if ($plain !== ''): ?><p><?= e(mb_substr($plain, 0, 160)) ?></p><?php endif; ?>
+                            <span class="hn-more">বিস্তারিত পড়ুন <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <a class="hn-empty" href="/Notice"><i class="fas fa-bullhorn"></i><span><b>নোটিশ বোর্ড</b>নতুন নোটিশ, খবর আর ঘোষণা এখানে আসবে — দেখতে ক্লিক করুন।</span><b style="color:#0369A1;">Notice পেজে যান <i class="fas fa-arrow-right"></i></b></a>
+        <?php endif; ?>
+        <div class="hn-mob"><a class="hn-all" href="/Notice">সব নোটিশ দেখুন <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+<?php endif; ?>
+
 <?php if (home_section_on('feed')): ?>
 <!-- ========================================= -->
 <!-- ✅ EDUCATIONAL FEED — সর্বশেষ Approve হওয়া পোস্ট -->

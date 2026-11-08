@@ -864,6 +864,14 @@ $userProfileImg = session_get('ProfileImageLink');
     .hd-page { background: radial-gradient(1200px 420px at 50% 0, #DDF1FC 0%, rgba(221,241,252,0) 70%), linear-gradient(180deg, #EAF6FD 0%, #F5FBFF 420px); padding: 18px 20px 70px; }
     .hd-container { max-width: 1000px; }
     .hd-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .hd-ctnav { display: flex; gap: 6px; background: #fff; padding: 6px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.05); width: fit-content; max-width: 100%; margin: 0 0 16px; }
+    .hd-ctnav a { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 10px; font-weight: 700; font-size: 14px; color: #334155; text-decoration: none; }
+    .hd-ctnav a.on { background: #08224A; color: #fff; } .hd-ctnav a:not(.on):hover { background: #F1F5F9; }
+    .hd-ctstrip { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; background: #fff; border: 1px solid #E3ECF6; border-radius: 14px; padding: 12px 18px; margin: 14px 0 4px; font-size: 14.5px; }
+    .hd-ctstrip .l { font-weight: 800; color: #0B1F44; display: inline-flex; gap: 8px; align-items: center; } .hd-ctstrip .l i { color: #0EA5E9; }
+    .hd-ctstrip a { color: #0F172A; font-weight: 700; text-decoration: none; display: inline-flex; gap: 7px; align-items: center; overflow-wrap: anywhere; } .hd-ctstrip a i { color: #00B5E0; }
+    .hd-ctstrip a.more { margin-left: auto; color: #0369A1; } .hd-ctstrip a:hover { text-decoration: underline; }
+    @media (max-width: 640px) { .hd-ctstrip a.more { margin-left: 0; } }
     .hd-banner { position: relative; margin: 0 0 6px; }
     .hd-banner img { display: block; width: 100%; height: auto; }
     .hd-banner .hd-fallback { display: none; }
@@ -935,8 +943,13 @@ $hdb = function_exists('helpdesk_banner') ? helpdesk_banner() : ['hd_banner' => 
 $hdBannerOn = ($hdb['hd_banner_enabled'] ?? '1') !== '0' && !is_blank($hdb['hd_banner'] ?? '');
 $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
 ?>
+<?php $hdCt = function_exists('contact_info') ? contact_info() : null; ?>
 <div class="hd-page">
     <div class="hd-container">
+        <nav class="hd-ctnav">
+            <a href="/Helpdesk" class="on"><i class="fas fa-headset"></i> Help Desk</a>
+            <a href="/Helpdesk/Contact"><i class="fas fa-address-card"></i> Contact</a>
+        </nav>
 
         <!-- ===== ব্যানার (Admin → Settings → Banners থেকে বদলানো যায়) ===== -->
         <?php if ($hdBannerOn): ?>
@@ -977,6 +990,14 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
                 <span class="tx"><b>Tuition / Tutor Support</b><small>টিউশন ও টিউটর সংক্রান্ত সহায়তা</small></span><i class="fas fa-arrow-right go"></i>
             </a>
         </div>
+        <?php if ($hdCt && ($hdCt['ct_phone'] !== '' || $hdCt['ct_email'] !== '')): ?>
+        <div class="hd-ctstrip">
+            <span class="l"><i class="fas fa-phone-volume"></i> সরাসরি যোগাযোগ</span>
+            <?php if ($hdCt['ct_phone'] !== ''): ?><a href="tel:<?= e($hdCt['tel']) ?>"><i class="fas fa-phone"></i> <?= e($hdCt['ct_phone']) ?></a><?php endif; ?>
+            <?php if ($hdCt['ct_email'] !== ''): ?><a href="mailto:<?= e($hdCt['ct_email']) ?>"><i class="fas fa-envelope"></i> <?= e($hdCt['ct_email']) ?></a><?php endif; ?>
+            <a class="more" href="/Helpdesk/Contact">Contact পেজ <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <?php endif; ?>
 
         <!-- ===== কমিউনিটিতে প্রশ্ন করুন (Create Post) ===== -->
         <div class="hd-create-card" id="hdCreate">

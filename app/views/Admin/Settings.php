@@ -1780,6 +1780,32 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
             .sm-acts { width: 100%; justify-content: flex-end; }
         }
     </style>
+    <?php $ctI = contact_info(); ?>
+    <div class="settings-card" id="ctSettings" data-sg="social">
+        <h5><i class="fas fa-address-card"></i> যোগাযোগের তথ্য (Contact পেজ)</h5>
+        <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">Help Desk এর <a href="/Helpdesk/Contact" target="_blank" rel="noopener">Contact পেজে</a> আর Help Desk পেজের উপরে এই নম্বর ও ইমেইল দেখায়। ঘর খালি রাখলে ঐ অংশ দেখাবে না।</p>
+        <div class="hxt-grid" id="ctForm">
+            <div data-f="ct_phone"><label for="ct_phone">মোবাইল নম্বর</label><input id="ct_phone" maxlength="30" value="<?= e($ctI['ct_phone']) ?>" placeholder="01805843825" /></div>
+            <div data-f="ct_whatsapp"><label for="ct_whatsapp">WhatsApp নম্বর <small>(খালি = মোবাইল নম্বরই)</small></label><input id="ct_whatsapp" maxlength="30" value="<?= e($ctI['ct_whatsapp']) ?>" placeholder="01805843825" /></div>
+            <div data-f="ct_email"><label for="ct_email">ইমেইল</label><input id="ct_email" maxlength="120" value="<?= e($ctI['ct_email']) ?>" placeholder="promashtermoshai@gmail.com" /></div>
+            <div data-f="ct_hours"><label for="ct_hours">যোগাযোগের সময় <small>(ঐচ্ছিক)</small></label><input id="ct_hours" maxlength="120" value="<?= e($ctI['ct_hours']) ?>" placeholder="যেমন: প্রতিদিন সকাল ১০টা – রাত ১০টা" /></div>
+            <div data-f="ct_address" style="grid-column:span 2;"><label for="ct_address">ঠিকানা <small>(ঐচ্ছিক)</small></label><input id="ct_address" maxlength="200" value="<?= e($ctI['ct_address']) ?>" /></div>
+            <div data-f="ct_note" style="grid-column:1/-1;"><label for="ct_note">Contact পেজের উপরের লেখা <small>(ঐচ্ছিক — খালি = ডিফল্ট লেখা)</small></label><input id="ct_note" maxlength="300" value="<?= e($ctI['ct_note']) ?>" /></div>
+        </div>
+        <div class="d-flex gap-2 mt-3 flex-wrap align-items-center">
+            <button type="button" class="btn btn-primary" id="ctSave"><i class="fas fa-floppy-disk me-1"></i> Save Contact</button>
+            <a href="/Helpdesk/Contact" target="_blank" rel="noopener" class="btn btn-link">Contact পেজ খুলে দেখুন <i class="fas fa-arrow-up-right-from-square"></i></a>
+        </div>
+    </div>
+    <script>
+    (function () {
+        document.getElementById('ctSave').addEventListener('click', function () {
+            var d = {}; ['ct_phone', 'ct_whatsapp', 'ct_email', 'ct_hours', 'ct_address', 'ct_note'].forEach(function (k) { d[k] = document.getElementById(k).value; });
+            mmRichSave('/Admin/SaveContactInfo', d, this);
+        });
+    })();
+    </script>
+
     <div class="settings-card" id="smSettings" data-sg="social">
         <h5><i class="fas fa-share-alt"></i> Footer — Social Media Links</h5>
         <p style="color:#64748B; font-size:13.5px; margin-bottom:14px;">

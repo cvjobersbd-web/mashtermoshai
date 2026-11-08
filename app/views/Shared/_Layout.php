@@ -1138,9 +1138,6 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-clipboard-list"></i>Tuition Circular
                     </a>
-                    <a href="/Notice" class="nav-desktop-link<?= $navOn('/Notice') ? ' active' : '' ?>"<?= $navOn('/Notice') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-bullhorn"></i>Notice
-                    </a>
                     <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-headset"></i>Helpdesk
                     </a>
@@ -1244,6 +1241,12 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         </a>
                                     </li>
                                 <?php endif; ?>
+
+                                <li>
+                                    <a class="dropdown-item" href="/Notice">
+                                        <i class="fas fa-bullhorn"></i> Notice
+                                    </a>
+                                </li>
 
                                 <?php if ($userRole === 'User'): ?>
                                     <li>
@@ -1354,7 +1357,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span>Find Tutor — পড়াতে চাই</span></a>
                 <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
-                <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
+                <?php if (!$mLoggedIn): ?><a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a><?php endif; ?>
                 <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span>Helpdesk</span></a>
                 <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
             </nav>
@@ -1366,6 +1369,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Referral" class="<?= $mActive('/Referral') ?>"><i class="fas fa-gift"></i><span>My Referral Bonus</span></a>
                     <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                    <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                     <?php if ($mRole === 'User'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
                     <?php endif; ?>
@@ -1466,7 +1470,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         'Find a Tutor' => [['Find Tutors', '/FindTutor'], ['Mathematics Tutors', '/FindTutor?subject=mathematics'], ['English Tutors', '/FindTutor?subject=english'],
                                            ['SSC Tutors', '/FindTutor?class=ssc'], ['HSC Tutors', '/FindTutor?class=hsc']],
                         'Tuition' => [['Tuition Circular', '/Tuition/Circular'], ['Post Tuition Requirement', $__postReq], ['Become a Tutor', '/Teacher/RequestForm'], ['Packages', '/Package']],
-                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], (function_exists('home_faqs') && home_faqs()) ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
+                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], ['Contact', '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
                     ];
                 ?>
                 <nav class="footer-nav" aria-label="Footer">

@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -716,6 +716,26 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SaveSocialLinks — ফুটারের সোশ্যাল মিডিয়া আইকন + লিংক */
+    /** POST /Admin/SaveContactInfo — Contact পেজের মোবাইল, WhatsApp, ইমেইল, সময়, ঠিকানা */
+    public function SaveContactInfo_POST(): void
+    {
+        $this->requireAdminJson();
+        $v = [];
+        foreach (['ct_phone' => 30, 'ct_whatsapp' => 30, 'ct_email' => 120, 'ct_hours' => 120, 'ct_address' => 200, 'ct_note' => 300] as $k => $n) {
+            $x = trim(strip_tags((string)input_str($k, '')));
+            if (mb_strlen($x) > $n) json_response(['success' => false, 'message' => "লেখা বেশি লম্বা ({$n} অক্ষরের মধ্যে)।", 'field' => $k]);
+            $v[$k] = $x;
+        }
+        $num = '/^[+০-৯0-9][০-৯0-9\s\-]{5,20}$/u';
+        if ($v['ct_phone'] === '' && $v['ct_email'] === '') json_response(['success' => false, 'message' => 'অন্তত মোবাইল নম্বর বা ইমেইল দিন।', 'field' => 'ct_phone']);
+        if ($v['ct_phone'] !== '' && !preg_match($num, $v['ct_phone'])) json_response(['success' => false, 'message' => 'মোবাইল নম্বর সঠিক নয় (যেমন 01805843825)।', 'field' => 'ct_phone']);
+        if ($v['ct_whatsapp'] !== '' && !preg_match($num, $v['ct_whatsapp'])) json_response(['success' => false, 'message' => 'WhatsApp নম্বর সঠিক নয়।', 'field' => 'ct_whatsapp']);
+        if ($v['ct_email'] !== '' && !filter_var($v['ct_email'], FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'message' => 'ইমেইল সঠিক নয়।', 'field' => 'ct_email']);
+        $err = null;
+        if (!$this->db->SaveSiteContent($v, $err)) json_response(['success' => false, 'message' => 'সেভ হয়নি: ' . $err]);
+        json_response(['success' => true, 'message' => 'যোগাযোগের তথ্য সেভ হয়েছে — Contact পেজে দেখুন।']);
+    }
+
     public function SaveSocialLinks_POST(): void
     {
         $this->requireAdminJson();
