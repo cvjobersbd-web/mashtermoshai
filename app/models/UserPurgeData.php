@@ -19,7 +19,7 @@ trait UserPurgeData
             'EduPostLikes' => ['UserId'], 'EduPostComments' => ['UserId'], 'TeacherStudents' => ['TeacherId', 'StudentUserId'], 'TeacherClasses' => ['TeacherId'],
             'TeacherPayments' => ['TeacherId', 'StudentId'], 'TeacherReviews' => ['TeacherId', 'StudentUserId'], 'TeacherCertificates' => ['TeacherId'],
             'ReferralCodes' => ['UserId'], 'Referrals' => ['ReferrerId', 'ReferredUserId'], 'ReferralWithdrawals' => ['UserId'], 'PartnerSignups' => ['UserId'],
-            'AdminAccess' => ['UserId'],
+            'AdminAccess' => ['UserId'], 'CourseEnrollments' => ['UserId'], 'CourseSubmissions' => ['UserId'], 'CourseProgress' => ['UserId'], 'CoursePayouts' => ['TeacherId'],
         ];
 
     /** মুছে ফেলা ইউজারের বাকি থাকা ডাটা খুঁজতে যে টেবিলগুলো দেখা হয় — বাংলা নাম */
@@ -32,7 +32,7 @@ trait UserPurgeData
         'ProfilePosts' => 'প্রোফাইল পোস্ট', 'ProfilePostComments' => 'প্রোফাইল কমেন্ট', 'ProfilePostReactions' => 'রিয়্যাকশন', 'Friendships' => 'ফ্রেন্ড', 'ProfileViews' => 'প্রোফাইল ভিউ',
         'Reviews' => 'রিভিউ', 'TeacherDetails' => 'টিচারের তথ্য', 'TeacherStudents' => 'টিচারের ছাত্র', 'TeacherPayments' => 'টিচারের পেমেন্ট হিসাব', 'TeacherReviews' => 'টিচার রিভিউ',
         'TeacherCertificates' => 'সার্টিফিকেট', 'ChatMessages' => 'চ্যাট মেসেজ', 'ChatDirect' => 'চ্যাট', 'ChatGroups' => 'চ্যাট গ্রুপ', 'ChatGroupMembers' => 'গ্রুপ মেম্বার',
-        'UserDevices' => 'ডিভাইস', 'PartnerSignups' => 'এজেন্সি সাইনআপ', 'SavedItems' => 'সেভ করা', 'UserGoals' => 'গোল', 'UserProfileExtras' => 'প্রোফাইল তথ্য',
+        'UserDevices' => 'ডিভাইস', 'PartnerSignups' => 'এজেন্সি সাইনআপ', 'SavedItems' => 'সেভ করা', 'UserGoals' => 'গোল', 'UserProfileExtras' => 'প্রোফাইল তথ্য', 'Courses' => 'কোর্স', 'CourseEnrollments' => 'কোর্সে ভর্তি', 'CourseSubmissions' => 'কোর্সের জমা',
         'UserActivityDays' => 'অ্যাক্টিভিটি', 'UserSuspensions' => 'সাসপেন্ড', 'PasswordResets' => 'পাসওয়ার্ড রিসেট', 'EmailOtps' => 'OTP', 'PollVotes' => 'পোল ভোট',
     ];
 
@@ -44,7 +44,7 @@ trait UserPurgeData
     {
         $out = [];
         $scan = self::PURGE_COLS + ['ChatMessages' => ['SenderId'], 'ChatDirect' => ['StudentId', 'TeacherId'], 'ChatGroups' => ['TeacherId'], 'ChatGroupMembers' => ['UserId'],
-            'EduPosts' => ['UserId'], 'TuitionCircularPosts' => ['UserId'], 'TeachWantedPosts' => ['UserId'], 'HelpdeskPosts' => ['UserId'], 'ProfilePosts' => ['UserId']];
+            'Courses' => ['TeacherId'], 'EduPosts' => ['UserId'], 'TuitionCircularPosts' => ['UserId'], 'TeachWantedPosts' => ['UserId'], 'HelpdeskPosts' => ['UserId'], 'ProfilePosts' => ['UserId']];
         foreach ($scan as $t => $cols) {
             if (!isset(self::ORPHAN_LABELS[$t])) continue;
             foreach ($cols as $c) {
@@ -108,6 +108,11 @@ trait UserPurgeData
         $x('DELETE FROM `TeachWantedCommentLikes` WHERE `CommentId` IN (SELECT `Id` FROM `TeachWantedComments` WHERE `UserId` = :u)');
         $x('DELETE FROM `ProfileCommentReactions` WHERE `CommentId` IN (SELECT `Id` FROM `ProfilePostComments` WHERE `UserId` = :u)');
         $x('DELETE FROM `GoalTasks` WHERE `GoalId` IN (SELECT `Id` FROM `UserGoals` WHERE `UserId` = :u)');
+
+        // ---- তার বানানো কোর্স (ক্লাস, কাজ, জমা, ভর্তি সব) ----
+        foreach ($this->purgeCol('SELECT `Thumbnail` FROM `Courses` WHERE `TeacherId` = :u', $p) as $f) if (is_string($f) && $f !== '') $files[] = $f;
+        foreach (['CourseSubmissions', 'CourseTasks', 'CourseProgress', 'CourseLessons', 'CourseEnrollments'] as $k) $x("DELETE FROM `$k` WHERE `CourseId` IN (SELECT `Id` FROM `Courses` WHERE `TeacherId` = :u)");
+        $x('DELETE FROM `Courses` WHERE `TeacherId` = :u');
 
         // ---- চ্যাট: তার সরাসরি কথোপকথন আর তার বানানো গ্রুপ পুরোটা ----
         $x("DELETE FROM `ChatMessages` WHERE `Kind` = 'dir' AND `AppId` IN (SELECT `Id` FROM `ChatDirect` WHERE `StudentId` = :u OR `TeacherId` = :u)");

@@ -365,10 +365,20 @@ trait PaymentData
             $n = $this->exec("UPDATE `PaymentRequests` SET `Status` = 'Approved', `AdminNote` = :n, `ReviewedBy` = :a, `ReviewedAt` = :t WHERE `Id` = :i AND `Status` = 'Pending'",
                 ['n' => $note !== '' ? $note : null, 'a' => $adminId, 't' => now(), 'i' => $id]);
             if (!$n) { $this->pdo->rollBack(); return null; }
+            // কোর্স কেনা — Subscription না, কোর্সে ভর্তি (দামের ভাগ টিচার / অ্যাডমিন)
+            if (!empty($p->CourseId) && method_exists($this, 'Enroll')) {
+                $this->Enroll((int)$p->CourseId, (int)$p->UserId, $id, (int)$p->Amount, 'payment');
+                $this->pdo->commit();
+                if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId);
+                return $this->GetPaymentRequest($id);
+            }
             $start = now(); $end = null;
+            $isLivePkg = false;
+            if ($p->Audience === 'Teacher' && $p->PackageId) { try { $isLivePkg = (int)$this->scalar('SELECT `IsLive` FROM `Packages` WHERE `Id` = :i', ['i' => (int)$p->PackageId]) === 1; } catch (Throwable $e) { } }
             if ($p->Audience === 'Teacher') {
                 $cur = $this->GetActiveTeacherSubscription($p->UserId);
-                if ($cur && $cur->EndsAt && $cur->EndsAt > $start) $start = $cur->EndsAt;
+                // প্রিমিয়াম লাইভ প্যাকেজ সাথে সাথে চালু হয় (লাইভ ক্লাস এখনই লাগবে) — অন্যগুলো আগেরটার শেষ থেকে
+                if (!$isLivePkg && $cur && $cur->EndsAt && $cur->EndsAt > $start) $start = $cur->EndsAt;
                 $end = (new DateTime($start))->modify('+' . max(1, $p->DurationMonths) . ' months')->format('Y-m-d H:i:s');
             } elseif ($p->DurationMonths > 0) {
                 // শিক্ষার্থীর আগের প্যাকেজ চালু থাকলে তার শেষ দিন থেকে নতুন মেয়াদ যোগ হয়

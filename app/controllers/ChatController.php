@@ -47,17 +47,6 @@ class ChatController extends Controller
         }, $this->db->GetChatClasses($t));
     }
 
-    /** শুধু Zoom / Google Meet / Microsoft Teams এর https লিংক — প্ল্যাটফর্মের নাম ফেরত দেয়, না মিললে null */
-    public static function meetingPlatform(string $url): ?string
-    {
-        if (!preg_match('~^https://~i', $url) || filter_var($url, FILTER_VALIDATE_URL) === false) return null;
-        $h = strtolower((string)parse_url($url, PHP_URL_HOST));
-        if ($h === 'zoom.us' || str_ends_with($h, '.zoom.us')) return 'Zoom';
-        if ($h === 'meet.google.com') return 'Google Meet';
-        if ($h === 'teams.microsoft.com' || $h === 'teams.live.com') return 'Microsoft Teams';
-        return null;
-    }
-
     /** এই চ্যাটের অন্য সদস্যরা (নোটিফিকেশন পাঠাতে) */
     private function recipients(Obj $t, int $me): array
     {
@@ -92,7 +81,7 @@ class ChatController extends Controller
             'Current' => $current, 'Closed' => $closed, 'Messages' => $this->pack($msgs, $me, $current), 'HasOlder' => count($msgs) === 50,
             'SeenUpTo' => $current ? $this->db->GetChatSeenUpTo($current, $me) : 0, 'Me' => $me,
             'ThreadJson' => $this->packThreads($threads),
-            'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false,
+            'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false, 'LiveOk' => teacher_live_enabled($me) && bbb_ready(),
             'Contacts' => current_role() === 'Teacher' ? array_values($this->db->TeacherChatContacts($me)) : [],
         ]);
     }
@@ -180,10 +169,12 @@ class ChatController extends Controller
         $t = $this->db->GetChatThread(trim((string)input_str('c', '')), $me);
         if (!$t) json_response(['success' => false, 'closed' => true, 'message' => 'এই চ্যাটটি বন্ধ হয়ে গেছে।']);
         if ($t->TeacherId !== $me) json_response(['success' => false, 'message' => 'শুধু টিচার ক্লাস সেট করতে পারবেন।']);
+        // Zoom / Google Meet আর না — সাইটের নিজের লাইভ ক্লাস (BigBlueButton), শুধু Premium টিচার প্যাকেজে
+        if (!teacher_live_enabled($me)) json_response(['success' => false, 'premium' => true, 'message' => 'লাইভ ক্লাস নিতে "Premium" টিচার প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500)।']);
+        if (!bbb_ready()) json_response(['success' => false, 'message' => 'লাইভ ক্লাসের সার্ভার এখনো চালু হয়নি — অ্যাডমিনকে জানান।']);
         $title = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str('title', ''))), 0, 150);
-        $link = trim((string)input_str('link', ''));
-        $platform = self::meetingPlatform($link);
-        if ($platform === null || mb_strlen($link) > 500) json_response(['success' => false, 'message' => 'সঠিক Zoom, Google Meet বা Microsoft Teams লিংক দিন (https:// দিয়ে শুরু)।']);
+        $platform = 'মাষ্টার মশাই লাইভ';
+        $link = '#';
         $date = (string)input_str('date', ''); $time = (string)input_str('time', '');
         $dt = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
         if (!$dt || $dt->format('Y-m-d H:i') !== $date . ' ' . $time) json_response(['success' => false, 'message' => 'ক্লাসের তারিখ আর সময় দিন।']);
@@ -195,8 +186,10 @@ class ChatController extends Controller
         if ($this->db->CountRecentChatMessages($me, 60) >= 30) json_response(['success' => false, 'message' => 'একটু পর আবার চেষ্টা করুন।']);
 
         $cid = $this->db->CreateChatClass($t, $me, $title, $link, $platform, $dt->format('Y-m-d H:i:s'), $dur);
+        $link = '/Live/Chat/' . $cid;
+        $this->db->exec('UPDATE `ChatClasses` SET `Link` = :l WHERE `Id` = :i', ['l' => $link, 'i' => $cid]);
         $when = $dt->format('d M Y, h:i A');
-        $this->db->AddChatMessage($t, $me, "📅 অনলাইন ক্লাস: $title — $when ($platform)\n$link", $cid);
+        $this->db->AddChatMessage($t, $me, "📅 লাইভ ক্লাস: $title — $when ($platform)\n" . site_public_url() . $link, $cid);
         $myName = (string)(session_get('UserFullName') ?? session_get('UserName') ?? 'Teacher');
         foreach ($this->recipients($t, $me) as $uid) $this->db->CreateNotification($uid, 'নতুন অনলাইন ক্লাস 📅', "$myName $when এ \"$title\" ক্লাস সেট করেছেন ($platform)" . ($t->Kind === 'grp' ? " — গ্রুপ: {$t->OtherName}" : '') . '।', 'success', '/Chat?c=' . $t->Key, 'fa-video');
         $msgs = $this->db->GetChatMessages($t, max(0, input_int('after', 0)), 0, 50);

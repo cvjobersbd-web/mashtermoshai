@@ -24,6 +24,7 @@ require_once __DIR__ . '/DeviceData.php';
 require_once __DIR__ . '/PartnerData.php';
 require_once __DIR__ . '/ReferenceData.php';
 require_once __DIR__ . '/UserPurgeData.php';
+require_once __DIR__ . '/CourseData.php';
 
 class Db
 {
@@ -44,6 +45,7 @@ class Db
     use PartnerData;
     use ReferenceData;
     use UserPurgeData;
+    use CourseData;
 
     private PDO $pdo;
 

@@ -234,6 +234,7 @@ $pkb = package_banner();
             <div class="full chk">
                 <label><input type="checkbox" class="pa-sw" name="isActive" value="1" checked /> চালু (পেজে দেখাবে)</label>
                 <label><input type="checkbox" class="pa-sw ft" name="isFeatured" value="1" /> হাইলাইট করুন</label>
+                <label id="paLiveWrap"><input type="checkbox" class="pa-sw" name="isLive" value="1" /> <i class="fas fa-video" style="color:#DC2626;"></i> প্রিমিয়াম লাইভ ক্লাস (শুধু টিচার)</label>
             </div>
             <div class="pa-err" id="paErr" hidden></div>
         </div>
@@ -266,7 +267,7 @@ $pkb = package_banner();
             + '<div class="pa-move"><button type="button" data-mv="-1" title="উপরে"' + (i === 0 ? ' disabled' : '') + '><i class="fas fa-chevron-up"></i></button>'
             + '<button type="button" data-mv="1" title="নিচে"' + (i === n - 1 ? ' disabled' : '') + '><i class="fas fa-chevron-down"></i></button></div>'
             + '<div><div class="pa-name">' + esc(p.Name) + (p.Badge ? '<span class="pa-badge">' + esc(p.Badge) + '</span>' : '') + '</div>'
-            + '<div class="pa-meta"><i class="far fa-clock"></i> ' + esc(p.DurationLabel) + ' · ' + feats + 'টি সুবিধা' + (p.IsActive ? '' : ' · <b style="color:#B91C1C;">বন্ধ</b>') + '</div></div>'
+            + '<div class="pa-meta"><i class="far fa-clock"></i> ' + esc(p.DurationLabel) + ' · ' + feats + 'টি সুবিধা' + (p.IsLive ? ' · <b style="color:#DC2626;"><i class="fas fa-video"></i> লাইভ ক্লাস</b>' : '') + (p.IsActive ? '' : ' · <b style="color:#B91C1C;">বন্ধ</b>') + '</div></div>'
             + '<div class="pa-price"><b>' + tk(p.Price) + '</b>' + (p.RegularPrice ? '<s>' + tk(p.RegularPrice) + '</s><span class="off">' + p.Discount + '% ছাড়</span>' : '') + '</div>'
             + '<div class="pa-tg"><label><input type="checkbox" class="pa-sw" data-tg="active"' + (p.IsActive ? ' checked' : '') + '> চালু</label>'
             + '<label><input type="checkbox" class="pa-sw ft" data-tg="featured"' + (p.IsFeatured ? ' checked' : '') + '> হাইলাইট</label></div>'
@@ -289,6 +290,7 @@ $pkb = package_banner();
         var st = form.audience.value === 'Student';
         document.querySelectorAll('[data-only-student]').forEach(function (x) { x.hidden = !st; });
         form.name.placeholder = st ? 'যেমন: Tuition Post' : 'যেমন: ১ মাস';
+        var lw = document.getElementById('paLiveWrap'); if (lw) lw.style.display = st ? 'none' : '';
     }
     form.audience.addEventListener('change', syncAud);
     function open(p, aud) {
@@ -297,7 +299,7 @@ $pkb = package_banner();
         form.price.value = p.Price === '' ? '' : p.Price; form.regularPrice.value = p.RegularPrice || '';
         form.durationMonths.value = p.DurationMonths; form.postLimit.value = p.PostLimit;
         form.badge.value = p.Badge || ''; form.description.value = p.Description || ''; form.features.value = p.Features || '';
-        form.isActive.checked = !!p.IsActive; form.isFeatured.checked = !!p.IsFeatured;
+        form.isActive.checked = !!p.IsActive; form.isFeatured.checked = !!p.IsFeatured; form.isLive.checked = !!p.IsLive; document.getElementById('paLiveWrap').style.display = (p.Audience || aud) === 'Teacher' ? '' : 'none';
         document.querySelector('#paTitle span').textContent = p.Id ? 'প্যাকেজ এডিট' : 'নতুন প্যাকেজ';
         err.hidden = true; syncAud(); modal.hidden = false; form.name.focus();
     }
@@ -309,7 +311,7 @@ $pkb = package_banner();
         e.preventDefault();
         var btn = form.querySelector('.sv'); btn.disabled = true; err.hidden = true;
         var fd = new FormData(form);
-        fd.set('isActive', form.isActive.checked ? 'true' : 'false'); fd.set('isFeatured', form.isFeatured.checked ? 'true' : 'false');
+        fd.set('isActive', form.isActive.checked ? 'true' : 'false'); fd.set('isFeatured', form.isFeatured.checked ? 'true' : 'false'); fd.set('isLive', form.isLive.checked ? 'true' : 'false');
         try {
             var d = await post('/Admin/SavePackage', fd);
             if (!d.success) { err.textContent = d.message || 'সেভ হয়নি।'; err.hidden = false; return; }

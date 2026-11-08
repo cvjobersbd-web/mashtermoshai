@@ -517,6 +517,21 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                 </a>
             </li>
             <li>
+                <a href="/Course/Manage">
+                    <i class="fas fa-book-open-reader"></i> আমার কোর্স
+                </a>
+            </li>
+            <li>
+                <a href="/Course/Earnings">
+                    <i class="fas fa-sack-dollar"></i> কোর্সের আয়
+                </a>
+            </li>
+            <li>
+                <a href="/Chat">
+                    <i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস (চ্যাট)
+                </a>
+            </li>
+            <li>
                 <a href="/Profile/Views">
                     <i class="fas fa-eye"></i> Profile Views
                 </a>

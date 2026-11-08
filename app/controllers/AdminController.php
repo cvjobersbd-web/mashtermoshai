@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'ToggleCourse' => 'কোর্স লুকানো/দেখানো', 'AddCoursePayout' => 'টিচারকে কোর্সের টাকা দেওয়া', 'SaveCourseSettings' => 'কোর্সের ভাগ (%) বদল', 'SaveLiveSettings' => 'লাইভ ক্লাস সার্ভার সেটিং', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -1124,6 +1124,100 @@ class AdminController extends Controller
     }
 
     // ============================================================
+    // ===== কোর্স (সব টিচারের কোর্স, টাকার ভাগ, টিচারকে টাকা দেওয়া) =====
+    // ============================================================
+    /** GET /Admin/Courses */
+    public function Courses(): void
+    {
+        $this->requireAdminPage();
+        $pend = 0;
+        try { $this->db->EnsureCourseTables(); $pend = (int)$this->db->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `CourseId` IS NOT NULL AND `Status` = 'Pending'"); } catch (Throwable $e) { }
+        $this->view(null, $this->db->GetAllCoursesAdmin(), ['Ledger' => $this->db->GetCourseLedger(), 'Pct' => course_admin_pct(), 'PendingPay' => $pend]);
+    }
+
+    /** POST /Admin/ToggleCourse (id, hidden) — অ্যাডমিন কোর্স লুকায় / আবার দেখায় */
+    public function ToggleCourse_POST(): void
+    {
+        $this->requireAdminJson();
+        $c = $this->db->GetCourse((int)input_int('id', 0));
+        if (!$c) json_response(['success' => false, 'message' => 'কোর্সটি পাওয়া যায়নি।']);
+        $h = input_bool('hidden');
+        $this->db->SetCourseHidden($c->Id, $h);
+        if ($h) { try { $this->db->CreateNotification((int)$c->TeacherId, 'কোর্স লুকানো হয়েছে', "অ্যাডমিন “{$c->Title}” কোর্সটি Course পেজ থেকে লুকিয়েছেন — বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।", 'warning', '/Course/Manage', 'fa-eye-slash'); } catch (Throwable $e) { } }
+        json_response(['success' => true, 'message' => $h ? 'কোর্স লুকানো হয়েছে — Course পেজে দেখাবে না (কেনা শিক্ষার্থীরা ক্লাস করতে পারবে)।' : 'কোর্স আবার দেখাচ্ছে।']);
+    }
+
+    /** POST /Admin/AddCoursePayout (teacherId, amount, method, note) — টিচারকে তার ভাগের টাকা পাঠানোর রেকর্ড */
+    public function AddCoursePayout_POST(): void
+    {
+        $this->requireAdminJson();
+        $tid = (int)input_int('teacherId', 0);
+        $row = null;
+        foreach ($this->db->GetCourseLedger() as $r) if ((int)$r->TeacherId === $tid) $row = $r;
+        if (!$row) json_response(['success' => false, 'message' => 'টিচার পাওয়া যায়নি।']);
+        $amt = (int)input_int('amount', 0);
+        if ($amt <= 0) json_response(['success' => false, 'message' => 'টাকার পরিমাণ দিন।']);
+        if ($amt > $row->Due) json_response(['success' => false, 'message' => 'বাকি আছে ' . taka($row->Due) . ' — এর বেশি দেওয়া যাবে না।']);
+        $method = mb_substr(trim(strip_tags((string)input_str('method', ''))), 0, 40);
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        $this->db->AddCoursePayout($tid, $amt, $method, $note, (int)current_user_id());
+        try { $this->db->CreateNotification($tid, 'কোর্সের টাকা পাঠানো হয়েছে 💸', 'আপনার কোর্স বিক্রির ভাগ থেকে ' . taka($amt) . ($method !== '' ? " ($method)" : '') . ' পাঠানো হয়েছে।' . ($note !== '' ? ' ' . $note : ''), 'success', '/Course/Earnings', 'fa-money-bill-transfer'); } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => taka($amt) . ' পাঠানো হিসেবে রেকর্ড হয়েছে — টিচার নোটিফিকেশন পাবে।']);
+    }
+
+    /** POST /Admin/SaveCourseSettings (pct) — কোর্সের দামের কত % অ্যাডমিন রাখবে (এরপরের বিক্রি থেকে) */
+    public function SaveCourseSettings_POST(): void
+    {
+        $this->requireAdminJson();
+        if (!admin_is_super()) json_response(['success' => false, 'message' => 'এটা শুধু Super Admin বদলাতে পারেন।']);
+        $p = (int)input_int('pct', -1);
+        if ($p < 0 || $p > 100) json_response(['success' => false, 'message' => '০ থেকে ১০০ এর মধ্যে দিন।']);
+        $this->db->SaveSiteContent(['course_admin_pct' => (string)$p]);
+        json_response(['success' => true, 'message' => "সেভ হয়েছে — এখন থেকে প্রতিটা বিক্রির {$p}% অ্যাডমিন, " . (100 - $p) . '% টিচার।']);
+    }
+
+    // ============================================================
+    // ===== লাইভ ক্লাস সার্ভার (BigBlueButton) — শুধু Super Admin =====
+    // ============================================================
+    /** GET /Admin/LiveSettings */
+    public function LiveSettings(): void
+    {
+        $this->requireAdminPage();
+        $c = $this->db->GetSiteContent(['bbb_url' => 'https://live.mashtermoshai.com/bigbluebutton/', 'bbb_secret' => '']);
+        $sec = trim((string)$c['bbb_secret']);
+        $this->view(null, null, ['Url' => $c['bbb_url'], 'HasSecret' => $sec !== '', 'Hint' => $sec !== '' ? '••••' . substr($sec, -4) : '']);
+    }
+
+    /** POST /Admin/SaveLiveSettings (url, secret — খালি রাখলে আগেরটাই থাকে) */
+    public function SaveLiveSettings_POST(): void
+    {
+        $this->requireAdminJson();
+        $url = trim((string)input_str('url', ''));
+        if (!preg_match('#^https://[a-z0-9.-]+(:\d+)?(/[^\s]*)?$#i', $url) || mb_strlen($url) > 200) json_response(['success' => false, 'message' => 'সার্ভারের ঠিকানা https:// দিয়ে দিন — যেমন https://live.mashtermoshai.com/bigbluebutton/']);
+        $v = ['bbb_url' => $url];
+        $sec = trim((string)input_str('secret', ''));
+        if (input_bool('clear')) $v['bbb_secret'] = '';
+        elseif ($sec !== '') {
+            if (!preg_match('/^[A-Za-z0-9]{16,128}$/', $sec)) json_response(['success' => false, 'message' => 'Secret টা ঠিক নেই — শুধু ইংরেজি অক্ষর আর সংখ্যা (সার্ভারে `sudo bbb-conf --secret` চালালে দেখায়)।']);
+            $v['bbb_secret'] = $sec;
+        }
+        $this->db->SaveSiteContent($v);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে। এখন "সংযোগ পরীক্ষা" চাপুন।']);
+    }
+
+    /** POST /Admin/TestLiveServer — সার্ভারে যোগাযোগ হয় কিনা আর secret ঠিক কিনা */
+    public function TestLiveServer_POST(): void
+    {
+        $this->requireAdminJson();
+        if (!bbb_ready()) json_response(['success' => false, 'message' => 'আগে সার্ভারের ঠিকানা আর secret সেভ করুন।']);
+        $err = null;
+        $x = bbb_call('getMeetings', [], $err);
+        if (!$x || (string)$x->returncode !== 'SUCCESS') json_response(['success' => false, 'message' => $err ?: 'সংযোগ হয়নি।']);
+        $n = isset($x->meetings->meeting) ? count($x->meetings->meeting) : 0;
+        json_response(['success' => true, 'message' => "সংযোগ ঠিক আছে ✅ — এখন {$n}টা মিটিং চলছে।"]);
+    }
+
+    // ============================================================
     // ===== META PIXEL & CONVERSIONS API (শুধু Super Admin) =====
     // ============================================================
     /** GET /Admin/MetaPixel */
@@ -1310,6 +1404,7 @@ class AdminController extends Controller
             'Price' => $price, 'RegularPrice' => $reg, 'Badge' => $clean(input_str('badge', ''), 40),
             'Description' => $clean(input_str('description', ''), 300), 'Features' => $features,
             'IsActive' => input_bool('isActive', true) ? 1 : 0, 'IsFeatured' => input_bool('isFeatured') ? 1 : 0,
+            'IsLive' => $aud === 'Teacher' && input_bool('isLive') ? 1 : 0,
         ];
         $id = (int)input_int('id', 0);
         if ($id > 0 && !$this->db->GetPackage($id)) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
@@ -1708,18 +1803,19 @@ class AdminController extends Controller
         $st = input_str('status', 'Pending');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
         // শিক্ষার্থী / শিক্ষক আলাদা সেকশন
-        $for = (string)input_str('for', 'all'); if (!in_array($for, ['all', 'Student', 'Teacher'], true)) $for = 'all';
+        $for = (string)input_str('for', 'all'); if (!in_array($for, ['all', 'Student', 'Teacher', 'Course'], true)) $for = 'all';
+        $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : ($x->Audience === 'Course' ? 'Course' : 'Student');
         $all = $this->db->GetPaymentRequests(null);
         $cnt = []; $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
         foreach ($all as $x) {
-            $a = $x->Audience === 'Teacher' ? 'Teacher' : 'Student';
+            $a = $audOf($x);
             foreach (['all', $a] as $k) { $cnt[$k][$x->Status] = ($cnt[$k][$x->Status] ?? 0) + 1; $cnt[$k]['all'] = ($cnt[$k]['all'] ?? 0) + 1; }
             if ($for !== 'all' && $a !== $for) continue;
             if (isset($stats[$x->Status])) $stats[$x->Status]++;
             $stats['Total']++;
             if ($x->Status === 'Approved') $stats['Revenue'] += (int)$x->Amount;
         }
-        $list = array_values(array_filter($all, fn($x) => ($st === 'all' || $x->Status === $st) && ($for === 'all' || ($x->Audience === 'Teacher' ? 'Teacher' : 'Student') === $for)));
+        $list = array_values(array_filter($all, fn($x) => ($st === 'all' || $x->Status === $st) && ($for === 'all' || $audOf($x) === $for)));
         $this->view(null, $list, ['Status' => $st, 'For' => $for, 'Counts' => $cnt, 'Stats' => $stats]);
     }
 
@@ -1731,6 +1827,16 @@ class AdminController extends Controller
         try { $p = $this->db->ApprovePayment((int)input_int('id', 0), (int)current_user_id(), $note); }
         catch (Throwable $e) { error_log('[approve payment] ' . $e->getMessage()); $p = null; }
         if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
+        // কোর্স কেনা — শিক্ষার্থী ভর্তি হয়ে গেছে; টিচারকে বিক্রির খবর
+        if (!empty($p->CourseId)) {
+            $c = $this->db->GetCourse((int)$p->CourseId);
+            $e = $this->db->GetEnrollment((int)$p->CourseId, (int)$p->UserId);
+            try {
+                $this->db->CreateNotification((int)$p->UserId, 'কোর্স খুলে গেছে 🎉', "“" . ($c->Title ?? $p->PackageName) . "” কোর্সে আপনি ভর্তি হয়েছেন — এখনই ক্লাস শুরু করুন।", 'success', '/Course/Learn/' . (int)$p->CourseId, 'fa-graduation-cap');
+                if ($c && $e && ($c->TeacherRole ?? '') !== 'Admin') $this->db->CreateNotification((int)$c->TeacherId, 'নতুন কোর্স বিক্রি 💰', ($p->FullName ?: 'একজন শিক্ষার্থী') . " “{$c->Title}” কিনেছেন — আপনার ভাগ " . taka((int)$e->TeacherShare) . '।', 'success', '/Course/Earnings', 'fa-sack-dollar');
+            } catch (Throwable $ex) { }
+            json_response(['success' => true, 'message' => 'Accept হয়েছে — শিক্ষার্থী কোর্সে ভর্তি হয়েছেন।' . ($e ? ' (টিচার ' . taka((int)$e->TeacherShare) . ' · অ্যাডমিন ' . taka((int)$e->AdminShare) . ')' : ''), 'payment' => $p]);
+        }
         if ($p->Audience === 'Teacher') {
             $sub = $this->db->GetActiveTeacherSubscription($p->UserId);
             $msg = "আপনার “{$p->PackageName}” Subscription (" . taka($p->Amount) . ") চালু হয়েছে" . ($sub ? ' — ' . date('d M Y', strtotime($sub->EndsAt)) . ' পর্যন্ত।' : '।');

@@ -1138,6 +1138,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-clipboard-list"></i>Tuition Circular
                     </a>
+                    <a href="/Course" class="nav-desktop-link<?= $navOn('/Course') ? ' active' : '' ?>"<?= $navOn('/Course') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-book-open-reader"></i>Course
+                    </a>
                     <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-headset"></i>Helpdesk
                     </a>
@@ -1242,6 +1245,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     </li>
                                 <?php endif; ?>
 
+                                <?php if ($userRole !== 'Admin'): ?>
+                                <li>
+                                    <a class="dropdown-item" href="/Course/My">
+                                        <i class="fas fa-bookmark"></i> আমার কোর্স
+                                    </a>
+                                </li>
+                                <?php endif; ?>
                                 <li>
                                     <a class="dropdown-item" href="/Notice">
                                         <i class="fas fa-bullhorn"></i> Notice
@@ -1358,6 +1368,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
                 <?php if (!$mLoggedIn): ?><a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a><?php endif; ?>
+                <a href="/Course" class="<?= $mActive('/Course') ?>"><i class="fas fa-book-open-reader"></i><span>Course</span></a>
                 <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span>Helpdesk</span></a>
                 <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
             </nav>
@@ -1369,6 +1380,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Referral" class="<?= $mActive('/Referral') ?>"><i class="fas fa-gift"></i><span>My Referral Bonus</span></a>
                     <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                    <a href="/Course/My" class="<?= $mActive('/Course/My') ?>"><i class="fas fa-bookmark"></i><span>আমার কোর্স</span></a>
                     <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                     <?php if ($mRole === 'User'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>

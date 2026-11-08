@@ -205,7 +205,7 @@ $role = current_role();
                             <?php if ($isGrp): ?><b id="grpTitle"><?= e($cur->OtherName) ?></b><?php else: ?><a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a><?php endif; ?>
                             <div><?= $isGrp ? 'গ্রুপ' : e($cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
                         </div>
-                        <?php if (!empty($ViewBag->IsTeacher)): ?><button type="button" class="cls-btn" id="chClsBtn" title="Zoom / Google Meet ক্লাস সেট করুন"><i class="fas fa-video"></i><span>অনলাইন ক্লাস</span></button><?php endif; ?>
+                        <?php if (!empty($ViewBag->IsTeacher)): ?><button type="button" class="cls-btn" id="chClsBtn" title="সাইট থেকেই লাইভ ক্লাস সেট করুন"><i class="fas fa-video"></i><span>লাইভ ক্লাস</span></button><?php endif; ?>
                         <?php if ($isGrp): ?><button type="button" class="mem-btn" id="grpMemBtn"><i class="fas fa-users"></i><span>সদস্য</span></button>
                         <?php else: ?><a class="prof" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i><span>প্রোফাইল</span></a><?php endif; ?>
                     </header>
@@ -215,7 +215,7 @@ $role = current_role();
                             <?php if ($cur->Kind === 'grp'): ?><b><?= e($cur->OtherName) ?></b> গ্রুপ — <?= !empty($ViewBag->IsTeacher) ? 'এখানে মেসেজ দিলে গ্রুপের সব স্টুডেন্ট পাবে।' : 'টিচার এখানে ক্লাসের মেসেজ আর অনলাইন ক্লাসের লিংক দেবেন।' ?><br>
                             <?php elseif ($cur->Kind === 'dir'): ?><b><?= e($cur->OtherName) ?></b> এর সাথে সরাসরি চ্যাট — <?= $role === 'Teacher' ? 'শিক্ষার্থী আপনার প্রোফাইল থেকে চ্যাট শুরু করেছেন।' : 'টিউশনের বিষয়, সময় আর বেতন নিয়ে কথা বলুন।' ?><br>
                             <?php else: ?><b><?= e($cur->OtherName) ?></b> এর সাথে আপনার টিউশন ঠিক হয়েছে<?= $cur->Topic !== '' ? ' (' . e($cur->Topic) . ')' : '' ?>।<br><?php endif; ?>
-                            <?= !empty($ViewBag->IsTeacher) ? 'উপরের <b>অনলাইন ক্লাস</b> বাটন দিয়ে Zoom / Google Meet ক্লাস সেট করুন — স্টুডেন্ট Join বাটন পাবে।' : 'টিচার Zoom / Google Meet ক্লাস সেট করলে এখানে <b>Join Class</b> বাটন আসবে।' ?> কেউ খারাপ আচরণ করলে <a href="/Helpdesk">Helpdesk</a> এ জানান।
+                            <?= !empty($ViewBag->IsTeacher) ? 'উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে সাইট থেকেই ক্লাস সেট করুন (Premium প্যাকেজ) — স্টুডেন্ট Join বাটন পাবে।' : 'টিচার লাইভ ক্লাস সেট করলে এখানে <b>Join Class</b> বাটন আসবে।' ?> কেউ খারাপ আচরণ করলে <a href="/Helpdesk">Helpdesk</a> এ জানান।
                         </div>
                     </div>
                     <div class="ch-closedbar" id="chClosedBar" hidden><i class="fas fa-lock"></i> এই চ্যাটটি বন্ধ হয়ে গেছে — অ্যাপ্লিকেশনটি আর Accepted নেই।</div>
@@ -226,11 +226,12 @@ $role = current_role();
                     <?php if (!empty($ViewBag->IsTeacher)): ?>
                     <div class="ch-dlg" id="chDlg" role="dialog" aria-modal="true" aria-labelledby="chDlgT">
                         <form id="chClsForm" autocomplete="off" novalidate>
-                            <h3 id="chDlgT"><i class="fas fa-video"></i> অনলাইন ক্লাস সেট করুন</h3>
-                            <p class="sub">Zoom বা Google Meet-এ মিটিং বানিয়ে লিংকটা এখানে দিন। <?= e($cur->OtherName) ?> চ্যাটে <b>Join Class</b> বাটন পাবে।</p>
-                            <label for="clsLink">মিটিং লিংক *</label>
-                            <input id="clsLink" name="link" type="url" inputmode="url" maxlength="500" placeholder="https://meet.google.com/abc-defg-hij" required />
-                            <div class="hint">শুধু Zoom, Google Meet বা Microsoft Teams এর লিংক।</div>
+                            <h3 id="chDlgT"><i class="fas fa-video"></i> লাইভ ক্লাস সেট করুন</h3>
+                            <?php if (empty($ViewBag->LiveOk)): ?>
+                                <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-crown"></i> সাইট থেকে সরাসরি লাইভ ক্লাস নিতে <b>Premium টিচার প্যাকেজ</b> লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — বৃষ্টি, বন্যা বা যেতে না পারলে শিক্ষার্থীকে অনলাইনে পড়ান। <a href="/Package?for=teacher">প্যাকেজ দেখুন</a></p>
+                            <?php else: ?>
+                                <p class="sub">মাষ্টার মশাই এর নিজের লাইভ ক্লাস — আলাদা কোনো অ্যাপ লাগবে না। সময় হলে কার্ডের <b>লাইভ শুরু করুন</b> চাপুন, <?= e($cur->OtherName) ?> <b>Join Class</b> চেপে যোগ দেবে।</p>
+                            <?php endif; ?>
                             <label for="clsTitle">বিষয় / শিরোনাম</label>
                             <input id="clsTitle" name="title" maxlength="150" placeholder="<?= e($cur->Topic !== '' ? $cur->Topic . ' ক্লাস' : 'যেমন: Math — Algebra') ?>" />
                             <div class="row2">
@@ -396,7 +397,7 @@ $role = current_role();
     }
     // ===== অনলাইন ক্লাস =====
     var CLASSES = {}, IS_TEACHER = <?= js(!empty($ViewBag->IsTeacher)) ?>, nextBar = document.getElementById('chNext');
-    var PICON = { 'Zoom': 'fas fa-video', 'Google Meet': 'fas fa-video', 'Microsoft Teams': 'fas fa-users' };
+    var PICON = { 'Zoom': 'fas fa-video', 'Google Meet': 'fas fa-video', 'Microsoft Teams': 'fas fa-users', 'মাষ্টার মশাই লাইভ': 'fas fa-tower-broadcast' };
     function clsState(c) {
         if (c.status === 'Cancelled') return ['cx', 'বাতিল করা হয়েছে'];
         var now = Date.now(), s = Date.parse(c.start), e = Date.parse(c.end);
@@ -410,7 +411,7 @@ $role = current_role();
     function card(c) {
         var st = clsState(c), el = document.createElement('div'); el.className = 'ch-cc' + (c.status === 'Cancelled' ? ' cancelled' : ''); el.setAttribute('data-cls', c.id);
         var hd = document.createElement('div'); hd.className = 'hd'; hd.innerHTML = '<i class="' + (PICON[c.platform] || 'fas fa-video') + '"></i>';
-        var t = document.createElement('div'); var b = document.createElement('b'); b.textContent = c.title; var sm = document.createElement('small'); sm.textContent = 'অনলাইন ক্লাস · ' + c.platform; t.appendChild(b); t.appendChild(sm); hd.appendChild(t); el.appendChild(hd);
+        var t = document.createElement('div'); var b = document.createElement('b'); b.textContent = c.title; var sm = document.createElement('small'); sm.textContent = 'লাইভ ক্লাস · ' + c.platform; t.appendChild(b); t.appendChild(sm); hd.appendChild(t); el.appendChild(hd);
         var bd = document.createElement('div'); bd.className = 'bd';
         var l1 = document.createElement('div'); l1.innerHTML = '<i class="far fa-calendar"></i> '; l1.appendChild(document.createTextNode(dayLabel(c.day) + ', ' + c.time));
         var l2 = document.createElement('div'); l2.innerHTML = '<i class="far fa-clock"></i> '; l2.appendChild(document.createTextNode(c.dur + ' মিনিট'));
@@ -419,7 +420,9 @@ $role = current_role();
         if (st[0] !== 'cx' && st[0] !== 'end') {
             var ft = document.createElement('div'); ft.className = 'ft';
             var j = document.createElement('a'); j.className = 'ch-join' + (st[0] === 'live' ? ' live' : ''); j.href = c.link; j.target = '_blank'; j.rel = 'noopener nofollow';
-            j.innerHTML = '<i class="fas fa-right-to-bracket"></i> Join Class'; ft.appendChild(j);
+            var internal = /^\/Live\//.test(c.link);
+            if (internal) { j.target = '_self'; }
+            j.innerHTML = internal && IS_TEACHER ? '<i class="fas fa-tower-broadcast"></i> লাইভ শুরু করুন' : '<i class="fas fa-right-to-bracket"></i> Join Class'; ft.appendChild(j);
             if (IS_TEACHER) { var x = document.createElement('button'); x.type = 'button'; x.className = 'cx-btn'; x.textContent = 'বাতিল'; x.setAttribute('data-cancel', c.id); ft.appendChild(x); }
             el.appendChild(ft);
         }
@@ -551,7 +554,7 @@ $role = current_role();
             if (!cf.date.value) cf.date.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
             if (!cf.time.value) cf.time.value = pad(d.getHours()) + ':00';
             var t = new Date(); cf.date.min = t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate());
-            document.getElementById('clsErr').textContent = ''; dlg.classList.add('open'); cf.link.focus();
+            document.getElementById('clsErr').textContent = ''; dlg.classList.add('open'); cf.elements['title'].focus();
         };
         var closeDlg = function () { dlg.classList.remove('open'); };
         document.getElementById('chClsBtn').addEventListener('click', openDlg);
@@ -561,12 +564,11 @@ $role = current_role();
         cf.addEventListener('submit', async function (e) {
             e.preventDefault();
             var err = document.getElementById('clsErr'), ok = document.getElementById('clsOk');
-            if (!/^https:\/\/([a-z0-9-]+\.)*(zoom\.us|meet\.google\.com|teams\.microsoft\.com|teams\.live\.com)(\/|$)/i.test(cf.link.value.trim())) { err.textContent = 'সঠিক Zoom, Google Meet বা Microsoft Teams লিংক দিন (https:// দিয়ে শুরু)।'; cf.link.focus(); return; }
             if (!cf.date.value || !cf.time.value) { err.textContent = 'তারিখ আর সময় দিন।'; return; }
             ok.disabled = true; err.textContent = '';
             try {
-                var r = await post('/Chat/CreateClass', { link: cf.link.value.trim(), title: cf.elements['title'].value.trim(), date: cf.date.value, time: cf.time.value, duration: cf.duration.value });
-                if (!r.success) { err.textContent = r.message || 'সেট করা যায়নি।'; if (r.closed) { closeDlg(); setClosed(); } return; }
+                var r = await post('/Chat/CreateClass', { title: cf.elements['title'].value.trim(), date: cf.date.value, time: cf.time.value, duration: cf.duration.value });
+                if (!r.success) { err.innerHTML = ''; err.textContent = r.message || 'সেট করা যায়নি।'; if (r.premium) { var a = document.createElement('a'); a.href = '/Package?for=teacher'; a.textContent = ' প্যাকেজ দেখুন →'; err.appendChild(a); } if (r.closed) { closeDlg(); setClosed(); } return; }
                 setClasses(r.classes); append(r.messages); cf.reset(); closeDlg();
             } catch (er) { err.textContent = 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।'; }
             finally { ok.disabled = false; }

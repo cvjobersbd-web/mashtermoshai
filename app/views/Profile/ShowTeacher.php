@@ -507,7 +507,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                             <div class="uc-item">
                                                 <span class="uc-ico <?= ['a', 'b', 'c'][$i % 3] ?>"><i class="fas <?= ['fa-square-root-variable', 'fa-atom', 'fa-book'][$i % 3] ?>"></i></span>
                                                 <div class="uc-who"><b><?= e($c->Title) ?><?= $o->IsLive ? '<span class="uc-live">LIVE</span>' : '' ?></b><small><?= e($occLabel($o)) ?></small></div>
-                                                <?php if ($c->MeetLink !== ''): ?>
+                                                <?php if (false): /* বাইরের Meet/Zoom লিংক আর দেখানো হয় না */ ?>
                                                     <a class="uc-btn <?= $o->IsLive ? 'start' : 'join' ?>" href="<?= e($c->MeetLink) ?>" target="_blank" rel="noopener"><?= $o->IsLive ? 'Start' : 'Join' ?></a>
                                                 <?php else: ?>
                                                     <a class="uc-btn ghost" href="?tab=schedule" data-tab="schedule">View</a>
@@ -708,7 +708,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
 
                 <!-- ======================= SCHEDULE ======================= -->
                 <section class="pf-sec <?= $tab === 'schedule' ? 'active' : '' ?>" id="sec-schedule">
-                    <div class="pf-sec-h"><div><h2>My Schedule</h2><p>সাপ্তাহিক ক্লাস রুটিন। Google Meet / Zoom লিংক দিলে ক্লাসের সময় <b>Start</b> বাটন আসবে।</p></div>
+                    <div class="pf-sec-h"><div><h2>My Schedule</h2><p>সাপ্তাহিক ক্লাস রুটিন। অনলাইনে ক্লাস নিতে চাইলে <a href="/Chat" style="font-weight:700;">মেসেজ থেকে লাইভ ক্লাস</a> সেট করুন (Premium টিচার প্যাকেজ)।</p></div>
                         <button type="button" class="pf-btn primary" data-open="clsOv"><i class="fas fa-plus"></i> Add class</button></div>
                     <div class="tp-week">
                         <?php $todayW = (int)date('w'); foreach ([6, 0, 1, 2, 3, 4, 5] as $d): ?>
@@ -742,7 +742,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                     <span class="uc-ico <?= ['a', 'b', 'c'][$i % 3] ?>"><i class="fas fa-chalkboard"></i></span>
                                     <div class="tu-who"><b style="font-size:15px;"><?= e($c->Title) ?></b><?= $o->IsLive ? '<span class="uc-live">LIVE</span>' : '' ?>
                                         <div class="tp-meta"><span><?= e($occLabel($o)) ?></span><?php if ($c->Location !== ''): ?><span><i class="fas fa-location-dot"></i> <?= e($c->Location) ?></span><?php endif; ?></div></div>
-                                    <?php if ($c->MeetLink !== ''): ?><a class="uc-btn <?= $o->IsLive ? 'start' : 'join' ?>" href="<?= e($c->MeetLink) ?>" target="_blank" rel="noopener"><?= $o->IsLive ? 'Start' : 'Join' ?></a><?php endif; ?>
+                                    <?php if (false): /* বাইরের Meet/Zoom লিংক আর দেখানো হয় না */ ?><a class="uc-btn <?= $o->IsLive ? 'start' : 'join' ?>" href="<?= e($c->MeetLink) ?>" target="_blank" rel="noopener"><?= $o->IsLive ? 'Start' : 'Join' ?></a><?php endif; ?>
                                     <div class="tp-menu-wrap">
                                         <button type="button" class="tp-menu-btn" data-tp="menu" aria-label="Options"><i class="fas fa-ellipsis"></i></button>
                                         <div class="tp-menu">
@@ -959,7 +959,6 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                 <div class="pf-f"><label>শুরু <b style="color:#e74c3c">*</b></label><input type="time" name="startTime" required value="17:00" /></div>
                 <div class="pf-f"><label>শেষ <b style="color:#e74c3c">*</b></label><input type="time" name="endTime" required value="18:00" /></div>
             </div>
-            <div class="pf-f"><label>অনলাইন ক্লাস লিংক <small>(Google Meet / Zoom — ঐচ্ছিক)</small></label><input type="url" name="meetLink" maxlength="300" placeholder="https://meet.google.com/..." /></div>
             <div class="pf-f"><label>জায়গা <small>(ঐচ্ছিক)</small></label><input type="text" name="location" maxlength="100" placeholder="যেমন: স্টুডেন্টের বাসা, Mirpur" /></div>
         </div>
         <div class="pf-modal-f"><button type="button" class="pf-btn danger-btn" data-tp-modal-del="/Tutor/DeleteClass" hidden style="margin-right:auto;color:#DC2626;"><i class="fas fa-trash-can"></i> Delete</button>

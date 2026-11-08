@@ -126,8 +126,7 @@ class TutorController extends Controller
         $start = $tm('startTime'); $end = $tm('endTime');
         if (!$start || !$end) $this->fail('শুরু ও শেষের সময় দিন।');
         if ($end <= $start) $this->fail('শেষের সময় শুরুর পরে হতে হবে।');
-        $link = trim((string)input_str('meetLink', ''));
-        if ($link !== '' && !preg_match('#^https://[^\s<>"\']+$#i', $link)) $this->fail('ক্লাস লিংক https:// দিয়ে শুরু হতে হবে (যেমন Google Meet / Zoom লিংক)।');
+        $link = ''; // বাইরের Meet / Zoom লিংক আর নেওয়া হয় না — লাইভ ক্লাস সাইটের নিজের সার্ভারে
         if ($id === null && $this->db->CountTeacherRows('TeacherClasses', $me) >= 100) $this->fail('সর্বোচ্চ ১০০টা ক্লাস রাখা যায়।');
         $this->db->SaveTeacherClass($me, $id, ['Title' => $title, 'Days' => $days, 'ClassDate' => $date, 'StartTime' => $start, 'EndTime' => $end,
             'MeetLink' => mb_substr($link, 0, 300), 'Location' => $this->clean('location', 100)]);

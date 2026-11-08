@@ -32,6 +32,9 @@ trait PackageData
                 PRIMARY KEY (`Id`), KEY `IX_Pkg_Aud` (`Audience`, `SortOrder`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
         $this->packagesReady = true;
+        // প্রিমিয়াম লাইভ ক্লাস ফিচার (টিচার — চ্যাট থেকে সরাসরি লাইভ ক্লাস)
+        try { $this->pdo->query('SELECT `IsLive` FROM `Packages` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `Packages` ADD COLUMN `IsLive` ' . ($sqlite ? 'INTEGER' : 'TINYINT(1)') . ' NOT NULL DEFAULT 0'); } catch (Throwable $e2) { error_log('[IsLive col] ' . $e2->getMessage()); } }
         // প্রথমবার ডিফল্ট প্যাকেজ (অ্যাডমিন সব মুছে দিলে আবার বসবে না)
         try {
             $seeded = $this->GetSiteContent(['pkg_seeded' => ''])['pkg_seeded'] ?? '';
@@ -52,7 +55,23 @@ trait PackageData
                 // প্যাকেজ ছাড়া শিক্ষার্থী পোস্ট / টিচারের সাথে যোগাযোগ করতে পারবে না
                 $this->SaveSiteContent(['pkg_student_v2' => '1', 'pay_enforce_student' => '1', 'pkg_student_free' => '']);
             }
+            // নতুন: টিচারের ২টা প্রিমিয়াম লাইভ প্যাকেজ (১ মাস ৳200, ৩ মাস ৳500) — একবারই বসে
+            if (($this->GetSiteContent(['pkg_live_v1' => ''])['pkg_live_v1'] ?? '') === '') {
+                $n = (int)$this->scalar("SELECT COALESCE(MAX(`SortOrder`), 0) FROM `Packages` WHERE `Audience` = 'Teacher'");
+                foreach (self::livePackages() as $i => $p) $this->insertPackage($p + ['SortOrder' => $n + $i + 1]);
+                $this->SaveSiteContent(['pkg_live_v1' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
+    }
+
+    /** প্রিমিয়াম: সাধারণ টিচার প্যাকেজের সব সুবিধা + সাইট থেকেই লাইভ ক্লাস (বৃষ্টি / বন্যায় শিক্ষার্থীর বাসায় যেতে না পারলে) */
+    private static function livePackages(): array
+    {
+        $f = "সাইট থেকেই সরাসরি লাইভ ক্লাস — Zoom / Google Meet লাগবে না\nবৃষ্টি, বন্যা বা যেতে না পারলে শিক্ষার্থীকে অনলাইনে পড়ান\nচ্যাট থেকে এক ক্লিকে ক্লাস শুরু — শিক্ষার্থী Join বাটন পাবে\n" . self::TEACHER_FEATURES_V2;
+        return [
+            ['Audience' => 'Teacher', 'Name' => 'Premium ১ মাস', 'DurationMonths' => 1, 'PostLimit' => 0, 'Price' => 200, 'RegularPrice' => null, 'Badge' => 'লাইভ ক্লাস', 'Description' => 'সব সুবিধা + সাইট থেকে লাইভ ক্লাস — ১ মাস', 'Features' => $f, 'IsFeatured' => 0, 'IsLive' => 1],
+            ['Audience' => 'Teacher', 'Name' => 'Premium ৩ মাস', 'DurationMonths' => 3, 'PostLimit' => 0, 'Price' => 500, 'RegularPrice' => 600, 'Badge' => 'লাইভ ক্লাস', 'Description' => 'সব সুবিধা + সাইট থেকে লাইভ ক্লাস — ৩ মাস', 'Features' => $f, 'IsFeatured' => 1, 'IsLive' => 1],
+        ];
     }
 
     private static function studentPackagesV2(): array
@@ -77,8 +96,8 @@ trait PackageData
 
     private function insertPackage(array $p): int
     {
-        return (int)$this->insert('INSERT INTO `Packages` (`Audience`, `Name`, `DurationMonths`, `PostLimit`, `Price`, `RegularPrice`, `Badge`, `Description`, `Features`, `IsActive`, `IsFeatured`, `SortOrder`, `CreatedAt`)
-            VALUES (:a, :n, :d, :l, :p, :r, :b, :ds, :f, :ac, :fe, :s, :t)', [
+        return (int)$this->insert('INSERT INTO `Packages` (`Audience`, `Name`, `DurationMonths`, `PostLimit`, `Price`, `RegularPrice`, `Badge`, `Description`, `Features`, `IsActive`, `IsFeatured`, `IsLive`, `SortOrder`, `CreatedAt`)
+            VALUES (:a, :n, :d, :l, :p, :r, :b, :ds, :f, :ac, :fe, :lv, :s, :t)', [ 'lv' => (int)($p['IsLive'] ?? 0),
             'a' => $p['Audience'], 'n' => $p['Name'], 'd' => (int)$p['DurationMonths'], 'l' => (int)$p['PostLimit'], 'p' => (int)$p['Price'],
             'r' => $p['RegularPrice'] ?? null, 'b' => ($p['Badge'] ?? '') !== '' ? $p['Badge'] : null, 'ds' => ($p['Description'] ?? '') !== '' ? $p['Description'] : null,
             'f' => ($p['Features'] ?? '') !== '' ? $p['Features'] : null, 'ac' => (int)($p['IsActive'] ?? 1), 'fe' => (int)($p['IsFeatured'] ?? 0),
@@ -91,7 +110,7 @@ trait PackageData
     {
         $p->Id = (int)$p->Id; $p->Price = (int)$p->Price; $p->DurationMonths = (int)$p->DurationMonths; $p->PostLimit = (int)$p->PostLimit;
         $p->RegularPrice = $p->RegularPrice !== null && (int)$p->RegularPrice > (int)$p->Price ? (int)$p->RegularPrice : null;
-        $p->IsActive = (bool)(int)$p->IsActive; $p->IsFeatured = (bool)(int)$p->IsFeatured;
+        $p->IsActive = (bool)(int)$p->IsActive; $p->IsFeatured = (bool)(int)$p->IsFeatured; $p->IsLive = (bool)(int)($p->IsLive ?? 0);
         $p->Discount = $p->RegularPrice ? (int)round(100 - $p->Price * 100 / $p->RegularPrice) : 0;
         $p->FeatureList = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)$p->Features))));
         $p->DurationLabel = package_duration_label($p);
@@ -128,7 +147,7 @@ trait PackageData
             return $this->insertPackage($p);
         }
         $this->exec('UPDATE `Packages` SET `Audience` = :a, `Name` = :n, `DurationMonths` = :d, `PostLimit` = :l, `Price` = :p, `RegularPrice` = :r, `Badge` = :b,
-                `Description` = :ds, `Features` = :f, `IsActive` = :ac, `IsFeatured` = :fe, `UpdatedAt` = :t WHERE `Id` = :i', [
+                `Description` = :ds, `Features` = :f, `IsActive` = :ac, `IsFeatured` = :fe, `IsLive` = :lv, `UpdatedAt` = :t WHERE `Id` = :i', [ 'lv' => (int)($p['IsLive'] ?? 0),
             'a' => $p['Audience'], 'n' => $p['Name'], 'd' => (int)$p['DurationMonths'], 'l' => (int)$p['PostLimit'], 'p' => (int)$p['Price'],
             'r' => $p['RegularPrice'], 'b' => $p['Badge'] !== '' ? $p['Badge'] : null, 'ds' => $p['Description'] !== '' ? $p['Description'] : null,
             'f' => $p['Features'] !== '' ? $p['Features'] : null, 'ac' => (int)$p['IsActive'], 'fe' => (int)$p['IsFeatured'], 't' => now(), 'i' => $id,

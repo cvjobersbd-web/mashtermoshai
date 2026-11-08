@@ -323,7 +323,7 @@ trait TeacherDetailsData
         try {
             $this->EnsurePaymentTables();
             $w = []; $a = [];
-            if ($aud !== 'all') { $w[] = 'p.`Audience` = :aud'; $a['aud'] = $aud; }
+            if ($aud !== 'all') { $w[] = 'p.`Audience` = :aud'; $a['aud'] = $aud; } else $w[] = "p.`Audience` IN ('Teacher', 'Student')";   // কোর্সের পেমেন্ট আলাদা (Admin → Courses)
             if ($status !== 'all') { $w[] = 'p.`Status` = :st'; $a['st'] = $status; }
             if ($from) { $w[] = 'p.`CreatedAt` >= :f'; $a['f'] = $from . ' 00:00:00'; }
             if ($to) { $w[] = 'p.`CreatedAt` < :t'; $a['t'] = date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00'; }

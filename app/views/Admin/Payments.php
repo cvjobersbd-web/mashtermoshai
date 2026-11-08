@@ -23,7 +23,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     .ap-au .c { background: rgba(0,0,0,.07); border-radius: 999px; padding: 0 9px; font-size: 12px; }
     .ap-au .pend { background: #F59E0B; color: #fff; border-radius: 999px; padding: 1px 9px; font-size: 11.5px; }
     .ap-au.on { background: #08224A; border-color: #08224A; color: #fff; } .ap-au.on .c { background: rgba(255,255,255,.2); }
-    .ap-au.student.on { background: #7E22CE; border-color: #7E22CE; } .ap-au.teacher.on { background: #0369A1; border-color: #0369A1; }
+    .ap-au.student.on { background: #7E22CE; border-color: #7E22CE; } .ap-au.teacher.on { background: #0369A1; border-color: #0369A1; } .ap-au.course.on { background: #C2410C; border-color: #C2410C; }
     .ap-joined { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 13px; }
     .ap-jl { color: #64748B; font-weight: 700; white-space: nowrap; }
     .ap-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -98,7 +98,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 
     <?php $for = (string)($ViewBag->For ?? 'all'); $cnt = $ViewBag->Counts ?? []; ?>
     <div class="ap-aud">
-        <?php foreach (['all' => ['সব পেমেন্ট', 'fa-layer-group'], 'Student' => ['শিক্ষার্থী', 'fa-user-graduate'], 'Teacher' => ['শিক্ষক', 'fa-chalkboard-user']] as $k => [$lbl, $ic]): $pc = (int)($cnt[$k]['Pending'] ?? 0); ?>
+        <?php foreach (['all' => ['সব পেমেন্ট', 'fa-layer-group'], 'Student' => ['শিক্ষার্থী', 'fa-user-graduate'], 'Teacher' => ['শিক্ষক', 'fa-chalkboard-user'], 'Course' => ['কোর্স', 'fa-book-open-reader']] as $k => [$lbl, $ic]): $pc = (int)($cnt[$k]['Pending'] ?? 0); ?>
             <a class="ap-au<?= $for === $k ? ' on' : '' ?> <?= strtolower($k) ?>" href="/Admin/Payments?<?= e(http_build_query(['for' => $k, 'status' => $st])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= (int)($cnt[$k]['all'] ?? 0) ?></span><?php if ($pc > 0): ?><span class="pend" title="যাচাই বাকি"><?= $pc ?> নতুন</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
@@ -132,7 +132,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
                 <div class="ap-grid">
                     <div class="amt"><small>Amount</small><b><?= e(taka($p->Amount)) ?></b></div>
-                    <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span style="font-size:12px;color:#64748B;">(<?= $p->Audience === 'Teacher' ? 'শিক্ষক' : 'শিক্ষার্থী' ?>)</span></div>
+                    <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span style="font-size:12px;color:#64748B;">(<?= $p->Audience === 'Teacher' ? 'শিক্ষক' : ($p->Audience === 'Course' ? 'কোর্স' : 'শিক্ষার্থী') ?>)</span></div>
                     <div><small>Method</small><b><?= e($p->MethodName) ?></b></div>
                     <div class="txn"><small>Transaction ID</small><b><?= e($p->TxnId ?: '—') ?></b></div>
                     <div><small>Payment date</small><b><?= e(date('d M Y', strtotime($p->PayDate))) ?></b></div>

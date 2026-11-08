@@ -310,7 +310,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Withdrawals' => 'Withdraw', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -469,6 +469,21 @@ try {
             <a href="/Admin/Withdrawals" class="<?= $currentAction === 'Withdrawals' ? 'active' : '' ?>">
                 <i class="fas fa-money-bill-transfer"></i> Withdraw
                 <?php if ($pendingWd > 0): ?><span class="badge-sidebar warning"><?= (int)$pendingWd ?></span><?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Courses'))): $pendCourse = 0; try { db()->EnsureCourseTables(); $pendCourse = (int)db()->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `CourseId` IS NOT NULL AND `Status` = 'Pending'"); } catch (Throwable $e) { } ?>
+        <li>
+            <a href="/Admin/Courses" class="<?= $currentAction === 'Courses' ? 'active' : '' ?>">
+                <i class="fas fa-book-open-reader"></i> Courses
+                <?php if ($pendCourse > 0): ?><span class="badge-sidebar warning"><?= (int)$pendCourse ?></span><?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('LiveSettings'))): ?>
+        <li>
+            <a href="/Admin/LiveSettings" class="<?= $currentAction === 'LiveSettings' ? 'active' : '' ?>">
+                <i class="fas fa-tower-broadcast"></i> Live Class Server
             </a>
         </li>
         <?php endif; ?>

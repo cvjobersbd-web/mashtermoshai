@@ -147,13 +147,14 @@ $jsMethods = array_map(function ($m) {
 </style>
 
 <div class="co-wrap">
-    <a class="co-back" href="/Package?for=<?= $pkg->Audience === 'Student' ? 'student' : 'teacher' ?>"><i class="fas fa-arrow-left"></i> সব প্যাকেজ</a>
+    <?php if ($pkg->Audience === 'Course'): ?><a class="co-back" href="/Course/Details/<?= (int)$pkg->CourseId ?>"><i class="fas fa-arrow-left"></i> কোর্সে ফিরে যান</a>
+    <?php else: ?><a class="co-back" href="/Package?for=<?= $pkg->Audience === 'Student' ? 'student' : 'teacher' ?>"><i class="fas fa-arrow-left"></i> সব প্যাকেজ</a><?php endif; ?>
     <h1 class="co-h1">পেমেন্ট করুন</h1>
     <p class="co-lead">bKash, Nagad, Rocket বা Upay এর এজেন্ট নম্বরে Cash Out করুন অথবা Bank Transfer এর QR স্ক্যান করুন — তারপর রসিদ জমা দিন। অ্যাডমিন যাচাই করে Accept করলেই প্যাকেজ চালু হবে।</p>
 
     <?php if ($block): ?>
         <div class="co-alert warn"><i class="fas fa-exclamation-triangle" style="margin-top:3px;"></i><span><?= e($block) ?>
-            <?php if ($pkg->Audience === 'Teacher'): ?> <a href="/Teacher/RequestForm">Become a Tutor ফর্ম</a><?php else: ?> <a href="/Tuition/Circular">Tuition Circular-এ যান</a><?php endif; ?></span></div>
+            <?php if ($pkg->Audience === 'Course'): ?> <a href="/Course/My">আমার কোর্স</a><?php elseif ($pkg->Audience === 'Teacher'): ?> <a href="/Teacher/RequestForm">Become a Tutor ফর্ম</a><?php else: ?> <a href="/Tuition/Circular">Tuition Circular-এ যান</a><?php endif; ?></span></div>
     <?php endif; ?>
     <?php if ($pending > 0): ?>
         <div class="co-alert info"><i class="fas fa-hourglass-half" style="margin-top:3px;"></i><span>আপনার <?= e(bn_num($pending)) ?>টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। <a href="/Payment/My">আমার পেমেন্ট দেখুন</a></span></div>
@@ -167,6 +168,7 @@ $jsMethods = array_map(function ($m) {
             <form id="coForm" novalidate>
                 <?= csrf_field() ?>
                 <input type="hidden" name="packageId" value="<?= (int)$pkg->Id ?>" />
+                <?php if ($pkg->Audience === 'Course'): ?><input type="hidden" name="courseId" value="<?= (int)$pkg->CourseId ?>" /><?php endif; ?>
                 <input type="hidden" name="methodId" id="coMethodId" />
                 <input type="hidden" name="accountId" id="coAccountId" />
 
@@ -255,7 +257,7 @@ $jsMethods = array_map(function ($m) {
         <aside class="co-card co-sum">
             <h3>অর্ডার সারাংশ</h3>
             <div class="co-pkg">
-                <div class="aud"><?= $pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ' ?></div>
+                <div class="aud"><?= $pkg->Audience === 'Course' ? 'কোর্স' : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ') ?></div>
                 <div class="nm"><?= e($pkg->Name) ?></div>
                 <div class="du"><i class="far fa-clock"></i> <?= e($pkg->DurationLabel) ?></div>
             </div>

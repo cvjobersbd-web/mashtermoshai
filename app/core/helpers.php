@@ -1721,7 +1721,7 @@ function admin_action_rule(string $action): string
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
-            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'Withdrawals', 'ProcessWithdrawal', 'SetReferralStatus',
+            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'ToggleCourse', 'AddCoursePayout', 'SaveCourseSettings', 'ProcessWithdrawal', 'SetReferralStatus',
                 'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
@@ -2215,3 +2215,6 @@ function device_lock_applies(?string $role): bool
     if ($role !== 'User' && $role !== 'Teacher') return false;
     try { return db()->DeviceLockOn(); } catch (Throwable $e) { return false; }
 }
+
+// লাইভ ক্লাস (BigBlueButton) — আলাদা ফাইলে
+require_once __DIR__ . '/bbb.php';

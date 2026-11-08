@@ -25,13 +25,41 @@ class PaymentController extends Controller
     }
 
     /** GET /Payment/Checkout/{packageId} */
+    /** কোর্স কেনা — প্যাকেজের মতো একটা অবজেক্ট (Checkout পেজ একই থাকে) */
+    private function coursePkg(int $courseId): ?Obj
+    {
+        $c = $courseId ? $this->db->GetCourse($courseId) : null;
+        if (!$c || !$c->IsLive || $c->Price <= 0) return null;
+        return obj(['Id' => 0, 'CourseId' => $c->Id, 'Course' => $c, 'Name' => $c->Title, 'Price' => $c->Price, 'Audience' => 'Course', 'IsActive' => true,
+            'RegularPrice' => $c->RegularPrice, 'Discount' => $c->RegularPrice ? (int)round(100 - $c->Price * 100 / $c->RegularPrice) : 0,
+            'DurationLabel' => 'আজীবন অ্যাক্সেস · ' . ($c->TeacherName ?: 'মাষ্টার মশাই'), 'DurationMonths' => 0, 'PostLimit' => 0]);
+    }
+
+    private function courseBlockReason(Obj $pkg): ?string
+    {
+        $uid = (int)current_user_id();
+        if (session_get('UserRole') === 'Admin') return 'অ্যাডমিন অ্যাকাউন্ট দিয়ে কোর্স কেনা যায় না।';
+        if ((int)$pkg->Course->TeacherId === $uid) return 'এটা আপনার নিজের কোর্স।';
+        if ($this->db->IsEnrolled($pkg->CourseId, $uid)) return 'আপনি এই কোর্সে আগেই ভর্তি আছেন।';
+        if ((int)$this->db->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `UserId` = :u AND `CourseId` = :c AND `Status` = 'Pending'", ['u' => $uid, 'c' => $pkg->CourseId]) > 0)
+            return 'এই কোর্সের একটা পেমেন্ট যাচাইয়ের অপেক্ষায় আছে — অ্যাডমিন Approve করলেই কোর্স খুলে যাবে।';
+        return null;
+    }
+
     public function Checkout(): void
     {
         $id = (int)input_int('id', 0);
-        if (current_user_id() === null) $this->redirectToAction('Login', 'Account', ['returnUrl' => '/Payment/Checkout/' . $id]);
+        $courseId = (int)input_int('course', 0);
+        if (current_user_id() === null) $this->redirectToAction('Login', 'Account', ['returnUrl' => $courseId ? '/Payment/Checkout?course=' . $courseId : '/Payment/Checkout/' . $id]);
+        $uid = (int)current_user_id();
+        if ($courseId) {
+            $pkg = $this->coursePkg($courseId);
+            if (!$pkg) redirect('/Course');
+            $this->view(null, $pkg, ['Methods' => $this->db->GetPaymentMethods(true), 'BlockReason' => $this->courseBlockReason($pkg),
+                'PendingCount' => $this->db->CountUserPendingPayments($uid), 'RefOptions' => $this->db->ReferenceOptions(true), 'RefSel' => $this->db->GetUserHowHeard($uid)]);
+        }
         $pkg = $id ? $this->db->GetPackage($id) : null;
         if (!$pkg || !$pkg->IsActive) redirect('/Package');
-        $uid = (int)current_user_id();
         $this->view(null, $pkg, [
             'Methods' => $this->db->GetPaymentMethods(true),
             'BlockReason' => $this->packageBlockReason($pkg),
@@ -46,9 +74,16 @@ class PaymentController extends Controller
     {
         $uid = current_user_id();
         if ($uid === null) $this->fail('পেমেন্ট জমা দিতে লগইন করুন।');
-        $pkg = $this->db->GetPackage((int)input_int('packageId', 0));
-        if (!$pkg || !$pkg->IsActive) $this->fail('প্যাকেজটি পাওয়া যায়নি।');
-        if ($why = $this->packageBlockReason($pkg)) $this->fail($why);
+        $courseId = (int)input_int('courseId', 0);
+        if ($courseId) {
+            $pkg = $this->coursePkg($courseId);
+            if (!$pkg) $this->fail('কোর্সটি পাওয়া যায়নি।');
+            if ($why = $this->courseBlockReason($pkg)) $this->fail($why);
+        } else {
+            $pkg = $this->db->GetPackage((int)input_int('packageId', 0));
+            if (!$pkg || !$pkg->IsActive) $this->fail('প্যাকেজটি পাওয়া যায়নি।');
+            if ($why = $this->packageBlockReason($pkg)) $this->fail($why);
+        }
         $method = $this->db->GetPaymentMethod((int)input_int('methodId', 0));
         if (!$method || !$method->IsActive) $this->fail('পেমেন্ট মেথড বাছাই করুন।');
         $acc = $this->db->GetPaymentAccount((int)input_int('accountId', 0));
@@ -98,8 +133,9 @@ class PaymentController extends Controller
         // অনুমান করা যায় না এমন নাম, যাতে অন্য কেউ রিসিট খুঁজে না পায়
         $url = save_upload($file, 'payments', 'rcpt_' . $uid . '_' . bin2hex(random_bytes(12)), $ext);
         try {
-            $id = $this->db->CreatePaymentRequest([
-                'UserId' => $uid, 'PackageId' => $pkg->Id, 'PackageName' => $pkg->Name, 'Audience' => $pkg->Audience, 'Amount' => $pkg->Price,
+            if ($courseId) $this->db->EnsureCourseTables();
+            $id = $this->db->CreatePaymentRequest(($courseId ? ['CourseId' => $courseId] : []) + [
+                'UserId' => $uid, 'PackageId' => $courseId ? null : $pkg->Id, 'PackageName' => $courseId ? mb_substr('কোর্স: ' . $pkg->Name, 0, 80) : $pkg->Name, 'Audience' => $pkg->Audience, 'Amount' => $pkg->Price,
                 'DurationMonths' => $pkg->DurationMonths, 'PostLimit' => $pkg->PostLimit, 'MethodId' => $method->Id, 'MethodName' => $method->Name,
                 'AccountId' => $acc->Id, 'AccountInfo' => mb_substr($info, 0, 200), 'TxnId' => $txn !== '' ? $txn : null, 'PayDate' => $date,
                 'ReceiptUrl' => $url, 'Note' => $note !== '' ? $note : null,
