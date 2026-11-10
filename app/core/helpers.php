@@ -2045,10 +2045,12 @@ function joined_via_full(int $userId): string
     $h .= '<div class="jv-full">';
     if ($ref) $h .= joined_via_html($ref, true);
     if ($pt) $h .= partner_badge_html($pt);
-    if (!$ref && !$pt) $h .= joined_via_html(null);
+    // রেফারেল / এজেন্সি লিংক-কোড না থাকলে "Direct" — তবে নিজে রেফারেন্স বেছে থাকলে সেটাই দেখায় (Direct লিখে বিভ্রান্ত করে না)
+    if (!$ref && !$pt && $how[0] === '') $h .= joined_via_html(null);
     if ($how[0] !== '') {
         $o = $db->ReferenceInfo($how[0]);
-        $h .= '<span class="jv-how2" title="সাইনআপের সময় নিজে বেছেছে"><i class="' . e($o['icon']) . '" style="color:' . e($o['color']) . ';"></i> রেফারেন্স: ' . e($how[0] === 'other' && $how[1] !== '' ? $how[1] : $o['label']) . '</span>';
+        $txt = $how[0] === 'other' && $how[1] !== '' ? 'অন্যান্য — নিজে লিখেছে: “' . $how[1] . '”' : $o['label'];
+        $h .= '<span class="jv-how2" title="সাইনআপ / পেমেন্টের সময় নিজে বেছেছে"><i class="' . e($o['icon']) . '" style="color:' . e($o['color']) . ';"></i> রেফারেন্স: ' . e($txt) . '</span>';
     }
     return $h . '</div>';
 }
