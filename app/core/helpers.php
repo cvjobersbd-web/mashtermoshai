@@ -1696,7 +1696,7 @@ function admin_permissions(): array
 {
     return [
         'users'      => ['Users & Teachers', 'fa-users', 'ইউজার/টিচার দেখা, Suspend, চালু/বন্ধ, পাসওয়ার্ড বদল'],
-        'teachers'   => ['Teacher Requests', 'fa-user-check', 'শিক্ষক হওয়ার আবেদন Approve / Reject'],
+        'teachers'   => ['KYC (পরিচয় যাচাই)', 'fa-id-card', 'টিচার / শিক্ষার্থীর KYC (NID, ID কার্ড) দেখা — Approve / Reject'],
         'tuition'    => ['Tuition', 'fa-clipboard-list', 'Tuition Posts, Applications, Tutor Requests'],
         'notices'    => ['News & Announcements', 'fa-newspaper', 'নোটিশ যোগ / এডিট / মুছে ফেলা'],
         'edufeed'    => ['Educational Feed', 'fa-graduation-cap', 'পোস্ট Approve / Reject'],
@@ -1715,13 +1715,13 @@ function admin_action_rule(string $action): string
         $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
         $groups = [
             'users' => ['TeacherOverview', 'UserOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
-            'teachers' => ['TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
+            'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
             'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
-            'payments' => ['Payments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'ToggleCourse', 'AddCoursePayout', 'SaveCourseSettings', 'ProcessWithdrawal', 'SetReferralStatus',
+            'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'ToggleCourse', 'AddCoursePayout', 'SaveCourseSettings', 'ProcessWithdrawal', 'SetReferralStatus',
                 'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],

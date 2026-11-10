@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/KycController.php';
 class TeacherController extends Controller
 {
     private const REQUEST_FIELDS = ['FullName', 'Email', 'MobileNumber', 'Education', 'Institution', 'SubjectExpertise',
@@ -84,11 +85,26 @@ class TeacherController extends Controller
         if (in_array($this->db->GetUserTeacherRequestStatus($userId), ['Pending', 'AwaitingPayment', 'Approved'], true)) $errors[] = 'আপনার আগের আবেদন এখনো চালু আছে।';
 
         $viewBag = ['Details' => $d];
+        // KYC — মোবাইল, WhatsApp, NID এর ছবি (সামনে + পেছনে)
+        $kyc = null;
+        if (!$errors) {
+            try {
+                $oldKyc = $this->db->GetKyc($userId, 'teacher');
+                $kyc = KycController::readTeacherKyc($this->db, $userId, $oldKyc && $oldKyc->Status !== 'Approved' ? $oldKyc : null, function ($m) { throw new InvalidArgumentException($m); });
+                $model->MobileNumber = $kyc[0]['mobile'];
+            } catch (InvalidArgumentException $e) { $errors[] = $e->getMessage(); }
+        }
         if (!$errors) {
             $model->RequestDate = now();
             $err = null;
             if ($this->db->CreateTeacherRequest($model, $err)) {
                 $this->db->SaveTeacherDetails($userId, $d);
+                if ($kyc) {
+                    try {
+                        $this->db->SaveKyc($userId, 'teacher', $kyc[0], $kyc[1], $kyc[2], (int)$model->Id ?: null);
+                        if (is_blank($user->MobileNumber ?? '')) $this->db->exec('UPDATE `Users` SET `MobileNumber` = :m WHERE `Id` = :u', ['m' => $kyc[0]['mobile'], 'u' => $userId]);
+                    } catch (Throwable $e) { error_log('[teacher kyc] ' . $e->getMessage()); }
+                }
                 // টিচার প্যাকেজ থাকলে: আগে প্যাকেজ কিনে পেমেন্ট, তারপর আবেদন অ্যাডমিনের কাছে যায়
                 if ($this->db->TeacherApplyNeedsPayment()) {
                     $this->db->SetTeacherRequestState((int)$model->Id, 'AwaitingPayment');

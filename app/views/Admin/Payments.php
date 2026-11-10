@@ -1,6 +1,7 @@
 <?php
 /** Admin → Payments: ইউজারদের জমা দেওয়া পেমেন্টের প্রমাণ দেখে Accept / Reject */
-$ViewData['Title'] = 'Payments';
+$pgTitle = (string)($ViewBag->PageTitle ?? 'Payments'); $base = (string)($ViewBag->Base ?? '/Admin/Payments'); $locked = !empty($ViewBag->Locked); $apps = $ViewBag->Apps ?? [];
+$ViewData['Title'] = $pgTitle;
 $list = is_array($Model) ? $Model : [];
 $st = $ViewBag->Status ?? 'Pending';
 $stats = $ViewBag->Stats ?? ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
@@ -53,6 +54,10 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     .ap-type.c { background: #F3E8FF; color: #6B21A8; border: 1.5px solid #D8B4FE; }
     .ap-tchip { display: inline-block; font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 2px 9px; margin-left: 4px; vertical-align: middle; }
     .ap-tchip.t { background: #DCFCE7; color: #166534; } .ap-tchip.s { background: #E0F2FE; color: #075985; } .ap-tchip.c { background: #F3E8FF; color: #6B21A8; }
+    .ap-tapp { margin-top: 10px; border-radius: 10px; padding: 9px 13px; font-size: 13.5px; line-height: 1.6; border: 1px solid; }
+    .ap-tapp.ok { background: #F0FDF4; border-color: #86EFAC; color: #166534; } .ap-tapp.warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; } .ap-tapp.no { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+    .ap-tapp a { color: inherit; font-weight: 800; }
+    .ap-btn:disabled { opacity: .45; cursor: not-allowed; }
     .ap-role.apply { background: #FEF3C7; color: #92400E; text-decoration: none; text-transform: none; letter-spacing: 0; font-size: 11.5px; margin-left: 4px; }
     .ap-pill { margin-left: auto; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; background: #FEF3C7; color: #92400E; text-transform: uppercase; }
     .ap-pill.Approved { background: #DCFCE7; color: #166534; } .ap-pill.Rejected { background: #FEE2E2; color: #991B1B; }
@@ -90,7 +95,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 <div class="admin-main-content">
     <div class="ap-head">
         <div>
-            <h2><i class="fas fa-money-bill-wave me-2" style="color:#22C55E;"></i>Payments</h2>
+            <h2><i class="fas fa-money-bill-wave me-2" style="color:#22C55E;"></i><?= e($pgTitle) ?></h2>
             <p>ইউজারদের জমা দেওয়া পেমেন্টের প্রমাণ দেখুন — টাকা এসেছে নিশ্চিত হলে Accept করুন, তাহলেই তার প্যাকেজ চালু হবে।</p>
         </div>
         <a href="/Admin/PaymentMethods"><i class="fas fa-wallet"></i> Payment Methods &amp; QR</a>
@@ -105,14 +110,16 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     </div>
 
     <?php $for = (string)($ViewBag->For ?? 'all'); $cnt = $ViewBag->Counts ?? []; ?>
+    <?php if (!$locked): ?>
     <div class="ap-aud">
         <?php foreach (['all' => ['সব পেমেন্ট', 'fa-layer-group'], 'Student' => ['শিক্ষার্থী', 'fa-user-graduate'], 'Teacher' => ['শিক্ষক', 'fa-chalkboard-user'], 'Course' => ['কোর্স', 'fa-book-open-reader']] as $k => [$lbl, $ic]): $pc = (int)($cnt[$k]['Pending'] ?? 0); ?>
             <a class="ap-au<?= $for === $k ? ' on' : '' ?> <?= strtolower($k) ?>" href="/Admin/Payments?<?= e(http_build_query(['for' => $k, 'status' => $st])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= (int)($cnt[$k]['all'] ?? 0) ?></span><?php if ($pc > 0): ?><span class="pend" title="যাচাই বাকি"><?= $pc ?> নতুন</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
+    <?php endif; ?>
     <div class="ap-tabs">
         <?php foreach ($tabs as $k => [$lbl, $ic]): ?>
-            <a class="ap-tab<?= $st === $k ? ' on' : '' ?>" href="/Admin/Payments?<?= e(http_build_query(['for' => $for, 'status' => $k])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= e($k === 'all' ? $stats['Total'] : $stats[$k]) ?></span></a>
+            <a class="ap-tab<?= $st === $k ? ' on' : '' ?>" href="<?= e($base) ?>?<?= e(http_build_query($locked ? ['status' => $k] : ['for' => $for, 'status' => $k])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= e($k === 'all' ? $stats['Total'] : $stats[$k]) ?></span></a>
         <?php endforeach; ?>
     </div>
 
@@ -137,7 +144,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                         <small><?= e(trim(($p->MobileNumber ?? '') . ' · ' . ($p->Email ?? ''), ' ·')) ?></small>
                     </div>
                     <?php if ($p->Role): ?><span class="ap-role <?= e($p->Role) ?>"><?= e($p->Role === 'User' ? 'Student' : $p->Role) ?></span><?php endif; ?>
-                    <?php if ($p->Audience === 'Teacher' && $p->Role === 'User'): ?><a class="ap-role apply" href="/Admin/TeacherRequests" title="এখনো শিক্ষার্থী অ্যাকাউন্ট — টিচার হওয়ার আবেদন করে শিক্ষক প্যাকেজ কিনেছেন। Teacher Requests থেকে আবেদন Approve করলে টিচার হয়ে যাবেন।"><i class="fas fa-chalkboard-user"></i> শিক্ষক হওয়ার আবেদনকারী</a><?php endif; ?>
+                    <?php if ($p->Audience === 'Teacher' && $p->Role === 'User'): ?><a class="ap-role apply" href="/Admin/Kyc?k=teacher" title="এখনো শিক্ষার্থী অ্যাকাউন্ট — টিচার হওয়ার আবেদন করে শিক্ষক প্যাকেজ কিনেছেন। KYC Approve + পেমেন্ট Accept হলে টিচার হয়ে যাবেন।"><i class="fas fa-chalkboard-user"></i> শিক্ষক হওয়ার আবেদনকারী</a><?php endif; ?>
                     <span class="ap-pill <?= e($p->Status) ?>"><?= e($p->Status === 'Approved' ? 'Accepted' : $p->Status) ?></span>
                 </div>
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
@@ -151,11 +158,22 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     <?php if (!empty($p->Reference)): $ro = db()->ReferenceInfo((string)$p->Reference); ?><div><small>কার রেফারেন্সে</small><b><i class="<?= e($ro['icon']) ?>" style="color:<?= e($ro['color']) ?>;"></i> <?= e($ro['label']) ?><?= !empty($p->ReferenceNote) ? ' — ' . e($p->ReferenceNote) : '' ?></b></div><?php endif; ?>
                     <?php if ($p->AccountInfo): ?><div style="grid-column:1/-1;"><small>যে অ্যাকাউন্টে পাঠিয়েছেন</small><b><?= e($p->AccountInfo) ?></b></div><?php endif; ?>
                 </div>
+                <?php if ($ap = $apps[(int)$p->Id] ?? null): $kOk = $ap['kyc'] === 'Approved' || $ap['kyc'] === 'None'; ?>
+                    <div class="ap-tapp <?= $ap['req'] === 'Approved' ? 'ok' : ($kOk ? 'ok' : ($ap['kyc'] === 'Rejected' ? 'no' : 'warn')) ?>">
+                        <i class="fas fa-user-check"></i>
+                        <?php if ($ap['req'] === 'Approved'): ?>নতুন টিচার আবেদন — <b>Approved</b>, ইউজার এখন টিচার।
+                        <?php elseif ($ap['kyc'] === 'Approved'): ?>নতুন টিচার আবেদন · KYC: <b>Approved ✅</b> — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
+                        <?php elseif ($ap['kyc'] === 'None'): ?>নতুন টিচার আবেদন (KYC চালুর আগের) — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
+                        <?php elseif ($ap['kyc'] === 'Rejected'): ?>নতুন টিচার আবেদন · KYC: <b>Rejected</b> — নতুন KYC জমা দিয়ে Approve না হওয়া পর্যন্ত Accept করা যাবে না। <a href="/Admin/Kyc?k=teacher&amp;s=all">KYC দেখুন</a>
+                        <?php else: ?>নতুন টিচার আবেদন · KYC: <b>যাচাই বাকি</b> — আগে <a href="/Admin/Kyc?k=teacher">KYC পেজে NID দেখে Approve করুন</a>, তারপর এখানে Accept করুন।<?php endif; ?>
+                    </div>
+                <?php endif; ?>
                 <?php if ($p->Note): ?><div class="ap-note"><i class="fas fa-comment"></i> <?= e($p->Note) ?></div><?php endif; ?>
                 <?php if ($p->AdminNote): ?><div class="ap-note adm<?= $p->Status === 'Approved' ? ' ok' : '' ?>"><i class="fas fa-user-shield"></i> <?= e($p->AdminNote) ?></div><?php endif; ?>
                 <div class="ap-acts">
                     <?php if ($p->Status === 'Pending'): ?>
-                        <button type="button" class="ap-btn ok" data-ap="approve" data-id="<?= (int)$p->Id ?>"><i class="fas fa-check"></i> Accept</button>
+                        <?php $blockAcc = ($ap = $apps[(int)$p->Id] ?? null) && $ap['req'] === 'Pending' && !in_array($ap['kyc'], ['Approved', 'None'], true); ?>
+                        <button type="button" class="ap-btn ok" data-ap="approve" data-id="<?= (int)$p->Id ?>"<?= $blockAcc ? ' disabled title="আগে KYC Approve করুন"' : '' ?>><i class="fas fa-check"></i> Accept</button>
                         <button type="button" class="ap-btn no" data-ap="reject" data-id="<?= (int)$p->Id ?>"><i class="fas fa-times"></i> Reject</button>
                     <?php else: ?>
                         <span style="font-size:12.5px;color:#64748B;"><i class="far fa-clock"></i> যাচাই: <?= e($fmt($p->ReviewedAt)) ?></span>

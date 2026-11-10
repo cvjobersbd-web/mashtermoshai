@@ -1,0 +1,199 @@
+<?php
+/**
+ * KYC — শিক্ষার্থী আর টিচারের পরিচয় যাচাই।
+ *  - শিক্ষার্থী: নাম, বাবা-মা, মোবাইল, ঠিকানা, জেলা, ক্লাস, প্রতিষ্ঠান, SSC/HSC (রেজাল্ট বা Running), ID কার্ডের ছবি (সামনে + পেছনে)
+ *  - টিচার: মোবাইল, WhatsApp, NID এর ছবি (সামনে + পেছনে) — "Become a Tutor" ফর্মের সাথে, বা পুরোনো টিচার আলাদা করে
+ * ছবিগুলো পাবলিক uploads এ না — app/storage/kyc এ রাখা হয় (ওয়েব থেকে সরাসরি খোলা যায় না), শুধু অ্যাডমিন / নিজে দেখতে পারে।
+ * প্রতিবার জমা দিলে নতুন সারি (আগেরগুলো ইতিহাস হিসেবে থাকে); সর্বশেষটাই চালু।
+ */
+trait KycData
+{
+    private bool $kycReady = false;
+
+    public const KYC_CLASSES = [
+        'play' => 'Play', 'nursery' => 'Nursery', 'kg' => 'KG',
+        'c1' => 'Class 1', 'c2' => 'Class 2', 'c3' => 'Class 3', 'c4' => 'Class 4', 'c5' => 'Class 5', 'c6' => 'Class 6', 'c7' => 'Class 7', 'c8' => 'Class 8',
+        'c9' => 'Class 9 (SSC)', 'c10' => 'Class 10 (SSC)', 'c11' => 'Class 11 (HSC ১ম বর্ষ)', 'c12' => 'Class 12 (HSC ২য় বর্ষ)',
+        'diploma' => 'Diploma / Polytechnic', 'uni1' => 'অনার্স / ডিগ্রি ১ম বর্ষ', 'uni2' => 'অনার্স / ডিগ্রি ২য় বর্ষ', 'uni3' => 'অনার্স / ডিগ্রি ৩য় বর্ষ',
+        'uni4' => 'অনার্স / ডিগ্রি ৪র্থ বর্ষ', 'masters' => 'মাস্টার্স',
+    ];
+
+    public const KYC_DISTRICTS = ['Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogura', 'Brahmanbaria', 'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga',
+        "Cox's Bazar", 'Cumilla', 'Dhaka', 'Dinajpur', 'Faridpur', 'Feni', 'Gaibandha', 'Gazipur', 'Gopalganj', 'Habiganj', 'Jamalpur', 'Jashore', 'Jhalokathi', 'Jhenaidah',
+        'Joypurhat', 'Khagrachhari', 'Khulna', 'Kishoreganj', 'Kurigram', 'Kushtia', 'Lakshmipur', 'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 'Moulvibazar',
+        'Munshiganj', 'Mymensingh', 'Naogaon', 'Narail', 'Narayanganj', 'Narsingdi', 'Natore', 'Netrokona', 'Nilphamari', 'Noakhali', 'Pabna', 'Panchagarh', 'Patuakhali',
+        'Pirojpur', 'Rajbari', 'Rajshahi', 'Rangamati', 'Rangpur', 'Satkhira', 'Shariatpur', 'Sherpur', 'Sirajganj', 'Sunamganj', 'Sylhet', 'Tangail', 'Thakurgaon'];
+
+    public const KYC_BOARDS = ['Dhaka', 'Rajshahi', 'Cumilla', 'Jashore', 'Chattogram', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh', 'Madrasah', 'Technical'];
+
+    /** কোন ক্লাসে SSC / HSC এর ঘর লাগবে আর Running চলবে কিনা: [দেখাবে, running চলবে] */
+    public static function kycExamRule(string $cls, string $exam): array
+    {
+        $order = array_keys(self::KYC_CLASSES);
+        $i = array_search($cls, $order, true);
+        if ($i === false) return [false, false];
+        $ge = fn($k) => $i >= array_search($k, $order, true);
+        if ($exam === 'ssc') return [$ge('c9'), in_array($cls, ['c9', 'c10'], true)];
+        // HSC: ১১-১২ ক্লাসে Running, অনার্স / মাস্টার্সে পাস করা লাগবে; ডিপ্লোমায় লাগে না
+        if ($cls === 'diploma') return [false, false];
+        return [$ge('c11'), in_array($cls, ['c11', 'c12'], true)];
+    }
+
+    public function EnsureKycTable(): void
+    {
+        if ($this->kycReady) return;
+        $this->kycReady = true;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "KycRequests" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "Kind" TEXT NOT NULL,
+                "Status" TEXT NOT NULL DEFAULT \'Pending\', "Data" TEXT NULL, "FileFront" TEXT NULL, "FileBack" TEXT NULL, "TeacherRequestId" INTEGER NULL,
+                "AdminNote" TEXT NULL, "ReviewedBy" INTEGER NULL, "ReviewedAt" TEXT NULL, "CreatedAt" TEXT NOT NULL)');
+            $this->pdo->exec('CREATE INDEX IF NOT EXISTS "IX_Kyc_User" ON "KycRequests" ("UserId", "Kind")');
+        } else {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS `KycRequests` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `Kind` VARCHAR(10) NOT NULL,
+                `Status` VARCHAR(12) NOT NULL DEFAULT \'Pending\', `Data` TEXT NULL, `FileFront` VARCHAR(120) NULL, `FileBack` VARCHAR(120) NULL, `TeacherRequestId` INT NULL,
+                `AdminNote` VARCHAR(500) NULL, `ReviewedBy` INT NULL, `ReviewedAt` DATETIME NULL, `CreatedAt` DATETIME NOT NULL,
+                PRIMARY KEY (`Id`), KEY `IX_Kyc_User` (`UserId`, `Kind`), KEY `IX_Kyc_Status` (`Status`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+        }
+    }
+
+    private function mapKyc(?Obj $k): ?Obj
+    {
+        if (!$k) return null;
+        $k->Id = (int)$k->Id; $k->UserId = (int)$k->UserId;
+        $d = json_decode((string)($k->Data ?? ''), true);
+        $k->D = is_array($d) ? $d : [];
+        return $k;
+    }
+
+    /** ইউজারের সর্বশেষ KYC (student / teacher) */
+    public function GetKyc(int $userId, string $kind): ?Obj
+    {
+        $this->EnsureKycTable();
+        return $this->mapKyc($this->one('SELECT * FROM `KycRequests` WHERE `UserId` = :u AND `Kind` = :k ORDER BY `Id` DESC LIMIT 1', ['u' => $userId, 'k' => $kind]));
+    }
+
+    public function GetKycById(int $id): ?Obj
+    {
+        $this->EnsureKycTable();
+        return $this->mapKyc($this->one('SELECT * FROM `KycRequests` WHERE `Id` = :i', ['i' => $id]));
+    }
+
+    /** 'None' | 'Pending' | 'Approved' | 'Rejected' */
+    public function KycStatus(int $userId, string $kind): string
+    {
+        try { $k = $this->GetKyc($userId, $kind); return $k ? (string)$k->Status : 'None'; } catch (Throwable $e) { return 'None'; }
+    }
+
+    public function SaveKyc(int $userId, string $kind, array $data, string $front, string $back, ?int $teacherRequestId = null): int
+    {
+        $this->EnsureKycTable();
+        return (int)$this->insert('INSERT INTO `KycRequests` (`UserId`, `Kind`, `Status`, `Data`, `FileFront`, `FileBack`, `TeacherRequestId`, `CreatedAt`) VALUES (:u, :k, \'Pending\', :d, :f, :b, :t, :c)',
+            ['u' => $userId, 'k' => $kind, 'd' => json_encode($data, JSON_UNESCAPED_UNICODE), 'f' => $front, 'b' => $back, 't' => $teacherRequestId, 'c' => now()]);
+    }
+
+    public function LinkKycTeacherRequest(int $kycId, int $requestId): void
+    {
+        $this->EnsureKycTable();
+        $this->exec('UPDATE `KycRequests` SET `TeacherRequestId` = :t WHERE `Id` = :i', ['t' => $requestId, 'i' => $kycId]);
+    }
+
+    public function SetKycStatus(int $id, string $status, string $note, int $adminId): bool
+    {
+        $this->EnsureKycTable();
+        return $this->exec('UPDATE `KycRequests` SET `Status` = :s, `AdminNote` = :n, `ReviewedBy` = :a, `ReviewedAt` = :t WHERE `Id` = :i',
+            ['s' => $status, 'n' => $note !== '' ? $note : null, 'a' => $adminId, 't' => now(), 'i' => $id]) > 0;
+    }
+
+    /** অ্যাডমিন KYC পেজ — প্রতিটা ইউজারের সর্বশেষ জমাটাই (kind = student / teacher, status = Pending / Approved / Rejected / all) */
+    public function GetKycList(string $kind, string $status = 'Pending'): array
+    {
+        $this->EnsureKycTable();
+        $p = ['k' => $kind];
+        $w = '';
+        if ($status !== 'all') { $w = ' AND k.`Status` = :s'; $p['s'] = $status; }
+        $rows = $this->all('SELECT k.*, u.`FullName` AS UFullName, u.`UserName` AS UUserName, u.`Email` AS UEmail, u.`Role` AS URole, u.`ProfileImageLink` AS UPhoto, u.`MobileNumber` AS UMobile
+            FROM `KycRequests` k LEFT JOIN `Users` u ON u.`Id` = k.`UserId`
+            WHERE k.`Kind` = :k AND k.`Id` = (SELECT MAX(x.`Id`) FROM `KycRequests` x WHERE x.`UserId` = k.`UserId` AND x.`Kind` = k.`Kind`)' . $w . ' ORDER BY k.`Id` DESC LIMIT 500', $p);
+        return array_map(fn($r) => $this->mapKyc($r), $rows);
+    }
+
+    /** [kind => [Pending => n, Approved => n, Rejected => n]] */
+    public function KycCounts(): array
+    {
+        $this->EnsureKycTable();
+        $out = ['student' => ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0], 'teacher' => ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0]];
+        foreach ($this->all('SELECT k.`Kind`, k.`Status`, COUNT(*) AS N FROM `KycRequests` k
+            WHERE k.`Id` = (SELECT MAX(x.`Id`) FROM `KycRequests` x WHERE x.`UserId` = k.`UserId` AND x.`Kind` = k.`Kind`) GROUP BY k.`Kind`, k.`Status`') as $r)
+            if (isset($out[$r->Kind][$r->Status])) $out[$r->Kind][$r->Status] = (int)$r->N;
+        return $out;
+    }
+
+    public function CountPendingKyc(): int
+    {
+        try { $c = $this->KycCounts(); return $c['student']['Pending'] + $c['teacher']['Pending']; } catch (Throwable $e) { return 0; }
+    }
+
+    /**
+     * টিচার আবেদন চূড়ান্ত — KYC Approved (পুরোনো আবেদন যেখানে KYC নেই সেখানে লাগে না) আর পেমেন্ট Accepted (বা প্যাকেজই লাগে না)
+     * হলে ইউজার Teacher হয়। হয়ে গেলে true।
+     */
+    public function FinalizeTeacherIfReady(int $requestId): bool
+    {
+        $this->EnsureTeacherRequestPaymentCol();
+        $r = $this->one('SELECT * FROM `TeacherRequests` WHERE `Id` = :i', ['i' => $requestId]);
+        if (!$r || $r->Status !== 'Pending') return false;
+        $kyc = $this->GetKyc((int)$r->UserId, 'teacher');
+        if ($kyc && $kyc->Status !== 'Approved') return false;
+        if (!empty($r->PaymentId)) {
+            $p = $this->GetPaymentRequest((int)$r->PaymentId);
+            if (!$p || $p->Status !== 'Approved') return false;
+        } elseif ($this->TeacherApplyNeedsPayment()) return false;
+        $this->UpdateTeacherRequest((int)$r->Id, 'Approved', null);
+        $this->MakeUserTeacher((int)$r->UserId);
+        return true;
+    }
+
+    /** কোনো পেমেন্টের সাথে চালু (Pending) টিচার আবেদন থাকলে সেটা */
+    public function GetTeacherRequestByPayment(int $paymentId): ?Obj
+    {
+        $this->EnsureTeacherRequestPaymentCol();
+        return $this->one('SELECT * FROM `TeacherRequests` WHERE `PaymentId` = :p ORDER BY `Id` DESC LIMIT 1', ['p' => $paymentId]);
+    }
+}
+
+// ============================================================ KYC ফাইল (ব্যক্তিগত — ওয়েব থেকে সরাসরি খোলা যায় না)
+function kyc_dir(): string
+{
+    $d = APP_ROOT . '/app/storage/kyc';
+    if (!is_dir($d)) { @mkdir($d, 0750, true); @file_put_contents(APP_ROOT . '/app/storage/.htaccess', "Require all denied\n"); }
+    return $d;
+}
+
+/** ছবি যাচাই করে সেভ — ফাইলের নাম ফেরত দেয়, সমস্যা হলে null আর $err এ কারণ */
+function kyc_store_image(?array $f, int $userId, string $tag, ?string &$err = null): ?string
+{
+    $err = null;
+    if (!$f) { $err = 'ছবি দিন।'; return null; }
+    if ((int)$f['size'] > 6 * 1024 * 1024) { $err = 'ছবি ৬ MB এর মধ্যে হতে হবে।'; return null; }
+    $info = @getimagesize($f['tmp_name']);
+    $ext = $info ? ([IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$info[2]] ?? null) : null;
+    if (!$ext) { $err = 'শুধু ছবি (JPG, PNG, WEBP) দেওয়া যাবে।'; return null; }
+    if ($info[0] < 200 || $info[1] < 120) { $err = 'ছবিটা অনেক ছোট — পরিষ্কার করে তোলা ছবি দিন।'; return null; }
+    $name = 'u' . $userId . '_' . preg_replace('/[^a-z]/', '', $tag) . '_' . bin2hex(random_bytes(10)) . '.' . $ext;
+    $dest = kyc_dir() . '/' . $name;
+    if (!@move_uploaded_file($f['tmp_name'], $dest) && !@rename($f['tmp_name'], $dest) && !@copy($f['tmp_name'], $dest)) { $err = 'ছবি সেভ করা যায়নি — আবার চেষ্টা করুন।'; return null; }
+    @chmod($dest, 0640);
+    return $name;
+}
+
+function kyc_file_path(?string $name): ?string
+{
+    if (!$name || !preg_match('/^u\d+_[a-z]+_[0-9a-f]{20}\.(jpg|png|webp)$/', $name)) return null;
+    $p = kyc_dir() . '/' . $name;
+    return is_file($p) ? $p : null;
+}
+
+function kyc_delete_file(?string $name): void
+{
+    if ($p = kyc_file_path($name)) @unlink($p);
+}

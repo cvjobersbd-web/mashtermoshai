@@ -25,6 +25,10 @@ $pendingEduPosts = 0;
 try { $pendingEduPosts = (int)(db()->CountEduPostsByStatus()['Pending'] ?? 0); } catch (Throwable $e) { }
 $pendingPayments = 0;
 try { $pendingPayments = db()->CountPendingPayments(); } catch (Throwable $e) { }
+$payPend = ['Teacher' => 0, 'Student' => 0, 'Course' => 0];
+try { foreach (db()->all("SELECT CASE WHEN `Audience` = 'Course' THEN 'Course' WHEN `Audience` = 'Teacher' THEN 'Teacher' ELSE 'Student' END AS A, COUNT(*) AS N FROM `PaymentRequests` WHERE `Status` = 'Pending' GROUP BY A") as $r) $payPend[$r->A] = (int)$r->N; } catch (Throwable $e) { }
+$kycPend = ['teacher' => 0, 'student' => 0];
+try { $kc0 = db()->KycCounts(); $kycPend = ['teacher' => $kc0['teacher']['Pending'], 'student' => $kc0['student']['Pending']]; } catch (Throwable $e) { }
 
 try {
     if ($ViewBag->PendingTuitionApps !== null)
@@ -306,7 +310,7 @@ try {
 <!-- ✅ মোবাইল/ট্যাবলেটে: ☰ বাটন চাপলে সাইডবার বাম দিক থেকে আসে -->
 <?php
     $adminPages = [
-        'Dashboard' => 'Dashboard', 'TeacherRequests' => 'Teacher Requests', 'TeacherOverview' => 'Teacher Overview',
+        'Dashboard' => 'Dashboard', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'KYC', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'TeacherOverview' => 'Teacher Overview',
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
@@ -314,7 +318,7 @@ try {
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
-    $adminPendingTotal = $pendingTeacherRequests + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
+    $adminPendingTotal = $kycPend['teacher'] + $kycPend['student'] + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
 ?>
 <div class="admin-mbar">
     <button class="admin-mbar-btn" id="adminSidebarToggle" type="button" aria-label="Open admin menu" aria-controls="adminSidebar" aria-expanded="false">
@@ -346,13 +350,33 @@ try {
             </a>
         </li>
         <?php endif; ?>
-        <?php if (admin_can(admin_action_rule('TeacherRequests'))): ?>
+        <?php if (admin_can(admin_action_rule('Kyc'))): ?>
         <li>
-            <a href="/Admin/TeacherRequests" class="<?= $currentAction === 'TeacherRequests' ? 'active' : '' ?>">
-                <i class="fas fa-user-graduate"></i> Teacher Requests
-                <?php if ($pendingTeacherRequests + $awaitTeacherPay > 0): ?>
-                    <span class="badge-sidebar warning" title="<?= e($pendingTeacherRequests . 'টা Approve এর অপেক্ষায় · ' . $awaitTeacherPay . 'টা পেমেন্ট বাকি') ?>"><?= (int)($pendingTeacherRequests + $awaitTeacherPay) ?></span>
+            <a href="/Admin/Kyc" class="<?= $currentAction === 'Kyc' ? 'active' : '' ?>">
+                <i class="fas fa-id-card"></i> KYC
+                <?php if ($kycPend['teacher'] + $kycPend['student'] > 0): ?>
+                    <span class="badge-sidebar warning" title="<?= e('টিচার ' . $kycPend['teacher'] . ' · শিক্ষার্থী ' . $kycPend['student'] . ' যাচাই বাকি') ?>"><?= (int)($kycPend['teacher'] + $kycPend['student']) ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('TeacherPayments'))): ?>
+        <li>
+            <a href="/Admin/TeacherPayments" class="<?= in_array($currentAction, ['TeacherPayments', 'TeacherRequests'], true) ? 'active' : '' ?>">
+                <i class="fas fa-chalkboard-user"></i> Teacher Payment Requests
+                <?php if ($payPend['Teacher'] > 0): ?><span class="badge-sidebar warning"><?= (int)$payPend['Teacher'] ?></span><?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/StudentPayments" class="<?= $currentAction === 'StudentPayments' ? 'active' : '' ?>">
+                <i class="fas fa-user-graduate"></i> Student Payment Requests
+                <?php if ($payPend['Student'] > 0): ?><span class="badge-sidebar warning"><?= (int)$payPend['Student'] ?></span><?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/CoursePayments" class="<?= $currentAction === 'CoursePayments' ? 'active' : '' ?>">
+                <i class="fas fa-book-open-reader"></i> Course Payment Requests
+                <?php if ($payPend['Course'] > 0): ?><span class="badge-sidebar warning"><?= (int)$payPend['Course'] ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>
@@ -433,16 +457,6 @@ try {
             </a>
         </li>
         <?php endif; ?>
-        <?php if (admin_can(admin_action_rule('Payments'))): ?>
-        <li>
-            <a href="/Admin/Payments" class="<?= $currentAction === 'Payments' ? 'active' : '' ?>">
-                <i class="fas fa-money-bill-wave"></i> Payments
-                <?php if ($pendingPayments > 0): ?>
-                    <span class="badge-sidebar warning"><?= e($pendingPayments) ?></span>
-                <?php endif; ?>
-            </a>
-        </li>
-        <?php endif; ?>
         <?php if (admin_can(admin_action_rule('Devices'))): $pendDev = 0; try { $pendDev = db()->CountPendingDevices(); } catch (Throwable $e) { } ?>
         <li>
             <a href="/Admin/Devices" class="<?= $currentAction === 'Devices' ? 'active' : '' ?>">
@@ -476,7 +490,6 @@ try {
         <li>
             <a href="/Admin/Courses" class="<?= $currentAction === 'Courses' ? 'active' : '' ?>">
                 <i class="fas fa-book-open-reader"></i> Courses
-                <?php if ($pendCourse > 0): ?><span class="badge-sidebar warning"><?= (int)$pendCourse ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>

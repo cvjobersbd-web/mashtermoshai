@@ -102,7 +102,7 @@ $ViewData['Title'] = 'Become a Tutor';
             <div class="alert alert-info"><?= e($TempData['Info']) ?></div>
         <?php endif; ?>
 
-        <form method="post" action="/Teacher/RequestForm" id="teacherForm">
+        <form method="post" action="/Teacher/RequestForm" id="teacherForm" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="UserId" id="UserId" value="<?= e($Model->UserId) ?>" />
             <input type="hidden" name="FullName" id="FullName" value="<?= e($Model->FullName) ?>" />
@@ -118,6 +118,53 @@ $ViewData['Title'] = 'Become a Tutor';
 
             <!-- এই তথ্যগুলো Tutor List → See (ডিটেইলস পেজে) দেখাবে -->
             <?php partial('Teacher/_DetailsForm', ['d' => $ViewBag->Details ?? db()->GetTeacherDetails((int)$Model->UserId)]); ?>
+
+            <?php $kOld = db()->GetKyc((int)$Model->UserId, 'teacher'); $kD = $kOld ? $kOld->D : []; ?>
+            <div class="form-section kyc-sec">
+                <div class="form-section-title"><i class="fas fa-id-card"></i> পরিচয় যাচাই (KYC)</div>
+                <p class="text-muted" style="font-size:13.5px;margin-top:-8px;"><i class="fas fa-lock"></i> NID এর ছবি শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</p>
+                <div class="row">
+                    <div class="col-md-4 mb-3"><label for="kycMobile" class="form-label fw-bold">মোবাইল নম্বর <span class="required-star">*</span></label><input type="tel" name="kycMobile" id="kycMobile" class="form-control" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)input_str('kycMobile', $kD['mobile'] ?? $Model->MobileNumber)) ?>" required /></div>
+                    <div class="col-md-4 mb-3"><label for="kycWhatsapp" class="form-label fw-bold"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp নম্বর <span class="required-star">*</span></label><input type="tel" name="kycWhatsapp" id="kycWhatsapp" class="form-control" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)input_str('kycWhatsapp', $kD['whatsapp'] ?? '')) ?>" required />
+                        <label style="font-size:12.5px;margin-top:5px;color:#475569;"><input type="checkbox" id="kycSameWa" /> মোবাইল নম্বরটাই WhatsApp</label></div>
+                    <div class="col-md-4 mb-3"><label for="kycNid" class="form-label fw-bold">NID নম্বর <span style="color:#94A3B8;font-weight:500;">(ঐচ্ছিক)</span></label><input type="text" name="kycNid" id="kycNid" class="form-control" maxlength="20" inputmode="numeric" placeholder="১০ / ১৩ / ১৭ ডিজিট" value="<?= e((string)input_str('kycNid', $kD['nid'] ?? '')) ?>" /></div>
+                </div>
+                <div class="row">
+                    <?php foreach (['Front' => 'NID কার্ডের সামনের ছবি', 'Back' => 'NID কার্ডের পেছনের ছবি'] as $side => $lbl): $has = $kOld && $kOld->Status !== 'Approved' && kyc_file_path($kOld->{'File' . $side}); ?>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold"><?= $lbl ?> <span class="required-star">*</span></label>
+                            <label class="kyc-drop" for="kycFile<?= $side ?>">
+                                <img alt="" id="kycPrev<?= $side ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . strtolower($side) . '"' : ' hidden' ?> />
+                                <span id="kycPh<?= $side ?>"<?= $has ? ' hidden' : '' ?>><i class="fas fa-id-card"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
+                            </label>
+                            <input type="file" name="kycFile<?= $side ?>" id="kycFile<?= $side ?>" accept="image/jpeg,image/png,image/webp" hidden<?= $has ? '' : ' required' ?> />
+                            <?php if ($has): ?><small class="text-muted">আগের ছবিটাই থাকবে — বদলাতে চাইলে উপরে চাপুন।</small><?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <style>
+                .kyc-drop { display: flex; align-items: center; justify-content: center; border: 2px dashed #BFE3F2; border-radius: 14px; background: #F5FBFF; min-height: 170px; cursor: pointer; overflow: hidden; text-align: center; padding: 10px; }
+                .kyc-drop:hover { border-color: #028EA5; }
+                .kyc-drop img { max-width: 100%; max-height: 220px; border-radius: 10px; }
+                .kyc-drop span { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #475569; }
+                .kyc-drop span i { font-size: 30px; color: #028EA5; } .kyc-drop small { color: #94A3B8; }
+            </style>
+            <script>
+            (function () {
+                ['Front', 'Back'].forEach(function (s) {
+                    var f = document.getElementById('kycFile' + s);
+                    f.addEventListener('change', function () { var x = f.files[0]; if (!x) return; var i = document.getElementById('kycPrev' + s); i.src = URL.createObjectURL(x); i.hidden = false; document.getElementById('kycPh' + s).hidden = true; });
+                });
+                var same = document.getElementById('kycSameWa'), m = document.getElementById('kycMobile'), w = document.getElementById('kycWhatsapp');
+                same.addEventListener('change', function () { if (same.checked) w.value = m.value; });
+                m.addEventListener('input', function () { if (same.checked) w.value = m.value; });
+                document.getElementById('teacherForm').addEventListener('submit', function (e) {
+                    var miss = ['Front', 'Back'].filter(function (s) { return document.getElementById('kycFile' + s).required && !document.getElementById('kycFile' + s).files.length; });
+                    if (miss.length) { e.preventDefault(); alert('NID কার্ডের ' + (miss.length === 2 ? 'সামনের আর পেছনের' : (miss[0] === 'Front' ? 'সামনের' : 'পেছনের')) + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
+                });
+            })();
+            </script>
 
             <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-link"></i> CV (ঐচ্ছিক)</div>

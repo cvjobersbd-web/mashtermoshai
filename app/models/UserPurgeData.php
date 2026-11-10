@@ -19,7 +19,7 @@ trait UserPurgeData
             'EduPostLikes' => ['UserId'], 'EduPostComments' => ['UserId'], 'TeacherStudents' => ['TeacherId', 'StudentUserId'], 'TeacherClasses' => ['TeacherId'],
             'TeacherPayments' => ['TeacherId', 'StudentId'], 'TeacherReviews' => ['TeacherId', 'StudentUserId'], 'TeacherCertificates' => ['TeacherId'],
             'ReferralCodes' => ['UserId'], 'Referrals' => ['ReferrerId', 'ReferredUserId'], 'ReferralWithdrawals' => ['UserId'], 'PartnerSignups' => ['UserId'],
-            'AdminAccess' => ['UserId'], 'CourseEnrollments' => ['UserId'], 'CourseSubmissions' => ['UserId'], 'CourseProgress' => ['UserId'], 'CoursePayouts' => ['TeacherId'],
+            'AdminAccess' => ['UserId'], 'CourseEnrollments' => ['UserId'], 'CourseSubmissions' => ['UserId'], 'CourseProgress' => ['UserId'], 'CoursePayouts' => ['TeacherId'], 'KycRequests' => ['UserId'],
         ];
 
     /** মুছে ফেলা ইউজারের বাকি থাকা ডাটা খুঁজতে যে টেবিলগুলো দেখা হয় — বাংলা নাম */
@@ -93,6 +93,10 @@ trait UserPurgeData
                   'SELECT `FileUrl` FROM `TeacherCertificates` WHERE `TeacherId` = :u', 'SELECT `MediaUrl` FROM `HelpdeskComments` WHERE `UserId` = :u',
                   'SELECT `ImageUrl` FROM `EduPosts` WHERE `UserId` = :u', 'SELECT `CoverImageUrl` FROM `UserProfileExtras` WHERE `UserId` = :u'] as $q)
             foreach ($this->purgeCol($q, $p) as $f) if (is_string($f)) $files[] = $f;
+
+        // ---- KYC এর ব্যক্তিগত ছবি (NID / ID কার্ড) ----
+        foreach ($this->purgeCol('SELECT `FileFront` FROM `KycRequests` WHERE `UserId` = :u', $p) as $f) kyc_delete_file(is_string($f) ? $f : null);
+        foreach ($this->purgeCol('SELECT `FileBack` FROM `KycRequests` WHERE `UserId` = :u', $p) as $f) kyc_delete_file(is_string($f) ? $f : null);
 
         // ---- পোস্টের নিচের সব (কমেন্ট / লাইক / আবেদন) — অন্যদেরগুলোও, কারণ পোস্টই থাকছে না ----
         foreach ([['TuitionCircularPosts', ['TuitionCircularComments', 'TuitionCircularLikes', 'TuitionCircularApplications']],

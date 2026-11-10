@@ -42,10 +42,10 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     <?= csrf_field() ?>
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
         <div><h2><i class="fas fa-graduation-cap" style="color:#0EA5E9;"></i> Courses</h2>
-            <p class="sub">টিচাররা নিজের কোর্স বানিয়ে সাথে সাথে প্রকাশ করতে পারেন — অনুপযুক্ত মনে হলে <b>লুকান</b> (কেনা শিক্ষার্থীরা তবুও ক্লাস করতে পারবে)। কোর্সের পেমেন্ট <a href="/Admin/Payments?for=Course"><b>Payments → Course</b></a> এ Approve করলে শিক্ষার্থী ভর্তি হয়, আর টাকা <?= $pct ?>% অ্যাডমিন / <?= 100 - $pct ?>% টিচার ভাগ হয়।</p></div>
+            <p class="sub">টিচাররা নিজের কোর্স বানিয়ে সাথে সাথে প্রকাশ করতে পারেন — অনুপযুক্ত মনে হলে <b>লুকান</b> (কেনা শিক্ষার্থীরা তবুও ক্লাস করতে পারবে)। কোর্সের পেমেন্ট <a href="/Admin/CoursePayments"><b>Payments → Course</b></a> এ Approve করলে শিক্ষার্থী ভর্তি হয়, আর টাকা <?= $pct ?>% অ্যাডমিন / <?= 100 - $pct ?>% টিচার ভাগ হয়।</p></div>
         <a class="ac-btn g" href="/Course/Edit" style="height:40px;"><i class="fas fa-plus"></i> অ্যাডমিনের কোর্স বানান</a>
     </div>
-    <?php if ($pend > 0): ?><a class="ac-alert" href="/Admin/Payments?for=Course"><i class="fas fa-clock"></i> <?= $pend ?>টা কোর্স পেমেন্ট যাচাইয়ের অপেক্ষায় — দেখুন →</a><?php endif; ?>
+    <?php if ($pend > 0): ?><a class="ac-alert" href="/Admin/CoursePayments"><i class="fas fa-clock"></i> <?= $pend ?>টা কোর্স পেমেন্ট যাচাইয়ের অপেক্ষায় — দেখুন →</a><?php endif; ?>
 
     <div class="ac-stats">
         <div class="ac-st" style="--c:#0EA5E9;"><small>মোট কোর্স বিক্রি</small><b>৳<?= number_format($gross) ?></b></div>

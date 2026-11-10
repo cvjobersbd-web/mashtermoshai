@@ -1251,6 +1251,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         <i class="fas fa-bookmark"></i> আমার কোর্স
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="/Kyc">
+                                        <i class="fas fa-id-card"></i> KYC (পরিচয় যাচাই)
+                                    </a>
+                                </li>
                                 <?php endif; ?>
                                 <li>
                                     <a class="dropdown-item" href="/Notice">
@@ -1381,6 +1386,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <a href="/Course/My" class="<?= $mActive('/Course/My') ?>"><i class="fas fa-bookmark"></i><span>আমার কোর্স</span></a>
+                    <a href="/Kyc" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span>KYC (পরিচয় যাচাই)</span></a>
                     <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                     <?php if ($mRole === 'User'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
@@ -1434,6 +1440,38 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         .exp-bar button { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; color: #9A3412; font-size: 16px; cursor: pointer; padding: 6px; }
     </style>
     <script>try { var _eb = document.getElementById('expBar'); if (_eb && sessionStorage.getItem(_eb.dataset.key)) _eb.remove(); } catch (e) { }</script>
+    <?php endif; ?>
+
+    <?php
+    // 🪪 KYC এখনো দেয়নি (বা বাতিল হয়েছে) — নিচে মনে করিয়ে দেওয়া (আটকায় না)
+    $kycBar = null;
+    $kycPath = strtolower((string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
+    if (!$expSub && current_user_id() !== null && !$isAdmin && !str_starts_with($kycPath, '/kyc') && !str_starts_with($kycPath, '/teacher/requestform') && !str_starts_with($kycPath, '/account')) {
+        try {
+            $kUid = (int)current_user_id(); $kRole = (string)session_get('UserRole');
+            if ($kRole === 'Teacher') { $ks = db()->KycStatus($kUid, 'teacher'); if ($ks === 'None' || $ks === 'Rejected') $kycBar = ['/Kyc/Teacher', $ks === 'Rejected' ? 'আপনার KYC গ্রহণ করা হয়নি — NID আর WhatsApp নম্বর ঠিক করে আবার জমা দিন।' : 'টিচারদের পরিচয় যাচাই (KYC) চালু হয়েছে — আপনার NID এর ছবি আর WhatsApp নম্বর দিয়ে KYC সম্পূর্ণ করুন।'];
+            } elseif ($kRole === 'User') {
+                $ks = db()->KycStatus($kUid, 'student');
+                $trs = db()->GetUserTeacherRequestStatus($kUid);
+                if (($ks === 'None' || $ks === 'Rejected') && !in_array($trs, ['Pending', 'AwaitingPayment'], true))
+                    $kycBar = ['/Kyc/Student', $ks === 'Rejected' ? 'আপনার শিক্ষার্থী KYC ফর্ম গ্রহণ করা হয়নি — তথ্য ঠিক করে আবার জমা দিন।' : 'প্যাকেজ কেনা আর টিউশন পোস্টের জন্য শিক্ষার্থীর KYC ফর্ম (বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।'];
+            }
+        } catch (Throwable $e) { $kycBar = null; }
+    }
+    if ($kycBar): ?>
+    <div class="exp-bar kyc-bar" id="kycBar" data-key="mmKycBar">
+        <i class="fas fa-id-card"></i><span><?= e($kycBar[1]) ?></span>
+        <a href="<?= e($kycBar[0]) ?>">KYC ফর্ম পূরণ করুন</a>
+        <button type="button" aria-label="বন্ধ করুন" onclick="try{sessionStorage.setItem('mmKycBar','1')}catch(e){} this.parentNode.remove()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <style>
+        .exp-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; font-size: 14px; padding: 10px 46px 10px 16px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1040; text-align: center; box-shadow: 0 -6px 20px rgba(0,0,0,.08); }
+        .exp-bar button { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; font-size: 16px; cursor: pointer; padding: 6px; }
+        .kyc-bar { background: #EFF6FF; border-top: 2px solid #93C5FD; color: #1E3A8A; }
+        .kyc-bar > i { color: #2563EB; font-size: 16px; } .kyc-bar button { color: #1E3A8A; }
+        .kyc-bar a { background: #2563EB; color: #fff !important; font-weight: 800; font-size: 13px; padding: 6px 14px; border-radius: 8px; text-decoration: none; white-space: nowrap; }
+    </style>
+    <script>try { if (sessionStorage.getItem('mmKycBar')) document.getElementById('kycBar').remove(); } catch (e) { }</script>
     <?php endif; ?>
 
     <main>

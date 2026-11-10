@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'ToggleCourse' => 'কোর্স লুকানো/দেখানো', 'AddCoursePayout' => 'টিচারকে কোর্সের টাকা দেওয়া', 'SaveCourseSettings' => 'কোর্সের ভাগ (%) বদল', 'SaveLiveSettings' => 'লাইভ ক্লাস সার্ভার সেটিং', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'ToggleCourse' => 'কোর্স লুকানো/দেখানো', 'KycDecide' => 'KYC Approve / বাতিল', 'AddCoursePayout' => 'টিচারকে কোর্সের টাকা দেওয়া', 'SaveCourseSettings' => 'কোর্সের ভাগ (%) বদল', 'SaveLiveSettings' => 'লাইভ ক্লাস সার্ভার সেটিং', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -292,11 +292,75 @@ class AdminController extends Controller
     }
 
     // ============================================================
+    // ===== KYC (টিচার / শিক্ষার্থীর পরিচয় যাচাই) =====
+    // ============================================================
+    /** GET /Admin/Kyc?k=teacher|student&s=Pending|Approved|Rejected|all */
+    public function Kyc(): void
+    {
+        $this->requireAdminPage();
+        $k = input_str('k', '') === 'student' ? 'student' : 'teacher';
+        $counts = $this->db->KycCounts();
+        if (input_str('k', '') === '' && $counts['teacher']['Pending'] === 0 && $counts['student']['Pending'] > 0) $k = 'student';
+        $s = (string)input_str('s', 'Pending'); if (!in_array($s, ['Pending', 'Approved', 'Rejected', 'all'], true)) $s = 'Pending';
+        $list = $this->db->GetKycList($k, $s);
+        // টিচার: আবেদনের ফর্ম + পেমেন্টের অবস্থা
+        $apps = [];
+        if ($k === 'teacher') {
+            $this->db->EnsureTeacherRequestPaymentCol();
+            foreach ($list as $x) {
+                $tr = $x->TeacherRequestId ? $this->db->GetTeacherRequestById((int)$x->TeacherRequestId) : null;
+                if (!$tr) $tr = $this->db->GetLatestTeacherRequest($x->UserId);
+                if (!$tr) continue;
+                $raw = $this->db->one('SELECT `PaymentId` FROM `TeacherRequests` WHERE `Id` = :i', ['i' => (int)$tr->Id]);
+                $apps[$x->Id] = ['req' => $tr, 'pay' => $raw && !empty($raw->PaymentId) ? $this->db->GetPaymentRequest((int)$raw->PaymentId) : null];
+            }
+        }
+        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Counts' => $counts, 'Apps' => $apps]);
+    }
+
+    /** POST /Admin/KycDecide (id, action = Approve|Reject, note) */
+    public function KycDecide_POST(): void
+    {
+        $this->requireAdminJson();
+        $k = $this->db->GetKycById((int)input_int('id', 0));
+        if (!$k) json_response(['success' => false, 'message' => 'KYC পাওয়া যায়নি।']);
+        $latest = $this->db->GetKyc($k->UserId, (string)$k->Kind);
+        if (!$latest || $latest->Id !== $k->Id) json_response(['success' => false, 'message' => 'ইউজার এর পরে নতুন তথ্য জমা দিয়েছেন — পেজ রিফ্রেশ করুন।']);
+        $act = (string)input_str('action', '');
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        if (!in_array($act, ['Approve', 'Reject'], true)) json_response(['success' => false, 'message' => 'ভুল অনুরোধ।']);
+        if ($act === 'Reject' && $note === '') json_response(['success' => false, 'message' => 'বাতিলের কারণ লিখুন — ইউজার এটা দেখতে পাবে।']);
+        $this->db->SetKycStatus($k->Id, $act === 'Approve' ? 'Approved' : 'Rejected', $note, (int)current_user_id());
+        $isT = $k->Kind === 'teacher';
+        $link = $isT ? '/Kyc/Teacher' : '/Kyc/Student';
+        $extra = '';
+        try {
+            if ($act === 'Approve') {
+                $this->db->CreateNotification($k->UserId, 'KYC Approve হয়েছে ✅', $isT ? 'আপনার পরিচয় (NID) যাচাই সম্পন্ন হয়েছে।' : 'আপনার শিক্ষার্থী KYC Approve হয়েছে — এখন প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারবেন।', 'success', $isT ? $link : '/Package?for=student', 'fa-id-card');
+                if ($isT) {
+                    $tr = $this->db->GetLatestTeacherRequest($k->UserId);
+                    if ($tr && $tr->Status === 'Pending') {
+                        if ($this->db->FinalizeTeacherIfReady((int)$tr->Id)) {
+                            $extra = ' পেমেন্ট আগেই Accept ছিল — ইউজার এখন টিচার।';
+                            $this->db->CreateNotification($k->UserId, "🎓 You're now a Teacher!", 'অভিনন্দন! আপনার টিচার আবেদন Approve হয়েছে — Teacher Dashboard থেকে শুরু করুন।', 'success', '/Teacher/TeacherDashboard', 'fa-chalkboard-teacher');
+                        } elseif (!empty($tr->PaymentId)) $extra = ' এখন Teacher Payment Requests থেকে পেমেন্ট Accept করুন — তাহলেই টিচার হয়ে যাবেন।';
+                    }
+                }
+            } else {
+                $this->db->CreateNotification($k->UserId, 'KYC গ্রহণ করা হয়নি', "কারণ: $note — তথ্য ঠিক করে আবার জমা দিন।", 'danger', $link, 'fa-id-card');
+            }
+        } catch (Throwable $e) { error_log('[kyc decide] ' . $e->getMessage()); }
+        json_response(['success' => true, 'message' => ($act === 'Approve' ? 'Approve হয়েছে।' : 'বাতিল করা হয়েছে — ইউজার কারণ দেখে আবার জমা দিতে পারবেন।') . $extra]);
+    }
+
+    // ============================================================
     // ===== TEACHER REQUESTS =====
     // ============================================================
     public function TeacherRequests(): void
     {
         $this->requireAdminPage();
+        // নাম বদলে "Teacher Payment Requests" — আবেদনের ফর্ম আর NID এখন KYC পেজে
+        if (!input_bool('old')) redirect('/Admin/TeacherPayments');
         $this->db->EnsureTeacherRequestPaymentCol();
         $requests = $this->db->GetAllTeacherRequests();
         // প্রতিটা আবেদনের পেমেন্টের তথ্য (প্যাকেজ, টাকা, মেথড, TxnID, রিসিট)
@@ -1800,10 +1864,24 @@ class AdminController extends Controller
     public function Payments(): void
     {
         $this->requireAdminPage();
+        // আলাদা পেজ হয়ে গেছে — Teacher / Student / Course Payment Requests
+        $for = (string)input_str('for', '');
+        $map = ['Teacher' => 'TeacherPayments', 'Student' => 'StudentPayments', 'Course' => 'CoursePayments'];
+        if (isset($map[$for])) redirect('/Admin/' . $map[$for] . (($st0 = (string)input_str('status', '')) !== '' ? '?status=' . rawurlencode($st0) : ''));
+        $this->paymentsPage('all', 'সব পেমেন্ট', '/Admin/Payments');
+    }
+
+    /** GET /Admin/TeacherPayments — টিচার প্যাকেজের পেমেন্ট (নতুন টিচার আবেদন সহ) */
+    public function TeacherPayments(): void { $this->requireAdminPage(); $this->paymentsPage('Teacher', 'Teacher Payment Requests', '/Admin/TeacherPayments'); }
+    /** GET /Admin/StudentPayments — শিক্ষার্থী প্যাকেজের পেমেন্ট */
+    public function StudentPayments(): void { $this->requireAdminPage(); $this->paymentsPage('Student', 'Student Payment Requests', '/Admin/StudentPayments'); }
+    /** GET /Admin/CoursePayments — কোর্স কেনার পেমেন্ট */
+    public function CoursePayments(): void { $this->requireAdminPage(); $this->paymentsPage('Course', 'Course Payment Requests', '/Admin/CoursePayments'); }
+
+    private function paymentsPage(string $for, string $title, string $base): void
+    {
         $st = input_str('status', 'Pending');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
-        // শিক্ষার্থী / শিক্ষক আলাদা সেকশন
-        $for = (string)input_str('for', 'all'); if (!in_array($for, ['all', 'Student', 'Teacher', 'Course'], true)) $for = 'all';
         $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : ($x->Audience === 'Course' ? 'Course' : 'Student');
         $all = $this->db->GetPaymentRequests(null);
         $cnt = []; $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
@@ -1816,7 +1894,18 @@ class AdminController extends Controller
             if ($x->Status === 'Approved') $stats['Revenue'] += (int)$x->Amount;
         }
         $list = array_values(array_filter($all, fn($x) => ($st === 'all' || $x->Status === $st) && ($for === 'all' || $audOf($x) === $for)));
-        $this->view(null, $list, ['Status' => $st, 'For' => $for, 'Counts' => $cnt, 'Stats' => $stats]);
+        // টিচার পেমেন্টের সাথে নতুন টিচার আবেদন থাকলে — আবেদন আর KYC এর অবস্থা
+        $apps = [];
+        foreach ($list as $x) {
+            if ($audOf($x) !== 'Teacher') continue;
+            try {
+                $tr = $this->db->GetTeacherRequestByPayment((int)$x->Id);
+                if (!$tr) continue;
+                $k = $this->db->GetKyc((int)$tr->UserId, 'teacher');
+                $apps[(int)$x->Id] = ['req' => (string)$tr->Status, 'kyc' => $k ? (string)$k->Status : 'None'];
+            } catch (Throwable $e) { }
+        }
+        $this->view('Payments', $list, ['Status' => $st, 'For' => $for, 'Counts' => $cnt, 'Stats' => $stats, 'PageTitle' => $title, 'Base' => $base, 'Locked' => $for !== 'all', 'Apps' => $apps]);
     }
 
     /** POST /Admin/ApprovePayment (id, note?) */
@@ -1824,6 +1913,17 @@ class AdminController extends Controller
     {
         $this->requireAdminJson();
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
+        // নতুন টিচার আবেদনের পেমেন্ট: আগে KYC (NID) Approve, তারপর পেমেন্ট
+        $pre = $this->db->GetPaymentRequest((int)input_int('id', 0));
+        if ($pre && $pre->Audience === 'Teacher' && $pre->Status === 'Pending') {
+            $trPre = $this->db->GetTeacherRequestByPayment((int)$pre->Id);
+            if ($trPre && $trPre->Status === 'Pending') {
+                $kPre = $this->db->GetKyc((int)$trPre->UserId, 'teacher');
+                if ($kPre && $kPre->Status !== 'Approved') json_response(['success' => false, 'needKyc' => true, 'message' => $kPre->Status === 'Rejected'
+                    ? 'এই আবেদনকারীর KYC বাতিল করা আছে — নতুন KYC জমা দিয়ে Approve না হওয়া পর্যন্ত পেমেন্ট Accept করা যাবে না।'
+                    : 'আগে KYC পেজে এই আবেদনকারীর NID / তথ্য দেখে Approve করুন — তারপর পেমেন্ট Accept করুন।']);
+            }
+        }
         try { $p = $this->db->ApprovePayment((int)input_int('id', 0), (int)current_user_id(), $note); }
         catch (Throwable $e) { error_log('[approve payment] ' . $e->getMessage()); $p = null; }
         if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
@@ -1855,8 +1955,12 @@ class AdminController extends Controller
                     $this->db->MakeUserTeacher((int)$p->UserId);
                     $msg .= ' আপনার টিচার অ্যাকাউন্ট আবার চালু হয়েছে।';
                     $extra = ' — টিচার অ্যাকাউন্টও আবার চালু হয়েছে (রিনিউ)।';
+                } elseif ($this->db->FinalizeTeacherIfReady((int)$tr->Id)) {
+                    $msg .= ' আপনার টিচার আবেদন Approve হয়েছে — এখন আপনি টিচার! 🎓';
+                    $extra = ' — KYC আগেই Approve ছিল, তাই ইউজার এখন টিচার।';
+                    try { $this->db->CreateNotification((int)$p->UserId, "🎓 You're now a Teacher!", 'অভিনন্দন! আপনার টিচার আবেদন Approve হয়েছে — Teacher Dashboard থেকে শুরু করুন।', 'success', '/Teacher/TeacherDashboard', 'fa-chalkboard-teacher'); } catch (Throwable $e) { }
                 } else {
-                    $extra = ' — এটা নতুন টিচার আবেদন, Teacher Requests থেকে ফর্ম দেখে Approve করুন।';
+                    $extra = ' — এখন KYC পেজে আবেদনকারীর তথ্য দেখে Approve করুন, তাহলেই টিচার হয়ে যাবেন।';
                 }
             }
         }

@@ -88,7 +88,7 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
             <p>পেমেন্ট মেথড, ব্যাংক / মোবাইল অ্যাকাউন্ট আর স্ক্যান করার QR ছবি যোগ বা পরিবর্তন করুন। লোগো আপলোড না করলে মেথডের রঙে নাম দেখায়।</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a class="pm-btn out" href="/Admin/Payments"><i class="fas fa-money-bill-wave"></i> Payments</a>
+            <a class="pm-btn out" href="/Admin/StudentPayments"><i class="fas fa-money-bill-wave"></i> Payment Requests</a>
             <button type="button" class="pm-btn pri" data-new-method><i class="fas fa-plus"></i> নতুন মেথড</button>
         </div>
     </div>
