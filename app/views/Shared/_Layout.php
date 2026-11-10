@@ -1278,11 +1278,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     </a>
                                 </li>
 
-                                <?php if ($userRole === 'User'): ?>
+                                <?php if ($userRole === 'User' && role_label('User', current_user_id()) === 'Student'): ?>
                                     <li>
                                         <a class="dropdown-item" href="/User/Dashboard">
                                             <i class="fas fa-chart-pie"></i> Student Dashboard
-                                            <span class="badge-role" style="background:#e3f2fd; color:#1565c0;"><?= e(role_label('User', current_user_id())) ?></span>
+                                            <span class="badge-role" style="background:#e3f2fd; color:#1565c0;">Student</span>
                                         </a>
                                     </li>
                                 <?php endif; ?>
@@ -1406,7 +1406,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <?php if ($mTrack !== 'student'): ?><a href="/Profile/Show?tab=profile#ab-tutor"><i class="fas fa-chalkboard-user"></i><span>Become a Tutor</span></a><?php endif; ?>
                     <?php endif; ?>
                     <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
-                    <?php if ($mRole === 'User'): ?>
+                    <?php if ($mRole === 'User' && role_label('User', current_user_id()) === 'Student'): ?>
                         <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
                     <?php endif; ?>
                     <?php if ($mRole === 'Teacher'): ?>

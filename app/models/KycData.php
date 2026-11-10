@@ -242,3 +242,26 @@ function account_track(?int $userId): ?string
 
 const ONE_ROLE_MSG_TEACHER = 'এই অ্যাকাউন্টটা টিচার হিসেবে ব্যবহার হচ্ছে (বা টিচার হওয়ার আবেদন করা আছে) — একই অ্যাকাউন্টে শিক্ষার্থী হওয়া যায় না। শিক্ষার্থী হিসেবে চাইলে লগআউট করে নতুন অ্যাকাউন্ট খুলুন।';
 const ONE_ROLE_MSG_STUDENT = 'এই অ্যাকাউন্টটা শিক্ষার্থী হিসেবে ব্যবহার হচ্ছে (Student Verification জমা / Approve আছে) — একই অ্যাকাউন্টে টিচার হওয়া যায় না। টিচার হতে চাইলে লগআউট করে নতুন অ্যাকাউন্ট খুলুন।';
+
+/**
+ * নীল টিক — টিচার প্যাকেজ কিনলে না, "Become a Tutor" ফর্ম অ্যাডমিন Approve করলে (Teacher Verification Approved,
+ * অথবা Verification চালুর আগের Approve হওয়া টিচার আবেদন)। শুধু চালু টিচার অ্যাকাউন্ট।
+ */
+function verified_teacher_ids(): array
+{
+    static $ids = null;
+    if ($ids !== null) return $ids;
+    $ids = [];
+    try {
+        db()->EnsureKycTable();
+        foreach (db()->all("SELECT u.`Id` FROM `Users` u WHERE u.`Role` = 'Teacher' AND (
+                EXISTS (SELECT 1 FROM `TeacherRequests` r WHERE r.`UserId` = u.`Id` AND r.`Status` = 'Approved')
+             OR EXISTS (SELECT 1 FROM `KycRequests` k WHERE k.`UserId` = u.`Id` AND k.`Kind` = 'teacher' AND k.`Status` = 'Approved'))") as $r) $ids[(int)$r->Id] = true;
+        // Verification বাতিল (Approve বাতিল) করা থাকলে টিক নেই
+        foreach (db()->all("SELECT k.`UserId` FROM `KycRequests` k WHERE k.`Kind` = 'teacher' AND k.`Status` = 'Rejected'
+            AND k.`Id` = (SELECT MAX(x.`Id`) FROM `KycRequests` x WHERE x.`UserId` = k.`UserId` AND x.`Kind` = 'teacher')") as $r) unset($ids[(int)$r->UserId]);
+    } catch (Throwable $e) { }
+    return $ids;
+}
+
+function has_blue_tick($userId): bool { return $userId !== null && isset(verified_teacher_ids()[(int)$userId]); }

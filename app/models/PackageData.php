@@ -13,7 +13,7 @@ trait PackageData
     public const PACKAGE_AUDIENCES = ['Teacher', 'Student'];
     private const TEACHER_FEATURES_V1 = "প্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
     private const STUDENT_FEATURES_V2 = "টিচারদের প্রোফাইল ছবি, মোবাইল নম্বর ও ইমেইল দেখতে পারবেন\nপছন্দের টিচারকে সরাসরি Direct Request পাঠাতে পারবেন\nTuition Circular এ যত খুশি টিউশন পোস্ট করতে পারবেন\nআগ্রহী টিচারদের আবেদন দেখে পছন্দের টিচার বাছাই করতে পারবেন";
-    private const TEACHER_FEATURES_V2 = "প্রোফাইলে নীল ভেরিফায়েড টিক\nFind Tutor তালিকায় উপরের দিকে দেখাবে\nপ্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
+    private const TEACHER_FEATURES_V2 = "Find Tutor তালিকায় উপরের দিকে দেখাবে\nপ্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
 
     public function EnsurePackageTable(): void
     {
@@ -46,6 +46,17 @@ trait PackageData
                 // আগের ডিফল্ট সুবিধার তালিকায় নীল টিক যোগ (অ্যাডমিন নিজে বদলে থাকলে হাত দেয় না)
                 $this->exec("UPDATE `Packages` SET `Features` = :n WHERE `Audience` = 'Teacher' AND `Features` = :o", ['n' => self::TEACHER_FEATURES_V2, 'o' => self::TEACHER_FEATURES_V1]);
                 $this->SaveSiteContent(['pkg_feat_v2' => '1']);
+            }
+            if (($this->GetSiteContent(['pkg_no_tick_v1' => ''])['pkg_no_tick_v1'] ?? '') === '') {
+                // নীল টিক আর প্যাকেজের সুবিধা না (Become a Tutor Approve হলে আসে) — প্যাকেজের লেখা আর সুবিধার তালিকা থেকে সরানো
+                foreach ($this->all("SELECT `Id`, `Features` FROM `Packages` WHERE `Features` LIKE '%নীল%টিক%'") as $r) {
+                    $lines = array_filter(preg_split('/\r?\n/', (string)$r->Features), fn($l) => !preg_match('/নীল.*টিক/u', $l));
+                    $this->exec('UPDATE `Packages` SET `Features` = :f WHERE `Id` = :i', ['f' => implode("\n", $lines), 'i' => (int)$r->Id]);
+                }
+                $bt = $this->GetSiteContent(['pkg_benefits_teacher' => ''])['pkg_benefits_teacher'] ?? '';
+                $bl = json_decode((string)$bt, true);
+                if (is_array($bl)) $this->SaveSiteContent(['pkg_benefits_teacher' => json_encode(array_values(array_filter($bl, fn($b) => ($b['i'] ?? '') !== 'fa-certificate' && !preg_match('/নীল.*টিক/u', (string)($b['t'] ?? '')))), JSON_UNESCAPED_UNICODE)]);
+                $this->SaveSiteContent(['pkg_no_tick_v1' => '1']);
             }
             if ($seeded !== '' && ($this->GetSiteContent(['pkg_student_v2' => ''])['pkg_student_v2'] ?? '') === '') {
                 // নতুন নিয়ম: শিক্ষার্থীর প্যাকেজ মেয়াদভিত্তিক (১ মাস ৳50, ৩ মাস ৳100) — আগের পোস্ট প্যাকেজ বন্ধ (মুছে না — পুরোনো পেমেন্টের রেকর্ড থাকে)

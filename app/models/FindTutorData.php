@@ -125,7 +125,7 @@ trait FindTutorData
                 'Rating' => $avg, 'TotalReviews' => $cnt, 'Students' => $students[$uid] ?? 0,
                 'AvailableTime' => !is_blank($r->PreferredTime) ? $r->PreferredTime : ((string)$r->AvailableDays ?: 'Contact for schedule'),
                 'About' => !is_blank($r->Bio) ? $r->Bio : (!is_blank($r->WhyTeach) ? $r->WhyTeach : (!is_blank($r->TeachingStyle) ? $r->TeachingStyle : 'Experienced tutor ready to help students excel.')),
-                'IsVerified' => true, 'IsTopRated' => false, 'IsPremium' => isset($premium[$uid]),
+                'IsVerified' => true, 'IsTopRated' => false, 'IsPremium' => isset($premium[$uid]), 'HasTick' => has_blue_tick($uid),
                 'JoinedAt' => $r->RequestDate ?? $r->UCreated,
             ]);
         }

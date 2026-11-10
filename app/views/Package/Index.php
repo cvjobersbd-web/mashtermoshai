@@ -251,9 +251,9 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
                 <span class="av"><?= e(initials($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'Your Name')) ?></span>
-                <div><b><?= e($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'আপনার নাম') ?><?= blue_tick_html() ?></b><small>Verified Teacher · Subscription চালু</small></div>
+                <div><b><?= e($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'আপনার নাম') ?><?= blue_tick_html() ?></b><small>Verified Teacher · ফর্ম Approve হয়েছে</small></div>
             </div>
-            <p><b>Subscription নিলেই প্রোফাইলে নীল টিক!</b> আপনার প্রোফাইল আর Find Tutor কার্ডে নামের পাশে নীল টিক দেখাবে। Subscription শেষ হলে টিক চলে যাবে, আবার নিলে ফিরে আসবে।</p>
+            <p><b>নীল টিক কীভাবে পাবেন?</b> Become a Tutor ফর্ম (শিক্ষা প্রতিষ্ঠানের ID কার্ড সহ) পূরণ করে অ্যাডমিন যাচাই করে Approve করলে প্রোফাইল আর Find Tutor কার্ডে নামের পাশে নীল টিক দেখাবে। শুধু প্যাকেজ কিনলে নীল টিক আসে না।</p>
         </div>
         <?php $benefitGrid($benefits['Teacher'], 'Subscription নিলে যা যা পাবেন'); ?>
     </section>

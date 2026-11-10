@@ -185,7 +185,7 @@ $seeAll = '/FindTutor?cat=' . rawurlencode($c->Slug);
                         <div class="cd-tutor">
                             <div class="cd-tutor-b">
                                 <span class="cd-av"><span><?= e($t->Initials) ?><?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span></span>
-                                <span class="cd-badge"><?php if ($t->IsPremium): ?><?= blue_tick_html('Verified') ?><?php else: ?><i class="fas fa-award" title="Approved tutor"></i><?php endif; ?></span>
+                                <span class="cd-badge"><?php if (has_blue_tick($t->UserId ?? $t->Id ?? 0)): ?><?= blue_tick_html('Verified Teacher') ?><?php else: ?><i class="fas fa-award" title="Approved tutor"></i><?php endif; ?></span>
                                 <b title="<?= e($t->FullName) ?>"><?= e($t->FullName) ?></b>
                                 <small title="<?= e($t->Institution) ?>"><?= e($t->Institution !== 'Not specified' ? $t->Institution : $t->Qualification) ?></small>
                                 <?php if ($t->TotalReviews): ?><span class="stars"><i class="fas fa-star"></i> <?= e(number_format($t->Rating, 1)) ?> (<?= (int)$t->TotalReviews ?>)</span><?php endif; ?>

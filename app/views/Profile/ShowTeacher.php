@@ -289,7 +289,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
 
                 <div class="pf-id">
                     <h1 class="pf-name"><?= e($name) ?>
-                        <?php if (is_premium_teacher($u->Id)): ?><?= blue_tick_html() ?><?php else: ?><i class="fas fa-circle-check" title="Verified Teacher"></i><?php endif; ?>
+                        <?php if (has_blue_tick($u->Id)): ?><?= blue_tick_html('Verified Teacher') ?><?php else: ?><i class="fas fa-circle-check" title="Verified Teacher"></i><?php endif; ?>
                         <?php if ($Model->IsSuspended): ?><span class="pf-warn"><i class="fas fa-ban"></i> Suspended</span><?php endif; ?>
                     </h1>
                     <?php if ($headline !== ''): ?><div class="tp-headline" id="tpHeadline"><?= e($headline) ?></div><?php endif; ?>

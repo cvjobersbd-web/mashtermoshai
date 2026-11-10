@@ -10,6 +10,12 @@ class UserController extends Controller
             tempdata_set('Error', 'You must be logged in as a Student to access this page.');
             $this->redirectToAction('Login', 'Account');
         }
+        // নতুন অ্যাকাউন্ট (User) এর কোনো ড্যাশবোর্ড নেই — Student Verification Approve হলে Student Dashboard
+        if ($role === 'User' && role_label('User', $userId) !== 'Student') {
+            $tr = account_track($userId) === 'teacher';
+            tempdata_set('Info', $tr ? 'আপনার টিচার আবেদন Approve হলে Teacher Dashboard পাবেন।' : 'Student Dashboard পেতে আগে Student Verification ফর্ম পূরণ করুন — অ্যাডমিন Approve করলে ড্যাশবোর্ড খুলে যাবে।');
+            redirect($tr ? '/Profile/Show?tab=profile#ab-tutor' : '/Kyc/Student');
+        }
         $user = $this->db->GetUserById($userId);
         if (!$user) $this->redirectToAction('Login', 'Account');
 
