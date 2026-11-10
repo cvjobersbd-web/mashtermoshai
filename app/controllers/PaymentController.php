@@ -101,13 +101,10 @@ class PaymentController extends Controller
         if ($d > (clone $today)->modify('+1 day')) $this->fail('পেমেন্টের তারিখ ভবিষ্যতের হতে পারে না।', ['field' => 'payDate']);
         if ($d < (clone $today)->modify('-90 days')) $this->fail('৯০ দিনের বেশি পুরোনো পেমেন্ট জমা দেওয়া যায় না — Helpdesk-এ যোগাযোগ করুন।', ['field' => 'payDate']);
 
-        // কার রেফারেন্সে প্যাকেজ কিনছেন — বাধ্যতামূলক
+        // কোথা থেকে জেনে প্যাকেজ কিনছেন — ঐচ্ছিক, শুধু তালিকা থেকে
         $ref = null;
-        if ($this->db->ReferenceOptions(true)) {
-            $refKey = (string)input_str('reference', '');
-            $ref = $this->db->CleanReference($refKey, (string)input_str('referenceNote', ''));
-            if ($ref === null) $this->fail($refKey === 'other' ? 'কার রেফারেন্সে কিনছেন সেটা লিখে দিন।' : 'কার রেফারেন্সে / কোথা থেকে জেনে প্যাকেজ কিনছেন সেটা বাছাই করুন।', ['field' => 'reference']);
-        }
+        $refKey = (string)input_str('reference', '');
+        if ($refKey !== '') $ref = $this->db->CleanReference($refKey);
 
         if ($this->db->CountUserPendingPayments($uid) >= 5) $this->fail('আপনার ৫টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। অ্যাডমিন যাচাই করার পর আবার চেষ্টা করুন।');
 

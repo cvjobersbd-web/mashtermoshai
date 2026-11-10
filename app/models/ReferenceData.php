@@ -20,6 +20,10 @@ trait ReferenceData
         'whatsapp' => ['WhatsApp', 'fab fa-whatsapp', '#25D366'],
         'telegram' => ['Telegram', 'fab fa-telegram', '#229ED9'],
         'google' => ['Google সার্চ', 'fab fa-google', '#EA4335'],
+    ];
+
+    /** আগে ছিল, এখন বাছাই করা যায় না — শুধু পুরোনো ডাটার নাম দেখাতে */
+    public const REFERENCE_LEGACY = [
         'friend' => ['বন্ধু / পরিচিত কেউ', 'fas fa-user-group', '#0EA5E9'],
         'teacher' => ['শিক্ষক / টিউটর', 'fas fa-chalkboard-user', '#7C3AED'],
         'agency' => ['এজেন্সি / প্রতিনিধি', 'fas fa-handshake', '#9333EA'],
@@ -52,14 +56,12 @@ trait ReferenceData
         $saved = is_array($saved) ? $saved : [];
         $out = [];
         foreach (self::REFERENCE_DEFAULTS as $k => [$l, $i, $c]) {
-            if ($k === 'other') continue;
             $out[$k] = ['label' => $l, 'icon' => $i, 'color' => $c, 'on' => !in_array($k, $saved['off'] ?? [], true), 'custom' => false];
         }
         foreach ($saved['custom'] ?? [] as $k => $l) {
             if (is_string($k) && preg_match('/^c_[a-z0-9]{4,12}$/', $k) && is_string($l) && $l !== '')
                 $out[$k] = ['label' => $l, 'icon' => 'fas fa-bullhorn', 'color' => '#0F766E', 'on' => !in_array($k, $saved['off'] ?? [], true), 'custom' => true];
         }
-        $out['other'] = ['label' => 'অন্যান্য', 'icon' => 'fas fa-ellipsis', 'color' => '#64748B', 'on' => true, 'custom' => false];
         return $onlyOn ? array_filter($out, fn($o) => $o['on']) : $out;
     }
 
@@ -67,17 +69,16 @@ trait ReferenceData
     public function ReferenceInfo(?string $key): array
     {
         if ($key === null || $key === '') return ['label' => 'জানা নেই', 'icon' => 'fas fa-circle-question', 'color' => '#94A3B8', 'on' => false, 'custom' => false];
+        if (isset(self::REFERENCE_LEGACY[$key])) { [$l, $i, $c] = self::REFERENCE_LEGACY[$key]; return ['label' => $l, 'icon' => $i, 'color' => $c, 'on' => false, 'custom' => false]; }
         return $this->ReferenceOptions()[$key] ?? ['label' => $key, 'icon' => 'fas fa-tag', 'color' => '#64748B', 'on' => false, 'custom' => true];
     }
 
-    /** ফর্ম থেকে আসা মান যাচাই — [key, note] অথবা null (ভুল / খালি) */
-    public function CleanReference(string $key, string $note): ?array
+    /** ফর্ম থেকে আসা মান যাচাই — [key, ''] অথবা null (তালিকায় নেই)। নিজে হাতে লেখার অপশন আর নেই। */
+    public function CleanReference(string $key, string $note = ''): ?array
     {
         $opts = $this->ReferenceOptions(true);
         if (!isset($opts[$key])) return null;
-        $note = mb_substr(trim(strip_tags($note)), 0, 100);
-        if ($key === 'other' && $note === '') return null;
-        return [$key, $note];
+        return [$key, ''];
     }
 
     public function SetUserHowHeard(int $userId, string $key, string $note): void

@@ -234,12 +234,11 @@ $jsMethods = array_map(function ($m) {
                         <?php $refOpts = $ViewBag->RefOptions ?? []; [$rk, $rn] = $ViewBag->RefSel ?? ['', '']; if (!isset($refOpts[$rk])) { $rk = ''; $rn = ''; } ?>
                         <?php if ($refOpts): ?>
                         <div class="full" data-f="reference">
-                            <label for="coRef">কার রেফারেন্সে / কোথা থেকে জেনে প্যাকেজ কিনছেন?<span class="req">*</span></label>
+                            <label for="coRef">কোথা থেকে জেনে কিনছেন? <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
                             <select id="coRef" name="reference" class="co-sel">
-                                <option value="">— বাছাই করুন —</option>
+                                <option value="">— বাছাই করুন (ঐচ্ছিক) —</option>
                                 <?php foreach ($refOpts as $k => $o): ?><option value="<?= e($k) ?>"<?= $rk === $k ? ' selected' : '' ?>><?= e($o['label']) ?></option><?php endforeach; ?>
                             </select>
-                            <input type="text" id="coRefNote" name="referenceNote" maxlength="100" placeholder="কোথা থেকে / কার কাছ থেকে জেনেছেন লিখুন" value="<?= e($rn) ?>" style="margin-top:8px;"<?= $rk === 'other' ? '' : ' hidden' ?> />
                         </div>
                         <?php endif; ?>
                         <div class="full">
@@ -387,8 +386,6 @@ $jsMethods = array_map(function ($m) {
         if (cur.txnRequired && !txn) return showErr('Transaction ID দিন।', 'txnId');
         if (cur.kind === 'agent' && !/^01[3-9]\d{8}$/.test(form.senderNumber.value.replace(/[^0-9]/g, ''))) return showErr('যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন (যেমন 01712345678)।', 'sender');
         if (!form.payDate.value) return showErr('পেমেন্টের তারিখ দিন।', 'payDate');
-        if (form.reference && !form.reference.value) return showErr('কার রেফারেন্সে / কোথা থেকে জেনে প্যাকেজ কিনছেন সেটা বাছাই করুন।', 'reference');
-        if (form.reference && form.reference.value === 'other' && !form.referenceNote.value.trim()) return showErr('কার রেফারেন্সে কিনছেন সেটা লিখে দিন।', 'reference');
         if (!file) return showErr('পেমেন্টের রিসিট / স্ক্রিনশট আপলোড করুন।', 'receipt');
         if (file.size > 5 * 1024 * 1024) return showErr('রিসিট ৫ MB এর কম হতে হবে।', 'receipt');
         var fd = new FormData(form); fd.set('receipt', file);
@@ -401,7 +398,7 @@ $jsMethods = array_map(function ($m) {
         } catch (x) { showErr('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); btn.disabled = false; btn.innerHTML = h; }
     });
     var coRef = document.getElementById('coRef');
-    if (coRef) coRef.addEventListener('change', function () { var n = document.getElementById('coRefNote'); n.hidden = coRef.value !== 'other'; if (!n.hidden) n.focus(); markBad(null); });
+    if (coRef) coRef.addEventListener('change', function () { markBad(null); });
     if (METHODS.length) pickMethod(METHODS[0].id);
 })();
 </script>

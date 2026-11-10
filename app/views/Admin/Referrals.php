@@ -35,6 +35,19 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     .rfa-tbl td { padding: 9px 6px; border-bottom: 1px solid #F1F5F9; color: #334155; }
     .rfa-empty { text-align: center; color: #94A3B8; padding: 22px 0; }
     .rfa-tw { overflow-x: auto; }
+    .rfg-search { display: flex; align-items: center; gap: 10px; border: 1.5px solid #DCECF5; border-radius: 12px; padding: 0 14px; margin-bottom: 12px; background: #fff; }
+    .rfg-search i { color: #94A3B8; } .rfg-search input { border: none; outline: none; height: 44px; flex: 1; min-width: 0; font-size: 14.5px; font-family: inherit; }
+    .rfg { border: 1px solid #E5ECF3; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+    .rfg[open] { border-color: #C4B5FD; }
+    .rfg summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 14px; background: #FAFBFF; }
+    .rfg summary::-webkit-details-marker { display: none; }
+    .rfg-who { font-size: 15px; font-weight: 800; color: #0F172A; } .rfg-who i { color: #7C3AED; margin-right: 4px; }
+    .rfg-who a { color: inherit; text-decoration: none; } .rfg-who a:hover { text-decoration: underline; }
+    .rfg-who small { font-weight: 600; color: #64748B; font-size: 12.5px; }
+    .rfg-code { font-family: ui-monospace, monospace; font-weight: 800; font-size: 13px; background: #FEF3C7; color: #92400E; border-radius: 8px; padding: 3px 9px; letter-spacing: .5px; }
+    .rfg-n { margin-left: auto; font-size: 13.5px; color: #334155; }
+    .rfg-car { color: #94A3B8; transition: transform .2s; } .rfg[open] .rfg-car { transform: rotate(180deg); }
+    .rfg .rfa-tbl { margin: 0; } .rfg .rfa-tw { padding: 4px 12px 10px; }
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 14px; } .rfa-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 640px) { .rfa-w { grid-template-columns: 1fr; } .rfa-w .acts { justify-content: flex-start; } }
 </style>
@@ -68,23 +81,49 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     </a>
     <?php endif; ?>
 
+    <?php
+    $refs = $ViewBag->Referrals ?: [];
+    $groups = [];
+    foreach ($refs as $r) {
+        $k = (int)$r->ReferrerId;
+        $groups[$k] ??= ['name' => (string)($r->ReferrerName ?: $r->ReferrerUser ?: ('#' . $k)), 'user' => (string)$r->ReferrerUser, 'code' => (string)$r->RefCode, 'role' => (string)$r->ReferrerRole, 'list' => [], 'ok' => 0];
+        $groups[$k]['list'][] = $r;
+        if ($r->Status === 'Credited') $groups[$k]['ok']++;
+    }
+    uasort($groups, fn($a, $b) => count($b['list']) <=> count($a['list']));
+    $roleBn = fn($r) => $r === 'Teacher' ? 'Teacher' : ($r === 'Admin' ? 'Admin' : 'Student');
+    $stBn = fn($r) => $r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>');
+    ?>
     <div class="rfa-card">
-        <h3><i class="fas fa-users" style="color:#00B5E0;"></i> সাম্প্রতিক রেফারেল</h3>
-        <?php if (!$ViewBag->Referrals): ?><div class="rfa-empty">এখনো কোনো রেফারেল নেই।</div><?php else: ?>
-            <div class="rfa-tw"><table class="rfa-tbl">
-                <tr><th>রেফার করেছেন</th><th>নতুন ইউজার</th><th>তারিখ</th><th>IP</th><th>বোনাস</th><th></th></tr>
-                <?php foreach ($ViewBag->Referrals as $r): ?>
-                    <tr>
-                        <td><a href="/Admin/UserDetails/<?= (int)$r->ReferrerId ?>"><?= e($r->ReferrerName ?: $r->ReferrerUser ?: '#' . $r->ReferrerId) ?></a></td>
-                        <td><?= e($r->ReferredName ?: $r->ReferredUser ?: 'Deleted') ?><br><small style="color:#94A3B8;"><?= e((string)$r->ReferredEmail) ?></small></td>
-                        <td><?= e(fmt_date($r->CreatedAt, 'd M Y, h:i A')) ?></td>
-                        <td><small><?= e((string)$r->Ip) ?></small></td>
-                        <td><?= $r->Status === 'Credited' ? '<b style="color:#16A34A;">৳' . (int)$r->Bonus . '</b>' : ($r->Status === 'Waiting' ? '<span style="color:#94A3B8; font-size:12.5px;">প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>') ?></td>
-                        <td><button type="button" class="rfa-btn <?= $r->Status !== 'Revoked' ? 'r' : 'l' ?>" style="height:32px; font-size:12px;" data-ref="<?= (int)$r->Id ?>" data-st="<?= $r->Status !== 'Revoked' ? 'Revoked' : 'Credited' ?>"><?= $r->Status !== 'Revoked' ? 'বাতিল' : 'আবার চালু' ?></button></td>
-                    </tr>
-                <?php endforeach; ?>
-            </table></div>
-            <p style="font-size:12.5px; color:#64748B; margin:10px 0 0;">একই IP থেকে অনেক সাইনআপ বা ভুয়া অ্যাকাউন্ট দেখলে "বাতিল" চাপুন — সেই বোনাস রেফারারের ব্যালেন্স থেকে কেটে যাবে।</p>
+        <h3><i class="fas fa-sitemap" style="color:#7C3AED;"></i> কে কার রেফারেল কোডে এসেছে <span class="rfa-pill" style="background:#EDE9FE;color:#5B21B6;"><?= count($groups) ?> জন রেফারার · <?= count($refs) ?> জন নতুন ইউজার</span></h3>
+        <?php if (!$refs): ?><div class="rfa-empty">এখনো কোনো রেফারেল নেই।</div><?php else: ?>
+        <div class="rfg-search"><i class="fas fa-magnifying-glass"></i><input type="search" id="rfgQ" placeholder="নাম, ইউজারনেম, ইমেইল বা রেফারেল কোড (যেমন MMAB12CD) দিয়ে খুঁজুন" autocomplete="off" /></div>
+        <div id="rfgList">
+        <?php foreach ($groups as $rid => $g): ?>
+            <details class="rfg" data-s="<?= e(mb_strtolower($g['name'] . ' ' . $g['user'] . ' ' . $g['code'] . ' ' . implode(' ', array_map(fn($x) => ($x->ReferredName ?? '') . ' ' . ($x->ReferredUser ?? '') . ' ' . ($x->ReferredEmail ?? ''), $g['list'])))) ?>">
+                <summary>
+                    <span class="rfg-who"><i class="fas fa-user-tie"></i> <a href="/Admin/UserDetails/<?= (int)$rid ?>"><?= e($g['name']) ?></a> <small><?= e($roleBn($g['role'])) ?><?= $g['user'] !== '' ? ' · @' . e($g['user']) : '' ?></small></span>
+                    <?php if ($g['code'] !== ''): ?><span class="rfg-code" title="এই ব্যক্তির রেফারেল কোড"><i class="fas fa-ticket"></i> <?= e($g['code']) ?></span><?php endif; ?>
+                    <span class="rfg-n"><b><?= count($g['list']) ?></b> জন এসেছে<?= $g['ok'] ? ' · <span style="color:#16A34A;">' . $g['ok'] . ' জন কিনেছে</span>' : '' ?></span>
+                    <i class="fas fa-chevron-down rfg-car"></i>
+                </summary>
+                <div class="rfa-tw"><table class="rfa-tbl">
+                    <tr><th>নতুন ইউজার</th><th>কবে এসেছে</th><th>অবস্থা</th><th>IP</th><th></th></tr>
+                    <?php foreach ($g['list'] as $r): ?>
+                        <tr>
+                            <td><?php if ($r->ReferredName || $r->ReferredUser): ?><a href="/Profile/Show/<?= (int)$r->ReferredUserId ?>" target="_blank"><b><?= e($r->ReferredName ?: $r->ReferredUser) ?></b></a> <small style="color:#64748B;">(<?= e($roleBn((string)$r->ReferredRole)) ?>)</small><?php else: ?><span style="color:#94A3B8;">Deleted</span><?php endif; ?><br><small style="color:#94A3B8;"><?= e((string)$r->ReferredEmail) ?></small></td>
+                            <td><?= e(fmt_date($r->CreatedAt, 'd M Y, h:i A')) ?></td>
+                            <td><?= $stBn($r) ?></td>
+                            <td><small><?= e((string)$r->Ip) ?></small></td>
+                            <td><button type="button" class="rfa-btn <?= $r->Status !== 'Revoked' ? 'r' : 'l' ?>" style="height:32px; font-size:12px;" data-ref="<?= (int)$r->Id ?>" data-st="<?= $r->Status !== 'Revoked' ? 'Revoked' : 'Credited' ?>"><?= $r->Status !== 'Revoked' ? 'বাতিল' : 'আবার চালু' ?></button></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table></div>
+            </details>
+        <?php endforeach; ?>
+        </div>
+        <div class="rfa-empty" id="rfgNone" hidden>কিছু পাওয়া যায়নি।</div>
+        <p style="font-size:12.5px; color:#64748B; margin:10px 0 0;">কারো নামে ক্লিক করলে তার আনা সবার তালিকা খুলবে। একই IP থেকে অনেক সাইনআপ বা ভুয়া অ্যাকাউন্ট দেখলে "বাতিল" চাপুন — সেই বোনাস রেফারারের ব্যালেন্স থেকে কেটে যাবে।</p>
         <?php endif; ?>
     </div>
 </div>
@@ -117,6 +156,14 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             if (!r2.success) { alert('❌ ' + (r2.message || '')); return; }
             location.reload();
         }
+    });    var q = document.getElementById('rfgQ');
+    if (q) q.addEventListener('input', function () {
+        var v = q.value.trim().toLowerCase(), any = false;
+        document.querySelectorAll('#rfgList .rfg').forEach(function (d) {
+            var hit = !v || d.getAttribute('data-s').indexOf(v) !== -1; d.hidden = !hit; if (hit) any = true;
+            if (v && hit) d.open = true; else if (!v) d.open = false;
+        });
+        document.getElementById('rfgNone').hidden = any;
     });
 })();
 </script>

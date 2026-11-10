@@ -948,7 +948,7 @@ class AdminController extends Controller
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(100)]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(2000)]);
     }
 
     /** GET /Admin/Withdrawals?w=Pending|Paid|Rejected|all — রেফারেল বোনাসের উইথড্র আবেদন: দেখে টাকা পাঠিয়ে Paid / বাতিল */

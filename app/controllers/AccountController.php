@@ -82,13 +82,10 @@ class AccountController extends Controller
         if ($this->db->UsernameExists($username)) $fail('Username already exists');
         if ($this->db->EmailExists($email)) $fail('Email already registered');
 
-        // কার রেফারেন্সে / কোথা থেকে জেনেছেন (Facebook, LinkedIn ...) — বাধ্যতামূলক
+        // কোথা থেকে জেনেছেন (Facebook, YouTube ...) — ঐচ্ছিক, শুধু তালিকা থেকে
         $how = null;
-        if ($this->db->ReferenceOptions(true)) {
-            $howKey = (string)input_str('howHeard', '');
-            $how = $this->db->CleanReference($howKey, (string)input_str('howHeardNote', ''));
-            if ($how === null) $fail($howKey === 'other' ? 'কোথা থেকে জেনেছেন সেটা লিখে দিন।' : 'আপনি কার রেফারেন্সে / কোথা থেকে জেনে এসেছেন সেটা বাছাই করুন।');
-        }
+        $howKey = (string)input_str('howHeard', '');
+        if ($howKey !== '') $how = $this->db->CleanReference($howKey);
 
         // রেফারেল / পার্টনার কোড (ঐচ্ছিক) — এজেন্সির কোড হলে পার্টনার, MMxxxxxx হলে ইউজার রেফারেল
         $typed = strtoupper(trim((string)input_str('refCode', '')));
@@ -101,7 +98,7 @@ class AccountController extends Controller
             } elseif (preg_match('/^MM[A-Z0-9]{6}$/', $typed) && $this->db->GetUserIdByReferralCode($typed)) {
                 $userRef = $typed;
             } else {
-                $fail('রেফারেল কোডটি সঠিক নয় — আবার দেখে লিখুন, অথবা ঘরটি খালি রাখুন।');
+                $fail('রেফারেন্স কোডটি সঠিক নয় — আবার দেখে লিখুন (যেমন MASHTER), অথবা ঘরটি খালি রাখুন।');
             }
         } elseif ($pend && ($partner = $this->db->GetPartnerByCode($pend[0])) !== null) {
             $pSrc = $pend[1];

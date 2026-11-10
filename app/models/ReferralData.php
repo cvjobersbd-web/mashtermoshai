@@ -177,8 +177,10 @@ trait ReferralData
     public function GetReferralsAdmin(int $limit = 200): array
     {
         $this->EnsureReferralTables();
-        return $this->all('SELECT r.*, a.`FullName` AS ReferrerName, a.`UserName` AS ReferrerUser, b.`FullName` AS ReferredName, b.`UserName` AS ReferredUser, b.`Email` AS ReferredEmail
-            FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId` LEFT JOIN `Users` b ON b.`Id` = r.`ReferredUserId` ORDER BY r.`Id` DESC LIMIT ' . max(1, min(500, $limit)));
+        return $this->all('SELECT r.*, a.`FullName` AS ReferrerName, a.`UserName` AS ReferrerUser, a.`Role` AS ReferrerRole, a.`ProfileImageLink` AS ReferrerPhoto,
+            (SELECT k.`Code` FROM `ReferralCodes` k WHERE k.`UserId` = r.`ReferrerId` LIMIT 1) AS RefCode,
+            b.`FullName` AS ReferredName, b.`UserName` AS ReferredUser, b.`Email` AS ReferredEmail, b.`Role` AS ReferredRole
+            FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId` LEFT JOIN `Users` b ON b.`Id` = r.`ReferredUserId` ORDER BY r.`Id` DESC LIMIT ' . max(1, min(2000, $limit)));
     }
 
     public function SetReferralStatus(int $id, string $status): void
@@ -210,7 +212,8 @@ trait ReferralData
         try {
             $this->EnsureReferralTables();
             $map = [];
-            foreach ($this->all('SELECT r.`ReferredUserId`, r.`ReferrerId`, r.`Status`, r.`Bonus`, r.`CreatedAt`, a.`FullName` AS ReferrerName, a.`UserName` AS ReferrerUser, a.`Role` AS ReferrerRole
+            foreach ($this->all('SELECT r.`ReferredUserId`, r.`ReferrerId`, r.`Status`, r.`Bonus`, r.`CreatedAt`, a.`FullName` AS ReferrerName, a.`UserName` AS ReferrerUser, a.`Role` AS ReferrerRole,
+                (SELECT k.`Code` FROM `ReferralCodes` k WHERE k.`UserId` = r.`ReferrerId` LIMIT 1) AS RefCode
                 FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId`') as $r) {
                 $r->ReferrerName = !is_blank($r->ReferrerName) ? (string)$r->ReferrerName : ((string)($r->ReferrerUser ?? '') ?: 'Deleted user');
                 $map[(int)$r->ReferredUserId] = $r;

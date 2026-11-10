@@ -1966,6 +1966,7 @@ function joined_via_html(?object $ref, bool $long = false): string
     $role = ($ref->ReferrerRole ?? '') === 'Teacher' ? 'Teacher' : (($ref->ReferrerRole ?? '') === 'Admin' ? 'Admin' : 'Student');
     $who = '<a href="/Profile/Show/' . (int)$ref->ReferrerId . '" target="_blank" rel="noopener">' . e((string)$ref->ReferrerName) . '</a>';
     return '<span class="jv-badge jv-ref" title="' . e('রেফার করেছেন: ' . $ref->ReferrerName . ' (' . $role . ')' . $st) . '"><i class="fas fa-gift"></i> ' . ($long ? 'রেফার করেছেন: ' : 'Ref: ') . $who
+        . ($long && !empty($ref->RefCode) ? ' <small>· কোড <b>' . e((string)$ref->RefCode) . '</b></small>' : '')
         . ($long ? ' <small>(' . $role . $st . ')</small>' : '') . '</span>';
 }
 
