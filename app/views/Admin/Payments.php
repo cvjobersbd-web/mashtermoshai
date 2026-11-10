@@ -46,6 +46,13 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     .ap-user small { display: block; color: #64748B; font-size: 12px; }
     .ap-role { font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; padding: 2px 9px; border-radius: 10px; background: #CFF2FC; color: #028EA5; }
     .ap-role.Teacher { background: #E8F8EF; color: #155724; }
+    .ap-type { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-weight: 800; font-size: 15px; border-radius: 12px; padding: 9px 14px; margin-bottom: 12px; }
+    .ap-type span { font-weight: 600; font-size: 13.5px; opacity: .85; margin-left: auto; }
+    .ap-type.t { background: #DCFCE7; color: #166534; border: 1.5px solid #86EFAC; }
+    .ap-type.s { background: #E0F2FE; color: #075985; border: 1.5px solid #7DD3FC; }
+    .ap-type.c { background: #F3E8FF; color: #6B21A8; border: 1.5px solid #D8B4FE; }
+    .ap-tchip { display: inline-block; font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 2px 9px; margin-left: 4px; vertical-align: middle; }
+    .ap-tchip.t { background: #DCFCE7; color: #166534; } .ap-tchip.s { background: #E0F2FE; color: #075985; } .ap-tchip.c { background: #F3E8FF; color: #6B21A8; }
     .ap-role.apply { background: #FEF3C7; color: #92400E; text-decoration: none; text-transform: none; letter-spacing: 0; font-size: 11.5px; margin-left: 4px; }
     .ap-pill { margin-left: auto; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; background: #FEF3C7; color: #92400E; text-transform: uppercase; }
     .ap-pill.Approved { background: #DCFCE7; color: #166534; } .ap-pill.Rejected { background: #FEE2E2; color: #991B1B; }
@@ -121,6 +128,8 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <a class="ap-rc" href="<?= e($p->ReceiptUrl) ?>" data-lb><img src="<?= e($p->ReceiptUrl) ?>" alt="Receipt" loading="lazy" /><span class="zoom"><i class="fas fa-expand"></i> বড় করুন</span></a>
             <?php endif; ?>
             <div style="min-width:0;">
+                <?php $pt = ['Teacher' => ['t', 'fa-chalkboard-user', 'শিক্ষক প্যাকেজ'], 'Course' => ['c', 'fa-book-open-reader', 'কোর্স কিনেছেন'], 'Student' => ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']][$p->Audience] ?? ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']; ?>
+                <div class="ap-type <?= $pt[0] ?>"><i class="fas <?= $pt[1] ?>"></i> <?= $pt[2] ?><span><?= e(preg_replace('/^কোর্স:\s*/u', '', (string)$p->PackageName)) ?> · <?= e(taka($p->Amount)) ?></span></div>
                 <div class="ap-user">
                     <span class="ap-ava"><?php if (!is_blank($p->ProfileImageLink)): ?><img src="<?= e($p->ProfileImageLink) ?>" alt="" /><?php else: ?><?= e($p->Initials) ?><?php endif; ?></span>
                     <div>
@@ -134,7 +143,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
                 <div class="ap-grid">
                     <div class="amt"><small>Amount</small><b><?= e(taka($p->Amount)) ?></b></div>
-                    <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span style="font-size:12px;color:#64748B;">(<?= $p->Audience === 'Teacher' ? 'শিক্ষক' : ($p->Audience === 'Course' ? 'কোর্স' : 'শিক্ষার্থী') ?>)</span></div>
+                    <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span class="ap-tchip <?= $pt[0] ?>"><?= $p->Audience === 'Teacher' ? 'শিক্ষক' : ($p->Audience === 'Course' ? 'কোর্স' : 'শিক্ষার্থী') ?></span></div>
                     <div><small>Method</small><b><?= e($p->MethodName) ?></b></div>
                     <div class="txn"><small>Transaction ID</small><b><?= e($p->TxnId ?: '—') ?></b></div>
                     <div><small>Payment date</small><b><?= e(date('d M Y', strtotime($p->PayDate))) ?></b></div>
