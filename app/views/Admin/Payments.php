@@ -165,7 +165,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                         <?php elseif ($ap['kyc'] === 'Approved'): ?>নতুন টিচার আবেদন · Teacher Verification: <b>Approved ✅</b> — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
                         <?php elseif ($ap['kyc'] === 'None'): ?>নতুন টিচার আবেদন (Teacher Verification চালুর আগের) — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
                         <?php elseif ($ap['kyc'] === 'Rejected'): ?>নতুন টিচার আবেদন · Teacher Verification: <b>Rejected</b> — নতুন Teacher Verification জমা দিয়ে Approve না হওয়া পর্যন্ত Accept করা যাবে না। <a href="/Admin/Kyc?k=teacher&amp;s=all">Teacher Verification দেখুন</a>
-                        <?php else: ?>নতুন টিচার আবেদন · Teacher Verification: <b>যাচাই বাকি</b> — আগে <a href="/Admin/Kyc?k=teacher">Teacher Verification পেজে NID দেখে Approve করুন</a>, তারপর এখানে Accept করুন।<?php endif; ?>
+                        <?php else: ?>নতুন টিচার আবেদন · Teacher Verification: <b>যাচাই বাকি</b> — আগে <a href="/Admin/Kyc?k=teacher">Teacher Verification পেজে ID কার্ড দেখে Approve করুন</a>, তারপর এখানে Accept করুন।<?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <?php $sk = ($ViewBag->StuKyc ?? [])[(int)$p->Id] ?? null; if ($sk !== null && $p->Status === 'Pending'): ?>

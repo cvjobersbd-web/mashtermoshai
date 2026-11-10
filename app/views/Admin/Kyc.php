@@ -65,7 +65,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
     <p class="sub">টিচার আর শিক্ষার্থীর জমা দেওয়া তথ্য, NID / ID কার্ডের ছবি দেখে Approve বা Reject করুন। নতুন টিচার আবেদনে: <b>Teacher Verification Approve</b> + <b>Teacher Payment Requests এ পেমেন্ট Accept</b> — দুটো হলেই ইউজার টিচার হয়ে যায়। Student Verification Approve হলে প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারে।</p>
 
     <div class="kc-kinds">
-        <?php foreach (['teacher' => ['t', 'fa-chalkboard-user', 'Teacher Verification', 'NID, মোবাইল, WhatsApp + আবেদনের ফর্ম'], 'student' => ['s', 'fa-user-graduate', 'Student Verification', 'বাবা-মা, ঠিকানা, ক্লাস, রেজাল্ট, ID কার্ড']] as $kk => [$cls, $ic, $lbl, $hint]): $pc = (int)$C[$kk]['Pending']; ?>
+        <?php foreach (['teacher' => ['t', 'fa-chalkboard-user', 'Teacher Verification', 'প্রতিষ্ঠানের ID কার্ড, মোবাইল, WhatsApp + আবেদনের ফর্ম'], 'student' => ['s', 'fa-user-graduate', 'Student Verification', 'বাবা-মা, ঠিকানা, ক্লাস, রেজাল্ট, ID কার্ড']] as $kk => [$cls, $ic, $lbl, $hint]): $pc = (int)$C[$kk]['Pending']; ?>
             <a class="kc-kind <?= $cls ?><?= $kind === $kk ? ' on' : '' ?>" href="/Admin/Kyc?k=<?= $kk ?>"><span class="ic"><i class="fas <?= $ic ?>"></i></span><span><b><?= $lbl ?></b><small><?= $hint ?> · মোট <?= array_sum($C[$kk]) ?></small></span><?php if ($pc): ?><span class="pend"><?= $pc ?> যাচাই বাকি</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
@@ -94,6 +94,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                             <div><small>মোবাইল</small><b><a class="tel" href="tel:<?= e($D['mobile'] ?? '') ?>"><?= e($D['mobile'] ?? '') ?></a></b></div>
                             <div><small>WhatsApp</small><b><a class="tel" href="https://wa.me/88<?= e($D['whatsapp'] ?? '') ?>" target="_blank" rel="noopener"><i class="fab fa-whatsapp" style="color:#25D366;"></i> <?= e($D['whatsapp'] ?? '') ?></a></b></div>
                             <div><small>NID নম্বর</small><b><?= e(($D['nid'] ?? '') ?: '—') ?></b></div>
+                            <?php if (!empty($D['university'])): ?><div class="w3"><small>শিক্ষা প্রতিষ্ঠান (ID কার্ড অনুযায়ী)</small><b><?= e($D['university']) ?></b></div><?php endif; ?>
                             <?php if ($a = $apps[$k->Id] ?? null): $r = $a['req']; ?>
                                 <div><small>শিক্ষা</small><b><?= e((string)$r->Education) ?></b></div>
                                 <div><small>প্রতিষ্ঠান</small><b><?= e((string)$r->Institution) ?></b></div>
@@ -133,15 +134,20 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                     <?php if ($k->Status === 'Rejected' && !is_blank($k->AdminNote)): ?><div class="kc-note"><i class="fas fa-circle-xmark"></i> বাতিলের কারণ: <?= e($k->AdminNote) ?></div><?php endif; ?>
                 </div>
                 <div class="kc-ids">
-                    <?php foreach (['front' => 'সামনে', 'back' => 'পেছনে'] as $side => $sl2): $u = '/Kyc/File/' . (int)$k->Id . '?side=' . $side; ?>
-                        <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="" loading="lazy" /><span><?= $kind === 'teacher' ? 'NID' : 'ID কার্ড' ?> · <?= $sl2 ?></span></a>
+                    <?php
+                    if ($kind !== 'teacher') $imgs = ['front' => 'ID কার্ড · সামনে', 'back' => 'ID কার্ড · পেছনে'];
+                    elseif (!empty($D['uniCard'])) $imgs = ['front' => 'প্রতিষ্ঠানের ID · সামনে', 'back' => 'প্রতিষ্ঠানের ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []);
+                    else $imgs = ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে'];
+                    foreach ($imgs as $side => $sl2): $u = '/Kyc/File/' . (int)$k->Id . '?side=' . $side; ?>
+                        <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="" loading="lazy" /><span><?= e($sl2) ?></span></a>
                     <?php endforeach; ?>
+                    <?php if ($kind === 'teacher' && !empty($D['uniCard']) && empty($D['nidFront']) && empty($D['nidBack'])): ?><div style="grid-column:1/-1;font-size:12.5px;color:#94A3B8;"><i class="fas fa-circle-info"></i> NID দেননি (ঐচ্ছিক)</div><?php endif; ?>
                 </div>
             </div>
             <?php if ($k->Status !== 'Rejected'): ?>
             <div class="kc-act">
                 <?php if ($k->Status === 'Pending'): ?><button type="button" class="kc-btn ok" data-kyc="<?= (int)$k->Id ?>" data-act="Approve"><i class="fas fa-check"></i> Approve</button><?php endif; ?>
-                <input type="text" maxlength="300" placeholder="বাতিলের কারণ (যেমন: NID এর ছবি ঝাপসা)" id="kycNote<?= (int)$k->Id ?>" />
+                <input type="text" maxlength="300" placeholder="বাতিলের কারণ (যেমন: ID কার্ডের ছবি ঝাপসা)" id="kycNote<?= (int)$k->Id ?>" />
                 <button type="button" class="kc-btn no" data-kyc="<?= (int)$k->Id ?>" data-act="Reject"><i class="fas fa-xmark"></i> <?= $k->Status === 'Approved' ? 'Approve বাতিল করুন' : 'Reject' ?></button>
             </div>
             <?php endif; ?>

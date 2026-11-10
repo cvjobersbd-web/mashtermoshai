@@ -336,7 +336,7 @@ class AdminController extends Controller
         $extra = '';
         try {
             if ($act === 'Approve') {
-                $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification Approve হয়েছে ✅', $isT ? 'আপনার পরিচয় (NID) যাচাই সম্পন্ন হয়েছে।' : 'আপনার শিক্ষার্থী Teacher Verification Approve হয়েছে — এখন প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারবেন।', 'success', $isT ? $link : '/Package?for=student', 'fa-id-card');
+                $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification Approve হয়েছে ✅', $isT ? 'আপনার পরিচয় (শিক্ষা প্রতিষ্ঠানের ID কার্ড) যাচাই সম্পন্ন হয়েছে।' : 'আপনার শিক্ষার্থী Teacher Verification Approve হয়েছে — এখন প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারবেন।', 'success', $isT ? $link : '/Package?for=student', 'fa-id-card');
                 if ($isT) {
                     $tr = $this->db->GetLatestTeacherRequest($k->UserId);
                     if ($tr && $tr->Status === 'Pending') {
@@ -1923,7 +1923,7 @@ class AdminController extends Controller
                 $kPre = $this->db->GetKyc((int)$trPre->UserId, 'teacher');
                 if ($kPre && $kPre->Status !== 'Approved') json_response(['success' => false, 'needKyc' => true, 'message' => $kPre->Status === 'Rejected'
                     ? 'এই আবেদনকারীর Teacher Verification বাতিল করা আছে — নতুন Teacher Verification জমা দিয়ে Approve না হওয়া পর্যন্ত পেমেন্ট Accept করা যাবে না।'
-                    : 'আগে Verification পেজে এই আবেদনকারীর NID / তথ্য দেখে Approve করুন — তারপর পেমেন্ট Accept করুন।']);
+                    : 'আগে Verification পেজে এই আবেদনকারীর ID কার্ড / তথ্য দেখে Approve করুন — তারপর পেমেন্ট Accept করুন।']);
             }
         }
         // শিক্ষার্থী প্যাকেজ: আগে Student Verification Approve (পুরোনো ইউজার যার ফর্মই নেই — আগের মতো চলে)

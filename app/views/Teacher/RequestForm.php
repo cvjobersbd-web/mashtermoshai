@@ -119,31 +119,37 @@ $ViewData['Title'] = 'Become a Tutor';
             <!-- এই তথ্যগুলো Tutor List → See (ডিটেইলস পেজে) দেখাবে -->
             <?php partial('Teacher/_DetailsForm', ['d' => $ViewBag->Details ?? db()->GetTeacherDetails((int)$Model->UserId)]); ?>
 
-            <?php $kOld = db()->GetKyc((int)$Model->UserId, 'teacher'); $kD = $kOld ? $kOld->D : []; ?>
+            <?php $kOld = db()->GetKyc((int)$Model->UserId, 'teacher'); $kD = $kOld ? $kOld->D : []; $kReuse = $kOld && $kOld->Status !== 'Approved' && !empty($kD['uniCard']); ?>
             <div class="form-section kyc-sec">
                 <div class="form-section-title"><i class="fas fa-id-card"></i> পরিচয় যাচাই (Teacher Verification)</div>
-                <p class="text-muted" style="font-size:13.5px;margin-top:-8px;"><i class="fas fa-lock"></i> NID এর ছবি শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</p>
+                <p class="text-muted" style="font-size:13.5px;margin-top:-8px;"><i class="fas fa-lock"></i> ID কার্ডের ছবি শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</p>
                 <div class="row">
                     <div class="col-md-4 mb-3"><label for="kycMobile" class="form-label fw-bold">মোবাইল নম্বর <span class="required-star">*</span></label><input type="tel" name="kycMobile" id="kycMobile" class="form-control" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)input_str('kycMobile', $kD['mobile'] ?? $Model->MobileNumber)) ?>" required /></div>
                     <div class="col-md-4 mb-3"><label for="kycWhatsapp" class="form-label fw-bold"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp নম্বর <span class="required-star">*</span></label><input type="tel" name="kycWhatsapp" id="kycWhatsapp" class="form-control" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)input_str('kycWhatsapp', $kD['whatsapp'] ?? '')) ?>" required />
                         <label style="font-size:12.5px;margin-top:5px;color:#475569;"><input type="checkbox" id="kycSameWa" /> মোবাইল নম্বরটাই WhatsApp</label></div>
-                    <div class="col-md-4 mb-3"><label for="kycNid" class="form-label fw-bold">NID নম্বর <span style="color:#94A3B8;font-weight:500;">(ঐচ্ছিক)</span></label><input type="text" name="kycNid" id="kycNid" class="form-control" maxlength="20" inputmode="numeric" placeholder="১০ / ১৩ / ১৭ ডিজিট" value="<?= e((string)input_str('kycNid', $kD['nid'] ?? '')) ?>" /></div>
+                    <div class="col-md-4 mb-3"><label for="kycUniversity" class="form-label fw-bold">শিক্ষা প্রতিষ্ঠান <span class="required-star">*</span></label><input type="text" name="kycUniversity" id="kycUniversity" class="form-control" maxlength="150" placeholder="বিশ্ববিদ্যালয় / কলেজ / স্কুলের নাম" value="<?= e((string)input_str('kycUniversity', $kD['university'] ?? '')) ?>" required /></div>
                 </div>
+                <div class="kyc-h"><i class="fas fa-building-columns"></i> শিক্ষা প্রতিষ্ঠানের ID কার্ড <span class="required-star">*</span> <small>— যে বিশ্ববিদ্যালয় / কলেজ / স্কুলে পড়ছেন বা পড়েছেন</small></div>
                 <div class="row">
-                    <?php foreach (['Front' => 'NID কার্ডের সামনের ছবি', 'Back' => 'NID কার্ডের পেছনের ছবি'] as $side => $lbl): $has = $kOld && $kOld->Status !== 'Approved' && kyc_file_path($kOld->{'File' . $side}); ?>
+                    <?php foreach (['UniFront' => ['front', 'ID কার্ডের সামনের ছবি', true], 'UniBack' => ['back', 'ID কার্ডের পেছনের ছবি', true], 'FileFront' => ['nidfront', 'NID এর সামনের ছবি', false], 'FileBack' => ['nidback', 'NID এর পেছনের ছবি', false]] as $nm => [$side, $lbl, $req]):
+                        $oldName = $kReuse ? ($side === 'front' ? $kOld->FileFront : ($side === 'back' ? $kOld->FileBack : ($kD[$side === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
+                        $has = $oldName && kyc_file_path($oldName); ?>
+                        <?php if ($nm === 'FileFront'): ?></div><div class="kyc-h" style="margin-top:6px;"><i class="fas fa-id-card"></i> NID কার্ড <small style="color:#94A3B8;">(ঐচ্ছিক — থাকলে দিন)</small></div><div class="row"><?php endif; ?>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold"><?= $lbl ?> <span class="required-star">*</span></label>
-                            <label class="kyc-drop" for="kycFile<?= $side ?>">
-                                <img alt="" id="kycPrev<?= $side ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . strtolower($side) . '"' : ' hidden' ?> />
-                                <span id="kycPh<?= $side ?>"<?= $has ? ' hidden' : '' ?>><i class="fas fa-id-card"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
+                            <label class="form-label fw-bold"><?= $lbl ?><?= $req ? ' <span class="required-star">*</span>' : '' ?></label>
+                            <label class="kyc-drop" for="kyc<?= $nm ?>">
+                                <img alt="" id="kycPrev<?= $nm ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . $side . '"' : ' hidden' ?> />
+                                <span id="kycPh<?= $nm ?>"<?= $has ? ' hidden' : '' ?>><i class="fas <?= $req ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
                             </label>
-                            <input type="file" name="kycFile<?= $side ?>" id="kycFile<?= $side ?>" accept="image/jpeg,image/png,image/webp" hidden<?= $has ? '' : ' required' ?> />
+                            <input type="file" name="kyc<?= $nm ?>" id="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" hidden data-kyc-req="<?= $req && !$has ? '1' : '0' ?>" />
                             <?php if ($has): ?><small class="text-muted">আগের ছবিটাই থাকবে — বদলাতে চাইলে উপরে চাপুন।</small><?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <div class="row"><div class="col-md-4 mb-2"><label for="kycNid" class="form-label fw-bold">NID নম্বর <span style="color:#94A3B8;font-weight:500;">(ঐচ্ছিক)</span></label><input type="text" name="kycNid" id="kycNid" class="form-control" maxlength="20" inputmode="numeric" placeholder="১০ / ১৩ / ১৭ ডিজিট" value="<?= e((string)input_str('kycNid', $kD['nid'] ?? '')) ?>" /></div></div>
             </div>
             <style>
+                .kyc-h { font-weight: 800; color: #08224A; font-size: 15px; margin: 4px 0 10px; } .kyc-h i { color: #028EA5; margin-right: 6px; } .kyc-h small { font-weight: 500; color: #64748B; font-size: 13px; }
                 .kyc-drop { display: flex; align-items: center; justify-content: center; border: 2px dashed #BFE3F2; border-radius: 14px; background: #F5FBFF; min-height: 170px; cursor: pointer; overflow: hidden; text-align: center; padding: 10px; }
                 .kyc-drop:hover { border-color: #028EA5; }
                 .kyc-drop img { max-width: 100%; max-height: 220px; border-radius: 10px; }
@@ -152,16 +158,18 @@ $ViewData['Title'] = 'Become a Tutor';
             </style>
             <script>
             (function () {
-                ['Front', 'Back'].forEach(function (s) {
-                    var f = document.getElementById('kycFile' + s);
+                ['UniFront', 'UniBack', 'FileFront', 'FileBack'].forEach(function (s) {
+                    var f = document.getElementById('kyc' + s);
                     f.addEventListener('change', function () { var x = f.files[0]; if (!x) return; var i = document.getElementById('kycPrev' + s); i.src = URL.createObjectURL(x); i.hidden = false; document.getElementById('kycPh' + s).hidden = true; });
                 });
                 var same = document.getElementById('kycSameWa'), m = document.getElementById('kycMobile'), w = document.getElementById('kycWhatsapp');
                 same.addEventListener('change', function () { if (same.checked) w.value = m.value; });
                 m.addEventListener('input', function () { if (same.checked) w.value = m.value; });
+                var uni = document.getElementById('kycUniversity'), tdUni = document.querySelector('input[name="td[university]"]');
+                if (tdUni && uni && !uni.value) { uni.value = tdUni.value; tdUni.addEventListener('input', function () { if (!uni.dataset.touched) uni.value = tdUni.value; }); uni.addEventListener('input', function () { uni.dataset.touched = '1'; }); }
                 document.getElementById('teacherForm').addEventListener('submit', function (e) {
-                    var miss = ['Front', 'Back'].filter(function (s) { return document.getElementById('kycFile' + s).required && !document.getElementById('kycFile' + s).files.length; });
-                    if (miss.length) { e.preventDefault(); alert('NID কার্ডের ' + (miss.length === 2 ? 'সামনের আর পেছনের' : (miss[0] === 'Front' ? 'সামনের' : 'পেছনের')) + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
+                    var miss = ['UniFront', 'UniBack'].filter(function (s) { var f = document.getElementById('kyc' + s); return f.dataset.kycReq === '1' && !f.files.length; });
+                    if (miss.length) { e.preventDefault(); alert('শিক্ষা প্রতিষ্ঠানের ID কার্ডের ' + (miss.length === 2 ? 'সামনের আর পেছনের' : (miss[0] === 'UniFront' ? 'সামনের' : 'পেছনের')) + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
                 });
             })();
             </script>

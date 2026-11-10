@@ -137,20 +137,39 @@ class KycController extends Controller
         $d = [];
         $d['mobile'] = self::cleanMobile((string)input_str('kycMobile', '')) ?? $fail('মোবাইল নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।', 'kycMobile');
         $d['whatsapp'] = self::cleanMobile((string)input_str('kycWhatsapp', '')) ?? $fail('WhatsApp নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।', 'kycWhatsapp');
+        $uni = trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('kycUniversity', ''))));
+        if ($uni === '') { $td = $_POST['td'] ?? []; $uni = is_array($td) ? trim(strip_tags((string)($td['university'] ?? ''))) : ''; }
+        if (mb_strlen($uni) < 2) $fail('কোন শিক্ষা প্রতিষ্ঠানে (বিশ্ববিদ্যালয় / কলেজ / স্কুল) পড়ছেন বা পড়েছেন সেটা লিখুন।', 'kycUniversity');
+        $d['university'] = mb_substr($uni, 0, 150);
         $nid = preg_replace('/\D/', '', (string)input_str('kycNid', ''));
         if ($nid !== '' && !in_array(strlen($nid), [10, 13, 17], true)) $fail('NID নম্বর ১০, ১৩ বা ১৭ ডিজিটের হয় — দেখে লিখুন (না দিলেও চলবে)।', 'kycNid');
         $d['nid'] = $nid;
-        $out = [];
-        foreach (['Front' => 'NID এর সামনের', 'Back' => 'NID এর পেছনের'] as $side => $bn) {
-            $f = upload_file('kycFile' . $side);
+        $d['uniCard'] = 1;
+        $oldD = $old && !empty($old->D['uniCard']) ? $old->D : null;   // আগের জমা নতুন ধরনের হলে তার ছবি আবার ব্যবহার করা যায়
+        $new = [];
+        $cleanup = function () use (&$new) { foreach ($new as $n) kyc_delete_file($n); };
+        // বিশ্ববিদ্যালয়ের ID কার্ড — বাধ্যতামূলক
+        $uniFiles = [];
+        foreach (['Front' => 'শিক্ষা প্রতিষ্ঠানের ID কার্ডের সামনের', 'Back' => 'শিক্ষা প্রতিষ্ঠানের ID কার্ডের পেছনের'] as $side => $bn) {
+            $f = upload_file('kycUni' . $side);
             $prop = 'File' . $side;
-            if (!$f && $old && kyc_file_path($old->$prop)) { $out[] = (string)$old->$prop; continue; }
+            if (!$f && $oldD && kyc_file_path($old->$prop)) { $uniFiles[] = (string)$old->$prop; continue; }
+            $err = null;
+            $name = kyc_store_image($f, $me, 'uni' . strtolower($side), $err);
+            if (!$name) { $cleanup(); $fail("$bn ছবি: " . $err, 'kycUni' . $side); }
+            $uniFiles[] = $new[] = $name;
+        }
+        // NID — ঐচ্ছিক
+        foreach (['Front' => 'NID এর সামনের', 'Back' => 'NID এর পেছনের'] as $side => $bn) {
+            $key = 'nid' . $side;
+            $f = upload_file('kycFile' . $side);
+            if (!$f) { $d[$key] = $oldD && kyc_file_path($oldD[$key] ?? null) ? (string)$oldD[$key] : ''; continue; }
             $err = null;
             $name = kyc_store_image($f, $me, 'nid' . strtolower($side), $err);
-            if (!$name) { foreach ($out as $n) if (!$old || ($n !== $old->FileFront && $n !== $old->FileBack)) kyc_delete_file($n); $fail("$bn ছবি: " . $err, 'kycFile' . $side); }
-            $out[] = $name;
+            if (!$name) { $cleanup(); $fail("$bn ছবি: " . $err, 'kycFile' . $side); }
+            $d[$key] = $new[] = $name;
         }
-        return [$d, $out[0], $out[1]];
+        return [$d, $uniFiles[0], $uniFiles[1]];
     }
 
     public function Teacher_POST(): void
@@ -178,7 +197,9 @@ class KycController extends Controller
         if (!$k) not_found('পাওয়া যায়নি।');
         $ok = $k->UserId === $me || (is_admin() && admin_can(admin_action_rule('Kyc')));
         if (!$ok) not_found('পাওয়া যায়নি।');
-        $path = kyc_file_path(input_str('side', 'front') === 'back' ? $k->FileBack : $k->FileFront);
+        $side = (string)input_str('side', 'front');
+        $name = ['front' => $k->FileFront, 'back' => $k->FileBack, 'nidfront' => $k->D['nidFront'] ?? null, 'nidback' => $k->D['nidBack'] ?? null][$side] ?? $k->FileFront;
+        $path = kyc_file_path($name);
         if (!$path) not_found('ছবিটা পাওয়া যায়নি।');
         $mime = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][strtolower(pathinfo($path, PATHINFO_EXTENSION))] ?? 'application/octet-stream';
         while (ob_get_level()) ob_end_clean();

@@ -11,7 +11,7 @@ $showForm = $st === 'None' || $st === 'Rejected';
 <div class="ky-page">
     <div class="ky-wrap">
         <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> টিচারের পরিচয় যাচাই (Teacher Verification)</h1>
-        <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য সব টিচারের NID আর যোগাযোগের নম্বর যাচাই করা হয়।</p>
+        <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য টিচারের শিক্ষা প্রতিষ্ঠানের (বিশ্ববিদ্যালয় / কলেজ / স্কুল) ID কার্ড আর যোগাযোগের নম্বর যাচাই করা হয় (NID ঐচ্ছিক)।</p>
         <?php if ($st === 'Pending'): ?>
             <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন।</p></div></div>
         <?php elseif ($st === 'Approved'): ?>
@@ -20,14 +20,17 @@ $showForm = $st === 'None' || $st === 'Rejected';
             <div class="ky-state no"><i class="fas fa-circle-xmark"></i><div><b>তথ্য গ্রহণ করা হয়নি</b><p><?= !is_blank($k->AdminNote) ? 'কারণ: ' . e($k->AdminNote) . '<br>' : '' ?>নিচে ঠিক করে আবার জমা দিন।</p></div></div>
         <?php endif; ?>
 
+        <?php $isUni = !empty($D['uniCard']); $reuse = $k && $isUni;
+            $imgs = $isUni ? ['front' => 'প্রতিষ্ঠানের ID · সামনে', 'back' => 'প্রতিষ্ঠানের ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []) : ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে']; ?>
         <?php if (!$showForm): ?>
             <div class="ky-card">
                 <div class="ky-sum">
                     <div><small>মোবাইল</small><b><?= e($D['mobile'] ?? '') ?></b></div>
                     <div><small>WhatsApp</small><b><?= e($D['whatsapp'] ?? '') ?></b></div>
+                    <?php if ($isUni): ?><div><small>শিক্ষা প্রতিষ্ঠান</small><b><?= e($D['university'] ?? '') ?></b></div><?php endif; ?>
                     <div><small>NID নম্বর</small><b><?= e(($D['nid'] ?? '') ?: '—') ?></b></div>
                 </div>
-                <div class="ky-ids"><img src="/Kyc/File/<?= (int)$k->Id ?>?side=front" alt="NID front" /><img src="/Kyc/File/<?= (int)$k->Id ?>?side=back" alt="NID back" /></div>
+                <div class="ky-ids"><?php foreach ($imgs as $sd => $lb): ?><img src="/Kyc/File/<?= (int)$k->Id ?>?side=<?= $sd ?>" alt="<?= e($lb) ?>" title="<?= e($lb) ?>" /><?php endforeach; ?></div>
             </div>
         <?php else: ?>
         <form id="kyForm" autocomplete="off" novalidate class="ky-card">
@@ -35,20 +38,23 @@ $showForm = $st === 'None' || $st === 'Rejected';
                 <div class="ky-f" data-f="kycMobile"><label class="l" for="kycMobile">মোবাইল নম্বর <span class="r">*</span></label><input type="tel" id="kycMobile" name="kycMobile" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)($D['mobile'] ?? ($u->MobileNumber ?? ''))) ?>" /></div>
                 <div class="ky-f" data-f="kycWhatsapp"><label class="l" for="kycWhatsapp"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp নম্বর <span class="r">*</span></label><input type="tel" id="kycWhatsapp" name="kycWhatsapp" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)($D['whatsapp'] ?? '')) ?>" />
                     <label class="ky-chk"><input type="checkbox" id="kySameWa" /> মোবাইলটাই WhatsApp</label></div>
-                <div class="ky-f" data-f="kycNid"><label class="l" for="kycNid">NID নম্বর <small>(ঐচ্ছিক)</small></label><input type="text" id="kycNid" name="kycNid" maxlength="20" inputmode="numeric" value="<?= e((string)($D['nid'] ?? '')) ?>" /></div>
+                <div class="ky-f" data-f="kycUniversity"><label class="l" for="kycUniversity">শিক্ষা প্রতিষ্ঠান <span class="r">*</span></label><input type="text" id="kycUniversity" name="kycUniversity" maxlength="150" placeholder="বিশ্ববিদ্যালয় / কলেজ / স্কুলের নাম" value="<?= e((string)($D['university'] ?? '')) ?>" /></div>
             </div>
-            <div class="ky-lock"><i class="fas fa-lock"></i> NID এর ছবি শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</div>
+            <div class="ky-lock"><i class="fas fa-lock"></i> ছবিগুলো শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</div>
             <div class="ky-g2">
-                <?php foreach (['Front' => 'NID — সামনের দিক', 'Back' => 'NID — পেছনের দিক'] as $side => $lbl): $has = $k && kyc_file_path($k->{'File' . $side}); ?>
-                    <div class="ky-f" data-f="kycFile<?= $side ?>"><label class="l"><?= $lbl ?> <span class="r">*</span></label>
-                        <label class="ky-drop" id="kyDrop<?= $side ?>" for="kycFile<?= $side ?>">
-                            <img alt=""<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . strtolower($side) . '"' : ' hidden' ?> />
-                            <span<?= $has ? ' hidden' : '' ?>><i class="fas fa-id-card"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে</small></span>
+                <?php foreach (['UniFront' => ['front', 'শিক্ষা প্রতিষ্ঠানের ID কার্ড — সামনে', true], 'UniBack' => ['back', 'শিক্ষা প্রতিষ্ঠানের ID কার্ড — পেছনে', true], 'FileFront' => ['nidfront', 'NID — সামনে', false], 'FileBack' => ['nidback', 'NID — পেছনে', false]] as $nm => [$sd, $lbl, $req]):
+                    $oldName = $reuse ? ($sd === 'front' ? $k->FileFront : ($sd === 'back' ? $k->FileBack : ($D[$sd === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
+                    $has = $oldName && kyc_file_path($oldName); ?>
+                    <div class="ky-f" data-f="kyc<?= $nm ?>"><label class="l"><?= $lbl ?> <?= $req ? '<span class="r">*</span>' : '<small>(ঐচ্ছিক)</small>' ?></label>
+                        <label class="ky-drop" id="kyDrop<?= $nm ?>" for="kyc<?= $nm ?>">
+                            <img alt=""<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . $sd . '"' : ' hidden' ?> />
+                            <span<?= $has ? ' hidden' : '' ?>><i class="fas <?= $req ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে</small></span>
                         </label>
-                        <input type="file" id="kycFile<?= $side ?>" name="kycFile<?= $side ?>" accept="image/jpeg,image/png,image/webp" data-file="kyDrop<?= $side ?>" hidden />
+                        <input type="file" id="kyc<?= $nm ?>" name="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" data-file="kyDrop<?= $nm ?>" hidden />
                     </div>
                 <?php endforeach; ?>
             </div>
+            <div class="ky-f" data-f="kycNid" style="max-width:300px;"><label class="l" for="kycNid">NID নম্বর <small>(ঐচ্ছিক)</small></label><input type="text" id="kycNid" name="kycNid" maxlength="20" inputmode="numeric" value="<?= e((string)($D['nid'] ?? '')) ?>" /></div>
             <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
                 <button type="submit" class="ky-btn" id="kyBtn"><i class="fas fa-paper-plane"></i> জমা দিন</button>
                 <span class="ky-msg" id="kyMsg"></span>
