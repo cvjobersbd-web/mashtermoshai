@@ -7,7 +7,8 @@ $ViewData['Robots'] = 'noindex, nofollow';
 $D = $k ? $k->D : [];
 $u = db()->GetUserById((int)current_user_id());
 $v = fn($key, $def = '') => (string)($D[$key] ?? $def);
-$showForm = $st === 'None' || $st === 'Rejected';
+$teacherAcc = !empty($ViewBag->TeacherAcc);
+$showForm = ($st === 'None' || $st === 'Rejected') && !$teacherAcc;
 $next = (string)($ViewBag->Next ?? '');
 $groups = ['প্রাক-প্রাথমিক' => ['play', 'nursery', 'kg'], 'প্রাথমিক (Class 1–5)' => ['c1', 'c2', 'c3', 'c4', 'c5'], 'মাধ্যমিক (Class 6–10)' => ['c6', 'c7', 'c8', 'c9', 'c10'],
     'উচ্চ মাধ্যমিক' => ['c11', 'c12'], 'ডিপ্লোমা / বিশ্ববিদ্যালয়' => ['diploma', 'uni1', 'uni2', 'uni3', 'uni4', 'masters']];
@@ -21,7 +22,9 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
         <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> Student Verification</h1>
         <p class="ky-sub">নতুন অ্যাকাউন্ট প্রথমে <b>User</b> থাকে — এই ফর্ম পূরণ করে অ্যাডমিন Approve করলে অ্যাকাউন্ট <b>Student</b> হয়। শিক্ষার্থী প্যাকেজ কেনার আগে ফর্মটা পূরণ করা বাধ্যতামূলক। Play / Nursery / KG থেকে বিশ্ববিদ্যালয় — সবাই এই ফর্ম পূরণ করতে পারবে। ছোটদের ক্ষেত্রে বাবা / মা পূরণ করে দিন।</p>
 
-        <?php if ($st === 'Pending'): ?>
+        <?php if ($teacherAcc && ($st === 'None' || $st === 'Rejected')): ?>
+            <div class="ky-state no"><i class="fas fa-user-lock"></i><div><b>এটা টিচার অ্যাকাউন্ট</b><p><?= e(ONE_ROLE_MSG_TEACHER) ?></p></div></div>
+        <?php elseif ($st === 'Pending'): ?>
             <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>ফর্ম যাচাই হচ্ছে</b><p>আপনার তথ্য অ্যাডমিনের কাছে আছে। এর মধ্যেই শিক্ষার্থী প্যাকেজ কিনে পেমেন্ট করতে পারবেন — অ্যাডমিন ফর্ম Approve করে পেমেন্ট Accept করবেন। Approve হলে আপনার অ্যাকাউন্ট <b>User</b> থেকে <b>Student</b> হয়ে যাবে।<?php if ($next !== ''): ?> <a href="<?= e($next) ?>" style="font-weight:800;color:inherit;">চালিয়ে যান →</a><?php else: ?> <a href="/Package?for=student" style="font-weight:800;color:inherit;">প্যাকেজ দেখুন →</a><?php endif; ?></p></div></div>
         <?php elseif ($st === 'Approved'): ?>
             <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার Student Verification Approve হয়েছে</b><p>এখন প্যাকেজ কিনতে ও সব সুবিধা ব্যবহার করতে পারবেন।<?php if ($next !== ''): ?> <a href="<?= e($next) ?>" style="font-weight:800;color:inherit;">চালিয়ে যান →</a><?php endif; ?></p></div></div>
@@ -29,7 +32,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
             <div class="ky-state no"><i class="fas fa-circle-xmark"></i><div><b>ফর্মটা গ্রহণ করা হয়নি</b><p><?= !is_blank($k->AdminNote) ? 'কারণ: ' . e($k->AdminNote) . '<br>' : '' ?>নিচে তথ্য ঠিক করে আবার জমা দিন।</p></div></div>
         <?php endif; ?>
 
-        <?php if (!$showForm): ?>
+        <?php if (!$showForm && !($teacherAcc && ($st === 'None' || $st === 'Rejected'))): ?>
             <div class="ky-card">
                 <h3><i class="fas fa-user-graduate" style="color:#0EA5E9;"></i> জমা দেওয়া তথ্য</h3>
                 <div class="ky-sum">
@@ -46,7 +49,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                 </div>
                 <div class="ky-ids"><img src="/Kyc/File/<?= (int)$k->Id ?>?side=front" alt="ID front" /><img src="/Kyc/File/<?= (int)$k->Id ?>?side=back" alt="ID back" /></div>
             </div>
-        <?php else: ?>
+        <?php elseif ($showForm): ?>
         <form id="kyForm" autocomplete="off" novalidate>
             <div class="ky-card">
                 <h3><span class="n">১</span> শিক্ষার্থীর তথ্য</h3>

@@ -165,7 +165,9 @@ $forms = !$isOwner ? [] : [
                     <?php endif; ?>
                 <?php else: /* নিজের প্রোফাইল, এখনো টিচার না */ ?>
                     <?php $st = $Model->TeacherStatus; ?>
-                    <?php if ($st === 'Expired'): ?>
+                    <?php if (account_track((int)$u->Id) === 'student'): ?>
+                        <div class="ab-tutor"><i class="fas fa-user-graduate" style="color:#0369A1;"></i><div><strong>এটা শিক্ষার্থী অ্যাকাউন্ট</strong><p>এক অ্যাকাউন্টে শিক্ষার্থী আর টিচার দুটো হওয়া যায় না। টিচার হতে চাইলে লগআউট করে নতুন অ্যাকাউন্ট খুলে সেখান থেকে Become a Tutor ফর্ম পূরণ করুন।</p></div></div>
+                    <?php elseif ($st === 'Expired'): ?>
                         <div class="ab-tutor"><i class="fas fa-user-clock" style="color:#e74c3c;"></i><div><strong>টিচার প্যাকেজের মেয়াদ শেষ</strong><p>প্যাকেজ রিনিউ করলেই আবার টিচার হয়ে যাবেন — আপনার আগের সব তথ্য রাখা আছে।</p></div></div>
                         <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-rotate"></i> প্যাকেজ রিনিউ করুন</a>
                     <?php elseif ($st === 'AwaitingPayment'): ?>

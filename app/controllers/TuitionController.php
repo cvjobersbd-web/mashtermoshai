@@ -50,6 +50,7 @@ class TuitionController extends Controller
         if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
         if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
         // Student Verification Approve না হলে টিউশন পোস্ট করা যাবে না
+        if (session_get('UserRole') === 'User' && account_track($userId) === 'teacher') json_response(['success' => false, 'message' => ONE_ROLE_MSG_TEACHER]);
         if (session_get('UserRole') === 'User') {
             $ks = $this->db->KycStatus($userId, 'student');
             if ($ks !== 'Approved') json_response(['success' => false, 'needPackage' => '/Kyc/Student?next=' . rawurlencode('/Tuition/Circular'), 'needKyc' => true,

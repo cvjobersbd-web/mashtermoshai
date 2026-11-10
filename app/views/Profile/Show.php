@@ -134,7 +134,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
             <div class="pf-nav-col">
                 <nav class="pf-card pf-nav" aria-label="Profile sections">
                     <?php foreach ($nav as [$k, $label, $icon]): ?>
-                        <?php if ($k === 'settings' && $isOwner && !$isTeacher):
+                        <?php if ($k === 'settings' && $isOwner && !$isTeacher && account_track((int)$u->Id) !== 'student'):
                             $bts = $Model->TeacherStatus; ?>
                             <a href="?tab=profile#ab-tutor" data-ab-go="tutor" class="pf-become<?= $bts === 'Pending' ? ' pending' : '' ?>">
                                 <i class="fas fa-chalkboard-user"></i> <?= $bts === 'Pending' ? 'আবেদন যাচাই হচ্ছে' : 'Become a Tutor' ?>
@@ -468,7 +468,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                 <a href="?tab=profile#ab-education" data-ab-go="education" data-ab-open="1"><i class="fas fa-graduation-cap"></i> Education <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="?tab=profile#ab-address" data-ab-go="address" data-ab-open="1"><i class="fas fa-location-dot"></i> Address <i class="fas fa-chevron-right chev"></i></a>
                                 <a href="?tab=profile#ab-links" data-ab-go="links" data-ab-open="1"><i class="fas fa-link"></i> Important Links <i class="fas fa-chevron-right chev"></i></a>
-                                <?php if (!$isTeacher): ?><a href="?tab=profile#ab-tutor" data-ab-go="tutor"><i class="fas fa-chalkboard-user"></i> Become a Tutor <i class="fas fa-chevron-right chev"></i></a><?php endif; ?>
+                                <?php if (!$isTeacher && account_track((int)$u->Id) !== 'student'): ?><a href="?tab=profile#ab-tutor" data-ab-go="tutor"><i class="fas fa-chalkboard-user"></i> Become a Tutor <i class="fas fa-chevron-right chev"></i></a><?php endif; ?>
                                 <a href="/Profile/Views"><i class="fas fa-eye"></i> Who viewed my profile <i class="fas fa-chevron-right chev"></i></a>
                             </div>
                         </div>

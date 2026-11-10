@@ -15,6 +15,9 @@ class PaymentController extends Controller
     {
         $role = (string)session_get('UserRole');
         if ($role === 'Admin') return 'অ্যাডমিন অ্যাকাউন্ট দিয়ে প্যাকেজ কেনা যায় না।';
+        $track = account_track((int)current_user_id());
+        if ($pkg->Audience === 'Student' && $track === 'teacher') return ONE_ROLE_MSG_TEACHER;
+        if ($pkg->Audience === 'Teacher' && $track === 'student') return ONE_ROLE_MSG_STUDENT;
         if ($pkg->Audience === 'Student' && $role === 'User') {
             $ks = $this->db->KycStatus((int)current_user_id(), 'student');
             // ফর্ম জমা দিলেই প্যাকেজ কেনা যায় (যাচাই চলাকালীনও) — অ্যাডমিন আগে ফর্ম Approve করে তারপর পেমেন্ট Accept করেন

@@ -1255,17 +1255,21 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                         <i class="fas fa-bookmark"></i> আমার কোর্স
                                     </a>
                                 </li>
-                                <?php if ($userRole === 'User'): ?>
+                                <?php if ($userRole === 'User'): $accTrack = account_track((int)current_user_id()); ?>
+                                <?php if ($accTrack !== 'teacher'): ?>
                                 <li>
                                     <a class="dropdown-item" href="/Kyc/Student">
                                         <i class="fas fa-id-card"></i> Student Verification
                                     </a>
                                 </li>
+                                <?php endif; ?>
+                                <?php if ($accTrack !== 'student'): ?>
                                 <li>
                                     <a class="dropdown-item" href="/Profile/Show?tab=profile#ab-tutor">
                                         <i class="fas fa-chalkboard-user"></i> Become a Tutor
                                     </a>
                                 </li>
+                                <?php endif; ?>
                                 <?php endif; ?>
                                 <?php endif; ?>
                                 <li>
@@ -1397,9 +1401,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <a href="/Course/My" class="<?= $mActive('/Course/My') ?>"><i class="fas fa-bookmark"></i><span>আমার কোর্স</span></a>
-                    <?php if ($mRole === 'User'): ?>
-                    <a href="/Kyc/Student" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span>Student Verification</span></a>
-                    <a href="/Profile/Show?tab=profile#ab-tutor"><i class="fas fa-chalkboard-user"></i><span>Become a Tutor</span></a>
+                    <?php if ($mRole === 'User'): $mTrack = account_track((int)current_user_id()); ?>
+                    <?php if ($mTrack !== 'teacher'): ?><a href="/Kyc/Student" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span>Student Verification</span></a><?php endif; ?>
+                    <?php if ($mTrack !== 'student'): ?><a href="/Profile/Show?tab=profile#ab-tutor"><i class="fas fa-chalkboard-user"></i><span>Become a Tutor</span></a><?php endif; ?>
                     <?php endif; ?>
                     <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
                     <?php if ($mRole === 'User'): ?>

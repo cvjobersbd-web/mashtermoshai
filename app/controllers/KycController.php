@@ -45,7 +45,7 @@ class KycController extends Controller
         $me = $this->me();
         if (is_admin()) redirect('/Admin/Kyc');
         $this->view(null, $this->db->GetKyc($me, 'student'), ['Classes' => Db::KYC_CLASSES, 'Districts' => Db::KYC_DISTRICTS, 'Boards' => Db::KYC_BOARDS,
-            'Edit' => input_bool('edit'), 'Next' => $this->safeNext()]);
+            'Edit' => input_bool('edit'), 'Next' => $this->safeNext(), 'TeacherAcc' => account_track($me) === 'teacher']);
     }
 
     private function safeNext(): string
@@ -58,6 +58,7 @@ class KycController extends Controller
     {
         $me = $this->me(true);
         if (is_admin()) $this->fail('অ্যাডমিন অ্যাকাউন্টের Student Verification লাগে না।');
+        if (account_track($me) === 'teacher') $this->fail(ONE_ROLE_MSG_TEACHER);
         $old = $this->db->GetKyc($me, 'student');
         if ($old && $old->Status === 'Pending') $this->fail('আপনার ফর্ম যাচাই হচ্ছে — অ্যাডমিন দেখার পর আবার জমা দিতে পারবেন।');
         if ($old && $old->Status === 'Approved') $this->fail('আপনার Student Verification আগেই Approve হয়েছে।');

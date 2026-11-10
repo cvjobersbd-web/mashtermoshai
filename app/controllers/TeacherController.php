@@ -14,6 +14,7 @@ class TeacherController extends Controller
         $userId = current_user_id() ?? 0;
 
         $status = $this->db->GetUserTeacherRequestStatus($userId);
+        if (account_track($userId) === 'student') { tempdata_set('Info', ONE_ROLE_MSG_STUDENT); redirect('/Profile/Show?tab=profile#ab-tutor'); }
         if ($status === 'Expired') {
             tempdata_set('Info', 'আপনার টিচার প্যাকেজের মেয়াদ শেষ হয়েছে — প্যাকেজ রিনিউ করলেই আবার টিচার হয়ে যাবেন (আগের সব তথ্য রাখা আছে)।');
             redirect('/Package?for=teacher&apply=1');
@@ -83,6 +84,7 @@ class TeacherController extends Controller
         if ($model->Education === '') $errors[] = 'Highest Education দিন।';
         if ($model->CvLink !== '' && !preg_match('#^https?://#i', $model->CvLink)) $errors[] = 'CV Link https:// দিয়ে শুরু হতে হবে।';
         if (in_array($this->db->GetUserTeacherRequestStatus($userId), ['Pending', 'AwaitingPayment', 'Approved'], true)) $errors[] = 'আপনার আগের আবেদন এখনো চালু আছে।';
+        if (account_track($userId) === 'student') $errors[] = ONE_ROLE_MSG_STUDENT;
 
         $viewBag = ['Details' => $d];
         // Teacher Verification — মোবাইল, WhatsApp, NID এর ছবি (সামনে + পেছনে)

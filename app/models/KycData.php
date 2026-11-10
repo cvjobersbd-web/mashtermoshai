@@ -220,3 +220,25 @@ function role_label(?string $role, $userId): string
     if ($role === 'Admin') return 'Admin';
     return isset(verified_student_ids()[(int)$userId]) ? 'Student' : 'User';
 }
+
+/**
+ * এক অ্যাকাউন্ট = হয় শিক্ষার্থী, নয় টিচার — দুটো একসাথে না।
+ * 'teacher' = টিচার বা টিচার হওয়ার আবেদন চালু; 'student' = Student Verification জমা / Approve; null = এখনো কিছু বাছেনি
+ */
+function account_track(?int $userId): ?string
+{
+    if (!$userId) return null;
+    static $c = [];
+    if (array_key_exists($userId, $c)) return $c[$userId];
+    try {
+        $u = db()->GetUserById($userId);
+        if ($u && $u->Role === 'Teacher') return $c[$userId] = 'teacher';
+        if ($u && $u->Role === 'Admin') return $c[$userId] = null;
+        if (in_array(db()->GetUserTeacherRequestStatus($userId), ['Pending', 'AwaitingPayment', 'Approved', 'Expired'], true)) return $c[$userId] = 'teacher';
+        if (in_array(db()->KycStatus($userId, 'student'), ['Pending', 'Approved'], true)) return $c[$userId] = 'student';
+    } catch (Throwable $e) { }
+    return $c[$userId] = null;
+}
+
+const ONE_ROLE_MSG_TEACHER = 'এই অ্যাকাউন্টটা টিচার হিসেবে ব্যবহার হচ্ছে (বা টিচার হওয়ার আবেদন করা আছে) — একই অ্যাকাউন্টে শিক্ষার্থী হওয়া যায় না। শিক্ষার্থী হিসেবে চাইলে লগআউট করে নতুন অ্যাকাউন্ট খুলুন।';
+const ONE_ROLE_MSG_STUDENT = 'এই অ্যাকাউন্টটা শিক্ষার্থী হিসেবে ব্যবহার হচ্ছে (Student Verification জমা / Approve আছে) — একই অ্যাকাউন্টে টিচার হওয়া যায় না। টিচার হতে চাইলে লগআউট করে নতুন অ্যাকাউন্ট খুলুন।';
