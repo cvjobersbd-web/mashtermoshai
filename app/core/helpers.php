@@ -2220,3 +2220,4 @@ function device_lock_applies(?string $role): bool
 
 // লাইভ ক্লাস (BigBlueButton) — আলাদা ফাইলে
 require_once __DIR__ . '/bbb.php';
+require_once __DIR__ . '/telegram.php';

@@ -1016,6 +1016,8 @@ class Db
                           VALUES (:u, :t, :m, :ty, :i, :l, 0, :c)', [
                 'u' => $userId, 't' => $title, 'm' => $message, 'ty' => $type ?? 'info', 'i' => $icon ?? 'fa-bell', 'l' => $link, 'c' => now(),
             ]);
+            // অ্যাডমিনের নোটিফিকেশন মোবাইলের Telegram এও (চালু থাকলে)
+            if (function_exists('tg_queue') && tg_is_admin_id($userId)) { try { tg_queue($title, $message, $link); } catch (Throwable $e) { } }
             return true;
         } catch (Throwable $e) { return false; }
     }

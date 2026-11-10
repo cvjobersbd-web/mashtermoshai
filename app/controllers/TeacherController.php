@@ -138,6 +138,8 @@ class TeacherController extends Controller
                         if (is_blank($user->MobileNumber ?? '')) $this->db->exec('UPDATE `Users` SET `MobileNumber` = :m WHERE `Id` = :u', ['m' => $kyc[0]['mobile'], 'u' => $userId]);
                     } catch (Throwable $e) { error_log('[teacher kyc] ' . $e->getMessage()); }
                 }
+                $who = (string)($user->FullName ?? '') ?: (string)session_get('UserName');
+                foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '🎓 নতুন টিচার আবেদন', "$who Become a Tutor ফর্ম জমা দিয়েছেন (শিক্ষা প্রতিষ্ঠান: " . ($kyc[0]['university'] ?? '') . ') — Teacher Verification দেখে Approve করুন।', 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher'); } catch (Throwable $e) { } }
                 // টিচার প্যাকেজ থাকলে: আগে প্যাকেজ কিনে পেমেন্ট, তারপর আবেদন অ্যাডমিনের কাছে যায়
                 if ($this->db->TeacherApplyNeedsPayment()) {
                     $this->db->SetTeacherRequestState((int)$model->Id, 'AwaitingPayment');

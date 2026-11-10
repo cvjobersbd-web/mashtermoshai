@@ -39,7 +39,7 @@ class AdminController extends Controller
             'SuspendUser' => 'ইউজার Suspend', 'UnsuspendUser' => 'Suspend তুলেছেন', 'ToggleUserStatus' => 'ইউজার চালু/বন্ধ', 'DeleteUser' => 'ইউজার মুছেছেন',
             'UpdatePassword' => 'ইউজারের পাসওয়ার্ড বদল', 'EduFeedStatus' => 'Educational Feed পোস্টের স্ট্যাটাস', 'UpdateReviewStatus' => 'রিভিউ স্ট্যাটাস', 'DeleteReview' => 'রিভিউ মুছেছেন',
             'SavePackage' => 'প্যাকেজ সেভ', 'DeletePackage' => 'প্যাকেজ মুছেছেন', 'TogglePackage' => 'প্যাকেজ চালু/বন্ধ', 'SetStudentPostFree' => 'শিক্ষার্থীর পোস্ট ফ্রি সুইচ',
-            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'ToggleCourse' => 'কোর্স লুকানো/দেখানো', 'KycDecide' => 'Teacher Verification Approve / বাতিল', 'AddCoursePayout' => 'টিচারকে কোর্সের টাকা দেওয়া', 'SaveCourseSettings' => 'কোর্সের ভাগ (%) বদল', 'SaveLiveSettings' => 'লাইভ ক্লাস সার্ভার সেটিং', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
+            'SavePaymentMethod' => 'পেমেন্ট মেথড সেভ', 'SaveAgentNumbers' => 'এজেন্ট নম্বর বদল', 'SaveSubAlertDays' => 'মেয়াদ শেষের সতর্কতার দিন বদল', 'ApproveDevice' => 'নতুন ডিভাইস Accept', 'RejectDevice' => 'নতুন ডিভাইস বাতিল', 'RevokeDevice' => 'ডিভাইস লগআউট', 'SaveDeviceLock' => 'এক ডিভাইসের নিয়ম চালু/বন্ধ', 'SavePartner' => 'পার্টনার (এজেন্সি) সেভ', 'SaveReferenceOptions' => 'রেফারেন্সের অপশন সেভ', 'SaveHeroText' => 'হোম পেজের হিরো লেখা সেভ', 'SaveContactInfo' => 'Contact পেজের নম্বর/ইমেইল সেভ', 'ToggleCourse' => 'কোর্স লুকানো/দেখানো', 'KycDecide' => 'Verification Approve / বাতিল', 'SaveTelegram' => 'Telegram বট যুক্ত', 'SaveTelegramEvents' => 'Telegram নোটিফিকেশন সেটিং', 'AddCoursePayout' => 'টিচারকে কোর্সের টাকা দেওয়া', 'SaveCourseSettings' => 'কোর্সের ভাগ (%) বদল', 'SaveLiveSettings' => 'লাইভ ক্লাস সার্ভার সেটিং', 'SaveAuthPage' => 'লগইন/সাইনআপ পেজের ছবি ও লেখা সেভ', 'PurgeOrphanUser' => 'মুছে ফেলা ইউজারের বাকি ডাটা মুছেছেন', 'TogglePartner' => 'পার্টনার চালু/বন্ধ', 'DeletePartner' => 'পার্টনার মুছেছেন', 'ResetPartnerToken' => 'পার্টনারের রিপোর্ট লিংক বদল', 'DeletePaymentMethod' => 'পেমেন্ট মেথড মুছেছেন', 'SavePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট নম্বর সেভ',
             'DeletePaymentAccount' => 'পেমেন্ট অ্যাকাউন্ট মুছেছেন', 'SavePaymentRules' => 'পেমেন্টের নিয়ম সেভ', 'SaveMailSettings' => 'Email (SMTP) সেটিং সেভ', 'SaveMetaPixel' => 'Meta Pixel সেটিং সেভ',
             'SaveSettings' => 'সাইট সেটিং (লোগো/রঙ/হিরো) সেভ', 'SaveHomeSections' => 'হোম সেকশন চালু/বন্ধ', 'SaveHomeCategories' => 'হোমের ক্যাটাগরি সেভ',
             'SaveCategory' => 'ক্যাটাগরি সেভ', 'DeleteCategory' => 'ক্যাটাগরি মুছেছেন', 'DeleteCategoryGroup' => 'ক্যাটাগরি গ্রুপ মুছেছেন',
@@ -1279,6 +1279,102 @@ class AdminController extends Controller
         if (!$x || (string)$x->returncode !== 'SUCCESS') json_response(['success' => false, 'message' => $err ?: 'সংযোগ হয়নি।']);
         $n = isset($x->meetings->meeting) ? count($x->meetings->meeting) : 0;
         json_response(['success' => true, 'message' => "সংযোগ ঠিক আছে ✅ — এখন {$n}টা মিটিং চলছে।"]);
+    }
+
+    // ============================================================
+    // ===== Telegram নোটিফিকেশন (শুধু Super Admin) =====
+    // ============================================================
+    /** GET /Admin/Telegram */
+    public function Telegram(): void
+    {
+        $this->requireAdminPage();
+        $s = tg_settings(true);
+        $bot = null;
+        if ($s['token'] !== '') { $err = null; $me = tg_call($s['token'], 'getMe', [], $err, 5); $bot = $me ? ['user' => (string)($me['username'] ?? ''), 'name' => (string)($me['first_name'] ?? '')] : ['error' => $err]; }
+        $this->view(null, null, ['S' => $s, 'Bot' => $bot, 'Hint' => $s['token'] !== '' ? '••••' . substr($s['token'], -4) : '']);
+    }
+
+    /** POST /Admin/SaveTelegram (token) — যাচাই করে সেভ, সাথে যারা START চেপেছে তাদের খুঁজে যোগ */
+    public function SaveTelegram_POST(): void
+    {
+        $this->requireAdminJson();
+        $tok = trim((string)input_str('token', ''));
+        if ($tok === '') json_response(['success' => false, 'message' => 'BotFather এর দেওয়া token টা দিন।']);
+        $err = null;
+        $me = tg_call($tok, 'getMe', [], $err);
+        if (!$me) json_response(['success' => false, 'message' => $err ?: 'Token যাচাই করা যায়নি।']);
+        $old = tg_settings(true);
+        $this->db->SaveSiteContent(['tg_token' => $tok] + ($old['token'] !== $tok ? ['tg_chats' => '[]'] : []));
+        tg_settings(true);
+        [$added, $total] = $this->tgFindChats($tok);
+        json_response(['success' => true, 'message' => '@' . ($me['username'] ?? '') . ' যুক্ত হয়েছে। ' . ($total ? "{$total}টা চ্যাটে নোটিফিকেশন যাবে।" : 'এখন মোবাইলে বটে ঢুকে START চাপুন, তারপর "চ্যাট খুঁজুন" চাপুন।')]);
+    }
+
+    /** বটে যারা START চেপেছে / যে গ্রুপে বট আছে — সেগুলো তালিকায় যোগ। [নতুন, মোট] */
+    private function tgFindChats(string $tok): array
+    {
+        $err = null;
+        $ups = tg_call($tok, 'getUpdates', ['limit' => 100, 'timeout' => 0], $err) ?: [];
+        $chats = [];
+        foreach (tg_settings(true)['chats'] as $c) $chats[(string)$c['id']] = $c;
+        $added = 0;
+        foreach ((array)$ups as $u) {
+            $m = $u['message'] ?? $u['my_chat_member'] ?? $u['channel_post'] ?? null;
+            $c = $m['chat'] ?? null;
+            if (!$c || !isset($c['id'])) continue;
+            $id = (string)$c['id'];
+            if (isset($chats[$id])) continue;
+            $name = trim(($c['title'] ?? '') ?: (($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? '')));
+            $chats[$id] = ['id' => $id, 'name' => mb_substr($name !== '' ? $name : $id, 0, 60), 'type' => (string)($c['type'] ?? '')];
+            $added++;
+        }
+        $this->db->SaveSiteContent(['tg_chats' => json_encode(array_values($chats), JSON_UNESCAPED_UNICODE)]);
+        tg_settings(true);
+        if ($added) foreach (array_slice(array_values($chats), -$added) as $c) tg_call($tok, 'sendMessage', ['chat_id' => $c['id'], 'text' => "✅ মাষ্টার মশাই এর অ্যাডমিন নোটিফিকেশন চালু হয়েছে — নতুন পেমেন্ট, Verification ইত্যাদি এখানে আসবে।"], $err, 5);
+        return [$added, count($chats)];
+    }
+
+    /** POST /Admin/TelegramFindChats */
+    public function TelegramFindChats_POST(): void
+    {
+        $this->requireAdminJson();
+        $s = tg_settings(true);
+        if ($s['token'] === '') json_response(['success' => false, 'message' => 'আগে token সেভ করুন।']);
+        [$added, $total] = $this->tgFindChats($s['token']);
+        json_response(['success' => true, 'message' => $added ? "{$added}টা নতুন চ্যাট যোগ হয়েছে (মোট {$total})।" : ($total ? 'নতুন কোনো চ্যাট নেই।' : 'কোনো চ্যাট পাওয়া যায়নি — মোবাইলে বটে ঢুকে START চাপুন বা কিছু লিখে পাঠান, তারপর আবার চাপুন।')]);
+    }
+
+    /** POST /Admin/TelegramRemoveChat (id) */
+    public function TelegramRemoveChat_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (string)input_str('id', '');
+        $chats = array_values(array_filter(tg_settings(true)['chats'], fn($c) => (string)$c['id'] !== $id));
+        $this->db->SaveSiteContent(['tg_chats' => json_encode($chats, JSON_UNESCAPED_UNICODE)]);
+        json_response(['success' => true, 'message' => 'সরানো হয়েছে।']);
+    }
+
+    /** POST /Admin/TelegramTest */
+    public function TelegramTest_POST(): void
+    {
+        $this->requireAdminJson();
+        $s = tg_settings(true);
+        if (!$s['on']) json_response(['success' => false, 'message' => 'আগে token আর অন্তত একটা চ্যাট যোগ করুন।']);
+        $ok = 0; $last = null;
+        foreach ($s['chats'] as $c) { $err = null; if (tg_call($s['token'], 'sendMessage', ['chat_id' => (string)$c['id'], 'text' => tg_format('🔔 পরীক্ষামূলক মেসেজ', 'মাষ্টার মশাই অ্যাডমিন প্যানেল থেকে — এটা পেলে সব ঠিক আছে।', '/Admin/Dashboard'), 'parse_mode' => 'HTML', 'disable_web_page_preview' => true], $err)) $ok++; else $last = $err; }
+        json_response(['success' => $ok > 0, 'message' => $ok ? "{$ok}টা চ্যাটে পাঠানো হয়েছে — মোবাইলে দেখুন।" : ($last ?: 'পাঠানো যায়নি।')]);
+    }
+
+    /** POST /Admin/SaveTelegramEvents (on[] = payment, verify ...) — কোন ঘটনাগুলো Telegram এ যাবে; clear=1 হলে token মুছে বন্ধ */
+    public function SaveTelegramEvents_POST(): void
+    {
+        $this->requireAdminJson();
+        if (input_bool('clear')) { $this->db->SaveSiteContent(['tg_token' => '', 'tg_chats' => '[]']); json_response(['success' => true, 'message' => 'Telegram নোটিফিকেশন বন্ধ করা হয়েছে।']); }
+        $on = $_POST['on'] ?? [];
+        $on = is_array($on) ? $on : [];
+        $off = array_values(array_filter(array_keys(TG_EVENTS), fn($k) => !in_array($k, $on, true)));
+        $this->db->SaveSiteContent(['tg_off' => json_encode($off)]);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
     }
 
     // ============================================================
