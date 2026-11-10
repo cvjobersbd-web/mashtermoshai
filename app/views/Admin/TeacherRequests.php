@@ -304,6 +304,14 @@ $ViewData['Title'] = 'Teacher Requests';
     }
     .tr-pay { margin-top: 10px; background: #F8FAFC; border: 1px solid #E5ECF3; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; color: #334155; line-height: 1.7; }
     .tr-pay.warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+    .tr-pkg { margin-top: 10px; display: flex; gap: 10px; align-items: flex-start; border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.6; border: 1px solid; }
+    .tr-pkg > i { margin-top: 4px; }
+    .tr-pkg .big { font-size: 15.5px; }
+    .tr-pkg a { font-weight: 700; color: inherit; text-decoration: underline; }
+    .tr-pkg.ok { background: #F0FDF4; border-color: #86EFAC; color: #166534; }
+    .tr-pkg.warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+    .tr-pkg.bad { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+    .tr-pkg + .tr-pay { margin-top: 6px; }
     .tr-pay code { color: #0F172A; font-weight: 700; }
     .tr-pay a { font-weight: 700; color: #0284C7; text-decoration: none; margin-left: 4px; }
     .tr-pst { font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; margin-left: 4px; }
@@ -384,9 +392,20 @@ $ViewData['Title'] = 'Teacher Requests';
                         </div>
 
                         <!-- টিচার প্যাকেজের পেমেন্ট -->
-                        <?php if ($pay): $pc = $pay->Status === 'Approved' ? '#166534;background:#DCFCE7' : ($pay->Status === 'Rejected' ? '#991B1B;background:#FEE2E2' : '#92400E;background:#FEF3C7'); ?>
+                        <?php if ($pay):
+                            $pc = $pay->Status === 'Approved' ? '#166534;background:#DCFCE7' : ($pay->Status === 'Rejected' ? '#991B1B;background:#FEE2E2' : '#92400E;background:#FEF3C7');
+                            $mo = (int)($pay->DurationMonths ?? 0);
+                            $pkgTxt = (string)$pay->PackageName . ($mo > 0 && !str_contains((string)$pay->PackageName, 'মাস') ? ' (' . bn_num($mo) . ' মাস)' : '');
+                            $cls = $pay->Status === 'Approved' ? 'ok' : ($pay->Status === 'Rejected' ? 'bad' : 'warn'); ?>
+                            <div class="tr-pkg <?= $cls ?>">
+                                <i class="fas <?= $pay->Status === 'Approved' ? 'fa-circle-check' : ($pay->Status === 'Rejected' ? 'fa-circle-xmark' : 'fa-hourglass-half') ?>"></i>
+                                <div>টিচার প্যাকেজ কিনেছেন: <b class="big"><?= e($pkgTxt) ?></b> — <b><?= e(taka($pay->Amount)) ?></b>
+                                    <?php if ($pay->Status === 'Approved'): ?> · পেমেন্ট Accept হয়েছে<?= $request->Status === 'Pending' ? ' — এখন <b>Approve</b> করতে পারেন।' : '।' ?>
+                                    <?php elseif ($pay->Status === 'Rejected'): ?> · পেমেন্ট বাতিল হয়েছে — আবার পেমেন্ট করলে Approve করা যাবে।
+                                    <?php else: ?> · পেমেন্ট যাচাই বাকি — <a href="/Admin/Payments?for=Teacher&amp;status=Pending">Payments এ Accept করুন</a>, তারপর Approve করা যাবে।<?php endif; ?></div>
+                            </div>
                             <div class="tr-pay">
-                                <b><i class="fas fa-receipt"></i> পেমেন্ট:</b> <?= e($pay->PackageName) ?> — <b><?= e(taka($pay->Amount)) ?></b> · <?= e($pay->MethodName) ?>
+                                <b><i class="fas fa-receipt"></i> পেমেন্ট:</b> <?= e($pay->MethodName) ?>
                                 <?php if (!is_blank($pay->TxnId)): ?> · TxnID: <code><?= e($pay->TxnId) ?></code><?php endif; ?> · <?= e(fmt_date($pay->PayDate, 'd M Y')) ?>
                                 <span class="tr-pst" style="color:<?= $pc ?>;"><?= $pay->Status === 'Approved' ? 'Accepted' : e($pay->Status) ?></span>
                                 <?php if (!is_blank($pay->ReceiptUrl)): ?> <a href="<?= e($pay->ReceiptUrl) ?>" target="_blank" rel="noopener"><i class="fas fa-file-image"></i> রিসিট দেখুন</a><?php endif; ?>
