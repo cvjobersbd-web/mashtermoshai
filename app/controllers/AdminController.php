@@ -315,7 +315,12 @@ class AdminController extends Controller
                 $apps[$x->Id] = ['req' => $tr, 'pay' => $raw && !empty($raw->PaymentId) ? $this->db->GetPaymentRequest((int)$raw->PaymentId) : null];
             }
         }
-        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Counts' => $counts, 'Apps' => $apps]);
+        // শিক্ষার্থী: প্যাকেজ কিনেছে কিনা (সর্বশেষ শিক্ষার্থী প্যাকেজের পেমেন্ট)
+        $pays = [];
+        if ($k === 'student') foreach ($list as $x) {
+            try { $p = $this->db->one("SELECT `Id`, `PackageName`, `Amount`, `Status`, `MethodName`, `CreatedAt` FROM `PaymentRequests` WHERE `UserId` = :u AND `Audience` = 'Student' ORDER BY `Id` DESC LIMIT 1", ['u' => $x->UserId]); if ($p) $pays[$x->Id] = $p; } catch (Throwable $e) { }
+        }
+        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Counts' => $counts, 'Apps' => $apps, 'StuPays' => $pays]);
     }
 
     /** POST /Admin/KycDecide (id, action = Approve|Reject, note) */

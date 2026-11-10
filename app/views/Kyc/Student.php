@@ -41,7 +41,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                     <div><small>প্রতিষ্ঠান</small><b><?= e($v('institution')) ?></b></div>
                     <div><small>নিজের মোবাইল</small><b><?= e($v('mobile') ?: '—') ?></b></div>
                     <div><small>বাবা</small><b><?= e($v('fatherName')) ?><?= $v('fatherMobile') !== '' ? ' · ' . e($v('fatherMobile')) : '' ?></b></div>
-                    <div><small>মা</small><b><?= e($v('motherName')) ?><?= $v('motherMobile') !== '' ? ' · ' . e($v('motherMobile')) : '' ?></b></div>
+                    <div><small>মা</small><b><?= e($v('motherName') ?: '—') ?><?= $v('motherMobile') !== '' ? ' · ' . e($v('motherMobile')) : '' ?></b></div>
                     <div><small>গ্রামের বাড়ি (স্থায়ী ঠিকানা)</small><b><?= e($v('permanentAddress')) ?></b></div>
                     <div><small>বর্তমান ঠিকানা</small><b><?= e($v('presentAddress')) ?>, <?= e($v('district')) ?></b></div>
                     <?php if ($exam('ssc')): ?><div><small>SSC</small><b><?= e($examTxt($exam('ssc'), 'SSC')) ?></b></div><?php endif; ?>
@@ -64,7 +64,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                 <div class="ky-g2">
                     <div class="ky-f" data-f="fatherName"><label class="l" for="fatherName">বাবার নাম <span class="r">*</span></label><input type="text" id="fatherName" name="fatherName" maxlength="80" value="<?= e($v('fatherName')) ?>" /></div>
                     <div class="ky-f" data-f="fatherMobile"><label class="l" for="fatherMobile">বাবার মোবাইল নম্বর</label><input type="tel" id="fatherMobile" name="fatherMobile" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e($v('fatherMobile')) ?>" /></div>
-                    <div class="ky-f" data-f="motherName"><label class="l" for="motherName">মায়ের নাম <span class="r">*</span></label><input type="text" id="motherName" name="motherName" maxlength="80" value="<?= e($v('motherName')) ?>" /></div>
+                    <div class="ky-f" data-f="motherName"><label class="l" for="motherName">মায়ের নাম <small>(ঐচ্ছিক)</small></label><input type="text" id="motherName" name="motherName" maxlength="80" value="<?= e($v('motherName')) ?>" /></div>
                     <div class="ky-f" data-f="motherMobile"><label class="l" for="motherMobile">মায়ের মোবাইল নম্বর</label><input type="tel" id="motherMobile" name="motherMobile" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e($v('motherMobile')) ?>" /></div>
                 </div>
                 <p class="ky-f h" style="margin:-4px 0 0;color:#64748B;font-size:12.5px;"><i class="fas fa-circle-info"></i> বাবা অথবা মায়ের — অন্তত একজনের মোবাইল নম্বর দিতে হবে।</p>

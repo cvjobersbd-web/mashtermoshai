@@ -64,9 +64,10 @@ class KycController extends Controller
         if ($old && $old->Status === 'Approved') $this->fail('আপনার Student Verification আগেই Approve হয়েছে।');
 
         $d = [];
-        $need = ['fullName' => ['আপনার পুরো নাম', 80], 'fatherName' => ['বাবার নাম', 80], 'motherName' => ['মায়ের নাম', 80],
+        $need = ['fullName' => ['আপনার পুরো নাম', 80], 'fatherName' => ['বাবার নাম', 80],
             'permanentAddress' => ['গ্রামের বাড়ির ঠিকানা (স্থায়ী)', 200], 'presentAddress' => ['বর্তমান ঠিকানা', 200], 'institution' => ['স্কুল / কলেজ / বিশ্ববিদ্যালয়ের নাম', 120]];
         foreach ($need as $k => [$label, $max]) { $d[$k] = self::txt($k, $max); if (mb_strlen($d[$k]) < 2) $this->fail("$label দিন।", $k); }
+        $d['motherName'] = self::txt('motherName', 80);   // ঐচ্ছিক
         $d['district'] = (string)input_str('district', '');
         if (!in_array($d['district'], Db::KYC_DISTRICTS, true)) $this->fail('জেলা বাছাই করুন।', 'district');
         $d['classLevel'] = (string)input_str('classLevel', '');

@@ -107,7 +107,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                             <div><small>বাবা</small><b><?= e($D['fatherName'] ?? '') ?></b></div>
                             <div><small>বাবার মোবাইল</small><b><?= !empty($D['fatherMobile']) ? '<a class="tel" href="tel:' . e($D['fatherMobile']) . '">' . e($D['fatherMobile']) . '</a>' : '—' ?></b></div>
                             <div><small>নিজের মোবাইল</small><b><?= !empty($D['mobile']) ? '<a class="tel" href="tel:' . e($D['mobile']) . '">' . e($D['mobile']) . '</a>' : '—' ?></b></div>
-                            <div><small>মা</small><b><?= e($D['motherName'] ?? '') ?></b></div>
+                            <div><small>মা</small><b><?= e(($D['motherName'] ?? '') ?: '—') ?></b></div>
                             <div><small>মায়ের মোবাইল</small><b><?= !empty($D['motherMobile']) ? '<a class="tel" href="tel:' . e($D['motherMobile']) . '">' . e($D['motherMobile']) . '</a>' : '—' ?></b></div>
                             <div><small>জেলা</small><b><?= e($D['district'] ?? '') ?></b></div>
                             <div class="w3"><small>গ্রামের বাড়ি (স্থায়ী)</small><b><?= e($D['permanentAddress'] ?? '') ?></b></div>
@@ -130,6 +130,15 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                             <div class="kc-app g"><i class="fas fa-circle-check"></i> টিচার আবেদন Approved।</div>
                         <?php endif; ?>
                         <?php if ($a): ?><div style="margin-top:8px;font-size:13px;"><a href="/Tutors/Profile/<?= (int)$k->UserId ?>" target="_blank" style="font-weight:700;color:#0284C7;"><i class="fas fa-id-card"></i> পুরো ফর্ম (Tutor Details) দেখুন</a></div><?php endif; ?>
+                    <?php endif; ?>
+                    <?php if ($kind === 'student'): $sp = ($ViewBag->StuPays ?? [])[$k->Id] ?? null; ?>
+                        <?php if (!$sp): ?>
+                            <div class="kc-app warn"><i class="fas fa-hourglass-half"></i> এখনো শিক্ষার্থী প্যাকেজ কেনেননি (পেমেন্ট করেননি)।</div>
+                        <?php else: $c3 = $sp->Status === 'Approved' ? 'ok' : ($sp->Status === 'Rejected' ? 'no' : 'warn'); ?>
+                            <div class="kc-app <?= $c3 ?>"><i class="fas fa-receipt"></i> শিক্ষার্থী প্যাকেজ কিনেছেন: <b><?= e($sp->PackageName) ?></b> — <?= e(taka($sp->Amount)) ?> · <?= e((string)$sp->MethodName) ?> ·
+                                পেমেন্ট: <b><?= $sp->Status === 'Approved' ? 'Accepted ✅' : ($sp->Status === 'Rejected' ? 'Rejected' : 'যাচাই বাকি') ?></b>
+                                <?php if ($sp->Status === 'Pending'): ?> — Verification Approve করার পর <a href="/Admin/StudentPayments#ap-<?= (int)$sp->Id ?>">Student Payment Requests এ Accept করুন</a><?php endif; ?></div>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <?php if ($k->Status === 'Rejected' && !is_blank($k->AdminNote)): ?><div class="kc-note"><i class="fas fa-circle-xmark"></i> বাতিলের কারণ: <?= e($k->AdminNote) ?></div><?php endif; ?>
                 </div>
