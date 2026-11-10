@@ -46,6 +46,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     .ap-user small { display: block; color: #64748B; font-size: 12px; }
     .ap-role { font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; padding: 2px 9px; border-radius: 10px; background: #CFF2FC; color: #028EA5; }
     .ap-role.Teacher { background: #E8F8EF; color: #155724; }
+    .ap-role.apply { background: #FEF3C7; color: #92400E; text-decoration: none; text-transform: none; letter-spacing: 0; font-size: 11.5px; margin-left: 4px; }
     .ap-pill { margin-left: auto; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; background: #FEF3C7; color: #92400E; text-transform: uppercase; }
     .ap-pill.Approved { background: #DCFCE7; color: #166534; } .ap-pill.Rejected { background: #FEE2E2; color: #991B1B; }
     .ap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 16px; margin-top: 14px; }
@@ -127,6 +128,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                         <small><?= e(trim(($p->MobileNumber ?? '') . ' · ' . ($p->Email ?? ''), ' ·')) ?></small>
                     </div>
                     <?php if ($p->Role): ?><span class="ap-role <?= e($p->Role) ?>"><?= e($p->Role === 'User' ? 'Student' : $p->Role) ?></span><?php endif; ?>
+                    <?php if ($p->Audience === 'Teacher' && $p->Role === 'User'): ?><a class="ap-role apply" href="/Admin/TeacherRequests" title="এখনো শিক্ষার্থী অ্যাকাউন্ট — টিচার হওয়ার আবেদন করে শিক্ষক প্যাকেজ কিনেছেন। Teacher Requests থেকে আবেদন Approve করলে টিচার হয়ে যাবেন।"><i class="fas fa-chalkboard-user"></i> শিক্ষক হওয়ার আবেদনকারী</a><?php endif; ?>
                     <span class="ap-pill <?= e($p->Status) ?>"><?= e($p->Status === 'Approved' ? 'Accepted' : $p->Status) ?></span>
                 </div>
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
