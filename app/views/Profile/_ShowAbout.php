@@ -9,7 +9,7 @@ $about = [
     'basic' => ['Basic Information', 'fa-id-card', $val($u->FullName) !== '', [
         ['fa-user', 'Full Name', $val($u->FullName), false],
         ['fa-at', 'Username', '@' . $u->UserName, false],
-        ['fa-user-tag', 'Account Type', $isTeacher ? 'Teacher' : 'Student', false],
+        ['fa-user-tag', 'Account Type', $isTeacher ? 'Teacher' : role_label($u->Role ?? 'User', (int)$u->Id), false],
         ['fa-envelope', 'Email', $val($u->Email), true],
         ['fa-phone', 'Mobile Number', $val($u->MobileNumber), true],
     ]],

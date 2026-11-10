@@ -197,3 +197,26 @@ function kyc_delete_file(?string $name): void
 {
     if ($p = kyc_file_path($name)) @unlink($p);
 }
+
+// ============================================================ রোলের নাম (User → Student Verification Approve হলে Student)
+/** Student Verification Approve হওয়া ইউজারদের Id (একবারই পড়া হয়) */
+function verified_student_ids(): array
+{
+    static $ids = null;
+    if ($ids !== null) return $ids;
+    $ids = [];
+    try {
+        db()->EnsureKycTable();
+        foreach (db()->all("SELECT k.`UserId` FROM `KycRequests` k WHERE k.`Kind` = 'student' AND k.`Status` = 'Approved'
+            AND k.`Id` = (SELECT MAX(x.`Id`) FROM `KycRequests` x WHERE x.`UserId` = k.`UserId` AND x.`Kind` = 'student')") as $r) $ids[(int)$r->UserId] = true;
+    } catch (Throwable $e) { }
+    return $ids;
+}
+
+/** দেখানোর নাম: Teacher / Admin / Student (ভেরিফাইড) / User (নতুন, এখনো ভেরিফাই হয়নি) */
+function role_label(?string $role, $userId): string
+{
+    if ($role === 'Teacher') return 'Teacher';
+    if ($role === 'Admin') return 'Admin';
+    return isset(verified_student_ids()[(int)$userId]) ? 'Student' : 'User';
+}

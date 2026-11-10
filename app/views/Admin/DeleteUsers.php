@@ -77,7 +77,7 @@ $totalRows = array_sum(array_map(fn($o) => $o['total'], $orph));
                 <div class="du-row">
                     <div class="du-av u"><?= e(initials((string)$nm)) ?></div>
                     <div class="du-who">
-                        <b><a href="/Profile/Show/<?= (int)$u->Id ?>" target="_blank" rel="noopener"><?= e($nm) ?></a></b><span class="du-role <?= $u->Role === 'Teacher' ? 't' : 's' ?>"><?= $u->Role === 'Teacher' ? 'Teacher' : 'Student' ?></span>
+                        <b><a href="/Profile/Show/<?= (int)$u->Id ?>" target="_blank" rel="noopener"><?= e($nm) ?></a></b><span class="du-role <?= $u->Role === 'Teacher' ? 't' : 's' ?>"><?= e(role_label($u->Role, (int)$u->Id)) ?></span>
                         <small>#<?= (int)$u->Id ?> · @<?= e($u->UserName) ?> · <?= e($u->Email) ?><?= !is_blank($u->MobileNumber) ? ' · ' . e($u->MobileNumber) : '' ?> · যোগ দিয়েছেন <?= e(fmt_date($u->CreatedAt, 'd M Y')) ?></small>
                     </div>
                     <button type="button" class="du-btn" data-user="<?= (int)$u->Id ?>" data-name="<?= e($nm) ?>"><i class="fas fa-trash"></i> অ্যাকাউন্ট + সব ডাটা মুছুন</button>

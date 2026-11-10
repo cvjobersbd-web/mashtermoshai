@@ -1,12 +1,12 @@
 <?php
 /**
- * Profile Verification (পরিচয় যাচাই)
+ * Student Verification (পরিচয় যাচাই)
  *  GET  /Kyc                → নিজের রোল অনুযায়ী Student / Teacher ফর্মে পাঠায়
  *  GET  /Kyc/Student        → শিক্ষার্থীর ফর্ম (Play থেকে University) / অবস্থা
  *  POST /Kyc/Student        → জমা (multipart, JSON উত্তর)
  *  GET  /Kyc/Teacher        → পুরোনো টিচারদের NID + WhatsApp (নতুন আবেদনকারীরা "Become a Tutor" ফর্মেই দেয়)
  *  POST /Kyc/Teacher
- *  GET  /Kyc/File/{id}?side=front|back → ID / NID এর ছবি — শুধু অ্যাডমিন (Profile Verification অনুমতি) বা নিজে
+ *  GET  /Kyc/File/{id}?side=front|back → ID / NID এর ছবি — শুধু অ্যাডমিন (Student Verification অনুমতি) বা নিজে
  */
 class KycController extends Controller
 {
@@ -57,10 +57,10 @@ class KycController extends Controller
     public function Student_POST(): void
     {
         $me = $this->me(true);
-        if (is_admin()) $this->fail('অ্যাডমিন অ্যাকাউন্টের Profile Verification লাগে না।');
+        if (is_admin()) $this->fail('অ্যাডমিন অ্যাকাউন্টের Student Verification লাগে না।');
         $old = $this->db->GetKyc($me, 'student');
         if ($old && $old->Status === 'Pending') $this->fail('আপনার ফর্ম যাচাই হচ্ছে — অ্যাডমিন দেখার পর আবার জমা দিতে পারবেন।');
-        if ($old && $old->Status === 'Approved') $this->fail('আপনার Profile Verification আগেই Approve হয়েছে।');
+        if ($old && $old->Status === 'Approved') $this->fail('আপনার Student Verification আগেই Approve হয়েছে।');
 
         $d = [];
         $need = ['fullName' => ['আপনার পুরো নাম', 80], 'fatherName' => ['বাবার নাম', 80], 'motherName' => ['মায়ের নাম', 80],
@@ -102,7 +102,7 @@ class KycController extends Controller
         $id = $this->db->SaveKyc($me, 'student', $d, $front, $back);
         if (!is_blank($d['mobile']) && is_blank($this->db->GetUserById($me)->MobileNumber ?? '')) { try { $this->db->exec('UPDATE `Users` SET `MobileNumber` = :m WHERE `Id` = :u', ['m' => $d['mobile'], 'u' => $me]); } catch (Throwable $e) { } }
         $who = (string)(session_get('UserFullName') ?: session_get('UserName'));
-        foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '🪪 নতুন Profile Verification (শিক্ষার্থী)', "$who শিক্ষার্থীর Profile Verification ফর্ম জমা দিয়েছেন — যাচাই করে Approve করুন।", 'info', '/Admin/Kyc?k=student', 'fa-id-card'); } catch (Throwable $e) { } }
+        foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '🪪 নতুন Student Verification (শিক্ষার্থী)', "$who Student Verification ফর্ম জমা দিয়েছেন — যাচাই করে Approve করুন।", 'info', '/Admin/Kyc?k=student', 'fa-id-card'); } catch (Throwable $e) { } }
         json_response(['success' => true, 'id' => $id, 'message' => 'ফর্ম জমা হয়েছে! অ্যাডমিন যাচাই করে Approve করলে নোটিফিকেশন পাবেন।', 'redirect' => '/Kyc/Student' . (($n = $this->safeNext()) !== '' ? '?next=' . rawurlencode($n) : '')]);
     }
 
@@ -155,17 +155,17 @@ class KycController extends Controller
     public function Teacher_POST(): void
     {
         $me = $this->me(true);
-        if (is_admin()) $this->fail('অ্যাডমিন অ্যাকাউন্টের Profile Verification লাগে না।');
+        if (is_admin()) $this->fail('অ্যাডমিন অ্যাকাউন্টের Teacher Verification লাগে না।');
         $old = $this->db->GetKyc($me, 'teacher');
         if ($old && $old->Status === 'Pending') $this->fail('আপনার তথ্য যাচাই হচ্ছে — অ্যাডমিন দেখার পর আবার জমা দিতে পারবেন।');
-        if ($old && $old->Status === 'Approved') $this->fail('আপনার Profile Verification আগেই Approve হয়েছে।');
+        if ($old && $old->Status === 'Approved') $this->fail('আপনার Teacher Verification আগেই Approve হয়েছে।');
         [$d, $front, $back] = self::readTeacherKyc($this->db, $me, $old, fn($m, $f = null) => $this->fail($m, $f));
-        // চালু টিচার আবেদন থাকলে তার সাথে জুড়ে দেওয়া (প্রত্যাখ্যাত Profile Verification আবার জমা)
+        // চালু টিচার আবেদন থাকলে তার সাথে জুড়ে দেওয়া (প্রত্যাখ্যাত Teacher Verification আবার জমা)
         $tr = $this->db->GetLatestTeacherRequest($me);
         $trId = $tr && in_array($tr->Status, ['Pending', 'AwaitingPayment'], true) ? (int)$tr->Id : null;
         $this->db->SaveKyc($me, 'teacher', $d, $front, $back, $trId);
         $who = (string)(session_get('UserFullName') ?: session_get('UserName'));
-        foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '🪪 নতুন Profile Verification (টিচার)', "$who টিচারের Profile Verification (NID + WhatsApp) জমা দিয়েছেন — যাচাই করে Approve করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-id-card'); } catch (Throwable $e) { } }
+        foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '🪪 নতুন Teacher Verification (টিচার)', "$who টিচারের Teacher Verification (NID + WhatsApp) জমা দিয়েছেন — যাচাই করে Approve করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-id-card'); } catch (Throwable $e) { } }
         json_response(['success' => true, 'message' => 'জমা হয়েছে! অ্যাডমিন যাচাই করে Approve করলে নোটিফিকেশন পাবেন।', 'redirect' => '/Kyc/Teacher']);
     }
 

@@ -25,7 +25,7 @@ $saved = $Model->SavedItems;
 $cover = $Model->Extras->CoverImageUrl;
 $coverY = $Model->Extras->CoverPosY;
 $location = implode(', ', array_filter([trim($intro->City), trim((string)$u->Country)]));
-$roleLabel = $isTeacher ? 'Teacher' : 'Student';
+$roleLabel = role_label($u->Role ?? ($isTeacher ? 'Teacher' : 'User'), (int)$u->Id);
 $peopleLabel = $isTeacher ? 'My Students' : 'My Tutors';
 $isAdminViewer = $Model->IsAdminViewer;
 
@@ -223,7 +223,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                 <div class="st-body">
                                     <div class="st-t">Member Since</div>
                                     <div class="st-v"><b><?= e(fmt_date($u->CreatedAt, 'M Y', '—')) ?></b></div>
-                                    <div class="st-empty"><?= e($isTeacher ? 'Tutor' : 'Student') ?> at মাষ্টার মশাই</div>
+                                    <div class="st-empty"><?= e($isTeacher ? 'Tutor' : role_label('User', (int)$u->Id)) ?> at মাষ্টার মশাই</div>
                                 </div>
                             </div>
                             <div class="pf-card st">

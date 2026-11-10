@@ -121,7 +121,7 @@ $ViewData['Title'] = 'Become a Tutor';
 
             <?php $kOld = db()->GetKyc((int)$Model->UserId, 'teacher'); $kD = $kOld ? $kOld->D : []; ?>
             <div class="form-section kyc-sec">
-                <div class="form-section-title"><i class="fas fa-id-card"></i> পরিচয় যাচাই (Profile Verification)</div>
+                <div class="form-section-title"><i class="fas fa-id-card"></i> পরিচয় যাচাই (Teacher Verification)</div>
                 <p class="text-muted" style="font-size:13.5px;margin-top:-8px;"><i class="fas fa-lock"></i> NID এর ছবি শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</p>
                 <div class="row">
                     <div class="col-md-4 mb-3"><label for="kycMobile" class="form-label fw-bold">মোবাইল নম্বর <span class="required-star">*</span></label><input type="tel" name="kycMobile" id="kycMobile" class="form-control" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e((string)input_str('kycMobile', $kD['mobile'] ?? $Model->MobileNumber)) ?>" required /></div>

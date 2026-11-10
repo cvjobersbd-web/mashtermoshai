@@ -74,7 +74,7 @@ $mIcon = ['bKash' => '#E2136E', 'Nagad' => '#F6921E', 'Rocket' => '#8C3494', 'Ba
             <div class="wd-top">
                 <div class="wd-who">
                     <b><a href="/Profile/Show/<?= (int)$w->UserId ?>" target="_blank" rel="noopener"><?= e($nm) ?></a></b>
-                    <small><?= $w->Role === 'Teacher' ? 'Teacher' : 'Student' ?> · @<?= e((string)$w->UserName) ?><?= !is_blank($w->MobileNumber) ? ' · ' . e($w->MobileNumber) : '' ?></small>
+                    <small><?= e(role_label($w->Role, $w->UserId)) ?> · @<?= e((string)$w->UserName) ?><?= !is_blank($w->MobileNumber) ? ' · ' . e($w->MobileNumber) : '' ?></small>
                     <small>আবেদন: <?= e(fmt_date($w->CreatedAt, 'd M Y, h:i A')) ?><?= !is_blank($w->ProcessedAt) ? ' · প্রক্রিয়া: ' . e(fmt_date($w->ProcessedAt, 'd M Y, h:i A')) : '' ?></small>
                 </div>
                 <div class="wd-amt"><b>৳<?= number_format((int)$w->Amount) ?></b><span class="wd-pill <?= $sk ?>"><?= e($sl) ?></span></div>

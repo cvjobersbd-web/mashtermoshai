@@ -453,7 +453,7 @@ $waLink = function (?string $phone): string {
                  alt="Profile" class="ud-avatar" />
             <div>
                 <h3 class="ud-name"><?= e($user?->FullName) ?></h3>
-                <span class="ud-role"><i class="fas fa-user-graduate"></i> Student</span>
+                <span class="ud-role"><i class="fas fa-user-graduate"></i> <?= e(role_label('User', (int)($user?->Id ?? current_user_id()))) ?></span>
             </div>
         </div>
 

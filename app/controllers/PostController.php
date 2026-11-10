@@ -153,7 +153,7 @@ class PostController extends Controller
         $meta = reaction_meta();
         json_response(['success' => true, 'people' => array_map(fn($p) => [
             'id' => $p->Id, 'name' => $p->Name, 'image' => $p->Image, 'initials' => $p->Initials,
-            'role' => $p->Role === 'Teacher' ? 'Teacher' : 'Student', 'reaction' => 'like', 'emoji' => like_badge_html(),
+            'role' => role_label($p->Role, $p->Id), 'reaction' => 'like', 'emoji' => like_badge_html(),
         ], $this->db->GetReactors($type, $id))]);
     }
 
@@ -468,7 +468,7 @@ class PostController extends Controller
             $share = $this->db->GetProfilePostById($p->ShareId);
             if (!$share || !$this->db->CanViewProfilePost($share, $me, $this->isAdmin())) continue;
             $list[] = ['id' => $p->Id, 'name' => $p->Name, 'image' => $p->Image, 'initials' => $p->Initials,
-                'role' => $p->Role === 'Teacher' ? 'Teacher' : 'Student', 'shareId' => $p->ShareId];
+                'role' => role_label($p->Role, $p->Id), 'shareId' => $p->ShareId];
         }
         json_response(['success' => true, 'people' => $list]);
     }

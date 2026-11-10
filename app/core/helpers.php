@@ -1696,7 +1696,7 @@ function admin_permissions(): array
 {
     return [
         'users'      => ['Users & Teachers', 'fa-users', 'ইউজার/টিচার দেখা, Suspend, চালু/বন্ধ, পাসওয়ার্ড বদল'],
-        'teachers'   => ['Profile Verification (পরিচয় যাচাই)', 'fa-id-card', 'টিচার / শিক্ষার্থীর Profile Verification (NID, ID কার্ড) দেখা — Approve / Reject'],
+        'teachers'   => ['Verification (পরিচয় যাচাই)', 'fa-id-card', 'টিচার / শিক্ষার্থীর Verification (NID, ID কার্ড) দেখা — Approve / Reject'],
         'tuition'    => ['Tuition', 'fa-clipboard-list', 'Tuition Posts, Applications, Tutor Requests'],
         'notices'    => ['News & Announcements', 'fa-newspaper', 'নোটিশ যোগ / এডিট / মুছে ফেলা'],
         'edufeed'    => ['Educational Feed', 'fa-graduation-cap', 'পোস্ট Approve / Reject'],
@@ -1963,7 +1963,7 @@ function joined_via_html(?object $ref, bool $long = false): string
 {
     if (!$ref) return '<span class="jv-badge jv-direct" title="নিজে সরাসরি সাইনআপ করেছেন"><i class="fas fa-user-plus"></i> Direct</span>';
     $st = ['Credited' => ' · ৳' . (int)$ref->Bonus . ' বোনাস দেওয়া হয়েছে', 'Waiting' => ' · প্যাকেজ কেনেনি', 'Revoked' => ' · বাতিল'][(string)$ref->Status] ?? '';
-    $role = ($ref->ReferrerRole ?? '') === 'Teacher' ? 'Teacher' : (($ref->ReferrerRole ?? '') === 'Admin' ? 'Admin' : 'Student');
+    $role = role_label($ref->ReferrerRole ?? '', $ref->ReferrerId ?? 0);
     $who = '<a href="/Profile/Show/' . (int)$ref->ReferrerId . '" target="_blank" rel="noopener">' . e((string)$ref->ReferrerName) . '</a>';
     return '<span class="jv-badge jv-ref" title="' . e('রেফার করেছেন: ' . $ref->ReferrerName . ' (' . $role . ')' . $st) . '"><i class="fas fa-gift"></i> ' . ($long ? 'রেফার করেছেন: ' : 'Ref: ') . $who
         . ($long && !empty($ref->RefCode) ? ' <small>· কোড <b>' . e((string)$ref->RefCode) . '</b></small>' : '')

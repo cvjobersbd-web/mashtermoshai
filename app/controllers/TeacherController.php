@@ -85,7 +85,7 @@ class TeacherController extends Controller
         if (in_array($this->db->GetUserTeacherRequestStatus($userId), ['Pending', 'AwaitingPayment', 'Approved'], true)) $errors[] = 'আপনার আগের আবেদন এখনো চালু আছে।';
 
         $viewBag = ['Details' => $d];
-        // Profile Verification — মোবাইল, WhatsApp, NID এর ছবি (সামনে + পেছনে)
+        // Teacher Verification — মোবাইল, WhatsApp, NID এর ছবি (সামনে + পেছনে)
         $kyc = null;
         if (!$errors) {
             try {

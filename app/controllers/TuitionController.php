@@ -49,11 +49,11 @@ class TuitionController extends Controller
         if ($title === '') $title = 'পড়াতে চাই পোস্ট';   // শিরোনাম ঐচ্ছিক
         if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
         if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
-        // শিক্ষার্থীর Profile Verification Approve না হলে টিউশন পোস্ট করা যাবে না
+        // Student Verification Approve না হলে টিউশন পোস্ট করা যাবে না
         if (session_get('UserRole') === 'User') {
             $ks = $this->db->KycStatus($userId, 'student');
             if ($ks !== 'Approved') json_response(['success' => false, 'needPackage' => '/Kyc/Student?next=' . rawurlencode('/Tuition/Circular'), 'needKyc' => true,
-                'message' => $ks === 'Pending' ? 'আপনার শিক্ষার্থী Profile Verification ফর্ম যাচাই হচ্ছে — অ্যাডমিন Approve করলেই টিউশন পোস্ট করতে পারবেন।' : 'টিউশন পোস্ট করার আগে শিক্ষার্থীর Profile Verification ফর্ম (নাম, বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।']);
+                'message' => $ks === 'Pending' ? 'আপনার Student Verification ফর্ম যাচাই হচ্ছে — অ্যাডমিন Approve করলেই টিউশন পোস্ট করতে পারবেন।' : 'টিউশন পোস্ট করার আগে Student Verification ফর্ম (নাম, বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।']);
         }
         // পেমেন্টের নিয়ম চালু থাকলে পোস্ট করতে ক্রেডিট লাগবে (অ্যাডমিন বাদে)
         $needCredit = session_get('UserRole') !== 'Admin' && $this->db->PaymentRules()['student'];

@@ -310,7 +310,7 @@ try {
 <!-- ✅ মোবাইল/ট্যাবলেটে: ☰ বাটন চাপলে সাইডবার বাম দিক থেকে আসে -->
 <?php
     $adminPages = [
-        'Dashboard' => 'Dashboard', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Profile Verification', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'TeacherOverview' => 'Teacher Overview',
+        'Dashboard' => 'Dashboard', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Verification', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'TeacherOverview' => 'Teacher Overview',
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
@@ -353,7 +353,7 @@ try {
         <?php if (admin_can(admin_action_rule('Kyc'))): ?>
         <li>
             <a href="/Admin/Kyc" class="<?= $currentAction === 'Kyc' ? 'active' : '' ?>">
-                <i class="fas fa-id-card"></i> Profile Verification
+                <i class="fas fa-id-card"></i> Verification
                 <?php if ($kycPend['teacher'] + $kycPend['student'] > 0): ?>
                     <span class="badge-sidebar warning" title="<?= e('টিচার ' . $kycPend['teacher'] . ' · শিক্ষার্থী ' . $kycPend['student'] . ' যাচাই বাকি') ?>"><?= (int)($kycPend['teacher'] + $kycPend['student']) ?></span>
                 <?php endif; ?>

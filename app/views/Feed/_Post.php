@@ -12,7 +12,7 @@ $open = !empty($open);
 $isOwner = $me !== null && $p->UserId === $me;
 $canDelete = $isOwner || is_admin();
 $approved = $p->Status === 'Approved';
-$roleLbl = $p->AuthorRole === 'Teacher' ? 'Teacher' : ($p->AuthorRole === 'Admin' ? 'Admin' : 'Student');
+$roleLbl = role_label($p->AuthorRole, $p->UserId);
 $n = count($p->Images);
 $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
 ?>

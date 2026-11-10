@@ -1484,7 +1484,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     if (!d) { err.textContent = res.status === 413 ? 'ফাইল অনেক বড় — ছোট ফাইল দিন।' : 'সার্ভার থেকে উত্তর পাওয়া যায়নি। ফাইল বড় হলে ছোট ফাইল দিয়ে চেষ্টা করুন।'; err.classList.add('show'); return; }
                     if (!d.success) {
                         err.textContent = d.message || 'পোস্ট করা যায়নি।';
-                        if (d.needPackage) { var pl = document.createElement('a'); pl.href = d.needPackage; pl.className = 'tc-need-pkg'; pl.innerHTML = d.needKyc ? '<i class="fas fa-id-card"></i> Profile Verification ফর্ম পূরণ করুন' : '<i class="fas fa-tags"></i> প্যাকেজ নিন'; err.appendChild(document.createTextNode(' ')); err.appendChild(pl); }
+                        if (d.needPackage) { var pl = document.createElement('a'); pl.href = d.needPackage; pl.className = 'tc-need-pkg'; pl.innerHTML = d.needKyc ? '<i class="fas fa-id-card"></i> Student Verification ফর্ম পূরণ করুন' : '<i class="fas fa-tags"></i> প্যাকেজ নিন'; err.appendChild(document.createTextNode(' ')); err.appendChild(pl); }
                         err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return;
                     }
                     form.reset(); clearMedia(); if (quick) quick.value = '';

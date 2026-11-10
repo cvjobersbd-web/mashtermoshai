@@ -154,7 +154,7 @@ $jsMethods = array_map(function ($m) {
 
     <?php if ($block): ?>
         <div class="co-alert warn"><i class="fas fa-exclamation-triangle" style="margin-top:3px;"></i><span><?= e($block) ?>
-            <?php if ($pkg->Audience === 'Course'): ?> <a href="/Course/My">আমার কোর্স</a><?php elseif ($pkg->Audience === 'Teacher'): ?> <a href="/Teacher/RequestForm">Become a Tutor ফর্ম</a><?php elseif (str_contains((string)$block, 'Profile Verification')): ?> <a href="/Kyc/Student?next=<?= rawurlencode('/Payment/Checkout/' . (int)$pkg->Id) ?>"><b>Profile Verification ফর্মে যান →</b></a><?php else: ?> <a href="/Tuition/Circular">Tuition Circular-এ যান</a><?php endif; ?></span></div>
+            <?php if ($pkg->Audience === 'Course'): ?> <a href="/Course/My">আমার কোর্স</a><?php elseif ($pkg->Audience === 'Teacher'): ?> <a href="/Teacher/RequestForm">Become a Tutor ফর্ম</a><?php elseif (str_contains((string)$block, 'Student Verification')): ?> <a href="/Kyc/Student?next=<?= rawurlencode('/Payment/Checkout/' . (int)$pkg->Id) ?>"><b>Student Verification ফর্মে যান →</b></a><?php else: ?> <a href="/Tuition/Circular">Tuition Circular-এ যান</a><?php endif; ?></span></div>
     <?php endif; ?>
     <?php if ($pending > 0): ?>
         <div class="co-alert info"><i class="fas fa-hourglass-half" style="margin-top:3px;"></i><span>আপনার <?= e(bn_num($pending)) ?>টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। <a href="/Payment/My">আমার পেমেন্ট দেখুন</a></span></div>

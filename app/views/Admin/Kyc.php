@@ -1,6 +1,6 @@
 <?php
-/** Admin → Profile Verification: টিচার আর শিক্ষার্থীর পরিচয় যাচাই — আলাদা সেকশন; পুরো তথ্য + NID / ID কার্ডের ছবি দেখে Approve / Reject */
-$ViewData['Title'] = 'Profile Verification';
+/** Admin → Verification: টিচার আর শিক্ষার্থীর পরিচয় যাচাই — আলাদা সেকশন; পুরো তথ্য + NID / ID কার্ডের ছবি দেখে Approve / Reject */
+$ViewData['Title'] = 'Verification';
 $list = is_array($Model) ? $Model : [];
 $kind = (string)$ViewBag->Kind; $S = (string)$ViewBag->S; $C = $ViewBag->Counts; $apps = $ViewBag->Apps ?? [];
 $classes = Db::KYC_CLASSES;
@@ -61,11 +61,11 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content kc">
     <?= csrf_field() ?>
-    <h2><i class="fas fa-id-card" style="color:#2563EB;"></i> Profile Verification — পরিচয় যাচাই</h2>
-    <p class="sub">টিচার আর শিক্ষার্থীর জমা দেওয়া তথ্য, NID / ID কার্ডের ছবি দেখে Approve বা Reject করুন। নতুন টিচার আবেদনে: <b>Profile Verification Approve</b> + <b>Teacher Payment Requests এ পেমেন্ট Accept</b> — দুটো হলেই ইউজার টিচার হয়ে যায়। শিক্ষার্থীর Profile Verification Approve হলে প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারে।</p>
+    <h2><i class="fas fa-id-card" style="color:#2563EB;"></i> Verification — টিচার ও শিক্ষার্থীর পরিচয় যাচাই</h2>
+    <p class="sub">টিচার আর শিক্ষার্থীর জমা দেওয়া তথ্য, NID / ID কার্ডের ছবি দেখে Approve বা Reject করুন। নতুন টিচার আবেদনে: <b>Teacher Verification Approve</b> + <b>Teacher Payment Requests এ পেমেন্ট Accept</b> — দুটো হলেই ইউজার টিচার হয়ে যায়। Student Verification Approve হলে প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারে।</p>
 
     <div class="kc-kinds">
-        <?php foreach (['teacher' => ['t', 'fa-chalkboard-user', 'টিচার Profile Verification', 'NID, মোবাইল, WhatsApp + আবেদনের ফর্ম'], 'student' => ['s', 'fa-user-graduate', 'শিক্ষার্থী Profile Verification', 'বাবা-মা, ঠিকানা, ক্লাস, রেজাল্ট, ID কার্ড']] as $kk => [$cls, $ic, $lbl, $hint]): $pc = (int)$C[$kk]['Pending']; ?>
+        <?php foreach (['teacher' => ['t', 'fa-chalkboard-user', 'Teacher Verification', 'NID, মোবাইল, WhatsApp + আবেদনের ফর্ম'], 'student' => ['s', 'fa-user-graduate', 'Student Verification', 'বাবা-মা, ঠিকানা, ক্লাস, রেজাল্ট, ID কার্ড']] as $kk => [$cls, $ic, $lbl, $hint]): $pc = (int)$C[$kk]['Pending']; ?>
             <a class="kc-kind <?= $cls ?><?= $kind === $kk ? ' on' : '' ?>" href="/Admin/Kyc?k=<?= $kk ?>"><span class="ic"><i class="fas <?= $ic ?>"></i></span><span><b><?= $lbl ?></b><small><?= $hint ?> · মোট <?= array_sum($C[$kk]) ?></small></span><?php if ($pc): ?><span class="pend"><?= $pc ?> যাচাই বাকি</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
@@ -83,7 +83,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                 <span class="kc-ava"><?php if (!is_blank($k->UPhoto)): ?><img src="<?= e($k->UPhoto) ?>" alt="" onerror="this.remove()" /><?php else: ?><?= e(mb_strtoupper(mb_substr($nm, 0, 1))) ?><?php endif; ?></span>
                 <div><a class="nm" href="/Profile/Show/<?= (int)$k->UserId ?>" target="_blank"><?= e($kind === 'student' && !empty($D['fullName']) ? $D['fullName'] : $nm) ?></a>
                     <small>@<?= e((string)$k->UUserName) ?> · <?= e((string)$k->UEmail) ?> · জমা: <?= e($fmt($k->CreatedAt)) ?></small></div>
-                <span class="kc-pill g"><?= e($k->URole === 'User' ? 'Student' : (string)$k->URole) ?></span>
+                <span class="kc-pill g"><?= e(role_label($k->URole, $k->UserId)) ?></span>
                 <span class="kc-pill <?= $sc ?>" style="margin-left:auto;"><?= e($sl) ?></span>
             </div>
             <div style="margin:-4px 0 10px;"><?= joined_via_full($k->UserId) ?></div>
@@ -123,7 +123,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                             <?php else: $pc2 = $p->Status === 'Approved' ? 'ok' : ($p->Status === 'Rejected' ? 'no' : 'warn'); ?>
                                 <div class="kc-app <?= $pc2 ?>"><i class="fas fa-receipt"></i> নতুন টিচার আবেদন · প্যাকেজ: <b><?= e($p->PackageName) ?></b> — <?= e(taka($p->Amount)) ?> ·
                                     পেমেন্ট: <b><?= $p->Status === 'Approved' ? 'Accepted' : ($p->Status === 'Rejected' ? 'Rejected' : 'যাচাই বাকি') ?></b>
-                                    <?php if ($p->Status === 'Pending'): ?> — Profile Verification Approve করার পর <a href="/Admin/TeacherPayments#ap-<?= (int)$p->Id ?>">Teacher Payment Requests এ Accept করুন</a><?php endif; ?></div>
+                                    <?php if ($p->Status === 'Pending'): ?> — Teacher Verification Approve করার পর <a href="/Admin/TeacherPayments#ap-<?= (int)$p->Id ?>">Teacher Payment Requests এ Accept করুন</a><?php endif; ?></div>
                             <?php endif; ?>
                         <?php elseif ($a && $a['req']->Status === 'Approved'): ?>
                             <div class="kc-app g"><i class="fas fa-circle-check"></i> টিচার আবেদন Approved।</div>

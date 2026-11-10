@@ -1258,7 +1258,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <?php if ($userRole === 'User'): ?>
                                 <li>
                                     <a class="dropdown-item" href="/Kyc/Student">
-                                        <i class="fas fa-id-card"></i> Profile Verification
+                                        <i class="fas fa-id-card"></i> Student Verification
                                     </a>
                                 </li>
                                 <li>
@@ -1278,7 +1278,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     <li>
                                         <a class="dropdown-item" href="/User/Dashboard">
                                             <i class="fas fa-chart-pie"></i> Student Dashboard
-                                            <span class="badge-role" style="background:#e3f2fd; color:#1565c0;">Student</span>
+                                            <span class="badge-role" style="background:#e3f2fd; color:#1565c0;"><?= e(role_label('User', current_user_id())) ?></span>
                                         </a>
                                     </li>
                                 <?php endif; ?>
@@ -1370,7 +1370,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     </span>
                     <span class="m-user-info">
                         <strong><?= e($mName) ?></strong>
-                        <small><?= e($mRole === 'User' ? 'Student' : $mRole) ?> · @<?= e(session_get('UserName')) ?></small>
+                        <small><?= e(role_label($mRole, current_user_id())) ?> · @<?= e(session_get('UserName')) ?></small>
                     </span>
                 </a>
             <?php endif; ?>
@@ -1398,7 +1398,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
                     <a href="/Course/My" class="<?= $mActive('/Course/My') ?>"><i class="fas fa-bookmark"></i><span>আমার কোর্স</span></a>
                     <?php if ($mRole === 'User'): ?>
-                    <a href="/Kyc/Student" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span>Profile Verification</span></a>
+                    <a href="/Kyc/Student" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span>Student Verification</span></a>
                     <a href="/Profile/Show?tab=profile#ab-tutor"><i class="fas fa-chalkboard-user"></i><span>Become a Tutor</span></a>
                     <?php endif; ?>
                     <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
@@ -1457,7 +1457,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <?php endif; ?>
 
     <?php
-    // 🪪 Profile Verification এখনো দেয়নি (বা বাতিল হয়েছে) — নিচে মনে করিয়ে দেওয়া (আটকায় না)
+    // 🪪 Student Verification এখনো দেয়নি (বা বাতিল হয়েছে) — নিচে মনে করিয়ে দেওয়া (আটকায় না)
     $kycBar = null;
     $kycPath = strtolower((string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
     if (!$expSub && current_user_id() !== null && !$isAdmin && !str_starts_with($kycPath, '/kyc') && !str_starts_with($kycPath, '/teacher/requestform') && !str_starts_with($kycPath, '/account')) {
@@ -1467,14 +1467,14 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 $ks = db()->KycStatus($kUid, 'student');
                 $trs = db()->GetUserTeacherRequestStatus($kUid);
                 if (($ks === 'None' || $ks === 'Rejected') && !in_array($trs, ['Pending', 'AwaitingPayment'], true))
-                    $kycBar = ['/Kyc/Student', $ks === 'Rejected' ? 'আপনার শিক্ষার্থী Profile Verification ফর্ম গ্রহণ করা হয়নি — তথ্য ঠিক করে আবার জমা দিন।' : 'প্যাকেজ কেনা আর টিউশন পোস্টের জন্য শিক্ষার্থীর Profile Verification ফর্ম (বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।'];
+                    $kycBar = ['/Kyc/Student', $ks === 'Rejected' ? 'আপনার Student Verification ফর্ম গ্রহণ করা হয়নি — তথ্য ঠিক করে আবার জমা দিন।' : 'প্যাকেজ কেনা আর টিউশন পোস্টের জন্য Student Verification ফর্ম (বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।'];
             }
         } catch (Throwable $e) { $kycBar = null; }
     }
     if ($kycBar): ?>
     <div class="exp-bar kyc-bar" id="kycBar" data-key="mmKycBar">
         <i class="fas fa-id-card"></i><span><?= e($kycBar[1]) ?></span>
-        <a href="<?= e($kycBar[0]) ?>">Profile Verification ফর্ম পূরণ করুন</a>
+        <a href="<?= e($kycBar[0]) ?>">Student Verification ফর্ম পূরণ করুন</a>
         <button type="button" aria-label="বন্ধ করুন" onclick="try{sessionStorage.setItem('mmKycBar','1')}catch(e){} this.parentNode.remove()"><i class="fas fa-xmark"></i></button>
     </div>
     <style>

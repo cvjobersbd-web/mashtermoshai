@@ -17,8 +17,9 @@ class PaymentController extends Controller
         if ($role === 'Admin') return 'অ্যাডমিন অ্যাকাউন্ট দিয়ে প্যাকেজ কেনা যায় না।';
         if ($pkg->Audience === 'Student' && $role === 'User') {
             $ks = $this->db->KycStatus((int)current_user_id(), 'student');
-            if ($ks === 'Pending') return 'আপনার শিক্ষার্থী Profile Verification ফর্ম যাচাই হচ্ছে — অ্যাডমিন Approve করলেই প্যাকেজ কিনতে পারবেন।';
-            if ($ks !== 'Approved') return 'প্যাকেজ কেনার আগে শিক্ষার্থীর Profile Verification ফর্ম (নাম, বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন — অ্যাডমিন Approve করলে কিনতে পারবেন।';
+            // ফর্ম জমা দিলেই প্যাকেজ কেনা যায় (যাচাই চলাকালীনও) — অ্যাডমিন আগে ফর্ম Approve করে তারপর পেমেন্ট Accept করেন
+            if ($ks === 'Rejected') return 'আপনার Student Verification ফর্ম গ্রহণ করা হয়নি — ফর্মটা ঠিক করে আবার জমা দিন, তারপর প্যাকেজ কিনতে পারবেন।';
+            if ($ks !== 'Approved' && $ks !== 'Pending') return 'প্যাকেজ কেনার আগে Student Verification ফর্ম (নাম, বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।';
         }
         if ($pkg->Audience === 'Student' && ($this->db->PaymentRules()['studentFree'] ?? false)) return 'এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি — কোনো প্যাকেজ বা পেমেন্ট লাগবে না। সরাসরি Tuition Circular-এ গিয়ে পোস্ট করুন।';
         if ($pkg->Audience === 'Teacher' && $role !== 'Teacher') {
@@ -154,7 +155,7 @@ class PaymentController extends Controller
             if ($tr && in_array($tr->Status, ['AwaitingPayment', 'Pending', 'Expired'], true)) {
                 $this->db->SetTeacherRequestState((int)$tr->Id, 'Pending', $id);
                 foreach ($this->db->GetAdmins() as $a) {
-                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — আগে Profile Verification (NID) Approve, তারপর Teacher Payment Requests এ পেমেন্ট Accept করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher');
+                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — আগে Teacher Verification (NID) Approve, তারপর Teacher Payment Requests এ পেমেন্ট Accept করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher');
                 }
                 json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
                     'message' => 'পেমেন্ট আর টিচার আবেদন অ্যাডমিনের কাছে পাঠানো হয়েছে! যাচাই করে Approve করলে আপনি টিচার হয়ে যাবেন।']);

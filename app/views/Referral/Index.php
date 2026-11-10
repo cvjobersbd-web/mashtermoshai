@@ -87,7 +87,7 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                             <?php foreach ($ViewBag->Referrals as $r): $nm = !is_blank($r->FullName) ? $r->FullName : ($r->UserName ?: 'User'); ?>
                                 <tr>
                                     <td><?= e($nm) ?></td>
-                                    <td><?= $r->Role === 'Teacher' ? 'Teacher' : 'Student' ?></td>
+                                    <td><?= e(role_label($r->Role, $r->ReferredUserId ?? 0)) ?></td>
                                     <td><?= e(fmt_date($r->CreatedAt, 'd M Y')) ?></td>
                                     <td><?= $r->Status === 'Credited' ? '<b style="color:#16A34A;">+৳' . (int)$r->Bonus . '</b>' : ($r->Status === 'Waiting' ? '<span style="color:#94A3B8; font-size:12.5px;">প্যাকেজ কেনেনি</span>' : '<span class="rfp-st rej">বাতিল</span>') ?></td>
                                 </tr>

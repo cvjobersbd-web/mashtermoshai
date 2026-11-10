@@ -478,7 +478,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                         <div class="hf-body">
                             <div class="hf-who">
                                 <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
-                                <div style="min-width:0;"><b><?= e($fp->AuthorName) ?><span class="hf-role<?= $fp->AuthorRole === 'Teacher' ? ' t' : '' ?>"><?= $fp->AuthorRole === 'Teacher' ? 'Teacher' : ($fp->AuthorRole === 'Admin' ? 'Admin' : 'Student') ?></span></b>
+                                <div style="min-width:0;"><b><?= e($fp->AuthorName) ?><span class="hf-role<?= $fp->AuthorRole === 'Teacher' ? ' t' : '' ?>"><?= e(role_label($fp->AuthorRole, $fp->UserId ?? 0)) ?></span></b>
                                     <small><?= e(time_ago($fp->ApprovedAt ?? $fp->CreatedAt)) ?></small></div>
                             </div>
                             <?php if ($fp->Subject !== ''): ?><span class="hf-subj"><i class="fas fa-book-open"></i><?= e($fp->Subject) ?></span><?php endif; ?>

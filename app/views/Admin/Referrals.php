@@ -91,7 +91,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         if ($r->Status === 'Credited') $groups[$k]['ok']++;
     }
     uasort($groups, fn($a, $b) => count($b['list']) <=> count($a['list']));
-    $roleBn = fn($r) => $r === 'Teacher' ? 'Teacher' : ($r === 'Admin' ? 'Admin' : 'Student');
+    $roleBn = fn($r, $uid = 0) => role_label($r, $uid);
     $stBn = fn($r) => $r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>');
     ?>
     <div class="rfa-card">
@@ -102,7 +102,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <?php foreach ($groups as $rid => $g): ?>
             <details class="rfg" data-s="<?= e(mb_strtolower($g['name'] . ' ' . $g['user'] . ' ' . $g['code'] . ' ' . implode(' ', array_map(fn($x) => ($x->ReferredName ?? '') . ' ' . ($x->ReferredUser ?? '') . ' ' . ($x->ReferredEmail ?? ''), $g['list'])))) ?>">
                 <summary>
-                    <span class="rfg-who"><i class="fas fa-user-tie"></i> <a href="/Admin/UserDetails/<?= (int)$rid ?>"><?= e($g['name']) ?></a> <small><?= e($roleBn($g['role'])) ?><?= $g['user'] !== '' ? ' · @' . e($g['user']) : '' ?></small></span>
+                    <span class="rfg-who"><i class="fas fa-user-tie"></i> <a href="/Admin/UserDetails/<?= (int)$rid ?>"><?= e($g['name']) ?></a> <small><?= e($roleBn($g["role"], $rid)) ?><?= $g['user'] !== '' ? ' · @' . e($g['user']) : '' ?></small></span>
                     <?php if ($g['code'] !== ''): ?><span class="rfg-code" title="এই ব্যক্তির রেফারেল কোড"><i class="fas fa-ticket"></i> <?= e($g['code']) ?></span><?php endif; ?>
                     <span class="rfg-n"><b><?= count($g['list']) ?></b> জন এসেছে<?= $g['ok'] ? ' · <span style="color:#16A34A;">' . $g['ok'] . ' জন কিনেছে</span>' : '' ?></span>
                     <i class="fas fa-chevron-down rfg-car"></i>
@@ -111,7 +111,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
                     <tr><th>নতুন ইউজার</th><th>কবে এসেছে</th><th>অবস্থা</th><th>IP</th><th></th></tr>
                     <?php foreach ($g['list'] as $r): ?>
                         <tr>
-                            <td><?php if ($r->ReferredName || $r->ReferredUser): ?><a href="/Profile/Show/<?= (int)$r->ReferredUserId ?>" target="_blank"><b><?= e($r->ReferredName ?: $r->ReferredUser) ?></b></a> <small style="color:#64748B;">(<?= e($roleBn((string)$r->ReferredRole)) ?>)</small><?php else: ?><span style="color:#94A3B8;">Deleted</span><?php endif; ?><br><small style="color:#94A3B8;"><?= e((string)$r->ReferredEmail) ?></small></td>
+                            <td><?php if ($r->ReferredName || $r->ReferredUser): ?><a href="/Profile/Show/<?= (int)$r->ReferredUserId ?>" target="_blank"><b><?= e($r->ReferredName ?: $r->ReferredUser) ?></b></a> <small style="color:#64748B;">(<?= e($roleBn((string)$r->ReferredRole, (int)$r->ReferredUserId)) ?>)</small><?php else: ?><span style="color:#94A3B8;">Deleted</span><?php endif; ?><br><small style="color:#94A3B8;"><?= e((string)$r->ReferredEmail) ?></small></td>
                             <td><?= e(fmt_date($r->CreatedAt, 'd M Y, h:i A')) ?></td>
                             <td><?= $stBn($r) ?></td>
                             <td><small><?= e((string)$r->Ip) ?></small></td>

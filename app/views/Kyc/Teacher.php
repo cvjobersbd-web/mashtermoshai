@@ -1,7 +1,7 @@
 <?php
-/** টিচারের Profile Verification — মোবাইল, WhatsApp, NID এর ছবি (পুরোনো টিচার / আগের Profile Verification বাতিল হলে আবার জমা) */
+/** টিচারের Teacher Verification — মোবাইল, WhatsApp, NID এর ছবি (পুরোনো টিচার / আগের Teacher Verification বাতিল হলে আবার জমা) */
 $k = $Model; $st = $k ? (string)$k->Status : 'None'; $u = $ViewBag->User;
-$ViewData['Title'] = 'টিচারের Profile Verification';
+$ViewData['Title'] = 'টিচারের Teacher Verification';
 $ViewData['Robots'] = 'noindex, nofollow';
 $D = $k ? $k->D : [];
 $showForm = $st === 'None' || $st === 'Rejected';
@@ -10,12 +10,12 @@ $showForm = $st === 'None' || $st === 'Rejected';
 <?= csrf_field() ?>
 <div class="ky-page">
     <div class="ky-wrap">
-        <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> টিচারের পরিচয় যাচাই (Profile Verification)</h1>
+        <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> টিচারের পরিচয় যাচাই (Teacher Verification)</h1>
         <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য সব টিচারের NID আর যোগাযোগের নম্বর যাচাই করা হয়।</p>
         <?php if ($st === 'Pending'): ?>
             <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন।</p></div></div>
         <?php elseif ($st === 'Approved'): ?>
-            <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার Profile Verification Approve হয়েছে</b><p>ধন্যবাদ! আপনার পরিচয় যাচাই করা হয়েছে।</p></div></div>
+            <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার Teacher Verification Approve হয়েছে</b><p>ধন্যবাদ! আপনার পরিচয় যাচাই করা হয়েছে।</p></div></div>
         <?php elseif ($st === 'Rejected'): ?>
             <div class="ky-state no"><i class="fas fa-circle-xmark"></i><div><b>তথ্য গ্রহণ করা হয়নি</b><p><?= !is_blank($k->AdminNote) ? 'কারণ: ' . e($k->AdminNote) . '<br>' : '' ?>নিচে ঠিক করে আবার জমা দিন।</p></div></div>
         <?php endif; ?>
