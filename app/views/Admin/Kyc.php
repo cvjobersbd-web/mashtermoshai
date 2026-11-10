@@ -147,7 +147,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
             <?php if ($k->Status !== 'Rejected'): ?>
             <div class="kc-act">
                 <?php if ($k->Status === 'Pending'): ?><button type="button" class="kc-btn ok" data-kyc="<?= (int)$k->Id ?>" data-act="Approve"><i class="fas fa-check"></i> Approve</button><?php endif; ?>
-                <input type="text" maxlength="300" placeholder="বাতিলের কারণ (যেমন: ID কার্ডের ছবি ঝাপসা)" id="kycNote<?= (int)$k->Id ?>" />
+                <input type="text" maxlength="300" placeholder="বাতিলের কারণ — ঐচ্ছিক (যেমন: ID কার্ডের ছবি ঝাপসা)" id="kycNote<?= (int)$k->Id ?>" />
                 <button type="button" class="kc-btn no" data-kyc="<?= (int)$k->Id ?>" data-act="Reject"><i class="fas fa-xmark"></i> <?= $k->Status === 'Approved' ? 'Approve বাতিল করুন' : 'Reject' ?></button>
             </div>
             <?php endif; ?>
@@ -165,7 +165,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
         if (e.target.closest('#kcLb')) { lb.classList.remove('open'); return; }
         var b = e.target.closest('[data-kyc]'); if (!b) return;
         var id = b.dataset.kyc, act = b.dataset.act, note = (document.getElementById('kycNote' + id) || {}).value || '';
-        if (act === 'Reject' && !note.trim()) { toast('বাতিলের কারণ লিখুন — ইউজার এটা দেখতে পাবে।'); document.getElementById('kycNote' + id).focus(); return; }
+        if (act === 'Reject' && !confirm(note.trim() ? 'Reject করবেন?' : 'কারণ না লিখেই Reject করবেন?')) return;
         if (act === 'Approve' && !confirm('তথ্য আর ছবি দেখে নিশ্চিত হয়েছেন? Approve করবেন?')) return;
         b.disabled = true;
         var fd = new FormData(); fd.append('id', id); fd.append('action', act); fd.append('note', note);

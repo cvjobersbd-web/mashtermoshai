@@ -329,7 +329,7 @@ class AdminController extends Controller
         $act = (string)input_str('action', '');
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
         if (!in_array($act, ['Approve', 'Reject'], true)) json_response(['success' => false, 'message' => 'ভুল অনুরোধ।']);
-        if ($act === 'Reject' && $note === '') json_response(['success' => false, 'message' => 'বাতিলের কারণ লিখুন — ইউজার এটা দেখতে পাবে।']);
+        // বাতিলের কারণ ঐচ্ছিক — দিলে ইউজার দেখতে পায়
         $this->db->SetKycStatus($k->Id, $act === 'Approve' ? 'Approved' : 'Rejected', $note, (int)current_user_id());
         $isT = $k->Kind === 'teacher';
         $link = $isT ? '/Kyc/Teacher' : '/Kyc/Student';
@@ -347,7 +347,7 @@ class AdminController extends Controller
                     }
                 }
             } else {
-                $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification গ্রহণ করা হয়নি', "কারণ: $note — তথ্য ঠিক করে আবার জমা দিন।", 'danger', $link, 'fa-id-card');
+                $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification গ্রহণ করা হয়নি', ($note !== '' ? "কারণ: $note — " : '') . 'তথ্য ও ছবি ঠিক করে আবার জমা দিন।', 'danger', $link, 'fa-id-card');
             }
         } catch (Throwable $e) { error_log('[kyc decide] ' . $e->getMessage()); }
         json_response(['success' => true, 'message' => ($act === 'Approve' ? 'Approve হয়েছে।' : 'বাতিল করা হয়েছে — ইউজার কারণ দেখে আবার জমা দিতে পারবেন।') . $extra]);
