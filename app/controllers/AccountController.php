@@ -98,7 +98,7 @@ class AccountController extends Controller
             } elseif (preg_match('/^MM[A-Z0-9]{6}$/', $typed) && $this->db->GetUserIdByReferralCode($typed)) {
                 $userRef = $typed;
             } else {
-                $fail('রেফারেন্স কোডটি সঠিক নয় — আবার দেখে লিখুন (যেমন MASHTER), অথবা ঘরটি খালি রাখুন।');
+                $fail('রেফারেন্স কোডটি সঠিক নয় — আবার দেখে লিখুন, অথবা ঘরটি খালি রাখুন।');
             }
         } elseif ($pend && ($partner = $this->db->GetPartnerByCode($pend[0])) !== null) {
             $pSrc = $pend[1];

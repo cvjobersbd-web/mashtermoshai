@@ -225,7 +225,7 @@ $authImg = $authT['auth_img'];
                         <?php endif; ?>
                         <div class="au-f">
                             <label for="refCode">রেফারেন্স কোড <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
-                            <div class="au-in"><i class="fas fa-ticket"></i><input name="refCode" id="refCode" type="text" maxlength="20" placeholder="কোড থাকলে লিখুন — যেমন MASHTER" autocomplete="off" value="<?= e($pfRef) ?>" style="text-transform:uppercase;" /></div>
+                            <div class="au-in"><i class="fas fa-ticket"></i><input name="refCode" id="refCode" type="text" maxlength="20" placeholder="কোড থাকলে লিখুন" autocomplete="off" value="<?= e($pfRef) ?>" style="text-transform:uppercase;" /></div>
                         </div>
                         <div id="formError" class="au-alert err" style="display:none;"></div>
                         <button type="submit" class="au-btn"><i class="fas fa-user-plus"></i> Create Account</button>
