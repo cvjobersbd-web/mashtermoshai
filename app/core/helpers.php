@@ -1696,7 +1696,7 @@ function admin_permissions(): array
 {
     return [
         'users'      => ['Users & Teachers', 'fa-users', 'ইউজার/টিচার দেখা, Suspend, চালু/বন্ধ, পাসওয়ার্ড বদল'],
-        'teachers'   => ['KYC (পরিচয় যাচাই)', 'fa-id-card', 'টিচার / শিক্ষার্থীর KYC (NID, ID কার্ড) দেখা — Approve / Reject'],
+        'teachers'   => ['Profile Verification (পরিচয় যাচাই)', 'fa-id-card', 'টিচার / শিক্ষার্থীর Profile Verification (NID, ID কার্ড) দেখা — Approve / Reject'],
         'tuition'    => ['Tuition', 'fa-clipboard-list', 'Tuition Posts, Applications, Tutor Requests'],
         'notices'    => ['News & Announcements', 'fa-newspaper', 'নোটিশ যোগ / এডিট / মুছে ফেলা'],
         'edufeed'    => ['Educational Feed', 'fa-graduation-cap', 'পোস্ট Approve / Reject'],

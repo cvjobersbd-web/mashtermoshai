@@ -144,7 +144,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                         <small><?= e(trim(($p->MobileNumber ?? '') . ' · ' . ($p->Email ?? ''), ' ·')) ?></small>
                     </div>
                     <?php if ($p->Role): ?><span class="ap-role <?= e($p->Role) ?>"><?= e($p->Role === 'User' ? 'Student' : $p->Role) ?></span><?php endif; ?>
-                    <?php if ($p->Audience === 'Teacher' && $p->Role === 'User'): ?><a class="ap-role apply" href="/Admin/Kyc?k=teacher" title="এখনো শিক্ষার্থী অ্যাকাউন্ট — টিচার হওয়ার আবেদন করে শিক্ষক প্যাকেজ কিনেছেন। KYC Approve + পেমেন্ট Accept হলে টিচার হয়ে যাবেন।"><i class="fas fa-chalkboard-user"></i> শিক্ষক হওয়ার আবেদনকারী</a><?php endif; ?>
+                    <?php if ($p->Audience === 'Teacher' && $p->Role === 'User'): ?><a class="ap-role apply" href="/Admin/Kyc?k=teacher" title="এখনো শিক্ষার্থী অ্যাকাউন্ট — টিচার হওয়ার আবেদন করে শিক্ষক প্যাকেজ কিনেছেন। Profile Verification Approve + পেমেন্ট Accept হলে টিচার হয়ে যাবেন।"><i class="fas fa-chalkboard-user"></i> শিক্ষক হওয়ার আবেদনকারী</a><?php endif; ?>
                     <span class="ap-pill <?= e($p->Status) ?>"><?= e($p->Status === 'Approved' ? 'Accepted' : $p->Status) ?></span>
                 </div>
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
@@ -162,10 +162,10 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     <div class="ap-tapp <?= $ap['req'] === 'Approved' ? 'ok' : ($kOk ? 'ok' : ($ap['kyc'] === 'Rejected' ? 'no' : 'warn')) ?>">
                         <i class="fas fa-user-check"></i>
                         <?php if ($ap['req'] === 'Approved'): ?>নতুন টিচার আবেদন — <b>Approved</b>, ইউজার এখন টিচার।
-                        <?php elseif ($ap['kyc'] === 'Approved'): ?>নতুন টিচার আবেদন · KYC: <b>Approved ✅</b> — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
-                        <?php elseif ($ap['kyc'] === 'None'): ?>নতুন টিচার আবেদন (KYC চালুর আগের) — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
-                        <?php elseif ($ap['kyc'] === 'Rejected'): ?>নতুন টিচার আবেদন · KYC: <b>Rejected</b> — নতুন KYC জমা দিয়ে Approve না হওয়া পর্যন্ত Accept করা যাবে না। <a href="/Admin/Kyc?k=teacher&amp;s=all">KYC দেখুন</a>
-                        <?php else: ?>নতুন টিচার আবেদন · KYC: <b>যাচাই বাকি</b> — আগে <a href="/Admin/Kyc?k=teacher">KYC পেজে NID দেখে Approve করুন</a>, তারপর এখানে Accept করুন।<?php endif; ?>
+                        <?php elseif ($ap['kyc'] === 'Approved'): ?>নতুন টিচার আবেদন · Profile Verification: <b>Approved ✅</b> — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
+                        <?php elseif ($ap['kyc'] === 'None'): ?>নতুন টিচার আবেদন (Profile Verification চালুর আগের) — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
+                        <?php elseif ($ap['kyc'] === 'Rejected'): ?>নতুন টিচার আবেদন · Profile Verification: <b>Rejected</b> — নতুন Profile Verification জমা দিয়ে Approve না হওয়া পর্যন্ত Accept করা যাবে না। <a href="/Admin/Kyc?k=teacher&amp;s=all">Profile Verification দেখুন</a>
+                        <?php else: ?>নতুন টিচার আবেদন · Profile Verification: <b>যাচাই বাকি</b> — আগে <a href="/Admin/Kyc?k=teacher">Profile Verification পেজে NID দেখে Approve করুন</a>, তারপর এখানে Accept করুন।<?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <?php if ($p->Note): ?><div class="ap-note"><i class="fas fa-comment"></i> <?= e($p->Note) ?></div><?php endif; ?>
@@ -173,7 +173,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <div class="ap-acts">
                     <?php if ($p->Status === 'Pending'): ?>
                         <?php $blockAcc = ($ap = $apps[(int)$p->Id] ?? null) && $ap['req'] === 'Pending' && !in_array($ap['kyc'], ['Approved', 'None'], true); ?>
-                        <button type="button" class="ap-btn ok" data-ap="approve" data-id="<?= (int)$p->Id ?>"<?= $blockAcc ? ' disabled title="আগে KYC Approve করুন"' : '' ?>><i class="fas fa-check"></i> Accept</button>
+                        <button type="button" class="ap-btn ok" data-ap="approve" data-id="<?= (int)$p->Id ?>"<?= $blockAcc ? ' disabled title="আগে Profile Verification Approve করুন"' : '' ?>><i class="fas fa-check"></i> Accept</button>
                         <button type="button" class="ap-btn no" data-ap="reject" data-id="<?= (int)$p->Id ?>"><i class="fas fa-times"></i> Reject</button>
                     <?php else: ?>
                         <span style="font-size:12.5px;color:#64748B;"><i class="far fa-clock"></i> যাচাই: <?= e($fmt($p->ReviewedAt)) ?></span>

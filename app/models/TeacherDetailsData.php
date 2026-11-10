@@ -23,7 +23,7 @@ trait TeacherDetailsData
             'presentAddress' => ['text', 250], 'permanentAddress' => ['text', 250],
         ];
         // শিক্ষাগত যোগ্যতা: SSC, HSC, স্নাতক, স্নাতকোত্তর
-        foreach (['ssc', 'hsc'] as $k) foreach (['Title' => 40, 'Institute' => 150, 'Board' => 40, 'Group' => 40, 'Year' => 4, 'Result' => 10] as $c => $n) $f[$k . $c] = ['text', $n];
+        foreach (['ssc', 'hsc'] as $k) foreach (['Title' => 40, 'Institute' => 150, 'Board' => 40, 'Group' => 40, 'Year' => 10, 'Result' => 10] as $c => $n) $f[$k . $c] = ['text', $n];
         foreach (['grad', 'post'] as $k) foreach (['Title' => 40, 'Institute' => 150, 'StudyType' => 40, 'Department' => 120, 'Year' => 20, 'Result' => 10] as $c => $n) $f[$k . $c] = ['text', $n];
         return $f;
     }

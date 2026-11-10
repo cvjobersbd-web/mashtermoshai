@@ -104,8 +104,14 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
                         <td data-l="Institute"><input name="td[<?= $k ?>Institute]" class="form-control" maxlength="150" value="<?= e($d[$k . 'Institute']) ?>" /></td>
                         <td data-l="Board"><input name="td[<?= $k ?>Board]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Board']) ?>" placeholder="Dhaka" /></td>
                         <td data-l="Group"><input name="td[<?= $k ?>Group]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Group']) ?>" placeholder="Science" /></td>
-                        <td data-l="Year"><input name="td[<?= $k ?>Year]" class="form-control" maxlength="4" inputmode="numeric" value="<?= e($d[$k . 'Year']) ?>" placeholder="2021" style="width:78px;" /></td>
-                        <td data-l="GPA"><input name="td[<?= $k ?>Result]" class="form-control" maxlength="10" value="<?= e($d[$k . 'Result']) ?>" placeholder="5.00" style="width:72px;" /></td>
+                        <td data-l="Year"><?php $yv = (string)$d[$k . 'Year']; $run = strcasecmp($yv, 'Running') === 0; ?>
+                            <select name="td[<?= $k ?>Year]" class="form-select td-year" data-res="td[<?= $k ?>Result]" style="width:118px;font-size:14px;color:#334155;">
+                                <option value="">— সাল —</option>
+                                <option value="Running"<?= $run ? ' selected' : '' ?>>Running (পড়ছি)</option>
+                                <?php for ($y = (int)date('Y') + 1; $y >= 1975; $y--): ?><option<?= $yv === (string)$y ? ' selected' : '' ?>><?= $y ?></option><?php endfor; ?>
+                                <?php if ($yv !== '' && !$run && !ctype_digit($yv)): ?><option selected><?= e($yv) ?></option><?php endif; ?>
+                            </select></td>
+                        <td data-l="GPA"><input name="td[<?= $k ?>Result]" class="form-control" maxlength="10" value="<?= e($run ? '' : $d[$k . 'Result']) ?>" placeholder="<?= $run ? 'Running' : '5.00' ?>" style="width:72px;"<?= $run ? ' disabled' : '' ?> /></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -120,12 +126,20 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
                         <td data-l="Institute"><input name="td[<?= $k ?>Institute]" class="form-control" maxlength="150" value="<?= e($d[$k . 'Institute']) ?>" /></td>
                         <td data-l="Study Type"><input name="td[<?= $k ?>StudyType]" class="form-control" maxlength="40" value="<?= e($d[$k . 'StudyType']) ?>" placeholder="Engineering" /></td>
                         <td data-l="Department"><input name="td[<?= $k ?>Department]" class="form-control" maxlength="120" value="<?= e($d[$k . 'Department']) ?>" /></td>
-                        <td data-l="Year"><input name="td[<?= $k ?>Year]" class="form-control" maxlength="20" value="<?= e($d[$k . 'Year']) ?>" placeholder="3rd Year" style="width:90px;" /></td>
+                        <td data-l="Year"><input name="td[<?= $k ?>Year]" class="form-control" maxlength="20" list="tdStudyYears" value="<?= e($d[$k . 'Year']) ?>" placeholder="3rd Year" style="width:110px;" /></td>
                         <td data-l="CGPA"><input name="td[<?= $k ?>Result]" class="form-control" maxlength="10" value="<?= e($d[$k . 'Result']) ?>" placeholder="3.50" style="width:72px;" /></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        <datalist id="tdStudyYears"><option value="Running"></option><option value="1st Year"></option><option value="2nd Year"></option><option value="3rd Year"></option><option value="4th Year"></option><option value="Final Year"></option><?php for ($y = (int)date('Y') + 1; $y >= 1990; $y--): ?><option value="<?= $y ?>"></option><?php endfor; ?></datalist>
+        <p class="hint" style="margin-top:6px;">এখন পড়ছেন (রেজাল্ট বের হয়নি)? সালের ঘরে <b>Running</b> বাছাই করুন — তখন GPA লাগবে না।</p>
+        <script>
+        document.querySelectorAll('select.td-year').forEach(function (sel) {
+            var res = document.querySelector('input[name="' + sel.dataset.res + '"]');
+            sel.addEventListener('change', function () { var run = sel.value === 'Running'; res.disabled = run; if (run) res.value = ''; res.placeholder = run ? 'Running' : '5.00'; });
+        });
+        </script>
     </div>
 </div>
 

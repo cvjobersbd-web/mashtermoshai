@@ -1,8 +1,8 @@
 <?php
-/** শিক্ষার্থীর KYC ফর্ম — Play / Nursery / KG থেকে University; SSC / HSC এর রেজাল্ট বা Running; ID কার্ডের ছবি */
+/** শিক্ষার্থীর Profile Verification ফর্ম — Play / Nursery / KG থেকে University; SSC / HSC এর রেজাল্ট বা Running; ID কার্ডের ছবি */
 $k = $Model; $st = $k ? (string)$k->Status : 'None';
 $cls = $ViewBag->Classes; $dists = $ViewBag->Districts; $boards = $ViewBag->Boards;
-$ViewData['Title'] = 'শিক্ষার্থীর KYC';
+$ViewData['Title'] = 'শিক্ষার্থীর Profile Verification';
 $ViewData['Robots'] = 'noindex, nofollow';
 $D = $k ? $k->D : [];
 $u = db()->GetUserById((int)current_user_id());
@@ -18,13 +18,13 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
 <?= csrf_field() ?>
 <div class="ky-page">
     <div class="ky-wrap">
-        <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> শিক্ষার্থীর তথ্য ও পরিচয় যাচাই (KYC)</h1>
+        <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> শিক্ষার্থীর তথ্য ও পরিচয় যাচাই (Profile Verification)</h1>
         <p class="ky-sub">প্যাকেজ কিনতে আর টিউশন পোস্ট করতে শিক্ষার্থীর তথ্য যাচাই করা লাগে। Play / Nursery / KG থেকে বিশ্ববিদ্যালয় — সবাই এই ফর্ম পূরণ করতে পারবে। ছোটদের ক্ষেত্রে বাবা / মা পূরণ করে দিন।</p>
 
         <?php if ($st === 'Pending'): ?>
             <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>ফর্ম যাচাই হচ্ছে</b><p>আপনার তথ্য অ্যাডমিনের কাছে আছে। Approve হলে নোটিফিকেশন পাবেন — তখন প্যাকেজ কিনতে পারবেন।</p></div></div>
         <?php elseif ($st === 'Approved'): ?>
-            <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার KYC Approve হয়েছে</b><p>এখন প্যাকেজ কিনতে ও সব সুবিধা ব্যবহার করতে পারবেন।<?php if ($next !== ''): ?> <a href="<?= e($next) ?>" style="font-weight:800;color:inherit;">চালিয়ে যান →</a><?php endif; ?></p></div></div>
+            <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার Profile Verification Approve হয়েছে</b><p>এখন প্যাকেজ কিনতে ও সব সুবিধা ব্যবহার করতে পারবেন।<?php if ($next !== ''): ?> <a href="<?= e($next) ?>" style="font-weight:800;color:inherit;">চালিয়ে যান →</a><?php endif; ?></p></div></div>
         <?php elseif ($st === 'Rejected'): ?>
             <div class="ky-state no"><i class="fas fa-circle-xmark"></i><div><b>ফর্মটা গ্রহণ করা হয়নি</b><p><?= !is_blank($k->AdminNote) ? 'কারণ: ' . e($k->AdminNote) . '<br>' : '' ?>নিচে তথ্য ঠিক করে আবার জমা দিন।</p></div></div>
         <?php endif; ?>
