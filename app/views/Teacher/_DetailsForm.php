@@ -41,6 +41,8 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
     .td-edu td { padding: 0 4px; vertical-align: middle; }
     .td-edu td:first-child { font-weight: 700; font-size: 13px; color: #08224A; white-space: nowrap; padding-right: 10px; }
     .td-edu input { font-size: 13px; padding: 7px 9px; }
+    .td-edu tr.edu-off td { opacity: .45; } .td-edu .edu-na { display: none; font-weight: 600; color: #94A3B8; font-size: 11px; margin-left: 6px; }
+    .td-edu tr.edu-off .edu-na { display: inline; }
     .td-private { font-size: 12.5px; color: #92400E; background: #FEF3C7; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
     @media (max-width: 760px) {
         .td-edu, .td-edu tbody, .td-edu tr, .td-edu td { display: block; width: 100%; }
@@ -92,20 +94,20 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
 
 <div class="td-sec">
     <h4><i class="fas fa-graduation-cap"></i> Educational Information</h4>
-    <p class="hint">যেটা প্রযোজ্য সেটা পূরণ করুন — বাকিগুলো খালি রাখতে পারেন।</p>
+    <p class="hint"><b>বাধ্যতামূলক</b> — SSC থেকে শুরু করে যতটুকু পড়েছেন। এখনো শেষ না হলে সালের ঘরে <b>Running</b> দিন: SSC পড়ছেন → SSC তে Running · HSC পড়ছেন → SSC এর রেজাল্ট + HSC তে Running · অনার্স / ডিগ্রি পড়ছেন → SSC, HSC এর রেজাল্ট + Graduation এ Running (বা কত বর্ষ)। Masters ঐচ্ছিক।</p>
     <div style="overflow-x:auto;">
         <table class="td-edu">
             <thead><tr><th></th><th>Exam Title</th><th>Institute</th><th>Board</th><th>Group</th><th>Year</th><th>GPA</th></tr></thead>
             <tbody>
                 <?php foreach (['ssc' => ['SSC / O Level / Dakhil', 'SSC'], 'hsc' => ['HSC / A Level / Alim', 'HSC']] as $k => [$lbl, $ph]): ?>
-                    <tr>
-                        <td><?= e($lbl) ?></td>
+                    <tr data-edu="<?= $k ?>">
+                        <td><?= e($lbl) ?><?= $k !== 'post' ? ' <span style="color:#e74c3c">*</span>' : '' ?><small class="edu-na">প্রযোজ্য নয়</small></td>
                         <td data-l="Exam Title"><input name="td[<?= $k ?>Title]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Title']) ?>" placeholder="<?= $ph ?>" /></td>
                         <td data-l="Institute"><input name="td[<?= $k ?>Institute]" class="form-control" maxlength="150" value="<?= e($d[$k . 'Institute']) ?>" /></td>
                         <td data-l="Board"><input name="td[<?= $k ?>Board]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Board']) ?>" placeholder="Dhaka" /></td>
                         <td data-l="Group"><input name="td[<?= $k ?>Group]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Group']) ?>" placeholder="Science" /></td>
                         <td data-l="Year"><?php $yv = (string)$d[$k . 'Year']; $run = strcasecmp($yv, 'Running') === 0; ?>
-                            <select name="td[<?= $k ?>Year]" class="form-select td-year" data-res="td[<?= $k ?>Result]" style="width:118px;font-size:14px;color:#334155;">
+                            <select name="td[<?= $k ?>Year]" class="form-select td-year" data-res="td[<?= $k ?>Result]" data-study="0" style="width:140px;font-size:14px;color:#334155;">
                                 <option value="">— সাল —</option>
                                 <option value="Running"<?= $run ? ' selected' : '' ?>>Running (পড়ছি)</option>
                                 <?php for ($y = (int)date('Y') + 1; $y >= 1975; $y--): ?><option<?= $yv === (string)$y ? ' selected' : '' ?>><?= $y ?></option><?php endfor; ?>
@@ -120,25 +122,50 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
             <thead><tr><th></th><th>Exam Title</th><th>Institute</th><th>Study Type</th><th>Department</th><th>Year</th><th>CGPA</th></tr></thead>
             <tbody>
                 <?php foreach (['grad' => ['Graduation / Diploma', 'BSc / BA / Diploma'], 'post' => ['Postgraduate / Masters', 'MSc / MA']] as $k => [$lbl, $ph]): ?>
-                    <tr>
-                        <td><?= e($lbl) ?></td>
+                    <tr data-edu="<?= $k ?>">
+                        <td><?= e($lbl) ?><?= $k !== 'post' ? ' <span style="color:#e74c3c">*</span>' : '' ?><small class="edu-na">প্রযোজ্য নয়</small></td>
                         <td data-l="Exam Title"><input name="td[<?= $k ?>Title]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Title']) ?>" placeholder="<?= $ph ?>" /></td>
                         <td data-l="Institute"><input name="td[<?= $k ?>Institute]" class="form-control" maxlength="150" value="<?= e($d[$k . 'Institute']) ?>" /></td>
                         <td data-l="Study Type"><input name="td[<?= $k ?>StudyType]" class="form-control" maxlength="40" value="<?= e($d[$k . 'StudyType']) ?>" placeholder="Engineering" /></td>
                         <td data-l="Department"><input name="td[<?= $k ?>Department]" class="form-control" maxlength="120" value="<?= e($d[$k . 'Department']) ?>" /></td>
-                        <td data-l="Year"><input name="td[<?= $k ?>Year]" class="form-control" maxlength="20" list="tdStudyYears" value="<?= e($d[$k . 'Year']) ?>" placeholder="3rd Year" style="width:110px;" /></td>
+                        <td data-l="Year"><?php $gv = (string)$d[$k . 'Year']; $gOpts = ['Running' => 'Running (পড়ছি)', '1st Year' => '1st Year', '2nd Year' => '2nd Year', '3rd Year' => '3rd Year', '4th Year' => '4th Year', 'Final Year' => 'Final Year']; ?>
+                            <select name="td[<?= $k ?>Year]" class="form-select td-year" data-res="td[<?= $k ?>Result]" data-study="1" style="width:140px;font-size:14px;color:#334155;">
+                                <option value="">— সাল / বর্ষ —</option>
+                                <optgroup label="এখনো পড়ছি"><?php foreach ($gOpts as $gk => $gl): ?><option value="<?= $gk ?>"<?= strcasecmp($gv, $gk) === 0 ? ' selected' : '' ?>><?= $gl ?></option><?php endforeach; ?></optgroup>
+                                <optgroup label="পাস করেছি (সাল)"><?php for ($y = (int)date('Y') + 1; $y >= 1975; $y--): ?><option<?= $gv === (string)$y ? ' selected' : '' ?>><?= $y ?></option><?php endfor; ?></optgroup>
+                                <?php if ($gv !== '' && !isset($gOpts[$gv]) && !ctype_digit($gv) && strcasecmp($gv, 'Running') !== 0): ?><option selected><?= e($gv) ?></option><?php endif; ?>
+                            </select></td>
                         <td data-l="CGPA"><input name="td[<?= $k ?>Result]" class="form-control" maxlength="10" value="<?= e($d[$k . 'Result']) ?>" placeholder="3.50" style="width:72px;" /></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <datalist id="tdStudyYears"><option value="Running"></option><option value="1st Year"></option><option value="2nd Year"></option><option value="3rd Year"></option><option value="4th Year"></option><option value="Final Year"></option><?php for ($y = (int)date('Y') + 1; $y >= 1990; $y--): ?><option value="<?= $y ?>"></option><?php endfor; ?></datalist>
-        <p class="hint" style="margin-top:6px;">এখন পড়ছেন (রেজাল্ট বের হয়নি)? সালের ঘরে <b>Running</b> বাছাই করুন — তখন GPA লাগবে না।</p>
         <script>
-        document.querySelectorAll('select.td-year').forEach(function (sel) {
-            var res = document.querySelector('input[name="' + sel.dataset.res + '"]');
-            sel.addEventListener('change', function () { var run = sel.value === 'Running'; res.disabled = run; if (run) res.value = ''; res.placeholder = run ? 'Running' : '5.00'; });
-        });
+        (function () {
+            var ORDER = ['ssc', 'hsc', 'grad', 'post'];
+            function row(k) { return document.querySelector('tr[data-edu="' + k + '"]'); }
+            function state(k) {   // '' | running | passed
+                var sel = row(k).querySelector('select.td-year'), v = sel.value;
+                if (v === '') return '';
+                if (v === 'Running' || (sel.dataset.study === '1' && !/^\d{4}$/.test(v))) return 'running';
+                return 'passed';
+            }
+            function refresh() {
+                var blocked = false;
+                ORDER.forEach(function (k) {
+                    var r = row(k); if (!r) return;
+                    r.classList.toggle('edu-off', blocked);
+                    r.querySelectorAll('input, select').forEach(function (x) { x.disabled = blocked; });
+                    if (blocked) return;
+                    var st = state(k), res = r.querySelector('input[name$="Result]"]');
+                    res.disabled = st === 'running'; if (st === 'running') res.value = '';
+                    res.placeholder = st === 'running' ? 'Running' : (k === 'grad' || k === 'post' ? '3.50' : '5.00');
+                    if (st !== 'passed') blocked = true;   // পড়া শেষ হয়নি / খালি → পরের ধাপ প্রযোজ্য নয়
+                });
+            }
+            document.querySelectorAll('select.td-year').forEach(function (s) { s.addEventListener('change', refresh); });
+            refresh();
+        })();
         </script>
     </div>
 </div>

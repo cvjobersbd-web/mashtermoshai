@@ -52,7 +52,38 @@ class TeacherController extends Controller
             'expectedSalary' => 'Expected Salary', 'gender' => 'Gender'];
         foreach ($need as $k => $label) if ($d[$k] === '' || $d[$k] === []) $errors[] = "$label দিন।";
         if ($d['expectedSalary'] !== '' && !preg_match('/^\d[\d,]*$/', $d['expectedSalary'])) $errors[] = 'Expected Salary শুধু সংখ্যায় দিন (যেমন 5000)।';
+        self::checkEducation($d, $errors);
         return $d;
+    }
+
+    /**
+     * Educational Information বাধ্যতামূলক — শেষ না হলে Running:
+     *  SSC সবসময় (পড়ছে হলে Running) · SSC পাস হলে HSC (পাস / Running) · HSC পাস হলে Graduation (পাস / Running / কত বর্ষ) · Masters ঐচ্ছিক
+     */
+    public static function checkEducation(array &$d, array &$errors): void
+    {
+        $run = fn($y) => strcasecmp(trim((string)$y), 'Running') === 0;
+        $isYear = fn($y) => (bool)preg_match('/^(19|20)\d{2}$/', trim((string)$y));
+        $gpaOk = fn($g, $max) => preg_match('/^\d(\.\d{1,2})?$/', trim((string)$g)) && (float)$g <= $max;
+        $need = function (string $k, string $lbl, float $max, bool $yearIsStudy = false) use (&$d, &$errors, $run, $isYear, $gpaOk): string {
+            $y = trim((string)($d[$k . 'Year'] ?? ''));
+            if ($y === '') { $errors[] = "$lbl: পাসের সাল দিন — এখন পড়লে Running বাছাই করুন।"; return 'bad'; }
+            if (trim((string)($d[$k . 'Institute'] ?? '')) === '') $errors[] = "$lbl: প্রতিষ্ঠানের (Institute) নাম দিন।";
+            if ($run($y) || ($yearIsStudy && !$isYear($y))) { $d[$k . 'Result'] = ''; return 'running'; }
+            if (!$isYear($y)) { $errors[] = "$lbl: সাল ঠিক নেই।"; return 'bad'; }
+            if (!$gpaOk($d[$k . 'Result'] ?? '', $max)) $errors[] = "$lbl: রেজাল্ট (" . ($max > 4.5 ? 'GPA ০–৫' : 'CGPA ০–৪') . ') দিন।';
+            return 'passed';
+        };
+        $clear = function (array $ks) use (&$d) { foreach ($ks as $k) foreach (['Year', 'Result'] as $c) if (array_key_exists($k . $c, $d)) $d[$k . $c] = ''; };
+        $ssc = $need('ssc', 'SSC', 5);
+        if ($ssc === 'running') { $clear(['hsc', 'grad', 'post']); return; }
+        if ($ssc === 'bad') return;
+        $hsc = $need('hsc', 'HSC', 5);
+        if ($hsc === 'running') { $clear(['grad', 'post']); return; }
+        if ($hsc === 'bad') return;
+        $grad = $need('grad', 'Graduation / Diploma', 5, true);
+        if ($grad !== 'passed') { $clear(['post']); return; }
+        if (trim((string)($d['postYear'] ?? '')) !== '') $need('post', 'Postgraduate / Masters', 5, true);
     }
 
     /** POST /Teacher/RequestForm */
