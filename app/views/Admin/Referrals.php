@@ -59,7 +59,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     <div class="rfa-stats">
         <div class="rfa-stat"><small>মোট রেফারেল · প্যাকেজ কিনেছে</small><b><?= number_format($st['referrals']) ?> · <?= number_format($st['bought'] ?? 0) ?></b></div>
         <div class="rfa-stat"><small>মোট বোনাস দেওয়া হয়েছে</small><b>৳<?= number_format($st['earned']) ?></b></div>
-        <div class="rfa-stat"><small>পাঠানো হয়েছে (Paid)</small><b>৳<?= number_format($st['paid']) ?></b></div>
+        <div class="rfa-stat"><small>পাঠানো (Paid) · প্যাকেজে ছাড়</small><b>৳<?= number_format($st['paid']) ?> · ৳<?= number_format($st['discount'] ?? 0) ?></b></div>
         <div class="rfa-stat warn"><small>অপেক্ষমাণ উইথড্র</small><b><?= (int)$st['pendingCount'] ?> টি · ৳<?= number_format($st['pendingAmount']) ?></b></div>
     </div>
 
@@ -81,6 +81,26 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     </a>
     <?php endif; ?>
 
+    <?php $ov = $ViewBag->Overview ?? []; ?>
+    <div class="rfa-card">
+        <h3><i class="fas fa-ranking-star" style="color:#0EA5E9;"></i> সব রেফারার — কে কতটা শেয়ার করছে <span class="rfa-pill" style="background:#E0F2FE;color:#075985;"><?= count($ov) ?> জন</span></h3>
+        <?php if (!$ov): ?><div class="rfa-empty">এখনো কেউ লিংক শেয়ার করেনি।</div><?php else: ?>
+        <div class="rfg-search"><i class="fas fa-magnifying-glass"></i><input type="search" id="rovQ" placeholder="নাম, ইউজারনেম বা কোড দিয়ে খুঁজুন" autocomplete="off" /></div>
+        <div class="rfa-tw"><table class="rfa-tbl" id="rovT">
+            <tr><th>ইউজার</th><th>রেফারেল কোড</th><th title="শেয়ার বাটনে কতবার চেপেছে">শেয়ার</th><th title="লিংক খুলে কত জন সাইটে এসেছে">লিংকে ক্লিক</th><th>সাইনআপ</th><th>প্যাকেজ কিনেছে</th><th>আয়</th><th>ব্যালেন্স</th><th></th></tr>
+            <?php foreach ($ov as $o): ?>
+                <tr data-s="<?= e(mb_strtolower($o->Name . ' ' . $o->UserName . ' ' . $o->Code)) ?>">
+                    <td><b><?= e($o->Name) ?></b><br><small style="color:#64748B;"><?= e(role_label($o->Role, (int)$o->UserId)) ?><?= $o->UserName !== '' ? ' · @' . e($o->UserName) : '' ?></small></td>
+                    <td><span class="rfg-code"><?= e($o->Code ?: '—') ?></span></td>
+                    <td><?= (int)$o->Shares ?></td><td><?= (int)$o->Clicks ?></td><td><b><?= (int)$o->Signups ?></b></td>
+                    <td><b style="color:#16A34A;"><?= (int)$o->Buyers ?></b></td><td>৳<?= number_format($o->Earned) ?></td><td>৳<?= number_format($o->Balance) ?></td>
+                    <td><a class="rfa-btn" style="height:32px;font-size:12.5px;text-decoration:none;" href="/Admin/ReferralUser/<?= (int)$o->UserId ?>"><i class="fas fa-magnifying-glass-chart"></i> বিস্তারিত</a></td>
+                </tr>
+            <?php endforeach; ?>
+        </table></div>
+        <?php endif; ?>
+    </div>
+
     <?php
     $refs = $ViewBag->Referrals ?: [];
     $groups = [];
@@ -92,7 +112,9 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     }
     uasort($groups, fn($a, $b) => count($b['list']) <=> count($a['list']));
     $roleBn = fn($r, $uid = 0) => role_label($r, $uid);
-    $stBn = fn($r) => (($r->Via ?? '') === 'code' ? '<span class="rfa-pill" style="background:#FEF3C7;color:#92400E;margin-right:4px;"><i class="fas fa-ticket"></i> কোড দিয়ে</span>' : '') . ($r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>'));
+    $srcPill = function ($r) { $k = (string)($r->Src ?? ''); if ($k === '' || !isset(Db::REF_SOURCES[$k])) return ''; [$l, $i, $c] = Db::REF_SOURCES[$k];
+        return '<span class="rfa-pill" style="background:#F1F5F9;color:' . $c . ';margin-right:4px;"><i class="' . $i . '"></i> ' . e($l) . '</span>'; };
+    $stBn = fn($r) => (($r->Via ?? '') === 'code' ? '<span class="rfa-pill" style="background:#FEF3C7;color:#92400E;margin-right:4px;"><i class="fas fa-ticket"></i> কেনার সময় কোড দিয়ে</span>' : $srcPill($r)) . ($r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>'));
     ?>
     <div class="rfa-card">
         <h3><i class="fas fa-sitemap" style="color:#7C3AED;"></i> কে কার রেফারেল কোডে এসেছে <span class="rfa-pill" style="background:#EDE9FE;color:#5B21B6;"><?= count($groups) ?> জন রেফারার · <?= count($refs) ?> জন নতুন ইউজার</span></h3>
@@ -104,6 +126,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
                 <summary>
                     <span class="rfg-who"><i class="fas fa-user-tie"></i> <a href="/Admin/UserDetails/<?= (int)$rid ?>"><?= e($g['name']) ?></a> <small><?= e($roleBn($g["role"], $rid)) ?><?= $g['user'] !== '' ? ' · @' . e($g['user']) : '' ?></small></span>
                     <?php if ($g['code'] !== ''): ?><span class="rfg-code" title="এই ব্যক্তির রেফারেল কোড"><i class="fas fa-ticket"></i> <?= e($g['code']) ?></span><?php endif; ?>
+                    <a href="/Admin/ReferralUser/<?= (int)$rid ?>" style="font-size:12.5px;font-weight:700;color:#0369A1;" onclick="event.stopPropagation();"><i class="fas fa-magnifying-glass-chart"></i> বিস্তারিত</a>
                     <span class="rfg-n"><b><?= count($g['list']) ?></b> জন এসেছে<?= $g['ok'] ? ' · <span style="color:#16A34A;">' . $g['ok'] . ' জন কিনেছে</span>' : '' ?></span>
                     <i class="fas fa-chevron-down rfg-car"></i>
                 </summary>
@@ -156,7 +179,9 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             if (!r2.success) { alert('❌ ' + (r2.message || '')); return; }
             location.reload();
         }
-    });    var q = document.getElementById('rfgQ');
+    });    var oq = document.getElementById('rovQ');
+    if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
+    var q = document.getElementById('rfgQ');
     if (q) q.addEventListener('input', function () {
         var v = q.value.trim().toLowerCase(), any = false;
         document.querySelectorAll('#rfgList .rfg').forEach(function (d) {

@@ -43,7 +43,11 @@ trait ReferralData
     /** ['bonus' => int, 'min' => int, 'enabled' => bool] — bonus = রেফার করা ইউজার প্যাকেজ কিনলে রেফারার যা পায় */
     public function ReferralSettings(): array
     {
-        $c = $this->GetSiteContent(['ref_bonus' => '10', 'ref_min_withdraw' => '50', 'ref_enabled' => '1', 'ref_model' => '']);
+        $c = $this->GetSiteContent(['ref_bonus' => '10', 'ref_min_withdraw' => '100', 'ref_enabled' => '1', 'ref_model' => '', 'ref_min_v100' => '']);
+        if ($c['ref_min_v100'] === '') {
+            // নিয়ম: ব্যালেন্স ৳100 হলে টাকা তোলা যায় (কম হলে প্যাকেজে ছাড় হিসেবে ব্যবহার) — একবারই সেট হয়, পরে অ্যাডমিন বদলাতে পারবেন
+            try { $this->SaveSiteContent(['ref_min_withdraw' => '100', 'ref_min_v100' => '1']); $c['ref_min_withdraw'] = '100'; } catch (Throwable $e) { }
+        }
         if ($c['ref_model'] !== 'purchase') {
             // নিয়ম বদলেছে: সাইনআপে ৳30 → প্যাকেজ কিনলে ৳10 (একবারই সেট হয়, পরে অ্যাডমিন বদলাতে পারবেন)
             try { $this->SaveSiteContent(['ref_bonus' => '10', 'ref_model' => 'purchase']); $c['ref_bonus'] = '10'; } catch (Throwable $e) { }
@@ -83,7 +87,7 @@ trait ReferralData
      * নতুন ইউজার কারো লিংক দিয়ে সাইনআপ করলে রেফারেল রেকর্ড হয় (Waiting — এখনো টাকা না)।
      * নিজেকে নিজে, অ্যাডমিন অ্যাকাউন্ট, বা দিনে ২০ জনের বেশি — রেকর্ড হয় না। রিটার্ন: রেফারারের Id
      */
-    public function CreditReferral(string $code, int $newUserId, string $ip): ?int
+    public function CreditReferral(string $code, int $newUserId, string $ip, string $src = 'link'): ?int
     {
         try {
             $set = $this->ReferralSettings();
@@ -93,8 +97,10 @@ trait ReferralData
             $u = $this->GetUserById($ref);
             if (!$u || $u->Role === 'Admin' || !(int)$u->IsActive) return null;
             if ((int)$this->scalar('SELECT COUNT(*) FROM `Referrals` WHERE `ReferrerId` = :r AND `CreatedAt` >= :t', ['r' => $ref, 't' => date('Y-m-d H:i:s', time() - 86400)]) >= 20) return null;
-            $this->exec('INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`) VALUES (:r, :n, 0, \'Waiting\', :ip, :t)',
-                ['r' => $ref, 'n' => $newUserId, 'ip' => mb_substr($ip, 0, 64), 't' => now()]);
+            $this->EnsureRefCodeCols();
+            $src = $src === 'code' ? 'code' : (self::CleanRefSrc($src) ?: 'link');
+            $this->exec('INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`, `Via`, `Src`) VALUES (:r, :n, 0, \'Waiting\', :ip, :t, :v, :s)',
+                ['r' => $ref, 'n' => $newUserId, 'ip' => mb_substr($ip, 0, 64), 't' => now(), 'v' => $src === 'code' ? 'signupcode' : 'link', 's' => $src]);
             return $ref;
         } catch (Throwable $e) { error_log('[CreditReferral] ' . $e->getMessage()); return null; }
     }
@@ -109,10 +115,71 @@ trait ReferralData
         $this->EnsureReferralTables();
         $this->EnsurePaymentTables();
         $sqlite = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
-        foreach ([['PaymentRequests', 'RefCode', 20], ['Referrals', 'Via', 10]] as [$t, $c, $n]) {
+        foreach ([['PaymentRequests', 'RefCode', 20], ['PaymentRequests', 'RefDiscount', 0], ['Referrals', 'Via', 10], ['Referrals', 'Src', 12]] as [$t, $c, $n]) {
+            if ($n === 0) {   // সংখ্যার কলাম
+                try { $this->pdo->query("SELECT `$c` FROM `$t` LIMIT 1"); }
+                catch (Throwable $e) { try { $this->pdo->exec("ALTER TABLE `$t` ADD COLUMN `$c` INT NOT NULL DEFAULT 0"); } catch (Throwable $e2) { error_log("[refcode col $t.$c] " . $e2->getMessage()); } }
+                continue;
+            }
             try { $this->pdo->query("SELECT `$c` FROM `$t` LIMIT 1"); }
             catch (Throwable $e) { try { $this->pdo->exec("ALTER TABLE `$t` ADD COLUMN `$c` " . ($sqlite ? 'TEXT' : "VARCHAR($n)") . ' NULL'); } catch (Throwable $e2) { error_log("[refcode col $t.$c] " . $e2->getMessage()); } }
         }
+        // শেয়ার বাটনে ক্লিক (share) আর লিংক খুলে সাইটে আসা (click) — কোন প্ল্যাটফর্মে
+        if ($sqlite) {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ReferralEvents" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "Kind" TEXT NOT NULL, "Src" TEXT NOT NULL, "Ip" TEXT NULL, "CreatedAt" TEXT NOT NULL)');
+            $this->pdo->exec('CREATE INDEX IF NOT EXISTS "IX_RefEv_User" ON "ReferralEvents" ("UserId")');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ReferralEvents` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `Kind` VARCHAR(10) NOT NULL, `Src` VARCHAR(12) NOT NULL,
+                `Ip` VARCHAR(64) NULL, `CreatedAt` DATETIME NOT NULL, PRIMARY KEY (`Id`), KEY `IX_RefEv_User` (`UserId`, `Kind`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+    }
+
+    /** শেয়ারের জায়গা — key => [নাম, আইকন, রং] */
+    public const REF_SOURCES = [
+        'wa' => ['WhatsApp', 'fab fa-whatsapp', '#25D366'], 'fb' => ['Facebook', 'fab fa-facebook-f', '#1877F2'], 'ms' => ['Messenger', 'fab fa-facebook-messenger', '#A033FF'],
+        'ig' => ['Instagram', 'fab fa-instagram', '#D6249F'], 'tg' => ['Telegram', 'fab fa-telegram', '#229ED9'], 'x' => ['X (Twitter)', 'fab fa-x-twitter', '#0F172A'],
+        'li' => ['LinkedIn', 'fab fa-linkedin-in', '#0A66C2'], 'more' => ['অন্য অ্যাপ (Share)', 'fas fa-share-nodes', '#64748B'], 'copy' => ['লিংক কপি করে', 'far fa-copy', '#0369A1'],
+        'code' => ['রেফারেল কোড', 'fas fa-ticket', '#B45309'], 'link' => ['লিংক (জায়গা জানা নেই)', 'fas fa-link', '#94A3B8'],
+    ];
+
+    public static function CleanRefSrc(?string $s): string
+    {
+        $s = strtolower(trim((string)$s));
+        return isset(self::REF_SOURCES[$s]) && !in_array($s, ['code', 'link'], true) ? $s : '';
+    }
+
+    /** শেয়ার বাটনে ক্লিক বা লিংক খুলে আসা রেকর্ড (একই IP থেকে একই ঘটনা ঘণ্টায় একবারই গোনা হয়) */
+    public function LogReferralEvent(int $userId, string $kind, string $src, string $ip): void
+    {
+        try {
+            $this->EnsureRefCodeCols();
+            if (!in_array($kind, ['share', 'click'], true)) return;
+            $src = $kind === 'share' && $src === 'code' ? 'code' : (self::CleanRefSrc($src) ?: 'link');
+            if ((int)$this->scalar('SELECT COUNT(*) FROM `ReferralEvents` WHERE `UserId` = :u AND `Kind` = :k AND `Src` = :s AND `Ip` = :ip AND `CreatedAt` >= :t',
+                ['u' => $userId, 'k' => $kind, 's' => $src, 'ip' => mb_substr($ip, 0, 64), 't' => date('Y-m-d H:i:s', time() - 3600)]) > 0) return;
+            $this->exec('INSERT INTO `ReferralEvents` (`UserId`, `Kind`, `Src`, `Ip`, `CreatedAt`) VALUES (:u, :k, :s, :ip, :t)',
+                ['u' => $userId, 'k' => $kind, 's' => $src, 'ip' => mb_substr($ip, 0, 64), 't' => now()]);
+        } catch (Throwable $e) { error_log('[LogReferralEvent] ' . $e->getMessage()); }
+    }
+
+    // ---------- রেফারেল ব্যালেন্স দিয়ে প্যাকেজে ছাড় ----------
+    /** পেমেন্ট জমার সময় ছাড়ের টাকা আটকে রাখা (ReferralWithdrawals, Method = Discount, Pending) — Accept হলে Paid, বাতিল হলে টাকা ফেরত */
+    public function ReserveReferralDiscount(int $userId, int $paymentId, int $amount): void
+    {
+        $this->EnsureRefCodeCols();
+        $this->exec('UPDATE `PaymentRequests` SET `RefDiscount` = :d WHERE `Id` = :i', ['d' => $amount, 'i' => $paymentId]);
+        $this->exec("INSERT INTO `ReferralWithdrawals` (`UserId`, `Amount`, `Method`, `AccountName`, `AccountNumber`, `Status`, `CreatedAt`) VALUES (:u, :a, 'Discount', :n, :no, 'Pending', :t)",
+            ['u' => $userId, 'a' => $amount, 'n' => 'প্যাকেজে ছাড়', 'no' => 'PAY-' . $paymentId, 't' => now()]);
+    }
+
+    /** পেমেন্ট Accept → ছাড় Paid (খরচ হলো); Reject / Delete → Rejected (ব্যালেন্সে ফেরত) */
+    public function SettleReferralDiscount(int $paymentId, bool $used): void
+    {
+        try {
+            $this->EnsureRefCodeCols();
+            $this->exec("UPDATE `ReferralWithdrawals` SET `Status` = :s, `ProcessedAt` = :t, `AdminNote` = :n WHERE `Method` = 'Discount' AND `AccountNumber` = :no AND `Status` = 'Pending'",
+                ['s' => $used ? 'Paid' : 'Rejected', 't' => now(), 'n' => $used ? 'প্যাকেজ কেনায় ব্যবহার হয়েছে' : 'পেমেন্ট বাতিল — টাকা ব্যালেন্সে ফেরত', 'no' => 'PAY-' . $paymentId]);
+        } catch (Throwable $e) { error_log('[SettleReferralDiscount] ' . $e->getMessage()); }
     }
 
     /**
@@ -181,8 +248,8 @@ trait ReferralData
                 $done = (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` <> 'Waiting'", ['u' => $buyerId]) > 0;
                 if ($ref && $ref !== $buyerId && $ru && $ru->Role !== 'Admin' && (int)$ru->IsActive && !$done) {
                     $w = $this->one("SELECT `Id` FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` = 'Waiting'", ['u' => $buyerId]);
-                    if ($w) $this->exec("UPDATE `Referrals` SET `ReferrerId` = :r, `Via` = 'code' WHERE `Id` = :i", ['r' => $ref, 'i' => (int)$w->Id]);
-                    else $this->exec("INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`, `Via`) VALUES (:r, :n, 0, 'Waiting', NULL, :t, 'code')",
+                    if ($w) $this->exec("UPDATE `Referrals` SET `ReferrerId` = :r, `Via` = 'code', `Src` = 'code' WHERE `Id` = :i", ['r' => $ref, 'i' => (int)$w->Id]);
+                    else $this->exec("INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`, `Via`, `Src`) VALUES (:r, :n, 0, 'Waiting', NULL, :t, 'code', 'code')",
                         ['r' => $ref, 'n' => $buyerId, 't' => now()]);
                 }
             }
@@ -204,9 +271,12 @@ trait ReferralData
         $this->EnsureReferralTables();
         $earned = (int)$this->scalar("SELECT COALESCE(SUM(`Bonus`), 0) FROM `Referrals` WHERE `ReferrerId` = :u AND `Status` = 'Credited'", ['u' => $userId]);
         $count = (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `ReferrerId` = :u AND `Status` <> 'Revoked'", ['u' => $userId]);
-        $paid = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Paid'", ['u' => $userId]);
-        $pending = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Pending'", ['u' => $userId]);
-        return ['earned' => $earned, 'withdrawn' => $paid, 'pending' => $pending, 'balance' => max(0, $earned - $paid - $pending), 'count' => $count];
+        $paid = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Paid' AND `Method` <> 'Discount'", ['u' => $userId]);
+        $pending = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Pending' AND `Method` <> 'Discount'", ['u' => $userId]);
+        $dUsed = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Paid' AND `Method` = 'Discount'", ['u' => $userId]);
+        $dHold = (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Pending' AND `Method` = 'Discount'", ['u' => $userId]);
+        return ['earned' => $earned, 'withdrawn' => $paid, 'pending' => $pending, 'discount' => $dUsed, 'discountHold' => $dHold,
+            'balance' => max(0, $earned - $paid - $pending - $dUsed - $dHold), 'count' => $count];
     }
 
     /** আমার রেফার করা ইউজাররা (নতুন আগে) */
@@ -234,9 +304,9 @@ trait ReferralData
     public function GetWithdrawalsAdmin(string $status, int $limit = 200): array
     {
         $this->EnsureReferralTables();
-        $w = in_array($status, ['Pending', 'Paid', 'Rejected'], true) ? 'WHERE w.`Status` = :s' : '';
+        $w = "WHERE w.`Method` <> 'Discount'" . (in_array($status, ['Pending', 'Paid', 'Rejected'], true) ? ' AND w.`Status` = :s' : '');
         return $this->all("SELECT w.*, u.`FullName`, u.`UserName`, u.`Role`, u.`MobileNumber` FROM `ReferralWithdrawals` w LEFT JOIN `Users` u ON u.`Id` = w.`UserId` $w
-            ORDER BY CASE WHEN w.`Status` = 'Pending' THEN 0 ELSE 1 END, w.`Id` DESC LIMIT " . max(1, min(500, $limit)), $w ? ['s' => $status] : []);
+            ORDER BY CASE WHEN w.`Status` = 'Pending' THEN 0 ELSE 1 END, w.`Id` DESC LIMIT " . max(1, min(500, $limit)), in_array($status, ['Pending', 'Paid', 'Rejected'], true) ? ['s' => $status] : []);
     }
 
     public function GetWithdrawal(int $id): ?Obj
@@ -260,6 +330,61 @@ trait ReferralData
             FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId` LEFT JOIN `Users` b ON b.`Id` = r.`ReferredUserId` ORDER BY r.`Id` DESC LIMIT ' . max(1, min(2000, $limit)));
     }
 
+    /**
+     * অ্যাডমিন: সব রেফারারের সারসংক্ষেপ — যার কোড আছে বা কোনো কার্যক্রম আছে
+     * @return Obj[] (UserId, Name, UserName, Role, Code, Shares, Clicks, Signups, Buyers, Earned, Balance)
+     */
+    public function GetReferrerOverview(): array
+    {
+        $this->EnsureRefCodeCols();
+        $rows = [];
+        $add = function (int $uid) use (&$rows) { $rows[$uid] ??= obj(['UserId' => $uid, 'Shares' => 0, 'Clicks' => 0, 'Signups' => 0, 'Buyers' => 0, 'Earned' => 0]); return $rows[$uid]; };
+        foreach ($this->all("SELECT `UserId`, `Kind`, COUNT(*) AS N FROM `ReferralEvents` GROUP BY `UserId`, `Kind`") as $r) { $o = $add((int)$r->UserId); if ($r->Kind === 'share') $o->Shares = (int)$r->N; else $o->Clicks = (int)$r->N; }
+        foreach ($this->all("SELECT `ReferrerId`, COUNT(*) AS N, SUM(CASE WHEN `Status` = 'Credited' THEN 1 ELSE 0 END) AS B, SUM(CASE WHEN `Status` = 'Credited' THEN `Bonus` ELSE 0 END) AS E
+            FROM `Referrals` WHERE `Status` <> 'Revoked' GROUP BY `ReferrerId`") as $r) { $o = $add((int)$r->ReferrerId); $o->Signups = (int)$r->N; $o->Buyers = (int)$r->B; $o->Earned = (int)$r->E; }
+        if (!$rows) return [];
+        $ids = implode(',', array_map('intval', array_keys($rows)));
+        $info = [];
+        foreach ($this->all("SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id` WHERE u.`Id` IN ($ids)") as $r) $info[(int)$r->Id] = $r;
+        foreach ($rows as $uid => $o) {
+            $i = $info[$uid] ?? null;
+            $o->Name = $i ? ((string)($i->FullName ?: $i->UserName)) : 'Deleted user';
+            $o->UserName = (string)($i->UserName ?? ''); $o->Role = (string)($i->Role ?? ''); $o->Code = (string)($i->Code ?? '');
+            $o->Balance = $this->GetReferralSummary($uid)['balance'];
+        }
+        $rows = array_values($rows);
+        usort($rows, fn($a, $b) => [$b->Buyers, $b->Signups, $b->Clicks, $b->Shares] <=> [$a->Buyers, $a->Signups, $a->Clicks, $a->Shares]);
+        return $rows;
+    }
+
+    /** অ্যাডমিন: একজন রেফারারের সব কিছু — কোথায় শেয়ার, কত জন এসেছে, কত জন কিনেছে, কাকে এনেছে, টাকা তোলা / ছাড় */
+    public function GetReferrerDetail(int $userId): array
+    {
+        $this->EnsureRefCodeCols();
+        $src = [];
+        foreach (array_keys(self::REF_SOURCES) as $k) $src[$k] = ['share' => 0, 'click' => 0, 'signup' => 0, 'buy' => 0];
+        foreach ($this->all('SELECT `Kind`, `Src`, COUNT(*) AS N FROM `ReferralEvents` WHERE `UserId` = :u GROUP BY `Kind`, `Src`', ['u' => $userId]) as $r) {
+            $k = isset($src[$r->Src]) ? $r->Src : 'link'; $src[$k][$r->Kind === 'share' ? 'share' : 'click'] += (int)$r->N;
+        }
+        $people = $this->all('SELECT r.*, b.`FullName`, b.`UserName`, b.`Email`, b.`Role`, b.`CreatedAt` AS JoinedAt,
+                (SELECT COUNT(*) FROM `PaymentRequests` p WHERE p.`UserId` = r.`ReferredUserId` AND p.`Status` = \'Approved\') AS Orders,
+                (SELECT COALESCE(SUM(p.`Amount` + COALESCE(p.`RefDiscount`, 0)), 0) FROM `PaymentRequests` p WHERE p.`UserId` = r.`ReferredUserId` AND p.`Status` = \'Approved\') AS Spent
+            FROM `Referrals` r LEFT JOIN `Users` b ON b.`Id` = r.`ReferredUserId` WHERE r.`ReferrerId` = :u ORDER BY r.`Id` DESC', ['u' => $userId]);
+        foreach ($people as $p) {
+            if ($p->Status === 'Revoked') continue;
+            $k = (string)($p->Src ?? '') !== '' && isset($src[$p->Src]) ? $p->Src : (($p->Via ?? '') === 'code' ? 'code' : 'link');
+            $src[$k]['signup']++;
+            if ($p->Status === 'Credited') $src[$k]['buy']++;
+        }
+        $src = array_filter($src, fn($x) => array_sum($x) > 0);
+        return [
+            'Code' => $this->GetReferralCode($userId), 'Summary' => $this->GetReferralSummary($userId), 'Sources' => $src, 'People' => $people,
+            'Totals' => ['share' => array_sum(array_column($src, 'share')), 'click' => array_sum(array_column($src, 'click')), 'signup' => array_sum(array_column($src, 'signup')), 'buy' => array_sum(array_column($src, 'buy'))],
+            'Withdrawals' => $this->GetMyWithdrawals($userId),
+            'LastShare' => $this->scalar("SELECT MAX(`CreatedAt`) FROM `ReferralEvents` WHERE `UserId` = :u AND `Kind` = 'share'", ['u' => $userId]),
+        ];
+    }
+
     public function SetReferralStatus(int $id, string $status): void
     {
         // "আবার চালু": বোনাস আগে পায়নি (এখনো প্যাকেজ কেনেনি) হলে Waiting এ ফেরে
@@ -274,9 +399,10 @@ trait ReferralData
             'referrals' => (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `Status` <> 'Revoked'"),
             'bought' => (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `Status` = 'Credited'"),
             'earned' => (int)$this->scalar("SELECT COALESCE(SUM(`Bonus`), 0) FROM `Referrals` WHERE `Status` = 'Credited'"),
-            'paid' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Paid'"),
-            'pendingCount' => (int)$this->scalar("SELECT COUNT(*) FROM `ReferralWithdrawals` WHERE `Status` = 'Pending'"),
-            'pendingAmount' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Pending'"),
+            'paid' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Paid' AND `Method` <> 'Discount'"),
+            'discount' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Paid' AND `Method` = 'Discount'"),
+            'pendingCount' => (int)$this->scalar("SELECT COUNT(*) FROM `ReferralWithdrawals` WHERE `Status` = 'Pending' AND `Method` <> 'Discount'"),
+            'pendingAmount' => (int)$this->scalar("SELECT COALESCE(SUM(`Amount`), 0) FROM `ReferralWithdrawals` WHERE `Status` = 'Pending' AND `Method` <> 'Discount'"),
         ];
     }
 

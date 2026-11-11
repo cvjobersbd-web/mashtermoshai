@@ -87,7 +87,8 @@ $fmtDate = fn($d) => $d ? date('d M Y', strtotime((string)$d)) : '';
                         <span><i class="fas fa-wallet"></i> <b><?= e($p->MethodName) ?></b></span>
                         <?php if ($p->TxnId): ?><span>TxnID: <b><?= e($p->TxnId) ?></b></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> <?= e($fmtDate($p->PayDate)) ?></span>
-                        <a href="<?= e($p->ReceiptUrl) ?>" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> রিসিট</a>
+                        <?php if ((int)($p->RefDiscount ?? 0) > 0): ?><span style="color:#B45309;"><i class="fas fa-gift"></i> রেফারেল ব্যালেন্স থেকে ছাড় <b><?= e(taka((int)$p->RefDiscount)) ?></b></span><?php endif; ?>
+                        <?php if ((string)$p->ReceiptUrl !== ''): ?><a href="<?= e($p->ReceiptUrl) ?>" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> রিসিট</a><?php endif; ?>
                     </div>
                     <?php if ($p->Status === 'Rejected'): ?>
                         <div class="mp-note"><i class="fas fa-circle-xmark"></i> <?= e($p->AdminNote ?: 'পেমেন্ট যাচাই করা যায়নি।') ?> — সঠিক তথ্য দিয়ে আবার জমা দিতে পারেন।</div>

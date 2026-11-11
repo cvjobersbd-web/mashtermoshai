@@ -129,7 +129,9 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 
     <?php foreach ($list as $p): ?>
         <div class="ap-item <?= e($p->Status) ?>" id="ap-<?= (int)$p->Id ?>">
-            <?php if ($p->IsPdf): ?>
+            <?php if ((string)$p->ReceiptUrl === ''): ?>
+                <span class="ap-rc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#FFFBEB;color:#92400E;font-weight:700;font-size:12.5px;text-align:center;padding:8px;"><i class="fas fa-gift" style="font-size:26px;color:#F59E0B;"></i>রিসিট লাগেনি — পুরো দাম রেফারেল ব্যালেন্স থেকে</span>
+            <?php elseif ($p->IsPdf): ?>
                 <a class="ap-rc" href="<?= e($p->ReceiptUrl) ?>" target="_blank" rel="noopener"><span class="pdf"><i class="fas fa-file-pdf"></i> PDF রিসিট খুলুন</span></a>
             <?php else: ?>
                 <a class="ap-rc" href="<?= e($p->ReceiptUrl) ?>" data-lb><img src="<?= e($p->ReceiptUrl) ?>" alt="Receipt" loading="lazy" /><span class="zoom"><i class="fas fa-expand"></i> বড় করুন</span></a>
@@ -149,7 +151,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 </div>
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
                 <div class="ap-grid">
-                    <div class="amt"><small>Amount</small><b><?= e(taka($p->Amount)) ?></b></div>
+                    <div class="amt"><small><?= (int)($p->RefDiscount ?? 0) > 0 ? 'পাঠানোর কথা' : 'Amount' ?></small><b><?= e(taka($p->Amount)) ?></b><?php if ((int)($p->RefDiscount ?? 0) > 0): ?><small style="display:block;color:#B45309;font-weight:700;"><i class="fas fa-gift"></i> রেফারেল ব্যালেন্স থেকে ছাড় <?= e(taka((int)$p->RefDiscount)) ?> (দাম <?= e(taka((int)$p->Amount + (int)$p->RefDiscount)) ?>)</small><?php endif; ?></div>
                     <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span class="ap-tchip <?= $pt[0] ?>"><?= $p->Audience === 'Teacher' ? 'শিক্ষক' : ($p->Audience === 'Course' ? 'কোর্স' : 'শিক্ষার্থী') ?></span></div>
                     <div><small>Method</small><b><?= e($p->MethodName) ?></b></div>
                     <div class="txn"><small>Transaction ID</small><b><?= e($p->TxnId ?: '—') ?></b></div>

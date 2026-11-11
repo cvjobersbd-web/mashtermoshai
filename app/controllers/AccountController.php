@@ -115,7 +115,10 @@ class AccountController extends Controller
                 if (!headers_sent()) setcookie('mm_ref', '', ['expires' => time() - 3600, 'path' => '/']);
 
                 // রেফারেল সাইনআপের সময়ই রেকর্ড হয় (অ্যাডমিন দেখতে পান কে কার লিংকে এসেছে) — বোনাস যায় প্যাকেজ কিনলে
-                if ($newId && $code !== '') $this->creditReferral($code, $newId, $fullName);
+                $rsrc = $userRef !== '' ? 'code' : (string)($_SESSION['ref_src'] ?? ($_COOKIE['mm_ref_src'] ?? 'link'));
+                unset($_SESSION['ref_src']);
+                if (!headers_sent()) setcookie('mm_ref_src', '', ['expires' => time() - 3600, 'path' => '/']);
+                if ($newId && $code !== '') $this->creditReferral($code, $newId, $fullName, $rsrc);
                 if ($newId) {
                     // SMTP সেট না থাকলেও Mailer সার্ভারের mail() দিয়ে পাঠানোর চেষ্টা করে
                     // ✅ ইমেইল ভেরিফিকেশন: OTP না দেওয়া পর্যন্ত লগইন হবে না
@@ -239,9 +242,9 @@ class AccountController extends Controller
     private const OTP_COOLDOWN = 60;   // সেকেন্ড — আবার কোড পাঠানোর আগে অপেক্ষা
 
     /** রেফারেল রেকর্ড (বোনাস পরে — প্যাকেজ কিনলে) + রেফারারকে জানানো */
-    private function creditReferral(string $code, int $newId, string $fullName): void
+    private function creditReferral(string $code, int $newId, string $fullName, string $src = 'link'): void
     {
-        $refId = $this->db->CreditReferral($code, $newId, (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+        $refId = $this->db->CreditReferral($code, $newId, (string)($_SERVER['REMOTE_ADDR'] ?? ''), $src);
         if ($refId) {
             $bonus = $this->db->ReferralSettings()['bonus'];
             $this->db->CreateNotification($refId, 'নতুন রেফারেল 👋', "{$fullName} আপনার রেফারেল লিংক দিয়ে সাইনআপ করেছেন। উনি প্যাকেজ কিনলে আপনি ৳{$bonus} বোনাস পাবেন।", 'info', '/Referral', 'fa-user-plus');

@@ -27,6 +27,15 @@ class ReferralController extends Controller
         ]);
     }
 
+    /** POST /Referral/Share (src) — নিজের লিংক / কোড কোথায় শেয়ার করল (অ্যাডমিন দেখেন) */
+    public function Share_POST(): void
+    {
+        $me = $this->me(true);
+        $src = (string)input_str('src', '');
+        $this->db->LogReferralEvent($me, 'share', $src === 'code' ? 'code' : $src, (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+        json_response(['success' => true]);
+    }
+
     /** POST /Referral/Withdraw (amount, method, accountName, accountNumber, bankName, branch) */
     public function Withdraw_POST(): void
     {
@@ -47,7 +56,7 @@ class ReferralController extends Controller
         } elseif (!preg_match('/^01[3-9]\d{8}$/', $number)) {
             json_response(['success' => false, 'message' => "সঠিক $method নম্বর দিন (যেমন 01712345678)।"]);
         }
-        if ((int)$this->db->scalar("SELECT COUNT(*) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Pending'", ['u' => $me]) >= 3) {
+        if ((int)$this->db->scalar("SELECT COUNT(*) FROM `ReferralWithdrawals` WHERE `UserId` = :u AND `Status` = 'Pending' AND `Method` <> 'Discount'", ['u' => $me]) >= 3) {
             json_response(['success' => false, 'message' => 'আগের আবেদনগুলো এখনো প্রক্রিয়াধীন — সেগুলো শেষ হলে আবার আবেদন করুন।']);
         }
         $this->db->CreateWithdrawal($me, $amount, $method, $name, $number, $bank, $branch);

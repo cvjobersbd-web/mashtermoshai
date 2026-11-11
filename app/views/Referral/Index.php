@@ -51,13 +51,13 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
     <div class="rfp-wrap">
         <div class="rfp-hero">
             <h1><i class="fas fa-gift"></i> My Referral Bonus</h1>
-            <p>বন্ধুদের সাথে লিংক শেয়ার করুন — আপনার লিংক দিয়ে সাইনআপ করে কেউ (স্টুডেন্ট বা টিচার) প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$set['bonus'] ?></b>। টাকা যখন খুশি bKash, Nagad, Rocket বা ব্যাংকে তুলতে পারবেন।</p>
+            <p>বন্ধুদের সাথে লিংক শেয়ার করুন — আপনার লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় আপনার রেফারেল কোড দিয়ে কেউ (স্টুডেন্ট বা টিচার) প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$set['bonus'] ?></b>। ব্যালেন্স ৳<?= (int)$set['min'] ?> হলে bKash, Nagad, Rocket বা ব্যাংকে তুলতে পারবেন — অথবা যত টাকাই থাকুক (৳10, ৳20, ৳30...) নিজের প্যাকেজ কেনার সময় ছাড় হিসেবে ব্যবহার করতে পারবেন।</p>
         </div>
 
         <div class="rfp-stats">
             <div class="rfp-stat g"><small>Total Earning</small><b>৳<?= number_format($sum['earned']) ?></b></div>
             <div class="rfp-stat c"><small>Available Balance</small><b>৳<?= number_format($sum['balance']) ?></b></div>
-            <div class="rfp-stat"><small>Withdrawn</small><b>৳<?= number_format($sum['withdrawn']) ?></b></div>
+            <div class="rfp-stat"><small>Withdrawn · প্যাকেজে ছাড়</small><b>৳<?= number_format($sum['withdrawn']) ?> · ৳<?= number_format($sum['discount'] + $sum['discountHold']) ?></b></div>
             <div class="rfp-stat"><small>Referred Users</small><b><?= (int)$sum['count'] ?> জন</b></div>
         </div>
 
@@ -73,7 +73,9 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                         <li>উপরের লিংকটা WhatsApp, Facebook, Messenger, Instagram বা যেকোনো জায়গায় বন্ধুদের পাঠান।</li>
                         <li>কেউ আপনার লিংকে ক্লিক করে নতুন অ্যাকাউন্ট খুললে নিচের তালিকায় তার নাম আসবে ("প্যাকেজ কেনেনি")।</li>
                         <li>সেই ইউজার (স্টুডেন্ট বা টিচার) কোনো প্যাকেজ কিনলে, পেমেন্ট Approve হওয়ার সাথে সাথে আপনার অ্যাকাউন্টে ৳<?= (int)$set['bonus'] ?> যোগ হবে।</li>
+                        <li>অথবা কাউকে আপনার <b>রেফারেল কোড</b> দিন — সে প্যাকেজ কেনার সময় কোডটা দিলেও আপনি ৳<?= (int)$set['bonus'] ?> পাবেন।</li>
                         <li>ব্যালেন্স ৳<?= (int)$set['min'] ?> বা বেশি হলে উইথড্র আবেদন দিন — অ্যাডমিন যাচাই করে টাকা পাঠাবেন।</li>
+                        <li>কম টাকাও কাজে লাগান: নিজে প্যাকেজ কেনার সময় চেকআউট পেজে "রেফারেল ব্যালেন্স দিয়ে ছাড় নিন" টিক দিন — যত টাকা আছে তত টাকা কম দিতে হবে।</li>
                     </ol>
                     <p style="font-size:12.5px; color:#94A3B8; margin:12px 0 0;">ভুয়া বা নিজের একাধিক অ্যাকাউন্ট দিয়ে রেফার করলে বোনাস বাতিল করা হবে।</p>
                 </div>
@@ -117,9 +119,15 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                         <button type="submit" id="rfBtn"<?= $sum['balance'] < $set['min'] ? ' disabled' : '' ?>><i class="fas fa-paper-plane"></i> Withdraw Request</button>
                         <div class="rfp-msg" id="rfMsg"><?= $sum['balance'] < $set['min'] ? '<span style="color:#64748B;">আরো রেফার করুন — ব্যালেন্স ৳' . (int)$set['min'] . ' হলে টাকা তুলতে পারবেন।</span>' : '' ?></div>
                     </form>
+                    <?php if ($sum['balance'] > 0): ?>
+                    <div style="margin-top:14px;background:#FFFBEB;border:1.5px dashed #F59E0B;border-radius:12px;padding:12px 14px;color:#92400E;font-size:13.5px;font-weight:600;">
+                        <i class="fas fa-gift" style="color:#F59E0B;"></i> আপনার ব্যালেন্স <b>৳<?= number_format($sum['balance']) ?></b> — নিজের প্যাকেজ কেনার সময় ছাড় হিসেবে ব্যবহার করতে পারেন।
+                        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><a href="/Package?for=student" style="background:#F59E0B;color:#fff;border-radius:8px;padding:6px 12px;text-decoration:none;font-weight:800;">প্যাকেজ দেখুন</a></div>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="rfp-card">
-                    <h2><i class="fas fa-clock-rotate-left"></i> উইথড্র ইতিহাস</h2>
+                    <h2><i class="fas fa-clock-rotate-left"></i> উইথড্র ও ছাড়ের ইতিহাস</h2>
                     <?php if (!$ViewBag->Withdrawals): ?>
                         <div class="rfp-empty">এখনো কোনো আবেদন নেই।</div>
                     <?php else: ?>
@@ -129,8 +137,9 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                                 <tr>
                                     <td><?= e(fmt_date($w->CreatedAt, 'd M Y')) ?></td>
                                     <td><b>৳<?= number_format((int)$w->Amount) ?></b></td>
-                                    <td><?= e($w->Method) ?><br><small style="color:#94A3B8;"><?= e(substr((string)$w->AccountNumber, 0, 3) . '•••' . substr((string)$w->AccountNumber, -3)) ?></small></td>
-                                    <td><span class="rfp-st <?= $stCls[$w->Status] ?? 'pend' ?>"><?= $w->Status === 'Pending' ? 'প্রক্রিয়াধীন' : ($w->Status === 'Paid' ? 'পাঠানো হয়েছে' : 'বাতিল') ?></span>
+                                    <?php $isD = $w->Method === 'Discount'; ?>
+                                    <td><?php if ($isD): ?><i class="fas fa-gift" style="color:#F59E0B;"></i> প্যাকেজে ছাড়<?php else: ?><?= e($w->Method) ?><br><small style="color:#94A3B8;"><?= e(substr((string)$w->AccountNumber, 0, 3) . '•••' . substr((string)$w->AccountNumber, -3)) ?></small><?php endif; ?></td>
+                                    <td><span class="rfp-st <?= $stCls[$w->Status] ?? 'pend' ?>"><?= $w->Status === 'Pending' ? ($isD ? 'পেমেন্ট যাচাই হচ্ছে' : 'প্রক্রিয়াধীন') : ($w->Status === 'Paid' ? ($isD ? 'ব্যবহার হয়েছে' : 'পাঠানো হয়েছে') : ($isD ? 'ফেরত এসেছে' : 'বাতিল')) ?></span>
                                         <?php if (!is_blank($w->TxnId)): ?><br><small style="color:#64748B;">TxnID: <?= e($w->TxnId) ?></small><?php endif; ?>
                                         <?php if (!is_blank($w->AdminNote)): ?><br><small style="color:#64748B;"><?= e($w->AdminNote) ?></small><?php endif; ?></td>
                                 </tr>

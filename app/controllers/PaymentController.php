@@ -103,17 +103,29 @@ class PaymentController extends Controller
             if (!$pkg || !$pkg->IsActive) $this->fail('প্যাকেজটি পাওয়া যায়নি।');
             if ($why = $this->packageBlockReason($pkg)) $this->fail($why);
         }
-        $method = $this->db->GetPaymentMethod((int)input_int('methodId', 0));
-        if (!$method || !$method->IsActive) $this->fail('পেমেন্ট মেথড বাছাই করুন।');
-        $acc = $this->db->GetPaymentAccount((int)input_int('accountId', 0));
-        if (!$acc || $acc->MethodId !== $method->Id || !$acc->IsActive) $this->fail('কোন অ্যাকাউন্টে টাকা পাঠিয়েছেন সেটি বাছাই করুন।');
+        // রেফারেল ব্যালেন্স থেকে ছাড় (ঐচ্ছিক) — পুরো দাম ব্যালেন্সে হলে টাকা পাঠাতে / রিসিট দিতে হয় না
+        $disc = max(0, (int)input_int('useBalance', 0));
+        if ($disc > 0) {
+            $bal = $this->db->GetReferralSummary((int)$uid)['balance'];
+            if ($disc > $bal) $this->fail("আপনার রেফারেল ব্যালেন্স ৳$bal — এর বেশি ছাড় নেওয়া যাবে না।", ['field' => 'useBalance']);
+            if ($disc > (int)$pkg->Price) $disc = (int)$pkg->Price;
+        }
+        $payable = (int)$pkg->Price - $disc;
+        $full = $disc > 0 && $payable === 0;
+        $method = null; $acc = null;
+        if (!$full) {
+            $method = $this->db->GetPaymentMethod((int)input_int('methodId', 0));
+            if (!$method || !$method->IsActive) $this->fail('পেমেন্ট মেথড বাছাই করুন।');
+            $acc = $this->db->GetPaymentAccount((int)input_int('accountId', 0));
+            if (!$acc || $acc->MethodId !== $method->Id || !$acc->IsActive) $this->fail('কোন অ্যাকাউন্টে টাকা পাঠিয়েছেন সেটি বাছাই করুন।');
+        }
 
-        $txn = strtoupper(preg_replace('/\s+/', '', (string)input_str('txnId', '')));
-        if ($txn === '' && $method->TxnRequired) $this->fail('Transaction ID দিন।', ['field' => 'txnId']);
+        $txn = $full ? '' : strtoupper(preg_replace('/\s+/', '', (string)input_str('txnId', '')));
+        if (!$full && $txn === '' && $method->TxnRequired) $this->fail('Transaction ID দিন।', ['field' => 'txnId']);
         if ($txn !== '' && !preg_match('/^[A-Z0-9\-_\/.#]{4,40}$/', $txn)) $this->fail('Transaction ID সঠিক নয় — শুধু ইংরেজি অক্ষর ও সংখ্যা (৪–৪০ অক্ষর)।', ['field' => 'txnId']);
         if ($txn !== '' && $this->db->PaymentTxnUsed($txn)) $this->fail('এই Transaction ID দিয়ে আগেই পেমেন্ট জমা দেওয়া হয়েছে।', ['field' => 'txnId']);
 
-        $date = (string)input_str('payDate', '');
+        $date = $full ? date('Y-m-d') : (string)input_str('payDate', '');
         $d = DateTime::createFromFormat('!Y-m-d', $date);
         if (!$d || $d->format('Y-m-d') !== $date) $this->fail('পেমেন্টের তারিখ দিন।', ['field' => 'payDate']);
         $today = new DateTime('today');
@@ -134,8 +146,9 @@ class PaymentController extends Controller
 
         if ($this->db->CountUserPendingPayments($uid) >= 5) $this->fail('আপনার ৫টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। অ্যাডমিন যাচাই করার পর আবার চেষ্টা করুন।');
 
-        $file = upload_file('receipt');
-        if (!$file) $this->fail('পেমেন্টের রিসিট / স্ক্রিনশট আপলোড করুন।', ['field' => 'receipt']);
+        $file = $full ? null : upload_file('receipt');
+        if (!$full && !$file) $this->fail('পেমেন্টের রিসিট / স্ক্রিনশট আপলোড করুন।', ['field' => 'receipt']);
+        if ($file) {
         $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));
         if ($ext === '.jpeg') $ext = '.jpg';
         if (!in_array($ext, self::RECEIPT_EXTS, true)) $this->fail('রিসিট হিসেবে শুধু ছবি (JPG, PNG, WEBP) বা PDF দেওয়া যাবে।', ['field' => 'receipt']);
@@ -143,24 +156,25 @@ class PaymentController extends Controller
         if ($ext === '.pdf') {
             if ((string)@file_get_contents($file['tmp_name'], false, null, 0, 5) !== '%PDF-') $this->fail('PDF ফাইলটি সঠিক নয়।', ['field' => 'receipt']);
         } elseif (@getimagesize($file['tmp_name']) === false) $this->fail('ছবিটি সঠিক নয়।', ['field' => 'receipt']);
+        }
 
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 500);
         // এজেন্ট নম্বরে Cash Out: কোন নম্বর থেকে পাঠিয়েছে — অ্যাডমিন রসিদের সাথে মিলিয়ে দেখেন (নোটের শুরুতে থাকে)
-        if ($method->Kind === 'agent') {
+        if (!$full && $method->Kind === 'agent') {
             $sender = preg_replace('/\D/', '', strtr((string)input_str('senderNumber', ''), ['০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9']));
             if (str_starts_with($sender, '880')) $sender = substr($sender, 2);
             if (!preg_match('/^01[3-9]\d{8}$/', $sender)) $this->fail('যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন (যেমন 01712345678)।', ['field' => 'sender']);
             $note = mb_substr('যে নম্বর থেকে পাঠিয়েছেন: ' . $sender . ($note !== '' ? ' · ' . $note : ''), 0, 500);
         }
-        $info = implode(' · ', array_filter([$acc->Title, $acc->BankName, $acc->AccountNumber]));
+        $info = $full ? 'পুরো দাম রেফারেল ব্যালেন্স থেকে' : implode(' · ', array_filter([$acc->Title, $acc->BankName, $acc->AccountNumber]));
         // অনুমান করা যায় না এমন নাম, যাতে অন্য কেউ রিসিট খুঁজে না পায়
-        $url = save_upload($file, 'payments', 'rcpt_' . $uid . '_' . bin2hex(random_bytes(12)), $ext);
+        $url = $full ? '' : save_upload($file, 'payments', 'rcpt_' . $uid . '_' . bin2hex(random_bytes(12)), $ext);
         try {
             if ($courseId) $this->db->EnsureCourseTables();
             $id = $this->db->CreatePaymentRequest(($courseId ? ['CourseId' => $courseId] : []) + [
-                'UserId' => $uid, 'PackageId' => $courseId ? null : $pkg->Id, 'PackageName' => $courseId ? mb_substr('কোর্স: ' . $pkg->Name, 0, 80) : $pkg->Name, 'Audience' => $pkg->Audience, 'Amount' => $pkg->Price,
-                'DurationMonths' => $pkg->DurationMonths, 'PostLimit' => $pkg->PostLimit, 'MethodId' => $method->Id, 'MethodName' => $method->Name,
-                'AccountId' => $acc->Id, 'AccountInfo' => mb_substr($info, 0, 200), 'TxnId' => $txn !== '' ? $txn : null, 'PayDate' => $date,
+                'UserId' => $uid, 'PackageId' => $courseId ? null : $pkg->Id, 'PackageName' => $courseId ? mb_substr('কোর্স: ' . $pkg->Name, 0, 80) : $pkg->Name, 'Audience' => $pkg->Audience, 'Amount' => $payable,
+                'DurationMonths' => $pkg->DurationMonths, 'PostLimit' => $pkg->PostLimit, 'MethodId' => $full ? null : $method->Id, 'MethodName' => $full ? 'রেফারেল ব্যালেন্স' : $method->Name,
+                'AccountId' => $full ? null : $acc->Id, 'AccountInfo' => mb_substr($info, 0, 200), 'TxnId' => $txn !== '' ? $txn : null, 'PayDate' => $date,
                 'ReceiptUrl' => $url, 'Note' => $note !== '' ? $note : null,
             ]);
         } catch (Throwable $e) {
@@ -168,6 +182,7 @@ class PaymentController extends Controller
             $this->fail('জমা দেওয়া যায়নি। আবার চেষ্টা করুন।');
         }
         if ($ref) { try { $this->db->SetPaymentReference($id, $ref[0], $ref[1]); } catch (Throwable $e) { error_log('[payment ref] ' . $e->getMessage()); } }
+        if ($disc > 0) { try { $this->db->ReserveReferralDiscount((int)$uid, $id, $disc); } catch (Throwable $e) { error_log('[payment discount] ' . $e->getMessage()); } }
         if ($refCode !== '') { try { $this->db->SetPaymentRefCode($id, $refCode); } catch (Throwable $e) { error_log('[payment refcode] ' . $e->getMessage()); } }
         $who = (string)(session_get('UserFullName') ?? session_get('UserName'));
         // টিচার হওয়ার আবেদন + পেমেন্ট একসাথে অ্যাডমিনের কাছে
@@ -183,7 +198,8 @@ class PaymentController extends Controller
             }
         }
         foreach ($this->db->GetAdmins() as $a) {
-            $this->db->CreateNotification((int)$a->Id, 'New Payment', "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($pkg->Price) . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', $pkg->Audience === 'Course' ? '/Admin/CoursePayments' : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
+            $this->db->CreateNotification((int)$a->Id, 'New Payment', $full ? "$who “{$pkg->Name}” প্যাকেজ পুরোটা রেফারেল ব্যালেন্স (৳$disc) দিয়ে নিতে চেয়েছেন — Accept করুন।"
+                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', $pkg->Audience === 'Course' ? '/Admin/CoursePayments' : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
         }
         json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
             'message' => 'পেমেন্টের তথ্য জমা হয়েছে! অ্যাডমিন যাচাই করে Accept করলে আপনার প্যাকেজ চালু হবে।']);

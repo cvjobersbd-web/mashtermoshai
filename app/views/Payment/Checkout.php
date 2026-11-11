@@ -28,6 +28,18 @@ $jsMethods = array_map(function ($m) {
     .co-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
     .co-card { background: #fff; border: 1px solid #DCECF5; border-radius: 18px; padding: 20px; box-shadow: 0 4px 18px rgba(8,34,74,.05); }
     .co-card + .co-card { margin-top: 16px; }
+    .co-bal { border: 2px dashed #F59E0B; background: linear-gradient(135deg, #FFFBEB, #FFF7D6); }
+    .co-bal-h { display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 0; font-weight: 800; color: #92400E; font-size: 15.5px; }
+    .co-bal-h input { width: 22px; height: 22px; accent-color: #F59E0B; flex-shrink: 0; }
+    .co-bal-h small { display: block; font-weight: 600; color: #B45309; font-size: 12.5px; margin-top: 2px; }
+    .co-bal-b { margin-top: 14px; }
+    .co-bal-b label { font-size: 13px; font-weight: 700; color: #334155; }
+    .co-bal-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+    .co-bal-row span { font-weight: 800; color: #92400E; font-size: 18px; }
+    .co-bal-row input { width: 130px; height: 42px; border: 1.5px solid #F59E0B; border-radius: 10px; padding: 0 12px; font-size: 16px; font-weight: 700; background: #fff; outline: none; }
+    .co-bal-row button { height: 42px; border: none; border-radius: 10px; background: #F59E0B; color: #fff; font-weight: 800; padding: 0 14px; cursor: pointer; font-family: inherit; }
+    .co-bal-res { margin-top: 10px; font-size: 14px; color: #0F172A; font-weight: 600; }
+    .co-bal-res b { color: #15803D; font-size: 16px; }
     .co-step { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 16.5px; font-weight: 800; color: #08224A; }
     .co-step b { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #1D7FE5, #02B8F5); color: #fff; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
@@ -171,6 +183,18 @@ $jsMethods = array_map(function ($m) {
                 <?php if ($pkg->Audience === 'Course'): ?><input type="hidden" name="courseId" value="<?= (int)$pkg->CourseId ?>" /><?php endif; ?>
                 <input type="hidden" name="methodId" id="coMethodId" />
                 <input type="hidden" name="accountId" id="coAccountId" />
+                <input type="hidden" name="useBalance" id="coUseBalance" value="0" />
+                <?php $rfBal = 0; try { if (db()->ReferralSettings()['enabled'] && (int)$pkg->Price > 0) $rfBal = min((int)db()->GetReferralSummary((int)current_user_id())['balance'], (int)$pkg->Price); } catch (Throwable $e) { } ?>
+                <?php if ($rfBal > 0): ?>
+                <div class="co-card co-bal" id="coBalCard">
+                    <label class="co-bal-h"><input type="checkbox" id="coBalOn" /> <span><i class="fas fa-gift"></i> রেফারেল ব্যালেন্স দিয়ে ছাড় নিন <small>আপনার ব্যালেন্সে আছে <b><?= e(taka((int)db()->GetReferralSummary((int)current_user_id())['balance'])) ?></b></small></span></label>
+                    <div class="co-bal-b" id="coBalBody" hidden>
+                        <label for="coBalAmt">কত টাকা ছাড় নেবেন?</label>
+                        <div class="co-bal-row"><span>৳</span><input type="number" id="coBalAmt" min="1" max="<?= $rfBal ?>" value="<?= $rfBal ?>" inputmode="numeric" /><button type="button" id="coBalMax">সব (৳<?= $rfBal ?>)</button></div>
+                        <div class="co-bal-res" id="coBalRes"></div>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <div class="co-card">
                     <h2 class="co-step"><b>1</b> পেমেন্ট মেথড বাছাই করুন</h2>
@@ -196,8 +220,8 @@ $jsMethods = array_map(function ($m) {
                     <div class="co-pay" id="coPayQr">
                         <div class="co-qr" id="coQr"></div>
                         <div>
-                            <div class="co-amount"><div><small>এই পরিমাণ টাকা পাঠান</small><b><?= e(taka($pkg->Price)) ?></b></div>
-                                <button type="button" class="co-copy" data-copy="<?= (int)$pkg->Price ?>"><i class="far fa-copy"></i> Copy</button></div>
+                            <div class="co-amount"><div><small>এই পরিমাণ টাকা পাঠান</small><b id="coAmtB"><?= e(taka($pkg->Price)) ?></b></div>
+                                <button type="button" class="co-copy" id="coAmtCopy" data-copy="<?= (int)$pkg->Price ?>"><i class="far fa-copy"></i> Copy</button></div>
                             <div class="co-rows" id="coRows"></div>
                             <div class="co-ins" id="coIns" hidden><i class="fas fa-info-circle"></i><span></span></div>
                         </div>
@@ -272,7 +296,8 @@ $jsMethods = array_map(function ($m) {
                 <div class="co-line"><span>নিয়মিত মূল্য</span><s><?= e(taka($pkg->RegularPrice)) ?></s></div>
                 <div class="co-line"><span>ছাড় (<?= e(bn_num($pkg->Discount)) ?>%)</span><span style="color:#157347;">−<?= e(taka($pkg->RegularPrice - $pkg->Price)) ?></span></div>
             <?php endif; ?>
-            <div class="co-line tot"><span>মোট</span><span><?= e(taka($pkg->Price)) ?></span></div>
+            <div class="co-line" id="coSumDisc" hidden><span><i class="fas fa-gift" style="color:#F59E0B;"></i> রেফারেল ব্যালেন্স থেকে ছাড়</span><span style="color:#157347;" id="coSumDiscV"></span></div>
+            <div class="co-line tot"><span id="coSumTotL">মোট</span><span id="coSumTot"><?= e(taka($pkg->Price)) ?></span></div>
             <ul class="co-how">
                 <li><i class="fas fa-mobile-screen-button"></i><span>এজেন্ট নম্বরে Cash Out করে (বা Bank QR স্ক্যান করে) ঠিক <?= e(taka($pkg->Price)) ?> পাঠান</span></li>
                 <li><i class="fas fa-camera"></i><span>পেমেন্ট সফল হওয়ার স্ক্রিনশট নিন</span></li>
@@ -290,7 +315,7 @@ $jsMethods = array_map(function ($m) {
 (function () {
     var form = document.getElementById('coForm'); if (!form) return;
     var METHODS = <?= js($jsMethods) ?>;
-    var cur = null, curAcc = null, file = null, AMOUNT = <?= js(taka($pkg->Price)) ?>;
+    var cur = null, curAcc = null, file = null, AMOUNT = <?= js(taka($pkg->Price)) ?>, PRICE = <?= (int)$pkg->Price ?>, FULL = false;
     function toBn(s) { return String(s).replace(/[0-9]/g, function (d) { return '০১২৩৪৫৬৭৮৯'[d]; }); }
     function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -387,8 +412,44 @@ $jsMethods = array_map(function ($m) {
     function markBad(f) { document.querySelectorAll('.co-f [data-f]').forEach(function (x) { x.classList.toggle('bad', x.getAttribute('data-f') === f); }); }
     function showErr(msg, f) { err.textContent = msg; err.classList.add('show'); markBad(f || null); var el = f && document.querySelector('[data-f="' + f + '"]'); (el || err).scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
+    // রেফারেল ব্যালেন্স থেকে ছাড়
+    var bOn = document.getElementById('coBalOn');
+    function balApply() {
+        var on = bOn && bOn.checked, amtIn = document.getElementById('coBalAmt');
+        var max = amtIn ? +amtIn.max : 0, d = on ? Math.max(0, Math.min(max, parseInt(amtIn.value, 10) || 0)) : 0;
+        var pay = PRICE - d; FULL = on && d > 0 && pay === 0;
+        document.getElementById('coUseBalance').value = d;
+        if (bOn) {
+            document.getElementById('coBalBody').hidden = !on;
+            document.getElementById('coBalRes').innerHTML = d > 0 ? (pay === 0 ? '🎉 পুরো দাম ব্যালেন্স থেকে — কোনো টাকা পাঠাতে হবে না, শুধু নিচে Submit করুন।' : 'ছাড়ের পর পাঠাতে হবে: <b>৳' + pay + '</b>') : 'কত টাকা ছাড় নেবেন লিখুন।';
+        }
+        AMOUNT = '৳' + toBn(pay);
+        document.getElementById('coAmtB').textContent = AMOUNT; document.getElementById('coAmtCopy').setAttribute('data-copy', pay);
+        document.getElementById('coSumDisc').hidden = !(d > 0); document.getElementById('coSumDiscV').textContent = '−৳' + toBn(d);
+        document.getElementById('coSumTot').textContent = AMOUNT; document.getElementById('coSumTotL').textContent = d > 0 ? 'পাঠাতে হবে' : 'মোট';
+        var first = form.querySelector('.co-card:not(#coBalCard)');
+        if (first) first.hidden = FULL;
+        ['txnId', 'sender', 'payDate', 'receipt'].forEach(function (f) { var x = form.querySelector('[data-f="' + f + '"]'); if (x) x.style.display = FULL ? 'none' : ''; });
+        if (FULL) { document.getElementById('coPayCard').hidden = true; document.getElementById('coDetails').hidden = false; }
+        else if (cur) { document.getElementById('coPayCard').hidden = false; pickAccount(curAcc ? curAcc.id : cur.accounts[0].id); }
+        else document.getElementById('coDetails').hidden = true;
+    }
+    if (bOn) {
+        bOn.addEventListener('change', balApply);
+        document.getElementById('coBalAmt').addEventListener('input', balApply);
+        document.getElementById('coBalMax').addEventListener('click', function () { var a = document.getElementById('coBalAmt'); a.value = a.max; balApply(); });
+    }
+
     form.addEventListener('submit', async function (e) {
         e.preventDefault(); err.classList.remove('show');
+        if (FULL) {
+            var fd0 = new FormData(form); fd0.delete('receipt');
+            var b0 = document.getElementById('coSubmit'); b0.disabled = true; var h0 = b0.innerHTML; b0.innerHTML = '<i class="fas fa-spinner fa-spin"></i> জমা হচ্ছে...';
+            try { var d0 = await (await fetch('/Payment/Submit', { method: 'POST', body: fd0, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                if (!d0.success) { showErr(d0.message || 'জমা দেওয়া যায়নি।', d0.field); b0.disabled = false; b0.innerHTML = h0; return; } location.href = d0.redirect;
+            } catch (x) { showErr('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); b0.disabled = false; b0.innerHTML = h0; }
+            return;
+        }
         if (!cur) return showErr('পেমেন্ট মেথড বাছাই করুন।');
         var txn = form.txnId.value.trim();
         if (cur.txnRequired && !txn) return showErr('Transaction ID দিন।', 'txnId');

@@ -367,9 +367,10 @@ trait PaymentData
             if (!$n) { $this->pdo->rollBack(); return null; }
             // কোর্স কেনা — Subscription না, কোর্সে ভর্তি (দামের ভাগ টিচার / অ্যাডমিন)
             if (!empty($p->CourseId) && method_exists($this, 'Enroll')) {
-                $this->Enroll((int)$p->CourseId, (int)$p->UserId, $id, (int)$p->Amount, 'payment');
+                $this->Enroll((int)$p->CourseId, (int)$p->UserId, $id, (int)$p->Amount + (int)($p->RefDiscount ?? 0), 'payment');   // রেফারেল ছাড় অ্যাডমিন বহন করেন — টিচারের ভাগ পুরো দামে
                 $this->pdo->commit();
-                if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
+                if ((int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'SettleReferralDiscount')) $this->SettleReferralDiscount($id, true);
+                if ((int)$p->Amount + (int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
                 return $this->GetPaymentRequest($id);
             }
             $start = now(); $end = null;
@@ -393,8 +394,9 @@ trait PaymentData
             ]);
             $this->pdo->commit();
         } catch (Throwable $e) { $this->pdo->rollBack(); throw $e; }
+        if ((int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'SettleReferralDiscount')) $this->SettleReferralDiscount($id, true);
         // রেফারেল: এই ইউজার কারো লিংক দিয়ে এসে থাকলে, প্রথম প্যাকেজ কেনায় রেফারার বোনাস পায়
-        if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
+        if ((int)$p->Amount + (int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
         return $this->GetPaymentRequest($id);
     }
 
@@ -403,6 +405,7 @@ trait PaymentData
         $this->EnsurePaymentTables();
         $n = $this->exec("UPDATE `PaymentRequests` SET `Status` = 'Rejected', `AdminNote` = :n, `ReviewedBy` = :a, `ReviewedAt` = :t WHERE `Id` = :i AND `Status` = 'Pending'",
             ['n' => $note !== '' ? $note : null, 'a' => $adminId, 't' => now(), 'i' => $id]);
+        if ($n && method_exists($this, 'SettleReferralDiscount')) $this->SettleReferralDiscount($id, false);   // ছাড়ের টাকা ব্যালেন্সে ফেরত
         return $n ? $this->GetPaymentRequest($id) : null;
     }
 
@@ -412,6 +415,7 @@ trait PaymentData
         $p = $this->GetPaymentRequest($id);
         if (!$p) return null;
         $this->exec('DELETE FROM `PaymentRequests` WHERE `Id` = :i', ['i' => $id]);
+        if ($p->Status === 'Pending' && method_exists($this, 'SettleReferralDiscount')) $this->SettleReferralDiscount($id, false);
         return $p->ReceiptUrl;
     }
 

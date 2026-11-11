@@ -41,6 +41,11 @@ abstract class Controller
             $ref = strtoupper($ref);
             $_SESSION['ref_code'] = $ref;
             if (!headers_sent()) setcookie('mm_ref', $ref, ['expires' => time() + 30 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+            // কোন জায়গার লিংক (&src=wa / fb / copy ...) — লিংক খুলে আসা গোনা হয়, সাইনআপ হলে সেই জায়গা রেকর্ড হয়
+            $src = Db::CleanRefSrc(is_string($_GET['src'] ?? null) ? $_GET['src'] : '') ?: 'link';
+            $_SESSION['ref_src'] = $src;
+            if (!headers_sent()) setcookie('mm_ref_src', $src, ['expires' => time() + 30 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+            try { if ($owner = $this->db->GetUserIdByReferralCode($ref)) $this->db->LogReferralEvent($owner, 'click', $src, (string)($_SERVER['REMOTE_ADDR'] ?? '')); } catch (Throwable $e) { }
         }
         // পার্টনার / এজেন্সি লিংক (?p=CODE&src=facebook) — ক্লিক গোনা হয়, কোড ৩০ দিন মনে থাকে, তারপর পরিষ্কার URL এ পাঠায়
         $pc = $_GET['p'] ?? null;

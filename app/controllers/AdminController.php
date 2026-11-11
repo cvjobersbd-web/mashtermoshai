@@ -1017,7 +1017,16 @@ class AdminController extends Controller
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(2000)]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(2000), 'Overview' => $this->db->GetReferrerOverview()]);
+    }
+
+    /** GET /Admin/ReferralUser/{userId} — একজন ইউজারের রেফারেল বিস্তারিত: লিংক, কোড, কোথায় শেয়ার, কত জন এসেছে / কিনেছে, টাকা তোলা / ছাড় */
+    public function ReferralUser(): void
+    {
+        $this->requireAdminPage();
+        $u = $this->db->GetUserById((int)input_int('id', 0));
+        if (!$u) not_found('ইউজার পাওয়া যায়নি।');
+        $this->view(null, $u, $this->db->GetReferrerDetail((int)$u->Id) + ['Settings' => $this->db->ReferralSettings()]);
     }
 
     /** GET /Admin/Withdrawals?w=Pending|Paid|Rejected|all — রেফারেল বোনাসের উইথড্র আবেদন: দেখে টাকা পাঠিয়ে Paid / বাতিল */

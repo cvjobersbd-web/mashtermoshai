@@ -4,28 +4,30 @@
  * @var string $code  @var int $bonus  @var bool $compact
  */
 $link = site_public_url() . '/?ref=' . rawurlencode($code);
-$msg = "মাষ্টার মশাই — সহজে যাচাই করা টিউটর খুঁজুন বা টিউশন পান। আমার লিংক দিয়ে ফ্রি অ্যাকাউন্ট খুলুন: $link — প্যাকেজ কেনার সময় আমার রেফারেল কোড দিন: $code";
-$enc = rawurlencode($link); $encMsg = rawurlencode($msg);
+// প্রতিটা জায়গার জন্য আলাদা লিংক (&src=wa ...) — কোথা থেকে কত জন এসেছে অ্যাডমিন দেখতে পান
+$lk = fn(string $src) => $link . '&src=' . $src;
+$mg = fn(string $src) => "মাষ্টার মশাই — সহজে যাচাই করা টিউটর খুঁজুন বা টিউশন পান। আমার লিংক দিয়ে ফ্রি অ্যাকাউন্ট খুলুন: " . $lk($src) . " — প্যাকেজ কেনার সময় আমার রেফারেল কোড দিন: $code";
+$msg = $mg('more');
 $compact = !empty($compact);
 $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
 ?>
-<div class="rf-share<?= $compact ? ' compact' : '' ?>" id="<?= $uid ?>" data-link="<?= e($link) ?>" data-msg="<?= e($msg) ?>" data-code="<?= e($code) ?>">
+<div class="rf-share<?= $compact ? ' compact' : '' ?>" id="<?= $uid ?>" data-link="<?= e($lk('copy')) ?>" data-msg="<?= e($msg) ?>" data-code="<?= e($code) ?>">
     <div class="rf-linkbox">
         <span class="rf-tag"><i class="fas fa-link"></i> আপনার রেফারেল লিংক</span>
-        <div class="rf-link"><input type="text" readonly value="<?= e($link) ?>" aria-label="Referral link" onclick="this.select()" /><button type="button" class="rf-copy" data-rf="copy"><i class="far fa-copy"></i> <span>Copy</span></button></div>
+        <div class="rf-link"><input type="text" readonly value="<?= e($lk('copy')) ?>" aria-label="Referral link" onclick="this.select()" /><button type="button" class="rf-copy" data-rf="copy" data-src="copy"><i class="far fa-copy"></i> <span>Copy</span></button></div>
         <span class="rf-tag rf-tag2"><i class="fas fa-ticket"></i> আপনার রেফারেল কোড</span>
-        <div class="rf-code"><b onclick="var r=document.createRange();r.selectNodeContents(this);var s=getSelection();s.removeAllRanges();s.addRange(r);"><?= e($code) ?></b><button type="button" class="rf-copy" data-rf="copycode"><i class="far fa-copy"></i> <span>Copy</span></button></div>
+        <div class="rf-code"><b onclick="var r=document.createRange();r.selectNodeContents(this);var s=getSelection();s.removeAllRanges();s.addRange(r);"><?= e($code) ?></b><button type="button" class="rf-copy" data-rf="copycode" data-src="code"><i class="far fa-copy"></i> <span>Copy</span></button></div>
         <p class="rf-earn"><i class="fas fa-gift"></i> কেউ আপনার লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় আপনার কোড দিয়ে প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$bonus ?></b> বোনাস!</p>
     </div>
     <div class="rf-socials" aria-label="শেয়ার করুন">
-        <a class="wa" href="https://wa.me/?text=<?= $encMsg ?>" target="_blank" rel="noopener" title="WhatsApp"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>
-        <a class="fb" href="https://www.facebook.com/sharer/sharer.php?u=<?= $enc ?>" target="_blank" rel="noopener" title="Facebook"><i class="fab fa-facebook-f"></i><span>Facebook</span></a>
-        <a class="ms" href="fb-messenger://share/?link=<?= $enc ?>" data-rf="messenger" title="Messenger"><i class="fab fa-facebook-messenger"></i><span>Messenger</span></a>
-        <a class="ig" href="#" data-rf="instagram" title="Instagram"><i class="fab fa-instagram"></i><span>Instagram</span></a>
-        <a class="tg" href="https://t.me/share/url?url=<?= $enc ?>&amp;text=<?= rawurlencode('মাষ্টার মশাই — আমার লিংক দিয়ে ফ্রি অ্যাকাউন্ট খুলুন') ?>" target="_blank" rel="noopener" title="Telegram"><i class="fab fa-telegram"></i><span>Telegram</span></a>
-        <a class="x" href="https://twitter.com/intent/tweet?text=<?= $encMsg ?>" target="_blank" rel="noopener" title="X"><i class="fab fa-x-twitter"></i><span>X</span></a>
-        <a class="li" href="https://www.linkedin.com/sharing/share-offsite/?url=<?= $enc ?>" target="_blank" rel="noopener" title="LinkedIn"><i class="fab fa-linkedin-in"></i><span>LinkedIn</span></a>
-        <a class="more" href="#" data-rf="more" title="আরো"><i class="fas fa-share-nodes"></i><span>More</span></a>
+        <a class="wa" data-src="wa" href="https://wa.me/?text=<?= rawurlencode($mg('wa')) ?>" target="_blank" rel="noopener" title="WhatsApp"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>
+        <a class="fb" data-src="fb" href="https://www.facebook.com/sharer/sharer.php?u=<?= rawurlencode($lk('fb')) ?>" target="_blank" rel="noopener" title="Facebook"><i class="fab fa-facebook-f"></i><span>Facebook</span></a>
+        <a class="ms" data-src="ms" href="fb-messenger://share/?link=<?= rawurlencode($lk('ms')) ?>" data-rf="messenger" data-msg="<?= e($mg('ms')) ?>" title="Messenger"><i class="fab fa-facebook-messenger"></i><span>Messenger</span></a>
+        <a class="ig" data-src="ig" href="#" data-rf="instagram" data-msg="<?= e($mg('ig')) ?>" title="Instagram"><i class="fab fa-instagram"></i><span>Instagram</span></a>
+        <a class="tg" data-src="tg" href="https://t.me/share/url?url=<?= rawurlencode($lk('tg')) ?>&amp;text=<?= rawurlencode('মাষ্টার মশাই — আমার লিংক দিয়ে ফ্রি অ্যাকাউন্ট খুলুন। রেফারেল কোড: ' . $code) ?>" target="_blank" rel="noopener" title="Telegram"><i class="fab fa-telegram"></i><span>Telegram</span></a>
+        <a class="x" data-src="x" href="https://twitter.com/intent/tweet?text=<?= rawurlencode($mg('x')) ?>" target="_blank" rel="noopener" title="X"><i class="fab fa-x-twitter"></i><span>X</span></a>
+        <a class="li" data-src="li" href="https://www.linkedin.com/sharing/share-offsite/?url=<?= rawurlencode($lk('li')) ?>" target="_blank" rel="noopener" title="LinkedIn"><i class="fab fa-linkedin-in"></i><span>LinkedIn</span></a>
+        <a class="more" data-src="more" href="#" data-rf="more" data-msg="<?= e($mg('more')) ?>" data-url="<?= e($lk('more')) ?>" title="আরো"><i class="fas fa-share-nodes"></i><span>More</span></a>
     </div>
 </div>
 <?php if (empty($GLOBALS['__rf_share_once'])): $GLOBALS['__rf_share_once'] = 1; ?>
@@ -66,12 +68,19 @@ $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
         var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = 0; document.body.appendChild(ta); ta.select();
         try { document.execCommand('copy'); } finally { ta.remove(); } return Promise.resolve();
     }
+    // কোথায় শেয়ার করল — অ্যাডমিনের জন্য গোনা
+    document.addEventListener('click', function (e) {
+        var s = e.target.closest('.rf-share [data-src]'); if (!s) return;
+        try { var t = document.querySelector('input[name="__RequestVerificationToken"]'); var fd = new FormData(); fd.append('src', s.getAttribute('data-src')); if (t) fd.append('__RequestVerificationToken', t.value);
+            if (navigator.sendBeacon) navigator.sendBeacon('/Referral/Share', fd); else fetch('/Referral/Share', { method: 'POST', body: fd, keepalive: true, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        } catch (x) { }
+    }, true);
     document.addEventListener('click', function (e) {
         var b = e.target.closest('[data-rf]'); if (!b) return;
-        var box = b.closest('.rf-share'), link = box.getAttribute('data-link'), msg = box.getAttribute('data-msg'), k = b.getAttribute('data-rf'), code = box.getAttribute('data-code');
+        var box = b.closest('.rf-share'), link = box.getAttribute('data-link'), msg = b.getAttribute('data-msg') || box.getAttribute('data-msg'), k = b.getAttribute('data-rf'), code = box.getAttribute('data-code');
         if (k === 'messenger' && mobile) return; // মোবাইলে Messenger অ্যাপ খোলে
         e.preventDefault();
-        if (k === 'more' && navigator.share) { navigator.share({ title: 'মাষ্টার মশাই', text: msg, url: link }).catch(function () {}); return; }
+        if (k === 'more' && navigator.share) { navigator.share({ title: 'মাষ্টার মশাই', text: msg, url: b.getAttribute('data-url') || link }).catch(function () {}); return; }
         copy(k === 'copy' ? link : (k === 'copycode' ? code : msg)).then(function () {
             if (k === 'copycode') { var s2 = b.querySelector('span'); b.classList.add('ok'); s2.textContent = 'Copied!'; setTimeout(function () { b.classList.remove('ok'); s2.textContent = 'Copy'; }, 1800); toast('কোড কপি হয়েছে ✅ — প্যাকেজ কেনার সময় এই কোড দিতে বলুন'); }
             else if (k === 'copy') { var s = b.querySelector('span'); b.classList.add('ok'); s.textContent = 'Copied!'; setTimeout(function () { b.classList.remove('ok'); s.textContent = 'Copy'; }, 1800); toast('লিংক কপি হয়েছে ✅'); }
