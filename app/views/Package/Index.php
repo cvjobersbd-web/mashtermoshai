@@ -273,8 +273,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             </div>
             <?php foreach ($teacherPk as $p) $card($p, 'Subscribe করুন'); ?>
         </div>
-        <div class="pk-note"><i class="fas fa-video" style="margin-top:3px;color:#1D7FE5;"></i>
-            <span><b>লাইভ ক্লাস ও কোর্স আলাদা:</b> প্যাকেজে লাইভ ক্লাস নেই। টিচার নিজে <a href="/Course/Manage">লাইভ ক্লাস / ব্যাচ বা কোর্স</a> বানিয়ে <b>নিজের পছন্দমতো দাম</b> ঠিক করবেন — শিক্ষার্থীরা আলাদা পেমেন্ট করে যোগ দেবে। মাষ্টার মশাই শুধু বিক্রির <b><?= (int)course_admin_pct() ?>% কমিশন</b> রাখবে, বাকিটা টিচারের।</span></div>
+        
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
                 <span class="av"><?= e(initials($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'Your Name')) ?></span>
