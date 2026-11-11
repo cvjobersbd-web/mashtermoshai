@@ -54,7 +54,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content rfa">
     <h2><i class="fas fa-gift" style="color:#F59E0B;"></i> Referrals</h2>
-    <p class="sub">ইউজাররা নিজের লিংক শেয়ার করে — কেউ সেই লিংক দিয়ে সাইনআপ করে প্যাকেজ কিনলে (পেমেন্ট Approve হলে) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই। উইথড্র আবেদন দেখতে ও টাকা পাঠাতে বাম মেনুর <a href="/Admin/Withdrawals"><b>Withdraw</b></a> পেজে যান।</p>
+    <p class="sub">ইউজাররা নিজের লিংক বা রেফারেল কোড শেয়ার করে — কেউ সেই লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় কোড দিয়ে প্যাকেজ কিনলে (পেমেন্ট Approve হলে) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই। উইথড্র আবেদন দেখতে ও টাকা পাঠাতে বাম মেনুর <a href="/Admin/Withdrawals"><b>Withdraw</b></a> পেজে যান।</p>
 
     <div class="rfa-stats">
         <div class="rfa-stat"><small>মোট রেফারেল · প্যাকেজ কিনেছে</small><b><?= number_format($st['referrals']) ?> · <?= number_format($st['bought'] ?? 0) ?></b></div>
@@ -92,7 +92,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     }
     uasort($groups, fn($a, $b) => count($b['list']) <=> count($a['list']));
     $roleBn = fn($r, $uid = 0) => role_label($r, $uid);
-    $stBn = fn($r) => $r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>');
+    $stBn = fn($r) => (($r->Via ?? '') === 'code' ? '<span class="rfa-pill" style="background:#FEF3C7;color:#92400E;margin-right:4px;"><i class="fas fa-ticket"></i> কোড দিয়ে</span>' : '') . ($r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>'));
     ?>
     <div class="rfa-card">
         <h3><i class="fas fa-sitemap" style="color:#7C3AED;"></i> কে কার রেফারেল কোডে এসেছে <span class="rfa-pill" style="background:#EDE9FE;color:#5B21B6;"><?= count($groups) ?> জন রেফারার · <?= count($refs) ?> জন নতুন ইউজার</span></h3>

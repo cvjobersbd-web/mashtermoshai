@@ -156,6 +156,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     <div><small>Payment date</small><b><?= e(date('d M Y', strtotime($p->PayDate))) ?></b></div>
                     <div><small>জমা দিয়েছেন</small><b><?= e($fmt($p->CreatedAt)) ?></b></div>
                     <?php if (!empty($p->Reference)): $ro = db()->ReferenceInfo((string)$p->Reference); ?><div><small>কার রেফারেন্সে</small><b><i class="<?= e($ro['icon']) ?>" style="color:<?= e($ro['color']) ?>;"></i> <?= e($ro['label']) ?><?= !empty($p->ReferenceNote) ? ' — ' . e($p->ReferenceNote) : '' ?></b></div><?php endif; ?>
+                    <?php if (!empty($p->RefCode)): $rco = db()->RefCodeOwnerNames([(string)$p->RefCode])[strtoupper((string)$p->RefCode)] ?? null; ?><div><small>রেফারেল কোড</small><b><i class="fas fa-gift" style="color:#F59E0B;"></i> <?= e($p->RefCode) ?><?php if ($rco): ?> — <a href="/Profile/Show/<?= (int)$rco['id'] ?>"><?= e($rco['name']) ?></a><?php endif; ?></b></div><?php endif; ?>
                     <?php if ($p->AccountInfo): ?><div style="grid-column:1/-1;"><small>যে অ্যাকাউন্টে পাঠিয়েছেন</small><b><?= e($p->AccountInfo) ?></b></div><?php endif; ?>
                 </div>
                 <?php if ($ap = $apps[(int)$p->Id] ?? null): $kOk = $ap['kyc'] === 'Approved' || $ap['kyc'] === 'None'; ?>

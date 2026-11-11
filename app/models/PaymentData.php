@@ -369,7 +369,7 @@ trait PaymentData
             if (!empty($p->CourseId) && method_exists($this, 'Enroll')) {
                 $this->Enroll((int)$p->CourseId, (int)$p->UserId, $id, (int)$p->Amount, 'payment');
                 $this->pdo->commit();
-                if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId);
+                if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
                 return $this->GetPaymentRequest($id);
             }
             $start = now(); $end = null;
@@ -394,7 +394,7 @@ trait PaymentData
             $this->pdo->commit();
         } catch (Throwable $e) { $this->pdo->rollBack(); throw $e; }
         // রেফারেল: এই ইউজার কারো লিংক দিয়ে এসে থাকলে, প্রথম প্যাকেজ কেনায় রেফারার বোনাস পায়
-        if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId);
+        if ((int)$p->Amount > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
         return $this->GetPaymentRequest($id);
     }
 

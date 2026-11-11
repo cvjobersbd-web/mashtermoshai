@@ -241,6 +241,14 @@ $jsMethods = array_map(function ($m) {
                             </select>
                         </div>
                         <?php endif; ?>
+                        <?php $rfOn = false; try { $rfOn = db()->ReferralSettings()['enabled'] && (int)$pkg->Price > 0; } catch (Throwable $e) { } ?>
+                        <?php if ($rfOn): $preCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('code', ''))); ?>
+                        <div class="full" data-f="refCode">
+                            <label for="coRefCode"><i class="fas fa-gift" style="color:#F59E0B;"></i> রেফারেল কোড <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
+                            <input type="text" id="coRefCode" name="refCode" maxlength="14" autocomplete="off" placeholder="কেউ কোড দিয়ে থাকলে লিখুন — যেমন MM7K2QXA" value="<?= e($preCode) ?>" style="text-transform:uppercase;letter-spacing:.5px;" />
+                            <div class="co-hint" id="coRefMsg"><i class="fas fa-info-circle"></i> যে আপনাকে কোড দিয়েছে, পেমেন্ট Accept হলে সে বোনাস পাবে। আপনার দামে কোনো পরিবর্তন হবে না।</div>
+                        </div>
+                        <?php endif; ?>
                         <div class="full">
                             <label for="coNote">Note</label>
                             <textarea id="coNote" name="note" maxlength="500" placeholder="যে নম্বর/অ্যাকাউন্ট থেকে টাকা পাঠিয়েছেন বা অন্য কিছু জানাতে চাইলে লিখুন (ঐচ্ছিক)"></textarea>
@@ -397,6 +405,20 @@ $jsMethods = array_map(function ($m) {
             location.href = d.redirect;
         } catch (x) { showErr('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); btn.disabled = false; btn.innerHTML = h; }
     });
+    // রেফারেল কোড — লেখার সাথে সাথে যাচাই
+    var rc = document.getElementById('coRefCode'), rcMsg = document.getElementById('coRefMsg'), rcT = null, rcDef = rcMsg ? rcMsg.innerHTML : '';
+    function rcCheck() {
+        var v = rc.value.replace(/\s+/g, '').toUpperCase();
+        if (v === '') { rcMsg.innerHTML = rcDef; rcMsg.style.color = ''; markBad(null); return; }
+        if (v.length < 6) return;
+        var fd = new FormData(); fd.append('code', v); fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        fetch('/Payment/CheckRefCode', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }).then(function (d) {
+            if (rc.value.replace(/\s+/g, '').toUpperCase() !== v) return;
+            rcMsg.textContent = d.message || ''; rcMsg.style.color = d.success ? '#15803D' : '#DC2626';
+            if (d.success) markBad(null);
+        }).catch(function () {});
+    }
+    if (rc) { rc.addEventListener('input', function () { clearTimeout(rcT); rcT = setTimeout(rcCheck, 450); }); if (rc.value) rcCheck(); }
     var coRef = document.getElementById('coRef');
     if (coRef) coRef.addEventListener('change', function () { markBad(null); });
     if (METHODS.length) pickMethod(METHODS[0].id);

@@ -33,6 +33,16 @@ class PaymentController extends Controller
         return null;
     }
 
+    /** POST /Payment/CheckRefCode (code) — চেকআউটে রেফারেল কোড লিখলে সাথে সাথে যাচাই */
+    public function CheckRefCode_POST(): void
+    {
+        $uid = current_user_id();
+        if ($uid === null) json_response(['success' => false, 'message' => 'লগইন করুন।']);
+        $err = null;
+        $o = $this->db->CheckPurchaseReferralCode((string)input_str('code', ''), (int)$uid, $err);
+        json_response($o ? ['success' => true, 'name' => $o->Name, 'message' => '✅ ' . $o->Name . ' এর রেফারেল কোড'] : ['success' => false, 'message' => $err]);
+    }
+
     /** GET /Payment/Checkout/{packageId} */
     /** কোর্স কেনা — প্যাকেজের মতো একটা অবজেক্ট (Checkout পেজ একই থাকে) */
     private function coursePkg(int $courseId): ?Obj
@@ -115,6 +125,13 @@ class PaymentController extends Controller
         $refKey = (string)input_str('reference', '');
         if ($refKey !== '') $ref = $this->db->CleanReference($refKey);
 
+        // রেফারেল কোড (ঐচ্ছিক) — কারো কোড দিলে পেমেন্ট Accept হলে কোডের মালিক বোনাস পায় (শুধু প্রথম কেনায়)
+        $refCode = strtoupper(preg_replace('/\s+/', '', (string)input_str('refCode', '')));
+        if ($refCode !== '' && (int)$pkg->Price > 0) {
+            $rerr = null;
+            if (!$this->db->CheckPurchaseReferralCode($refCode, $uid, $rerr)) $this->fail($rerr . ' (কোড না থাকলে ঘরটা ফাঁকা রাখুন)', ['field' => 'refCode']);
+        } else $refCode = '';
+
         if ($this->db->CountUserPendingPayments($uid) >= 5) $this->fail('আপনার ৫টি পেমেন্ট যাচাইয়ের অপেক্ষায় আছে। অ্যাডমিন যাচাই করার পর আবার চেষ্টা করুন।');
 
         $file = upload_file('receipt');
@@ -151,6 +168,7 @@ class PaymentController extends Controller
             $this->fail('জমা দেওয়া যায়নি। আবার চেষ্টা করুন।');
         }
         if ($ref) { try { $this->db->SetPaymentReference($id, $ref[0], $ref[1]); } catch (Throwable $e) { error_log('[payment ref] ' . $e->getMessage()); } }
+        if ($refCode !== '') { try { $this->db->SetPaymentRefCode($id, $refCode); } catch (Throwable $e) { error_log('[payment refcode] ' . $e->getMessage()); } }
         $who = (string)(session_get('UserFullName') ?? session_get('UserName'));
         // টিচার হওয়ার আবেদন + পেমেন্ট একসাথে অ্যাডমিনের কাছে
         if ($pkg->Audience === 'Teacher' && session_get('UserRole') !== 'Teacher') {

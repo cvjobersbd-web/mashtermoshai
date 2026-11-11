@@ -99,16 +99,93 @@ trait ReferralData
         } catch (Throwable $e) { error_log('[CreditReferral] ' . $e->getMessage()); return null; }
     }
 
+    // ---------- প্যাকেজ কেনার সময় রেফারেল কোড ----------
+    private bool $refCodeColReady = false;
+    /** PaymentRequests.RefCode (কেনার সময় দেওয়া কোড), Referrals.Via (link | code) */
+    public function EnsureRefCodeCols(): void
+    {
+        if ($this->refCodeColReady) return;
+        $this->refCodeColReady = true;
+        $this->EnsureReferralTables();
+        $this->EnsurePaymentTables();
+        $sqlite = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
+        foreach ([['PaymentRequests', 'RefCode', 20], ['Referrals', 'Via', 10]] as [$t, $c, $n]) {
+            try { $this->pdo->query("SELECT `$c` FROM `$t` LIMIT 1"); }
+            catch (Throwable $e) { try { $this->pdo->exec("ALTER TABLE `$t` ADD COLUMN `$c` " . ($sqlite ? 'TEXT' : "VARCHAR($n)") . ' NULL'); } catch (Throwable $e2) { error_log("[refcode col $t.$c] " . $e2->getMessage()); } }
+        }
+    }
+
+    /**
+     * প্যাকেজ কেনার সময় দেওয়া রেফারেল কোড যাচাই — ঠিক থাকলে কোডের মালিকের Obj (Id, Name), না হলে null আর $err এ কারণ।
+     * নিয়ম: নিজের কোড না, অ্যাডমিনের না, আর শুধু প্রথম কেনায় (আগে কেনা থাকলে / আগেই বোনাস দেওয়া হয়ে থাকলে চলে না)।
+     */
+    public function CheckPurchaseReferralCode(string $code, int $buyerId, ?string &$err = null): ?Obj
+    {
+        $err = null;
+        $code = strtoupper(trim($code));
+        try {
+            if (!$this->ReferralSettings()['enabled']) { $err = 'এখন রেফারেল চালু নেই।'; return null; }
+            if (!preg_match('/^MM[A-Z0-9]{4,10}$/', $code)) { $err = 'রেফারেল কোডটা সঠিক নয় — যেমন MM7K2QXA'; return null; }
+            $ref = $this->GetUserIdByReferralCode($code);
+            if (!$ref) { $err = 'এই রেফারেল কোড পাওয়া যায়নি — বানান মিলিয়ে দেখুন।'; return null; }
+            if ($ref === $buyerId) { $err = 'নিজের রেফারেল কোড দেওয়া যাবে না।'; return null; }
+            $u = $this->GetUserById($ref);
+            if (!$u || $u->Role === 'Admin' || !(int)$u->IsActive) { $err = 'এই রেফারেল কোড এখন চালু নেই।'; return null; }
+            $this->EnsureRefCodeCols();
+            if ((int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` <> 'Waiting'", ['u' => $buyerId]) > 0
+                || (int)$this->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `UserId` = :u AND `Status` = 'Approved' AND `Amount` > 0", ['u' => $buyerId]) > 0) {
+                $err = 'রেফারেল কোড শুধু প্রথমবার প্যাকেজ কেনার সময় কাজ করে — আপনি আগেই কিনেছেন।'; return null;
+            }
+            return obj(['Id' => $ref, 'Code' => $code, 'Name' => !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName]);
+        } catch (Throwable $e) { error_log('[CheckPurchaseReferralCode] ' . $e->getMessage()); $err = 'কোড যাচাই করা যায়নি — আবার চেষ্টা করুন।'; return null; }
+    }
+
+    /** পেমেন্টে দেওয়া রেফারেল কোড সেভ */
+    public function SetPaymentRefCode(int $paymentId, string $code): void
+    {
+        $this->EnsureRefCodeCols();
+        $this->exec('UPDATE `PaymentRequests` SET `RefCode` = :c WHERE `Id` = :i', ['c' => strtoupper($code), 'i' => $paymentId]);
+    }
+
+    /** [Code => নাম] — অ্যাডমিনের পেমেন্ট পেজে কোডের মালিক দেখানোর জন্য */
+    public function RefCodeOwnerNames(array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(fn($c) => strtoupper((string)$c), $codes))));
+        if (!$codes) return [];
+        try {
+            $this->EnsureReferralTables();
+            $ph = implode(',', array_fill(0, count($codes), '?'));
+            $st = $this->pdo->prepare("SELECT c.`Code`, c.`UserId`, u.`FullName`, u.`UserName` FROM `ReferralCodes` c LEFT JOIN `Users` u ON u.`Id` = c.`UserId` WHERE c.`Code` IN ($ph)");
+            $st->execute($codes);
+            $m = [];
+            foreach ($st->fetchAll(PDO::FETCH_OBJ) as $r) $m[$r->Code] = ['id' => (int)$r->UserId, 'name' => (string)($r->FullName ?: $r->UserName)];
+            return $m;
+        } catch (Throwable $e) { return []; }
+    }
+
     /**
      * রেফার করা ইউজারের পেমেন্ট Approve হলে (প্রথম প্যাকেজ কেনা) রেফারার বোনাস পায় — একজন ইউজারের জন্য একবারই।
+     * কেনার সময় রেফারেল কোড দিলে ($code) সেই কোডের মালিক রেফারার হয় (লিংক দিয়ে আসা রেফারারের চেয়ে কোড আগে)।
      * বোনাস দিলে রেফারারকে নোটিফিকেশন যায়। রিটার্ন: ['referrer' => id, 'bonus' => ৳] অথবা null
      */
-    public function CreditReferralPurchase(int $buyerId): ?array
+    public function CreditReferralPurchase(int $buyerId, string $code = ''): ?array
     {
         try {
             $this->EnsureReferralTables();
             $set = $this->ReferralSettings();
             if (!$set['enabled'] || $set['bonus'] <= 0) return null;
+            if ($code !== '') {
+                $this->EnsureRefCodeCols();
+                $ref = $this->GetUserIdByReferralCode($code);
+                $ru = $ref ? $this->GetUserById($ref) : null;
+                $done = (int)$this->scalar("SELECT COUNT(*) FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` <> 'Waiting'", ['u' => $buyerId]) > 0;
+                if ($ref && $ref !== $buyerId && $ru && $ru->Role !== 'Admin' && (int)$ru->IsActive && !$done) {
+                    $w = $this->one("SELECT `Id` FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` = 'Waiting'", ['u' => $buyerId]);
+                    if ($w) $this->exec("UPDATE `Referrals` SET `ReferrerId` = :r, `Via` = 'code' WHERE `Id` = :i", ['r' => $ref, 'i' => (int)$w->Id]);
+                    else $this->exec("INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`, `Via`) VALUES (:r, :n, 0, 'Waiting', NULL, :t, 'code')",
+                        ['r' => $ref, 'n' => $buyerId, 't' => now()]);
+                }
+            }
             $r = $this->one("SELECT `Id`, `ReferrerId` FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` = 'Waiting'", ['u' => $buyerId]);
             if (!$r) return null;
             $n = $this->exec("UPDATE `Referrals` SET `Status` = 'Credited', `Bonus` = :b WHERE `Id` = :i AND `Status` = 'Waiting'", ['b' => $set['bonus'], 'i' => (int)$r->Id]);
@@ -116,7 +193,7 @@ trait ReferralData
             $buyer = $this->GetUserById($buyerId);
             $name = $buyer ? (!is_blank($buyer->FullName) ? (string)$buyer->FullName : (string)$buyer->UserName) : 'আপনার রেফার করা ইউজার';
             $bonus = $set['bonus'];
-            try { $this->CreateNotification((int)$r->ReferrerId, 'Referral Bonus 🎉', "{$name} প্যাকেজ কিনেছেন — রেফার করার জন্য আপনি ৳{$bonus} বোনাস পেয়েছেন!", 'success', '/Referral', 'fa-gift'); } catch (Throwable $e) { }
+            try { $this->CreateNotification((int)$r->ReferrerId, 'Referral Bonus 🎉', "{$name} " . ($code !== '' ? 'আপনার রেফারেল কোড দিয়ে ' : '') . "প্যাকেজ কিনেছেন — রেফার করার জন্য আপনি ৳{$bonus} বোনাস পেয়েছেন!", 'success', '/Referral', 'fa-gift'); } catch (Throwable $e) { }
             return ['referrer' => (int)$r->ReferrerId, 'bonus' => $bonus];
         } catch (Throwable $e) { error_log('[CreditReferralPurchase] ' . $e->getMessage()); return null; }
     }

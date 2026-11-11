@@ -4,16 +4,18 @@
  * @var string $code  @var int $bonus  @var bool $compact
  */
 $link = site_public_url() . '/?ref=' . rawurlencode($code);
-$msg = "মাষ্টার মশাই — সহজে যাচাই করা টিউটর খুঁজুন বা টিউশন পান। আমার লিংক দিয়ে ফ্রি অ্যাকাউন্ট খুলুন: $link";
+$msg = "মাষ্টার মশাই — সহজে যাচাই করা টিউটর খুঁজুন বা টিউশন পান। আমার লিংক দিয়ে ফ্রি অ্যাকাউন্ট খুলুন: $link — প্যাকেজ কেনার সময় আমার রেফারেল কোড দিন: $code";
 $enc = rawurlencode($link); $encMsg = rawurlencode($msg);
 $compact = !empty($compact);
 $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
 ?>
-<div class="rf-share<?= $compact ? ' compact' : '' ?>" id="<?= $uid ?>" data-link="<?= e($link) ?>" data-msg="<?= e($msg) ?>">
+<div class="rf-share<?= $compact ? ' compact' : '' ?>" id="<?= $uid ?>" data-link="<?= e($link) ?>" data-msg="<?= e($msg) ?>" data-code="<?= e($code) ?>">
     <div class="rf-linkbox">
         <span class="rf-tag"><i class="fas fa-link"></i> আপনার রেফারেল লিংক</span>
         <div class="rf-link"><input type="text" readonly value="<?= e($link) ?>" aria-label="Referral link" onclick="this.select()" /><button type="button" class="rf-copy" data-rf="copy"><i class="far fa-copy"></i> <span>Copy</span></button></div>
-        <p class="rf-earn"><i class="fas fa-gift"></i> এই লিংক দিয়ে সাইনআপ করে কেউ প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$bonus ?></b> বোনাস!</p>
+        <span class="rf-tag rf-tag2"><i class="fas fa-ticket"></i> আপনার রেফারেল কোড</span>
+        <div class="rf-code"><b onclick="var r=document.createRange();r.selectNodeContents(this);var s=getSelection();s.removeAllRanges();s.addRange(r);"><?= e($code) ?></b><button type="button" class="rf-copy" data-rf="copycode"><i class="far fa-copy"></i> <span>Copy</span></button></div>
+        <p class="rf-earn"><i class="fas fa-gift"></i> কেউ আপনার লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় আপনার কোড দিয়ে প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$bonus ?></b> বোনাস!</p>
     </div>
     <div class="rf-socials" aria-label="শেয়ার করুন">
         <a class="wa" href="https://wa.me/?text=<?= $encMsg ?>" target="_blank" rel="noopener" title="WhatsApp"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>
@@ -34,6 +36,11 @@ $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
     .rf-link input { flex: 1; min-width: 0; height: 42px; border: 1.5px solid #00CFFF; border-radius: 10px; padding: 0 12px; font-weight: 700; font-size: 14px; color: #0F172A; background: #fff; outline: none; }
     .rf-copy { flex-shrink: 0; height: 42px; padding: 0 14px; border: none; border-radius: 10px; background: #00CFFF; color: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
     .rf-copy:hover { background: #00B5E0; } .rf-copy.ok { background: #16A34A; }
+    .rf-tag2 { margin-top: 12px; }
+    .rf-code { display: flex; gap: 8px; margin-top: 8px; align-items: stretch; }
+    .rf-code b { flex: 1; min-width: 0; height: 42px; display: flex; align-items: center; justify-content: center; border: 1.5px dashed #F59E0B; border-radius: 10px; background: #fff; font-size: 19px; font-weight: 800; letter-spacing: 2px; color: #B45309; font-family: ui-monospace, Menlo, Consolas, monospace; user-select: all; cursor: text; }
+    .rf-share.compact .rf-code { flex-direction: column; }
+    .rf-share.compact .rf-code .rf-copy { justify-content: center; height: 38px; }
     .rf-earn { margin: 10px 0 0; font-size: 13.5px; color: #92400E; font-weight: 600; }
     .rf-earn b { font-size: 16px; color: #B45309; } .rf-earn i { color: #F59E0B; }
     .rf-socials { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
@@ -61,12 +68,13 @@ $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
     }
     document.addEventListener('click', function (e) {
         var b = e.target.closest('[data-rf]'); if (!b) return;
-        var box = b.closest('.rf-share'), link = box.getAttribute('data-link'), msg = box.getAttribute('data-msg'), k = b.getAttribute('data-rf');
+        var box = b.closest('.rf-share'), link = box.getAttribute('data-link'), msg = box.getAttribute('data-msg'), k = b.getAttribute('data-rf'), code = box.getAttribute('data-code');
         if (k === 'messenger' && mobile) return; // মোবাইলে Messenger অ্যাপ খোলে
         e.preventDefault();
         if (k === 'more' && navigator.share) { navigator.share({ title: 'মাষ্টার মশাই', text: msg, url: link }).catch(function () {}); return; }
-        copy(k === 'copy' ? link : msg).then(function () {
-            if (k === 'copy') { var s = b.querySelector('span'); b.classList.add('ok'); s.textContent = 'Copied!'; setTimeout(function () { b.classList.remove('ok'); s.textContent = 'Copy'; }, 1800); toast('লিংক কপি হয়েছে ✅'); }
+        copy(k === 'copy' ? link : (k === 'copycode' ? code : msg)).then(function () {
+            if (k === 'copycode') { var s2 = b.querySelector('span'); b.classList.add('ok'); s2.textContent = 'Copied!'; setTimeout(function () { b.classList.remove('ok'); s2.textContent = 'Copy'; }, 1800); toast('কোড কপি হয়েছে ✅ — প্যাকেজ কেনার সময় এই কোড দিতে বলুন'); }
+            else if (k === 'copy') { var s = b.querySelector('span'); b.classList.add('ok'); s.textContent = 'Copied!'; setTimeout(function () { b.classList.remove('ok'); s.textContent = 'Copy'; }, 1800); toast('লিংক কপি হয়েছে ✅'); }
             else if (k === 'instagram') { toast('লেখা আর লিংক কপি হয়েছে — Instagram এ পেস্ট করুন'); if (mobile) setTimeout(function () { location.href = 'instagram://direct-inbox'; }, 600); }
             else if (k === 'messenger') toast('লিংক কপি হয়েছে — Messenger এ পেস্ট করে পাঠান');
             else toast('লেখা আর লিংক কপি হয়েছে — যেকোনো জায়গায় পেস্ট করুন');
