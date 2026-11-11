@@ -48,6 +48,7 @@ $stCls = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <small style="font-size:13px;font-weight:600;color:#64748B;"><?= e(role_label((string)$u->Role, (int)$u->Id)) ?> · @<?= e((string)$u->UserName) ?></small>
         <a href="/Admin/UserDetails/<?= (int)$u->Id ?>" style="font-size:13px;font-weight:700;color:#0369A1;"><i class="fas fa-id-card"></i> ইউজারের তথ্য</a>
     </h2>
+    <?php if (!empty($V->NoBonus)): ?><div style="margin-top:10px;background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;border-radius:12px;padding:10px 14px;font-weight:700;font-size:13.5px;"><i class="fas fa-user-slash"></i> এই ইউজার "বোনাস ছাড়া রেফারার" তালিকায় আছে — এর রেফারেলে কেউ প্যাকেজ কিনলে ৳ বোনাস যায় না, শুধু গোনা হয়। <a href="/Admin/Referrals#noBonus">বদলান</a></div><?php endif; ?>
 
     <div class="ru-card" style="margin-top:14px;">
         <div class="ru-id">

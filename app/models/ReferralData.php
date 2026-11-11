@@ -55,6 +55,53 @@ trait ReferralData
         return ['bonus' => max(0, (int)$c['ref_bonus']), 'min' => max(1, (int)$c['ref_min_withdraw']), 'enabled' => $c['ref_enabled'] !== '0'];
     }
 
+    // ---------- বোনাস ছাড়া রেফারার (অ্যাডমিন বেছে দেন) — এদের লিংক / কোডে কেউ এলে ও কিনলে গোনা হয়, কিন্তু ৳ বোনাস পায় না ----------
+    /** @return int[] */
+    public function RefNoBonusIds(): array
+    {
+        static $c = null;
+        if ($c !== null) return $c;
+        try { $j = json_decode((string)$this->GetSiteContent(['ref_nobonus' => '[]'])['ref_nobonus'], true); } catch (Throwable $e) { $j = []; }
+        return $c = array_values(array_unique(array_map('intval', is_array($j) ? $j : [])));
+    }
+
+    public function IsRefNoBonus(int $userId): bool { return in_array($userId, $this->RefNoBonusIds(), true); }
+
+    public function SetRefNoBonus(int $userId, bool $on): void
+    {
+        $ids = json_decode((string)$this->GetSiteContent(['ref_nobonus' => '[]'])['ref_nobonus'], true);
+        $ids = array_values(array_unique(array_map('intval', is_array($ids) ? $ids : [])));
+        $ids = $on ? array_values(array_unique(array_merge($ids, [$userId]))) : array_values(array_diff($ids, [$userId]));
+        $this->SaveSiteContent(['ref_nobonus' => json_encode($ids)]);
+    }
+
+    /** এই রেফারার প্রতি কেনায় কত পায় (বোনাস ছাড়া তালিকায় থাকলে ০) */
+    public function ReferralBonusFor(int $userId): int
+    {
+        return $this->IsRefNoBonus($userId) ? 0 : $this->ReferralSettings()['bonus'];
+    }
+
+    /** @return Obj[] বোনাস ছাড়া রেফারারদের তালিকা */
+    public function GetRefNoBonusUsers(): array
+    {
+        $ids = $this->RefNoBonusIds();
+        if (!$ids) return [];
+        $this->EnsureReferralTables();
+        return $this->all('SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id` WHERE u.`Id` IN (' . implode(',', $ids) . ') ORDER BY u.`FullName`');
+    }
+
+    /** অ্যাডমিন: নাম / ইউজারনেম / ইমেইল / মোবাইল / রেফারেল কোড দিয়ে ইউজার খোঁজা */
+    public function SearchUsersForReferral(string $q, int $limit = 10): array
+    {
+        $q = trim($q);
+        if (mb_strlen($q) < 2) return [];
+        $this->EnsureReferralTables();
+        $like = '%' . str_replace(['%', '_'], '', $q) . '%';
+        return $this->all("SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id`
+            WHERE u.`Role` <> 'Admin' AND (u.`FullName` LIKE :a OR u.`UserName` LIKE :b OR u.`Email` LIKE :c OR u.`MobileNumber` LIKE :d OR c.`Code` = :e)
+            ORDER BY u.`Id` DESC LIMIT " . max(1, min(30, $limit)), ['a' => $like, 'b' => $like, 'c' => $like, 'd' => $like, 'e' => strtoupper($q)]);
+    }
+
     /** ইউজারের রেফারেল কোড (না থাকলে বানায়) — যেমন MM7K2QX */
     public function GetReferralCode(int $userId): string
     {
@@ -255,6 +302,11 @@ trait ReferralData
             }
             $r = $this->one("SELECT `Id`, `ReferrerId` FROM `Referrals` WHERE `ReferredUserId` = :u AND `Status` = 'Waiting'", ['u' => $buyerId]);
             if (!$r) return null;
+            if ($this->IsRefNoBonus((int)$r->ReferrerId)) {
+                // বোনাস ছাড়া রেফারার — "কিনেছে" হিসেবে গোনা হয়, টাকা ০
+                $this->exec("UPDATE `Referrals` SET `Status` = 'Credited', `Bonus` = 0 WHERE `Id` = :i AND `Status` = 'Waiting'", ['i' => (int)$r->Id]);
+                return null;
+            }
             $n = $this->exec("UPDATE `Referrals` SET `Status` = 'Credited', `Bonus` = :b WHERE `Id` = :i AND `Status` = 'Waiting'", ['b' => $set['bonus'], 'i' => (int)$r->Id]);
             if (!$n) return null;
             $buyer = $this->GetUserById($buyerId);
@@ -342,6 +394,7 @@ trait ReferralData
         foreach ($this->all("SELECT `UserId`, `Kind`, COUNT(*) AS N FROM `ReferralEvents` GROUP BY `UserId`, `Kind`") as $r) { $o = $add((int)$r->UserId); if ($r->Kind === 'share') $o->Shares = (int)$r->N; else $o->Clicks = (int)$r->N; }
         foreach ($this->all("SELECT `ReferrerId`, COUNT(*) AS N, SUM(CASE WHEN `Status` = 'Credited' THEN 1 ELSE 0 END) AS B, SUM(CASE WHEN `Status` = 'Credited' THEN `Bonus` ELSE 0 END) AS E
             FROM `Referrals` WHERE `Status` <> 'Revoked' GROUP BY `ReferrerId`") as $r) { $o = $add((int)$r->ReferrerId); $o->Signups = (int)$r->N; $o->Buyers = (int)$r->B; $o->Earned = (int)$r->E; }
+        foreach ($this->RefNoBonusIds() as $nb) $add((int)$nb);
         if (!$rows) return [];
         $ids = implode(',', array_map('intval', array_keys($rows)));
         $info = [];
@@ -351,6 +404,7 @@ trait ReferralData
             $o->Name = $i ? ((string)($i->FullName ?: $i->UserName)) : 'Deleted user';
             $o->UserName = (string)($i->UserName ?? ''); $o->Role = (string)($i->Role ?? ''); $o->Code = (string)($i->Code ?? '');
             $o->Balance = $this->GetReferralSummary($uid)['balance'];
+            $o->NoBonus = $this->IsRefNoBonus($uid);
         }
         $rows = array_values($rows);
         usort($rows, fn($a, $b) => [$b->Buyers, $b->Signups, $b->Clicks, $b->Shares] <=> [$a->Buyers, $a->Signups, $a->Clicks, $a->Shares]);
@@ -388,7 +442,12 @@ trait ReferralData
     public function SetReferralStatus(int $id, string $status): void
     {
         // "আবার চালু": বোনাস আগে পায়নি (এখনো প্যাকেজ কেনেনি) হলে Waiting এ ফেরে
-        if ($status === 'Credited' && (int)$this->scalar('SELECT `Bonus` FROM `Referrals` WHERE `Id` = :i', ['i' => $id]) <= 0) $status = 'Waiting';
+        if ($status === 'Credited' && (int)$this->scalar('SELECT `Bonus` FROM `Referrals` WHERE `Id` = :i', ['i' => $id]) <= 0) {
+            // বোনাস ছাড়া রেফারারের কেনা ইউজার হলে "কিনেছে" থাকে
+            $r = $this->one('SELECT `ReferrerId`, `ReferredUserId` FROM `Referrals` WHERE `Id` = :i', ['i' => $id]);
+            $bought = $r && $this->IsRefNoBonus((int)$r->ReferrerId) && (int)$this->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `UserId` = :u AND `Status` = 'Approved'", ['u' => (int)$r->ReferredUserId]) > 0;
+            if (!$bought) $status = 'Waiting';
+        }
         $this->exec('UPDATE `Referrals` SET `Status` = :s WHERE `Id` = :i', ['s' => $status, 'i' => $id]);
     }
 

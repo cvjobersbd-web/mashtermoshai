@@ -26,7 +26,7 @@ catch (Throwable $e) { return; }
         <div class="earn"><b>৳<?= number_format($rfSum['earned']) ?></b><small>Total Earning</small></div>
         <div><b>৳<?= number_format($rfSum['balance']) ?></b><small>Balance</small></div>
     </div>
-    <?php partial('Referral/_Share', ['code' => $rfCode, 'bonus' => $rfSet['bonus'], 'compact' => true]); ?>
+    <?php partial('Referral/_Share', ['code' => $rfCode, 'bonus' => db()->ReferralBonusFor($me), 'compact' => true]); ?>
     <div class="rfc-acts">
         <a class="w" href="/Referral#withdraw"><i class="fas fa-money-bill-transfer"></i> Withdraw</a>
         <a class="d" href="/Referral"><i class="fas fa-users"></i> <?= (int)$rfSum['count'] ?> জন রেফার</a>

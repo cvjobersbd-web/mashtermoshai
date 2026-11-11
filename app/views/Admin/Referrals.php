@@ -81,6 +81,25 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     </a>
     <?php endif; ?>
 
+    <?php $nb = $ViewBag->NoBonus ?? []; ?>
+    <div class="rfa-card" id="noBonus">
+        <h3><i class="fas fa-user-slash" style="color:#DC2626;"></i> বোনাস ছাড়া রেফারার <span class="rfa-pill" style="background:#FEE2E2;color:#991B1B;"><?= count($nb) ?> জন</span></h3>
+        <p style="font-size:13px;color:#64748B;margin:0 0 12px;">এই তালিকার ইউজারদের লিংক বা কোড দিয়ে কেউ সাইনআপ করে প্যাকেজ কিনলে তারা <b>৳ বোনাস পাবে না</b> — কিন্তু কত জন এনেছে আর কত জন কিনেছে সব নিচের তালিকায় আর "বিস্তারিত" পেজে গোনা হবে।</p>
+        <div class="rfg-search" style="position:relative;"><i class="fas fa-user-plus"></i><input type="search" id="nbQ" placeholder="ইউজার যোগ করুন — নাম, ইউজারনেম, ইমেইল, মোবাইল বা কোড লিখুন" autocomplete="off" /></div>
+        <div id="nbRes" style="margin:-4px 0 12px;"></div>
+        <?php if (!$nb): ?><div class="rfa-empty" style="padding:10px 0;">এখনো কেউ নেই।</div><?php else: ?>
+        <div class="rfa-tw"><table class="rfa-tbl">
+            <tr><th>ইউজার</th><th>কোড</th><th></th></tr>
+            <?php foreach ($nb as $u): ?>
+                <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <small style="color:#64748B;">@<?= e((string)$u->UserName) ?> · <?= e((string)$u->Email) ?></small></td>
+                    <td><span class="rfg-code"><?= e((string)($u->Code ?: '—')) ?></span></td>
+                    <td style="white-space:nowrap;text-align:right;"><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Admin/ReferralUser/<?= (int)$u->Id ?>">বিস্তারিত</a>
+                        <button type="button" class="rfa-btn g" style="height:32px;font-size:12px;" data-nb="<?= (int)$u->Id ?>" data-on="0">বোনাস চালু করুন</button></td></tr>
+            <?php endforeach; ?>
+        </table></div>
+        <?php endif; ?>
+    </div>
+
     <?php $ov = $ViewBag->Overview ?? []; ?>
     <div class="rfa-card">
         <h3><i class="fas fa-ranking-star" style="color:#0EA5E9;"></i> সব রেফারার — কে কতটা শেয়ার করছে <span class="rfa-pill" style="background:#E0F2FE;color:#075985;"><?= count($ov) ?> জন</span></h3>
@@ -90,7 +109,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             <tr><th>ইউজার</th><th>রেফারেল কোড</th><th title="শেয়ার বাটনে কতবার চেপেছে">শেয়ার</th><th title="লিংক খুলে কত জন সাইটে এসেছে">লিংকে ক্লিক</th><th>সাইনআপ</th><th>প্যাকেজ কিনেছে</th><th>আয়</th><th>ব্যালেন্স</th><th></th></tr>
             <?php foreach ($ov as $o): ?>
                 <tr data-s="<?= e(mb_strtolower($o->Name . ' ' . $o->UserName . ' ' . $o->Code)) ?>">
-                    <td><b><?= e($o->Name) ?></b><br><small style="color:#64748B;"><?= e(role_label($o->Role, (int)$o->UserId)) ?><?= $o->UserName !== '' ? ' · @' . e($o->UserName) : '' ?></small></td>
+                    <td><b><?= e($o->Name) ?></b><?= !empty($o->NoBonus) ? ' <span class="rfa-pill no" title="এই ইউজার রেফারেলে বোনাস পায় না">বোনাস নেই</span>' : '' ?><br><small style="color:#64748B;"><?= e(role_label($o->Role, (int)$o->UserId)) ?><?= $o->UserName !== '' ? ' · @' . e($o->UserName) : '' ?></small></td>
                     <td><span class="rfg-code"><?= e($o->Code ?: '—') ?></span></td>
                     <td><?= (int)$o->Shares ?></td><td><?= (int)$o->Clicks ?></td><td><b><?= (int)$o->Signups ?></b></td>
                     <td><b style="color:#16A34A;"><?= (int)$o->Buyers ?></b></td><td>৳<?= number_format($o->Earned) ?></td><td>৳<?= number_format($o->Balance) ?></td>
@@ -179,7 +198,30 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             if (!r2.success) { alert('❌ ' + (r2.message || '')); return; }
             location.reload();
         }
-    });    var oq = document.getElementById('rovQ');
+    });    // বোনাস ছাড়া রেফারার: খোঁজা আর যোগ / বাদ
+    var nbQ = document.getElementById('nbQ'), nbRes = document.getElementById('nbRes'), nbT = null;
+    function escH(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    if (nbQ) nbQ.addEventListener('input', function () {
+        clearTimeout(nbT); var v = nbQ.value.trim(); if (v.length < 2) { nbRes.innerHTML = ''; return; }
+        nbT = setTimeout(async function () {
+            var r = await post('/Admin/RefUserSearch', { q: v }); if (nbQ.value.trim() !== v) return;
+            nbRes.innerHTML = (r.users || []).length ? r.users.map(function (u) {
+                return '<div style="display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid #E5ECF3;border-radius:10px;padding:8px 12px;margin-bottom:6px;">'
+                    + '<span><b>' + escH(u.name) + '</b> <small style="color:#64748B;">@' + escH(u.user) + ' · ' + escH(u.role) + ' · ' + escH(u.email) + (u.code ? ' · ' + escH(u.code) : '') + '</small></span>'
+                    + (u.off ? '<span class="rfa-pill no">আগেই তালিকায়</span>' : '<button type="button" class="rfa-btn r" style="height:32px;font-size:12px;" data-nb="' + u.id + '" data-on="1">বোনাস বন্ধ করুন</button>') + '</div>';
+            }).join('') : '<div class="rfa-empty" style="padding:8px 0;">কাউকে পাওয়া যায়নি।</div>';
+        }, 300);
+    });
+    document.addEventListener('click', async function (e) {
+        var b = e.target.closest('[data-nb]'); if (!b) return;
+        var on = b.getAttribute('data-on') === '1';
+        if (!confirm(on ? 'এই ইউজারের রেফারেলে ৳ বোনাস বন্ধ করবেন? (কত জন আনছে / কিনছে গোনা চলবে)' : 'এই ইউজারের রেফারেল বোনাস আবার চালু করবেন?')) return;
+        b.disabled = true;
+        var r = await post('/Admin/SetRefNoBonus', { id: b.getAttribute('data-nb'), on: on ? 'true' : 'false' });
+        if (!r.success) { alert('❌ ' + (r.message || '')); b.disabled = false; return; }
+        location.reload();
+    });
+    var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
     var q = document.getElementById('rfgQ');
     if (q) q.addEventListener('input', function () {

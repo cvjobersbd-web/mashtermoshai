@@ -1,6 +1,7 @@
 <?php
 /** আমার রেফারেল — লিংক, আয়, রেফার করা ইউজার, টাকা তোলা */
 $sum = $ViewBag->Summary; $set = $ViewBag->Settings;
+$myBonus = db()->ReferralBonusFor((int)current_user_id());
 $ViewData['Title'] = 'My Referral Bonus';
 $ViewData['Robots'] = 'noindex, nofollow';
 $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
@@ -51,7 +52,8 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
     <div class="rfp-wrap">
         <div class="rfp-hero">
             <h1><i class="fas fa-gift"></i> My Referral Bonus</h1>
-            <p>বন্ধুদের সাথে লিংক শেয়ার করুন — আপনার লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় আপনার রেফারেল কোড দিয়ে কেউ (স্টুডেন্ট বা টিচার) প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$set['bonus'] ?></b>। ব্যালেন্স ৳<?= (int)$set['min'] ?> হলে bKash, Nagad, Rocket বা ব্যাংকে তুলতে পারবেন — অথবা যত টাকাই থাকুক (৳10, ৳20, ৳30...) নিজের প্যাকেজ কেনার সময় ছাড় হিসেবে ব্যবহার করতে পারবেন।</p>
+            <?php if ($myBonus <= 0): ?><p>আপনার লিংক বা রেফারেল কোড দিয়ে কত জন সাইনআপ করেছে আর কত জন প্যাকেজ কিনেছে — সব এখানে ও অ্যাডমিনের কাছে গোনা হয়। (আপনার অ্যাকাউন্টে রেফারেল বোনাস চালু নেই।)</p><?php else: ?>
+            <p>বন্ধুদের সাথে লিংক শেয়ার করুন — আপনার লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় আপনার রেফারেল কোড দিয়ে কেউ (স্টুডেন্ট বা টিচার) প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$set['bonus'] ?></b>। ব্যালেন্স ৳<?= (int)$set['min'] ?> হলে bKash, Nagad, Rocket বা ব্যাংকে তুলতে পারবেন — অথবা যত টাকাই থাকুক (৳10, ৳20, ৳30...) নিজের প্যাকেজ কেনার সময় ছাড় হিসেবে ব্যবহার করতে পারবেন।</p><?php endif; ?>
         </div>
 
         <div class="rfp-stats">
@@ -65,8 +67,9 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
             <div>
                 <div class="rfp-card">
                     <h2><i class="fas fa-share-nodes"></i> লিংক শেয়ার করুন</h2>
-                    <?php partial('Referral/_Share', ['code' => $ViewBag->Code, 'bonus' => $set['bonus'], 'compact' => false]); ?>
+                    <?php partial('Referral/_Share', ['code' => $ViewBag->Code, 'bonus' => $myBonus, 'compact' => false]); ?>
                 </div>
+                <?php if ($myBonus > 0): ?>
                 <div class="rfp-card">
                     <h2><i class="fas fa-circle-question"></i> কীভাবে কাজ করে</h2>
                     <ol class="rfp-how">
@@ -79,6 +82,7 @@ $stCls = ['Pending' => 'pend', 'Paid' => 'paid', 'Rejected' => 'rej'];
                     </ol>
                     <p style="font-size:12.5px; color:#94A3B8; margin:12px 0 0;">ভুয়া বা নিজের একাধিক অ্যাকাউন্ট দিয়ে রেফার করলে বোনাস বাতিল করা হবে।</p>
                 </div>
+                <?php endif; ?>
                 <div class="rfp-card">
                     <h2><i class="fas fa-users"></i> আমার রেফার করা ইউজার</h2>
                     <?php if (!$ViewBag->Referrals): ?>

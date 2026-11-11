@@ -17,7 +17,9 @@ $uid = 'rf' . substr(md5($code . ($compact ? 'c' : 'f')), 0, 6);
         <div class="rf-link"><input type="text" readonly value="<?= e($lk('copy')) ?>" aria-label="Referral link" onclick="this.select()" /><button type="button" class="rf-copy" data-rf="copy" data-src="copy"><i class="far fa-copy"></i> <span>Copy</span></button></div>
         <span class="rf-tag rf-tag2"><i class="fas fa-ticket"></i> আপনার রেফারেল কোড</span>
         <div class="rf-code"><b onclick="var r=document.createRange();r.selectNodeContents(this);var s=getSelection();s.removeAllRanges();s.addRange(r);"><?= e($code) ?></b><button type="button" class="rf-copy" data-rf="copycode" data-src="code"><i class="far fa-copy"></i> <span>Copy</span></button></div>
+        <?php if ((int)$bonus > 0): ?>
         <p class="rf-earn"><i class="fas fa-gift"></i> কেউ আপনার লিংক দিয়ে সাইনআপ করে, অথবা প্যাকেজ কেনার সময় আপনার কোড দিয়ে প্যাকেজ কিনলে আপনি পাবেন <b>৳<?= (int)$bonus ?></b> বোনাস!</p>
+        <?php else: ?><p class="rf-earn"><i class="fas fa-chart-line"></i> আপনার লিংক বা কোড দিয়ে কত জন সাইনআপ করেছে আর প্যাকেজ কিনেছে — গোনা হচ্ছে।</p><?php endif; ?>
     </div>
     <div class="rf-socials" aria-label="শেয়ার করুন">
         <a class="wa" data-src="wa" href="https://wa.me/?text=<?= rawurlencode($mg('wa')) ?>" target="_blank" rel="noopener" title="WhatsApp"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>

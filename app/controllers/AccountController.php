@@ -246,8 +246,8 @@ class AccountController extends Controller
     {
         $refId = $this->db->CreditReferral($code, $newId, (string)($_SERVER['REMOTE_ADDR'] ?? ''), $src);
         if ($refId) {
-            $bonus = $this->db->ReferralSettings()['bonus'];
-            $this->db->CreateNotification($refId, 'নতুন রেফারেল 👋', "{$fullName} আপনার রেফারেল লিংক দিয়ে সাইনআপ করেছেন। উনি প্যাকেজ কিনলে আপনি ৳{$bonus} বোনাস পাবেন।", 'info', '/Referral', 'fa-user-plus');
+            $bonus = $this->db->ReferralBonusFor($refId);
+            $this->db->CreateNotification($refId, 'নতুন রেফারেল 👋', "{$fullName} আপনার রেফারেল লিংক দিয়ে সাইনআপ করেছেন।" . ($bonus > 0 ? " উনি প্যাকেজ কিনলে আপনি ৳{$bonus} বোনাস পাবেন।" : ''), 'info', '/Referral', 'fa-user-plus');
         }
     }
 

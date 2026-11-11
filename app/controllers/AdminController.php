@@ -1017,7 +1017,31 @@ class AdminController extends Controller
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(2000), 'Overview' => $this->db->GetReferrerOverview()]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(2000), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers()]);
+    }
+
+    /** POST /Admin/RefUserSearch (q) — বোনাস ছাড়া তালিকায় যোগ করার জন্য ইউজার খোঁজা */
+    public function RefUserSearch_POST(): void
+    {
+        $this->requireAdminJson();
+        $off = $this->db->RefNoBonusIds();
+        $out = array_map(fn($u) => ['id' => (int)$u->Id, 'name' => (string)($u->FullName ?: $u->UserName), 'user' => (string)$u->UserName, 'email' => (string)$u->Email,
+            'role' => role_label((string)$u->Role, (int)$u->Id), 'code' => (string)($u->Code ?? ''), 'off' => in_array((int)$u->Id, $off, true)],
+            $this->db->SearchUsersForReferral((string)input_str('q', ''), 12));
+        json_response(['success' => true, 'users' => $out]);
+    }
+
+    /** POST /Admin/SetRefNoBonus (id, on) — এই ইউজারের রেফারেলে ৳ বোনাস বন্ধ / চালু (গোনা চলতে থাকে) */
+    public function SetRefNoBonus_POST(): void
+    {
+        $this->requireAdminJson();
+        $u = $this->db->GetUserById((int)input_int('id', 0));
+        if (!$u || $u->Role === 'Admin') json_response(['success' => false, 'message' => 'ইউজার পাওয়া যায়নি।']);
+        $on = input_bool('on');
+        $this->db->SetRefNoBonus((int)$u->Id, $on);
+        try { $this->db->GetReferralCode((int)$u->Id); } catch (Throwable $e) { }   // কোড না থাকলে এখনই বানিয়ে রাখা
+        $nm = (string)($u->FullName ?: $u->UserName);
+        json_response(['success' => true, 'message' => $on ? "$nm এর রেফারেলে এখন থেকে বোনাস যাবে না — শুধু গোনা হবে।" : "$nm এর রেফারেল বোনাস আবার চালু হয়েছে।"]);
     }
 
     /** GET /Admin/ReferralUser/{userId} — একজন ইউজারের রেফারেল বিস্তারিত: লিংক, কোড, কোথায় শেয়ার, কত জন এসেছে / কিনেছে, টাকা তোলা / ছাড় */
@@ -1026,7 +1050,7 @@ class AdminController extends Controller
         $this->requireAdminPage();
         $u = $this->db->GetUserById((int)input_int('id', 0));
         if (!$u) not_found('ইউজার পাওয়া যায়নি।');
-        $this->view(null, $u, $this->db->GetReferrerDetail((int)$u->Id) + ['Settings' => $this->db->ReferralSettings()]);
+        $this->view(null, $u, $this->db->GetReferrerDetail((int)$u->Id) + ['Settings' => $this->db->ReferralSettings(), 'NoBonus' => $this->db->IsRefNoBonus((int)$u->Id)]);
     }
 
     /** GET /Admin/Withdrawals?w=Pending|Paid|Rejected|all — রেফারেল বোনাসের উইথড্র আবেদন: দেখে টাকা পাঠিয়ে Paid / বাতিল */
