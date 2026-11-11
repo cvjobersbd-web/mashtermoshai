@@ -375,7 +375,8 @@ class AccountController extends Controller
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
         $this->db->RequestDevice((int)$u->Id, device_hash(), device_label(), client_ip(), $note);
         $name = (string)($u->FullName ?: $u->UserName);
-        foreach ($this->db->GetAdmins() as $a) {
+        notify_actor((int)$u->Id);
+            foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, '📱 নতুন ডিভাইসে লগইনের অনুরোধ', "$name ({$u->Role}) " . device_label() . ' থেকে লগইন করতে চান' . ($note !== '' ? " — \"$note\"" : '') . '।', 'info', '/Admin/Devices', 'fa-mobile-screen');
         }
         tempdata_set('Success', 'অনুরোধ পাঠানো হয়েছে। অ্যাডমিন Accept করলে এই ডিভাইস থেকে লগইন করতে পারবেন — আগের ডিভাইস থেকে তখন লগআউট হয়ে যাবে।');

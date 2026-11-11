@@ -100,6 +100,9 @@ class TuitionController extends Controller
         $err = null;
         if ($this->db->CreateTuitionCircularPost($post, $err)) {
             if ($needCredit) { try { $this->db->ConsumeStudentPostCredit($userId); } catch (Throwable $e) { error_log('[post credit] ' . $e->getMessage()); } }
+            tg_notify_post('📚 Tuition Circular এ নতুন পোস্ট', tg_who() . ' টিউটর চেয়েছেন' . "\n"
+                . implode(' · ', array_filter([$post->ClassLevel ? 'ক্লাস: ' . $post->ClassLevel : '', $post->Subjects ? 'বিষয়: ' . $post->Subjects : '', $post->PreferredArea ? 'এলাকা: ' . $post->PreferredArea : '', $post->Budget ? 'বাজেট: ৳' . $post->Budget : '', $post->TuitionType ?: '']))
+                . ($content !== '' ? "\n" . $content : ''), '/Tuition/Circular#circular-post-' . (int)$post->Id);
             pixel_track('PostRequest', ['content_name' => 'Tuition Requirement', 'post_type' => 'student', 'content_category' => (string)($post->Subjects ?? ''), 'location' => (string)($post->PreferredArea ?? '')]);
             json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।']);
         }

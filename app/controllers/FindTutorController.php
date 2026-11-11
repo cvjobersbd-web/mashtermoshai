@@ -184,6 +184,7 @@ class FindTutorController extends Controller
         $err = null;
         if ($this->db->CreateTeachWantedPost($post, $err)) {
             pixel_track('PostRequest', ['content_name' => 'Teach Post (পড়াতে চাই)', 'post_type' => 'teacher']);
+            tg_notify_post('🧑‍🏫 "পড়াতে চাই" তে নতুন পোস্ট', tg_who() . ' (টিচার) পোস্ট করেছেন' . ($content !== '' ? ":\n" . $content : ($videoUrl ? ' — ভিডিও' : ' — ছবি')), '/FindTutor');
             json_response(['success' => true, 'id' => $post->Id]);
         }
         if ($imageUrl) $this->deleteTeachImage($imageUrl);

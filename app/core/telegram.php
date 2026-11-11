@@ -10,6 +10,7 @@ const TG_EVENTS = [
     'payment' => ['💰 নতুন পেমেন্ট', 'শিক্ষার্থী / টিচার প্যাকেজ আর কোর্সের পেমেন্ট'],
     'verify'  => ['🪪 Verification / টিচার আবেদন', 'Student Verification, Teacher Verification, নতুন টিচার আবেদন'],
     'withdraw' => ['💸 Withdraw আবেদন', 'রেফারেল বোনাসের টাকা তোলার আবেদন'],
+    'post'    => ['📝 নতুন পোস্ট', 'Helpdesk এ প্রশ্ন, পড়াতে চাই, Tuition Circular এর পোস্ট'],
     'other'   => ['🔔 অন্যান্য', 'Helpdesk, রিভিউ, টিউশন, Edu Feed, ডিভাইস ইত্যাদি'],
 ];
 
@@ -74,11 +75,11 @@ function tg_event_of(?string $link): string
 }
 
 /** অ্যাডমিন নোটিফিকেশন Telegram এর জন্য জমা রাখা (একই নোটিফিকেশন কয়েকজন অ্যাডমিনকে গেলেও Telegram এ একবারই) */
-function tg_queue(?string $title, ?string $message, ?string $link): void
+function tg_queue(?string $title, ?string $message, ?string $link, ?string $event = null): void
 {
     $s = tg_settings();
     if (!$s['on']) return;
-    $ev = tg_event_of($link);
+    $ev = $event ?? tg_event_of($link);
     if (in_array($ev, $s['off'], true)) return;
     static $seen = [], $hooked = false;
     $key = md5($title . '|' . $message . '|' . $link);
@@ -95,7 +96,7 @@ function tg_format(?string $title, ?string $message, ?string $link): string
     if (!is_blank($message)) $t .= "\n" . $h($message);
     if (!is_blank($link)) {
         $url = preg_match('#^https?://#', (string)$link) ? (string)$link : site_public_url() . (string)$link;
-        $t .= "\n\n👉 <a href=\"" . $h($url) . '">অ্যাডমিন প্যানেলে দেখুন</a>';
+        $t .= "\n\n👉 <a href=\"" . $h($url) . '">' . (str_contains((string)$link, '/Admin') ? 'অ্যাডমিন প্যানেলে দেখুন' : 'সাইটে দেখুন') . '</a>';
     }
     return mb_substr($t, 0, 3900);
 }
@@ -124,4 +125,24 @@ function tg_is_admin_id(int $userId): bool
     static $ids = null;
     if ($ids === null) { $ids = []; try { foreach (db()->GetAdmins() as $a) $ids[(int)$a->Id] = true; } catch (Throwable $e) { } }
     return isset($ids[$userId]);
+}
+
+/**
+ * সাইটের নোটিফিকেশন ছাড়াই শুধু Telegram এ খবর (যেমন নতুন পোস্ট) — Admin → Telegram এ ঘটনাটা চালু থাকলে যায়।
+ * $who = যে পোস্ট করেছে; অ্যাডমিন নিজে পোস্ট করলে পাঠানো হয় না।
+ */
+function tg_notify_post(string $title, string $message, string $link): void
+{
+    try {
+        if (is_admin()) return;
+        $msg = mb_strlen($message) > 300 ? mb_substr($message, 0, 300) . '…' : $message;
+        if (($aid = notify_actor_id()) !== null) $msg .= "\n🔗 কার রেফারেন্সে: " . joined_via_text($aid);
+        tg_queue($title, $msg, $link, 'post');
+    } catch (Throwable $e) { error_log('[tg post] ' . $e->getMessage()); }
+}
+
+/** এখন যে ইউজার লগইন আছে তার নাম (Telegram মেসেজের জন্য) */
+function tg_who(): string
+{
+    return (string)(session_get('UserFullName') ?: session_get('UserName') ?: 'একজন ইউজার');
 }

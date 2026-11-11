@@ -84,6 +84,7 @@ class HelpdeskController extends Controller
                     }
                 } catch (Throwable $e) {}
             }
+            tg_notify_post('🆘 Helpdesk এ নতুন প্রশ্ন', tg_who() . ' লিখেছেন — ' . trim($title) . "\n" . trim($content), '/Helpdesk');
             json_response(['success' => true, 'message' => 'Post created successfully!', 'postId' => $post->Id]);
         }
         json_response(['success' => false, 'message' => $err ?? 'Failed to create post.']);

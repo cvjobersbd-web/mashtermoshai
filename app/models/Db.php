@@ -1012,12 +1012,17 @@ class Db
     public function CreateNotification(int $userId, ?string $title, ?string $message, ?string $type = 'info', ?string $link = null, ?string $icon = 'fa-bell'): bool
     {
         try {
+            // অ্যাডমিনের নোটিফিকেশনে: যে ইউজারের কাজে নোটিফিকেশন, সে কার রেফারেন্সে এসেছে — সবসময় লেখা থাকে
+            $isAdm = function_exists('tg_is_admin_id') && tg_is_admin_id($userId);
+            if ($isAdm && function_exists('notify_actor_id') && ($aid = notify_actor_id()) && $aid !== $userId && !str_contains((string)$message, 'কার রেফারেন্সে:')) {
+                try { $message = rtrim((string)$message) . "\n🔗 কার রেফারেন্সে: " . joined_via_text($aid); } catch (Throwable $e) { }
+            }
             $this->query('INSERT INTO `Notifications` (`UserId`, `Title`, `Message`, `Type`, `Icon`, `Link`, `IsRead`, `CreatedAt`)
                           VALUES (:u, :t, :m, :ty, :i, :l, 0, :c)', [
                 'u' => $userId, 't' => $title, 'm' => $message, 'ty' => $type ?? 'info', 'i' => $icon ?? 'fa-bell', 'l' => $link, 'c' => now(),
             ]);
             // অ্যাডমিনের নোটিফিকেশন মোবাইলের Telegram এও (চালু থাকলে)
-            if (function_exists('tg_queue') && tg_is_admin_id($userId)) { try { tg_queue($title, $message, $link); } catch (Throwable $e) { } }
+            if (function_exists('tg_queue') && $isAdm) { try { tg_queue($title, $message, $link); } catch (Throwable $e) { } }
             return true;
         } catch (Throwable $e) { return false; }
     }

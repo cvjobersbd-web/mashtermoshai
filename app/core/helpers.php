@@ -2055,6 +2055,44 @@ function joined_via_full(int $userId): string
     return $h . '</div>';
 }
 
+/**
+ * কে কার রেফারেন্সে এসেছে — সাধারণ লেখা (অ্যাডমিনের নোটিফিকেশন / Telegram এর জন্য)।
+ * যেমন: "রেফারেল: Rahim Uddin (কোড MMAB12CD · WhatsApp)" / "এজেন্সি লিংক: ABC" / "নিজে বেছেছে: Facebook" / "ডাইরেক্ট (কারো রেফারেন্সে নয়)"
+ */
+function joined_via_text(int $userId): string
+{
+    static $cache = [];
+    if (isset($cache[$userId])) return $cache[$userId];
+    $db = db(); $parts = [];
+    try {
+        $db->EnsureRefCodeCols();
+        $r = $db->one("SELECT r.`ReferrerId`, r.`Status`, r.`Via`, r.`Src`, a.`FullName`, a.`UserName`, (SELECT k.`Code` FROM `ReferralCodes` k WHERE k.`UserId` = r.`ReferrerId` LIMIT 1) AS Code
+            FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId` WHERE r.`ReferredUserId` = :u AND r.`Status` <> 'Revoked'", ['u' => $userId]);
+        if ($r) {
+            $src = (string)($r->Src ?? '');
+            $srcL = $src !== '' && $src !== 'link' && isset(Db::REF_SOURCES[$src]) ? Db::REF_SOURCES[$src][0] : '';
+            if (($r->Via ?? '') === 'code') $srcL = 'প্যাকেজ কেনার সময় কোড দিয়ে';
+            $who = (string)($r->FullName ?: $r->UserName ?: ('#' . $r->ReferrerId));
+            $parts[] = 'রেফারেল: ' . $who . ($r->UserName ? ' (@' . $r->UserName . ')' : '') . ' — ' . implode(' · ', array_filter([$r->Code ? 'কোড ' . $r->Code : '', $srcL]));
+        }
+    } catch (Throwable $e) { }
+    try { if ($pt = $db->GetPartnerSignup($userId)) $parts[] = ($pt->Via === 'code' ? 'এজেন্সি কোড: ' : 'এজেন্সি লিংক: ') . $pt->PartnerName . ' (' . $pt->Code . ')'; } catch (Throwable $e) { }
+    try {
+        $how = $db->GetUserHowHeard($userId);
+        if ($how[0] !== '') $parts[] = 'নিজে বেছেছে: ' . $db->ReferenceInfo($how[0])['label'] . ($how[1] !== '' ? ' — ' . $how[1] : '');
+    } catch (Throwable $e) { }
+    return $cache[$userId] = $parts ? implode(' | ', array_map(fn($x) => rtrim($x, ' —'), $parts)) : 'ডাইরেক্ট (কারো রেফারেন্সে নয়)';
+}
+
+/** অ্যাডমিন নোটিফিকেশনটা কোন ইউজারের কাজে — না দিলে যে ইউজার এখন লগইন আছে (অ্যাডমিন বাদে) */
+function notify_actor(?int $userId): void { $GLOBALS['__notify_actor'] = $userId; }
+function notify_actor_id(): ?int
+{
+    if (array_key_exists('__notify_actor', $GLOBALS) && $GLOBALS['__notify_actor']) return (int)$GLOBALS['__notify_actor'];
+    $me = current_user_id();
+    return $me !== null && !is_admin() ? (int)$me : null;
+}
+
 /** অ্যাডমিন ড্যাশবোর্ডের "Joined via" — পার্টনার ব্যাজ */
 function partner_badge_html(?object $ps): string
 {
