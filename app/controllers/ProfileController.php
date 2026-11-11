@@ -88,6 +88,10 @@ class ProfileController extends Controller
         if (!in_array($tab, $allowed, true)) $tab = 'overview';
 
         $posts = $this->db->GetProfilePosts($id, $me, $isAdminViewer, null, 10);
+        // প্যাকেজ ছাড়া অন্য ইউজার / শিক্ষার্থীর ছবি, কভার, পোস্ট আর যোগাযোগের তথ্য দেখা যায় না — বাকি তথ্য দেখা যায়
+        $locked = !$isOwner && !$isAdminViewer && !viewer_sees_user_full($id);
+        $extras = $this->db->GetProfileExtras($id);
+        if ($locked) { $user->ProfileImageLink = null; $extras->CoverImageUrl = ''; }
 
         $this->view('Profile/Show', obj([
             'User' => $user, 'IsOwner' => $isOwner, 'Relation' => $relation, 'IsAdminViewer' => $isAdminViewer,
@@ -96,7 +100,7 @@ class ProfileController extends Controller
             'TeacherInfo' => $user->Role === 'Teacher' || $isOwner ? $teacherInfo : null, 'TeacherStatus' => $teacherStatus,
             'Posts' => $posts, 'HasMore' => count($posts) === 10,
             'PostCount' => $this->db->CountProfilePosts($id, $me, $isAdminViewer),
-            'Tab' => $tab, 'IsSuspended' => $suspended, 'Extras' => $this->db->GetProfileExtras($id),
+            'Tab' => $tab, 'IsSuspended' => $suspended, 'Extras' => $extras, 'Locked' => $locked,
             'Intro' => $this->db->GetIntro($id),
             'Streak' => $this->db->GetStreak($id),
             'ActivityDays' => $this->db->GetActivityDays($id, 119),

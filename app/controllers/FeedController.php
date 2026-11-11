@@ -43,7 +43,10 @@ class FeedController extends Controller
     private function canSee(?Obj $p, ?int $me): bool
     {
         if (!$p) return false;
-        return $p->Status === 'Approved' || is_admin() || ($me !== null && $p->UserId === $me);
+        if (is_admin() || ($me !== null && $p->UserId === $me)) return true;
+        // টিচারদের পোস্ট — শিক্ষার্থী প্যাকেজ ছাড়া দেখা যায় না
+        if ($p->AuthorRole === 'Teacher' && !viewer_sees_teacher_photos()) return false;
+        return $p->Status === 'Approved';
     }
 
     private function render(string $partial, array $vars): string
@@ -118,7 +121,7 @@ class FeedController extends Controller
     {
         $me = $this->me();
         $isAdmin = is_admin();
-        if (current_role() === 'User') $this->fail('Edu Feed এ শুধু টিচাররা পোস্ট করতে পারেন। টিউটর দরকার হলে Tuition Circular এ পোস্ট করুন।');
+        // টিচার, শিক্ষার্থী, ইউজার — সবাই পোস্ট করতে পারে; অ্যাডমিন Approve করলে ফিডে দেখায়
         $content = str_replace(["\r\n", "\r"], "\n", (string)input_str('content', ''));
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $content) ?? '') ?? '');
         if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');

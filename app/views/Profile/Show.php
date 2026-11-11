@@ -260,11 +260,19 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                             <div id="psFeed">
                                 <?php foreach ($Model->Posts as $p) partial('Post/_Post', ['post' => $p, 'viewerId' => $me->Id, 'viewerIsAdmin' => $isAdminViewer]); ?>
                             </div>
+                            <?php if (!empty($Model->Locked)): ?>
+                            <div class="pf-card pf-empty" id="psEmpty" style="border:1.5px dashed #F59E0B;background:#FFFBEB;">
+                                <div class="ei" style="color:#B45309;"><i class="fas fa-lock"></i></div>
+                                <h5 style="color:#92400E;">পোস্ট, ছবি আর যোগাযোগের তথ্য লক করা</h5>
+                                <p style="color:#92400E;"><?= e($firstName) ?> এর পোস্ট, প্রোফাইল ছবি, কভার ছবি আর যোগাযোগের তথ্য দেখতে <a href="<?= current_role() === 'Teacher' ? '/Package?for=teacher' : e(student_package_url()) ?>" style="font-weight:800;color:#B45309;">প্যাকেজ নিন</a>।</p>
+                            </div>
+                            <?php else: ?>
                             <div class="pf-card pf-empty" id="psEmpty" <?= $Model->Posts ? 'hidden' : '' ?>>
                                 <div class="ei"><i class="far fa-newspaper"></i></div>
                                 <h5><?= $isOwner ? 'আপনার learning journey শুরু করুন' : 'দেখানোর মতো কোনো পোস্ট নেই' ?></h5>
                                 <p><?= $isOwner ? 'আজ কী পড়লেন, কী শিখলেন — Study Update দিয়ে শেয়ার করুন।' : e($firstName) . ' এখনো কিছু পোস্ট করেননি।' ?></p>
                             </div>
+                            <?php endif; ?>
                             <?php if ($Model->HasMore): ?>
                                 <button type="button" class="pc-loadmore" id="psMore"><i class="fas fa-angles-down"></i> আরো পোস্ট দেখুন</button>
                             <?php endif; ?>

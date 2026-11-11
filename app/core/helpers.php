@@ -2182,6 +2182,42 @@ function teacher_contact_lock_html(int $teacherId, string $cls, string $what = '
         . (current_user_id() === null ? 'লগইন করে ' . e($what) : 'প্যাকেজ নিয়ে ' . e($what)) . '</a>';
 }
 
+/**
+ * বর্তমান ভিজিটরের নিজের প্যাকেজ চালু আছে কিনা — না থাকলে অন্য ইউজার / শিক্ষার্থীদের ছবি, কভার, পোস্ট আর যোগাযোগের তথ্য দেখা যায় না।
+ * অ্যাডমিন সব দেখেন; টিচার = টিচার প্যাকেজ, অন্যরা = শিক্ষার্থী প্যাকেজ (প্যাকেজ বাধ্যতামূলক না হলে সবাই দেখে)।
+ */
+function viewer_has_package(): bool
+{
+    static $r = null;
+    if ($r !== null) return $r;
+    if (is_admin()) return $r = true;
+    $me = current_user_id();
+    if ($me === null) return $r = !student_package_required();
+    if (current_role() === 'Teacher') return $r = teacher_profile_open((int)$me);
+    return $r = !student_package_required() || student_has_package((int)$me);
+}
+
+/** এই ভিজিটর এই ইউজার / শিক্ষার্থীর ছবি, কভার, প্রোফাইলের পোস্ট দেখতে পারবে কিনা */
+function viewer_sees_user_full(int $userId): bool
+{
+    return (int)(current_user_id() ?? 0) === $userId || viewer_has_package();
+}
+
+/**
+ * এই ভিজিটর কারো প্রোফাইলের পোস্ট দেখতে পারবে কিনা —
+ * টিচারের পোস্ট: শিক্ষার্থী প্যাকেজ লাগে; ইউজার / শিক্ষার্থীর পোস্ট: ভিজিটরের নিজের প্যাকেজ লাগে। অ্যাডমিন আর নিজে সবসময়।
+ */
+function viewer_sees_profile_posts(int $ownerId): bool
+{
+    static $c = [];
+    if (isset($c[$ownerId])) return $c[$ownerId];
+    if (is_admin() || (int)(current_user_id() ?? 0) === $ownerId) return $c[$ownerId] = true;
+    $role = '';
+    try { $role = (string)db()->scalar('SELECT `Role` FROM `Users` WHERE `Id` = :u', ['u' => $ownerId]); } catch (Throwable $e) { }
+    if ($role === 'Admin') return $c[$ownerId] = true;   // অফিসিয়াল পেজ
+    return $c[$ownerId] = $role === 'Teacher' ? viewer_sees_teacher_photos() : viewer_has_package();
+}
+
 /** প্যাকেজ ছাড়া দেখালে টিচারের ছবির জায়গায় এই ছবি */
 function teacher_photo_placeholder(): string
 {
@@ -2197,14 +2233,16 @@ function mask_teacher_photos(string $out): string
     static $map = null;
     if ($out === '' || is_admin()) return $out;
     $all = !viewer_sees_teacher_photos();   // শিক্ষার্থীর প্যাকেজ নেই → সব টিচারের ছবি বন্ধ; আছে → শুধু প্যাকেজ ছাড়া টিচারদের
+    $users = !viewer_has_package();          // প্যাকেজ নেই → অন্য ইউজার / শিক্ষার্থীদের ছবিও বন্ধ
     if ($map === null) {
         $map = [];
         try {
             $me = (int)(current_user_id() ?? 0);
             $ph = teacher_photo_placeholder();
-            foreach (db()->all("SELECT `Id`, `ProfileImageLink` FROM `Users` WHERE `Role` = 'Teacher' AND `ProfileImageLink` IS NOT NULL AND `ProfileImageLink` <> ''") as $r) {
+            $roles = $users ? "('Teacher', 'User')" : "('Teacher')";
+            foreach (db()->all("SELECT `Id`, `Role`, `ProfileImageLink` FROM `Users` WHERE `Role` IN $roles AND `ProfileImageLink` IS NOT NULL AND `ProfileImageLink` <> ''") as $r) {
                 if ((int)$r->Id === $me) continue;
-                if (!$all && teacher_profile_open((int)$r->Id)) continue;
+                if ($r->Role === 'Teacher' && !$all && teacher_profile_open((int)$r->Id)) continue;
                 $u = trim((string)$r->ProfileImageLink);
                 if (strlen($u) < 8) continue;
                 $map[$u] = $ph;

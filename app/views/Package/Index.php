@@ -241,13 +241,28 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             <h2>শিক্ষকদের জন্য Subscription</h2>
             <p>আপনার প্রোফাইল সক্রিয় করুন এবং শিক্ষার্থীদের সাথে সহজেই যুক্ত হোন</p>
         </div>
-        <?php if ($teacherPk): ?>
-            <div class="pk-grid<?= count($teacherPk) < 3 ? ' few' : '' ?>">
-                <?php foreach ($teacherPk as $p) $card($p, 'Subscribe করুন'); ?>
+        <div class="pk-grid<?= count($teacherPk) + 1 < 3 ? ' few' : '' ?>">
+            <div class="pk-card pk-free">
+                <div class="pk-top"><div class="pk-name">Free Teacher</div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;">সবসময় ফ্রি</span></div>
+                <div class="pk-price"><b>৳0</b></div>
+                <span class="pk-pill green">কোনো খরচ নেই · আজীবন</span>
+                <ul class="pk-feat">
+                    <li><i class="fas fa-check"></i><span>বিনামূল্যে Become a Tutor ফর্ম পূরণ করুন</span></li>
+                    <li><i class="fas fa-check"></i><span>Verification Approve হলে টিচার — নীল টিক ও Teacher Dashboard</span></li>
+                    <li><i class="fas fa-check"></i><span>Tutor List এ আপনার নাম ও বেসিক তথ্য</span></li>
+                    <li><i class="fas fa-check"></i><span>Edu Feed দেখুন, পোস্ট ও লাইক করুন</span></li>
+                    <li><i class="fas fa-check"></i><span>Notice, Helpdesk ব্যবহার করুন</span></li>
+                </ul>
+                <?php if (($me['role'] ?? '') === 'Teacher'): ?>
+                    <a class="pk-btn" href="/Teacher/TeacherDashboard">Teacher Dashboard <i class="fas fa-arrow-right"></i></a>
+                <?php elseif ($isLoggedIn): ?>
+                    <a class="pk-btn" href="/Teacher/RequestForm">Become a Tutor <i class="fas fa-arrow-right"></i></a>
+                <?php else: ?>
+                    <a class="pk-btn" href="/Account/Register">ফ্রি Account খুলুন <i class="fas fa-arrow-right"></i></a>
+                <?php endif; ?>
             </div>
-        <?php else: ?>
-            <div class="pk-empty"><i class="fas fa-box-open fa-2x"></i><p style="margin:10px 0 0;">এখনো কোনো প্যাকেজ যোগ করা হয়নি।</p></div>
-        <?php endif; ?>
+            <?php foreach ($teacherPk as $p) $card($p, 'Subscribe করুন'); ?>
+        </div>
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
                 <span class="av"><?= e(initials($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'Your Name')) ?></span>
@@ -274,7 +289,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
                 <span class="pk-pill green">কোনো খরচ নেই · আজীবন</span>
                 <ul class="pk-feat">
                     <li><i class="fas fa-check"></i><span>বিনামূল্যে Account খুলুন</span></li>
-                    <li><i class="fas fa-check"></i><span>Edu Feed দেখুন ও লাইক দিন</span></li>
+                    <li><i class="fas fa-check"></i><span>Edu Feed দেখুন, পোস্ট ও লাইক করুন</span></li>
                     <li><i class="fas fa-check"></i><span>টিচারদের তথ্য, প্রোফাইল ও রিভিউ দেখুন</span></li>
                     <li><i class="fas fa-check"></i><span>Notice, Helpdesk ব্যবহার করুন</span></li>
                 </ul>

@@ -2429,6 +2429,8 @@ class Db
     {
         if ($viewerIsAdmin) return true;
         if ($viewerId !== null && $post->UserId === $viewerId) return true;
+        // প্যাকেজ ছাড়া অন্যের প্রোফাইলের পোস্ট দেখা যায় না (বর্তমান ভিজিটরের জন্য)
+        if ($viewerId !== null && $viewerId === current_user_id() && function_exists('viewer_sees_profile_posts') && !viewer_sees_profile_posts((int)$post->UserId)) return false;
         if ($post->Privacy === 'Public') return true;
         if ($post->Privacy === 'Friends' && $viewerId !== null) return $this->GetFriendRelation($viewerId, $post->UserId) === 'friends';
         return false;
@@ -2441,6 +2443,7 @@ class Db
     public function GetProfilePosts(int $ownerId, ?int $viewerId, bool $viewerIsAdmin, ?int $beforeId = null, int $limit = 10, array $types = []): array
     {
         try {
+            if (!$viewerIsAdmin && $viewerId !== $ownerId && $viewerId === current_user_id() && function_exists('viewer_sees_profile_posts') && !viewer_sees_profile_posts($ownerId)) return [];
             $this->EnsureProfilePostTables();
             $where = ['p.`UserId` = :o'];
             $p = ['o' => $ownerId];
