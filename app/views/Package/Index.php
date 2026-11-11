@@ -38,11 +38,13 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
     .pk-offer b { display: block; font-size: 13.5px; } .pk-offer b.p { display: inline; font-size: 16px; color: #15803D; }
 </style>
 <?php
-$card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student'; ?>
+$card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student';
+    $cpo = $free ? null : db()->CouponOfferFor($p);
+    $badge = $cpo ? 'Special Package' : (string)$p->Badge; // কুপন অফার থাকলে "জনপ্রিয়"-এর বদলে Special Package ?>
     <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
             <div class="pk-name"><?= e($p->Name) ?></div>
-            <?php if (!is_blank($p->Badge)): ?><span class="pk-badge"><?= e($p->Badge) ?></span><?php endif; ?>
+            <?php if (!is_blank($badge)): ?><span class="pk-badge"><?= e($badge) ?></span><?php endif; ?>
         </div>
         <?php if (trim($p->Name) !== $p->DurationLabel): ?><div class="pk-dur"><?= e($p->DurationLabel) ?></div><?php endif; ?>
         <div class="pk-price">
@@ -55,7 +57,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
         <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green">মাত্র <?= e(taka($p->Price)) ?></span>
         <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill">প্রতি পোস্ট মাত্র <?= e(taka((int)round($p->Price / $p->PostLimit))) ?></span>
         <?php else: ?><span class="pk-pill green"><?= e($p->DurationLabel) ?></span><?php endif; ?>
-        <?php if (!$free && ($cpo = db()->CouponOfferFor($p))): ?>
+        <?php if ($cpo): ?>
             <div class="pk-offer"><i class="fas fa-ticket"></i><div><b>স্পেশাল অফার · সীমিত সময়</b>কুপন কোড দিলে মাত্র <b class="p"><?= e(taka((int)$cpo->Price)) ?></b><?= $cpo->EndsAt ? ' — ' . e(date('d M Y', strtotime((string)$cpo->EndsAt))) . ' পর্যন্ত' : '' ?></div></div>
         <?php endif; ?>
         <?php if ($p->FeatureList): ?>
