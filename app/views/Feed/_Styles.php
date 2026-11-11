@@ -41,10 +41,10 @@
     .ef-imgs img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
     .ef-imgs button:hover img { transform: scale(1.02); }
     .ef-imgs.n1 { grid-template-columns: 1fr; }
-    /* একটা ছবি: যে সাইজই হোক পুরো ছবি দেখাবে — কাটা যাবে না, পাশে কালো বর্ডার না; খুব লম্বা ছবিতে পাশে ঝাপসা একই ছবি */
-    .ef-imgs.n1 button { width: 100%; background: #F1F5F9; }
-    .ef-imgs.n1 button::before { content: ""; position: absolute; inset: -20px; background: var(--bg) center / cover no-repeat; filter: blur(18px) brightness(.9); }
-    .ef-imgs.n1 img { position: relative; width: 100%; height: auto; max-height: min(80vh, 720px); object-fit: contain; }
+    /* একটা ছবি: যে সাইজই হোক পুরো চওড়া জুড়ে নিজের মাপে পুরো ছবি — কাটা না, পাশে কোনো বর্ডার/ঝাপসা না */
+    .ef-imgs.n1 { background: transparent; }
+    .ef-imgs.n1 button { width: 100%; background: transparent; }
+    .ef-imgs.n1 img { width: 100%; height: auto; max-height: none; object-fit: initial; }
     .ef-imgs.n1 button:hover img { transform: none; }
     .ef-imgs.n2 { grid-template-columns: 1fr 1fr; } .ef-imgs.n2 button { aspect-ratio: 1 / 1; }
     .ef-imgs.n3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; aspect-ratio: 3 / 2; }

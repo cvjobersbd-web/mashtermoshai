@@ -53,7 +53,7 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
     <?php if ($n): ?>
         <div class="ef-imgs n<?= min($n, 4) ?>" data-imgs="<?= e(js($p->Images)) ?>">
             <?php foreach (array_slice($p->Images, 0, 4) as $i => $src): ?>
-                <button type="button" data-ef="img" data-i="<?= $i ?>"<?= $n === 1 ? ' style="--bg:url(\'' . e($src) . '\')"' : '' ?> aria-label="ছবি <?= $i + 1 ?> বড় করে দেখুন"><img src="<?= e($src) ?>" alt="" loading="lazy" /><?php if ($i === 3 && $n > 4): ?><span class="plus">+<?= $n - 4 ?></span><?php endif; ?></button>
+                <button type="button" data-ef="img" data-i="<?= $i ?>" aria-label="ছবি <?= $i + 1 ?> বড় করে দেখুন"><img src="<?= e($src) ?>" alt="" loading="lazy" /><?php if ($i === 3 && $n > 4): ?><span class="plus">+<?= $n - 4 ?></span><?php endif; ?></button>
             <?php endforeach; ?>
         </div>
     <?php elseif ($p->Video !== ''): ?>
