@@ -31,6 +31,13 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
     </div>
 <?php };
 
+?>
+<style>
+    .pk-offer { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 4px; padding: 10px 12px; border-radius: 12px; background: linear-gradient(135deg, #F5F3FF, #FDF4FF); border: 1.5px dashed #8B5CF6; color: #5B21B6; font-size: 13px; line-height: 1.5; }
+    .pk-offer i { font-size: 18px; margin-top: 2px; color: #7C3AED; }
+    .pk-offer b { display: block; font-size: 13.5px; } .pk-offer b.p { display: inline; font-size: 16px; color: #15803D; }
+</style>
+<?php
 $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student'; ?>
     <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
@@ -48,6 +55,9 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
         <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green">মাত্র <?= e(taka($p->Price)) ?></span>
         <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill">প্রতি পোস্ট মাত্র <?= e(taka((int)round($p->Price / $p->PostLimit))) ?></span>
         <?php else: ?><span class="pk-pill green"><?= e($p->DurationLabel) ?></span><?php endif; ?>
+        <?php if (!$free && ($cpo = db()->CouponOfferFor($p))): ?>
+            <div class="pk-offer"><i class="fas fa-ticket"></i><div><b>স্পেশাল অফার · সীমিত সময়</b>কুপন কোড দিলে মাত্র <b class="p"><?= e(taka((int)$cpo->Price)) ?></b><?= $cpo->EndsAt ? ' — ' . e(date('d M Y', strtotime((string)$cpo->EndsAt))) . ' পর্যন্ত' : '' ?></div></div>
+        <?php endif; ?>
         <?php if ($p->FeatureList): ?>
             <ul class="pk-feat">
                 <?php foreach ($p->FeatureList as $f): ?><li><i class="fas fa-check"></i><span><?= e($f) ?></span></li><?php endforeach; ?>
@@ -279,7 +289,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
     <section class="pk-sec" id="pk-student"<?= $tab === 'student' ? '' : ' hidden' ?>>
         <div class="pk-sec-h">
             <h2>শিক্ষার্থীদের জন্য</h2>
-            <p>Account খোলা, Edu Feed দেখা আর টিচারদের প্রোফাইল দেখা ফ্রি। টিচারের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ পোস্ট করতে প্যাকেজ নিন — ১ মাস ৳50, ৩ মাস ৳100।</p>
+            <p>Account খোলা, Edu Feed দেখা আর টিচারদের প্রোফাইল দেখা ফ্রি। টিচারের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ পোস্ট করতে প্যাকেজ নিন — <?= e(package_price_hint('Student')) ?>।</p>
         </div>
         <?php if ($studentFree): ?>
             <div class="pk-free-note"><i class="fas fa-gift"></i><div><b>সুখবর! এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি।</b><br>কোনো প্যাকেজ বা পেমেন্ট লাগবে না — সরাসরি পোস্ট করুন।</div><a href="/Tuition/Circular">পোস্ট করুন</a></div>

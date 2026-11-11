@@ -3884,7 +3884,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 // টিচারের প্রোফাইল থেকে "Request Tutor" (/FindTutor?req={userId}) — সরাসরি রিকোয়েস্ট ফর্ম খোলে
                 var reqUid = parseInt(new URLSearchParams(location.search).get('req') || '0', 10);
                 if (reqUid && !<?= viewer_can_contact_teachers() ? 'true' : 'false' ?>) {
-                    alert('<?= current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (১ মাস ৳50, ৩ মাস ৳100)।' ?>');
+                    alert('<?= current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।' ?>');
                     location.href = <?= js(student_package_url()) ?>; reqUid = 0;
                 }
                 if (reqUid) {

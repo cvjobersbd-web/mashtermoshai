@@ -107,7 +107,121 @@ trait PackageData
                 }
                 $this->SaveSiteContent(['pkg_special_v1' => '1']);
             }
+            // নতুন দাম (একবারই) — টিচার: ১ মাস ৳300, ৩ মাস ৳600, ৬ মাস ৳1200, ১ বছর ৳2000; শিক্ষার্থী: ৩ মাস ৳300, ৬ মাস ৳500, ১ বছর ৳900।
+            // স্পেশাল অফার (৬ মাস টিচার ৳500 / শিক্ষার্থী ৳200) এখন আলাদা প্যাকেজ না — কুপন কোড দিলে ৬ মাসের প্যাকেজ ঐ দামে।
+            // আগের নরমাল প্যাকেজ বন্ধ (মুছে না — পুরোনো পেমেন্টের রেকর্ড থাকে); Premium (লাইভ ক্লাস) যেমন আছে থাকে।
+            if (($this->GetSiteContent(['pkg_v3' => ''])['pkg_v3'] ?? '') === '') {
+                $plan = [
+                    'Teacher' => [[1, '১ মাস', 300, ''], [3, '৩ মাস', 600, ''], [6, '৬ মাস', 1200, 'জনপ্রিয়'], [12, '১ বছর', 2000, 'সেরা মূল্য']],
+                    'Student' => [[3, '৩ মাস', 300, ''], [6, '৬ মাস', 500, 'জনপ্রিয়'], [12, '১ বছর', 900, 'সেরা মূল্য']],
+                ];
+                foreach ($plan as $aud => $list) {
+                    // আগের সুবিধার তালিকা (অ্যাডমিন বদলে থাকলে সেটাই) রাখা হয়
+                    $old = $this->one("SELECT `Features` FROM `Packages` WHERE `Audience` = :a AND COALESCE(`IsLive`, 0) = 0 AND `IsActive` = 1 AND `Features` IS NOT NULL AND `Name` NOT LIKE :sp ORDER BY `Id` DESC LIMIT 1", ['a' => $aud, 'sp' => '%স্পেশাল%']);
+                    $feat = $old && !is_blank($old->Features) ? (string)$old->Features : ($aud === 'Teacher' ? self::TEACHER_FEATURES_V2 : self::STUDENT_FEATURES_V2);
+                    $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = :a AND COALESCE(`IsLive`, 0) = 0", ['a' => $aud]);
+                    foreach ($list as $i => [$m, $nm, $price, $badge]) {
+                        $this->insertPackage(['Audience' => $aud, 'Name' => $nm, 'DurationMonths' => $m, 'PostLimit' => 0, 'Price' => $price, 'RegularPrice' => null, 'Badge' => $badge,
+                            'Description' => $aud === 'Teacher' ? ($m >= 12 ? 'পুরো বছর নিশ্চিন্ত' : 'টিউশন পেতে ' . $nm) : 'টিচারের সাথে যোগাযোগ আর টিউশন পোস্ট — ' . $nm,
+                            'Features' => $feat, 'IsFeatured' => $m === 6 ? 1 : 0, 'IsLive' => 0, 'SortOrder' => $i + 1]);
+                    }
+                    $i = 0;
+                    foreach ($this->all("SELECT `Id` FROM `Packages` WHERE `Audience` = :a ORDER BY `IsActive` DESC, COALESCE(`IsLive`, 0), `DurationMonths`, `Price`, `Id`", ['a' => $aud]) as $r)
+                        $this->exec('UPDATE `Packages` SET `SortOrder` = :s WHERE `Id` = :i', ['s' => ++$i, 'i' => (int)$r->Id]);
+                }
+                // স্পেশাল অফারের কুপন — অ্যাডমিন Admin → Coupons থেকে কোড / দাম / শেষ তারিখ বদলাতে পারবেন
+                try {
+                    $this->EnsureCouponTable();
+                    if ((int)$this->scalar('SELECT COUNT(*) FROM `Coupons`') === 0) {
+                        $this->SaveCoupon(null, ['Code' => 'TEACHER500', 'Audience' => 'Teacher', 'DurationMonths' => 6, 'Price' => 500, 'EndsAt' => null, 'MaxUses' => 0, 'IsActive' => 1, 'Note' => 'স্পেশাল অফার — টিচার ৬ মাস ৳500']);
+                        $this->SaveCoupon(null, ['Code' => 'STUDENT200', 'Audience' => 'Student', 'DurationMonths' => 6, 'Price' => 200, 'EndsAt' => null, 'MaxUses' => 0, 'IsActive' => 1, 'Note' => 'স্পেশাল অফার — শিক্ষার্থী ৬ মাস ৳200']);
+                    }
+                } catch (Throwable $e) { error_log('[coupon seed] ' . $e->getMessage()); }
+                $this->SaveSiteContent(['pkg_v3' => '1', 'pkg_special_v1' => '1', 'pkg_t6_v1' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
+    }
+
+    // ============================================================ কুপন কোড (স্পেশাল অফার)
+    private bool $couponReady = false;
+    public function EnsureCouponTable(): void
+    {
+        if ($this->couponReady) return;
+        $this->couponReady = true;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "Coupons" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "Code" TEXT NOT NULL UNIQUE, "Audience" TEXT NOT NULL, "DurationMonths" INTEGER NOT NULL DEFAULT 0,
+                "Price" INTEGER NOT NULL, "EndsAt" TEXT NULL, "MaxUses" INTEGER NOT NULL DEFAULT 0, "IsActive" INTEGER NOT NULL DEFAULT 1, "Note" TEXT NULL, "CreatedAt" TEXT NOT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `Coupons` (`Id` INT NOT NULL AUTO_INCREMENT, `Code` VARCHAR(30) NOT NULL, `Audience` VARCHAR(10) NOT NULL, `DurationMonths` INT NOT NULL DEFAULT 0,
+                `Price` INT NOT NULL, `EndsAt` DATETIME NULL, `MaxUses` INT NOT NULL DEFAULT 0, `IsActive` TINYINT(1) NOT NULL DEFAULT 1, `Note` VARCHAR(200) NULL, `CreatedAt` DATETIME NOT NULL,
+                PRIMARY KEY (`Id`), UNIQUE KEY `UX_Coupon_Code` (`Code`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->EnsurePaymentTables();
+        try { $this->pdo->query('SELECT `CouponCode` FROM `PaymentRequests` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `PaymentRequests` ADD COLUMN `CouponCode` ' . ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? 'TEXT' : 'VARCHAR(30)') . ' NULL'); } catch (Throwable $e2) { error_log('[CouponCode col] ' . $e2->getMessage()); } }
+    }
+
+    /** @return Obj[] সব কুপন + কতবার ব্যবহার হয়েছে (বাতিল পেমেন্ট বাদে) */
+    public function GetCoupons(): array
+    {
+        $this->EnsureCouponTable();
+        $used = [];
+        foreach ($this->all("SELECT UPPER(`CouponCode`) AS C, SUM(CASE WHEN `Status` = 'Approved' THEN 1 ELSE 0 END) AS A, SUM(CASE WHEN `Status` = 'Pending' THEN 1 ELSE 0 END) AS P FROM `PaymentRequests` WHERE `CouponCode` IS NOT NULL GROUP BY UPPER(`CouponCode`)") as $r) $used[(string)$r->C] = [(int)$r->A, (int)$r->P];
+        $out = $this->all('SELECT * FROM `Coupons` ORDER BY `Id` DESC');
+        foreach ($out as $c) { [$c->UsedApproved, $c->UsedPending] = $used[strtoupper((string)$c->Code)] ?? [0, 0]; $c->Id = (int)$c->Id; $c->IsActive = (bool)(int)$c->IsActive; }
+        return $out;
+    }
+
+    public function GetCouponByCode(string $code): ?Obj
+    {
+        $this->EnsureCouponTable();
+        return $this->one('SELECT * FROM `Coupons` WHERE UPPER(`Code`) = :c', ['c' => strtoupper(trim($code))]);
+    }
+
+    public function SaveCoupon(?int $id, array $c): int
+    {
+        $this->EnsureCouponTable();
+        $p = ['c' => strtoupper($c['Code']), 'a' => $c['Audience'], 'd' => (int)$c['DurationMonths'], 'p' => (int)$c['Price'], 'e' => $c['EndsAt'] ?: null,
+            'm' => (int)$c['MaxUses'], 'ac' => (int)$c['IsActive'], 'n' => ($c['Note'] ?? '') !== '' ? $c['Note'] : null];
+        if ($id) { $this->exec('UPDATE `Coupons` SET `Code` = :c, `Audience` = :a, `DurationMonths` = :d, `Price` = :p, `EndsAt` = :e, `MaxUses` = :m, `IsActive` = :ac, `Note` = :n WHERE `Id` = :i', $p + ['i' => $id]); return $id; }
+        return (int)$this->insert('INSERT INTO `Coupons` (`Code`, `Audience`, `DurationMonths`, `Price`, `EndsAt`, `MaxUses`, `IsActive`, `Note`, `CreatedAt`) VALUES (:c, :a, :d, :p, :e, :m, :ac, :n, :t)', $p + ['t' => now()]);
+    }
+
+    public function DeleteCoupon(int $id): void { $this->EnsureCouponTable(); $this->exec('DELETE FROM `Coupons` WHERE `Id` = :i', ['i' => $id]); }
+
+    /**
+     * কুপন যাচাই — এই প্যাকেজে চলে কিনা। চললে কুপনের পর দাম (int), না চললে null আর $err এ কারণ।
+     * $selfId = এই ইউজার আগে একই কুপন ব্যবহার করে থাকলে আবার চলে না।
+     */
+    public function CheckCoupon(string $code, Obj $pkg, int $userId, ?string &$err = null, ?Obj &$coupon = null): ?int
+    {
+        $err = null; $coupon = null;
+        $code = strtoupper(preg_replace('/\s+/', '', $code));
+        if ($code === '') { $err = 'কুপন কোড লিখুন।'; return null; }
+        $c = $this->GetCouponByCode($code);
+        if (!$c || !(int)$c->IsActive) { $err = 'এই কুপন কোডটা সঠিক নয় বা এখন চালু নেই।'; return null; }
+        if ($c->EndsAt && $c->EndsAt < now()) { $err = 'এই কুপনের মেয়াদ শেষ হয়ে গেছে।'; return null; }
+        if ($c->Audience !== ($pkg->Audience ?? '') || ((int)$c->DurationMonths > 0 && (int)$c->DurationMonths !== (int)$pkg->DurationMonths) || !empty($pkg->IsLive)) {
+            $err = 'এই কুপন এই প্যাকেজে চলে না — ' . ($c->Audience === 'Teacher' ? 'টিচারের' : 'শিক্ষার্থীর') . ((int)$c->DurationMonths > 0 ? ' ' . bn_num((int)$c->DurationMonths) . ' মাসের' : '') . ' প্যাকেজে চলে।';
+            return null;
+        }
+        $this->EnsureCouponTable();
+        if ((int)$c->MaxUses > 0 && (int)$this->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE UPPER(`CouponCode`) = :c AND `Status` <> 'Rejected'", ['c' => $code]) >= (int)$c->MaxUses) { $err = 'এই কুপন যত জন ব্যবহার করতে পারে, সব শেষ হয়ে গেছে।'; return null; }
+        if ((int)$this->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE UPPER(`CouponCode`) = :c AND `UserId` = :u AND `Status` <> 'Rejected'", ['c' => $code, 'u' => $userId]) > 0) { $err = 'আপনি এই কুপন আগেই ব্যবহার করেছেন।'; return null; }
+        $coupon = $c;
+        return min((int)$pkg->Price, max(0, (int)$c->Price));
+    }
+
+    /** প্যাকেজ পেজে দেখানোর জন্য: এই প্যাকেজে কোনো চালু কুপন অফার আছে কিনা (কোড দেখায় না) — অফারের দাম বা null */
+    public function CouponOfferFor(Obj $pkg): ?Obj
+    {
+        try {
+            $this->EnsureCouponTable();
+            if (!empty($pkg->IsLive)) return null;
+            $c = $this->one("SELECT * FROM `Coupons` WHERE `IsActive` = 1 AND `Audience` = :a AND (`DurationMonths` = 0 OR `DurationMonths` = :d) AND (`EndsAt` IS NULL OR `EndsAt` > :n) AND `Price` < :p ORDER BY `Price` LIMIT 1",
+                ['a' => $pkg->Audience, 'd' => (int)$pkg->DurationMonths, 'n' => now(), 'p' => (int)$pkg->Price]);
+            return $c ?: null;
+        } catch (Throwable $e) { return null; }
     }
 
     /** প্রিমিয়াম: সাধারণ টিচার প্যাকেজের সব সুবিধা + সাইট থেকেই লাইভ ক্লাস (বৃষ্টি / বন্যায় শিক্ষার্থীর বাসায় যেতে না পারলে) */

@@ -33,6 +33,20 @@ class PaymentController extends Controller
         return null;
     }
 
+    /** POST /Payment/CheckCoupon (code, packageId) — চেকআউটে কুপন যাচাই, ঠিক হলে নতুন দাম */
+    public function CheckCoupon_POST(): void
+    {
+        $uid = current_user_id();
+        if ($uid === null) json_response(['success' => false, 'message' => 'লগইন করুন।']);
+        $pkg = $this->db->GetPackage((int)input_int('packageId', 0));
+        if (!$pkg || !$pkg->IsActive) json_response(['success' => false, 'message' => 'প্যাকেজ পাওয়া যায়নি।']);
+        $err = null; $c = null;
+        $price = $this->db->CheckCoupon((string)input_str('code', ''), $pkg, (int)$uid, $err, $c);
+        if ($price === null) json_response(['success' => false, 'message' => $err]);
+        json_response(['success' => true, 'price' => $price, 'before' => (int)$pkg->Price, 'code' => strtoupper((string)$c->Code),
+            'message' => '✅ কুপন কাজ করছে — দাম ৳' . (int)$pkg->Price . ' থেকে কমে ৳' . $price]);
+    }
+
     /** POST /Payment/CheckRefCode (code) — চেকআউটে রেফারেল কোড লিখলে সাথে সাথে যাচাই */
     public function CheckRefCode_POST(): void
     {
@@ -103,6 +117,16 @@ class PaymentController extends Controller
             if (!$pkg || !$pkg->IsActive) $this->fail('প্যাকেজটি পাওয়া যায়নি।');
             if ($why = $this->packageBlockReason($pkg)) $this->fail($why);
         }
+        // কুপন কোড (স্পেশাল অফার) — ঠিক থাকলে প্যাকেজের দাম কুপনের দামে নামে
+        $couponCode = strtoupper(preg_replace('/\s+/', '', (string)input_str('couponCode', '')));
+        if ($couponCode !== '' && !$courseId) {
+            $cerr = null;
+            $cp = $this->db->CheckCoupon($couponCode, $pkg, (int)$uid, $cerr);
+            if ($cp === null) $this->fail($cerr . ' (কুপন না থাকলে ঘরটা ফাঁকা রাখুন)', ['field' => 'couponCode']);
+            $pkg->PriceBefore = (int)$pkg->Price;
+            $pkg->Price = $cp;
+        } else $couponCode = '';
+
         // রেফারেল ব্যালেন্স থেকে ছাড় (ঐচ্ছিক) — পুরো দাম ব্যালেন্সে হলে টাকা পাঠাতে / রিসিট দিতে হয় না
         $disc = max(0, (int)input_int('useBalance', 0));
         if ($disc > 0) {
@@ -182,6 +206,7 @@ class PaymentController extends Controller
             $this->fail('জমা দেওয়া যায়নি। আবার চেষ্টা করুন।');
         }
         if ($ref) { try { $this->db->SetPaymentReference($id, $ref[0], $ref[1]); } catch (Throwable $e) { error_log('[payment ref] ' . $e->getMessage()); } }
+        if ($couponCode !== '') { try { $this->db->exec('UPDATE `PaymentRequests` SET `CouponCode` = :c WHERE `Id` = :i', ['c' => $couponCode, 'i' => $id]); } catch (Throwable $e) { error_log('[payment coupon] ' . $e->getMessage()); } }
         if ($disc > 0) { try { $this->db->ReserveReferralDiscount((int)$uid, $id, $disc); } catch (Throwable $e) { error_log('[payment discount] ' . $e->getMessage()); } }
         if ($refCode !== '') { try { $this->db->SetPaymentRefCode($id, $refCode); } catch (Throwable $e) { error_log('[payment refcode] ' . $e->getMessage()); } }
         $who = (string)(session_get('UserFullName') ?? session_get('UserName'));

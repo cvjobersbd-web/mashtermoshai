@@ -314,7 +314,7 @@ try {
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -539,6 +539,13 @@ try {
         <li>
             <a href="/Admin/Packages" class="<?= $currentAction === 'Packages' ? 'active' : '' ?>">
                 <i class="fas fa-box-open"></i> Packages
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Coupons'))): ?>
+        <li>
+            <a href="/Admin/Coupons" class="<?= $currentAction === 'Coupons' ? 'active' : '' ?>">
+                <i class="fas fa-ticket"></i> Coupons
             </a>
         </li>
         <?php endif; ?>

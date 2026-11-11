@@ -1062,6 +1062,42 @@ class AdminController extends Controller
         $this->view(null, $R, ['Type' => $type, 'From' => $from, 'To' => $to, 'Q' => $q, 'Print' => $exp === 'print']);
     }
 
+    /** GET /Admin/Coupons — স্পেশাল অফারের কুপন কোড: কোন প্যাকেজে, কত দাম, কতদিন, কতবার */
+    public function Coupons(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, $this->db->GetCoupons(), ['Packages' => $this->db->GetPackages(null, true)]);
+    }
+
+    /** POST /Admin/SaveCoupon (id?, code, audience, months, price, endsAt, maxUses, active, note) */
+    public function SaveCoupon_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = input_int('id', 0) ?: null;
+        $code = strtoupper(preg_replace('/[^A-Za-z0-9_-]/', '', (string)input_str('code', '')));
+        $aud = (string)input_str('audience', '');
+        $months = max(0, (int)input_int('months', 0));
+        $price = (int)input_int('price', -1);
+        $ends = trim((string)input_str('endsAt', ''));
+        if (strlen($code) < 3 || strlen($code) > 30) json_response(['success' => false, 'message' => 'কুপন কোড ৩–৩০ অক্ষরের দিন (ইংরেজি অক্ষর / সংখ্যা)।']);
+        if (!in_array($aud, ['Teacher', 'Student'], true)) json_response(['success' => false, 'message' => 'কার জন্য — টিচার না শিক্ষার্থী বাছাই করুন।']);
+        if ($price < 0 || $price > 100000) json_response(['success' => false, 'message' => 'অফারের দাম সঠিক নয়।']);
+        if ($ends !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $ends)) json_response(['success' => false, 'message' => 'শেষ তারিখ সঠিক নয়।']);
+        $ex = $this->db->GetCouponByCode($code);
+        if ($ex && (int)$ex->Id !== (int)$id) json_response(['success' => false, 'message' => 'এই কোড আগেই আছে — অন্য কোড দিন।']);
+        $this->db->SaveCoupon($id, ['Code' => $code, 'Audience' => $aud, 'DurationMonths' => $months, 'Price' => $price, 'EndsAt' => $ends !== '' ? $ends . ' 23:59:59' : null,
+            'MaxUses' => max(0, (int)input_int('maxUses', 0)), 'IsActive' => input_bool('active') ? 1 : 0, 'Note' => mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 200)]);
+        json_response(['success' => true, 'message' => 'কুপন সেভ হয়েছে।']);
+    }
+
+    /** POST /Admin/DeleteCoupon (id) */
+    public function DeleteCoupon_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->DeleteCoupon((int)input_int('id', 0));
+        json_response(['success' => true]);
+    }
+
     /** GET /Admin/ReferralUser/{userId} — একজন ইউজারের রেফারেল বিস্তারিত: লিংক, কোড, কোথায় শেয়ার, কত জন এসেছে / কিনেছে, টাকা তোলা / ছাড় */
     public function ReferralUser(): void
     {

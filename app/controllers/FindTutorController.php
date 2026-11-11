@@ -58,7 +58,7 @@ class FindTutorController extends Controller
             // নির্দিষ্ট টিচারকে Direct Request — শুধু প্যাকেজ নেওয়া শিক্ষার্থী
             if (!is_blank(input_str('tutorId')) && !viewer_can_contact_teachers()) {
                 json_response(['success' => false, 'needPackage' => student_package_url(),
-                    'message' => current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে আগে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (১ মাস ৳50, ৩ মাস ৳100)।']);
+                    'message' => current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে আগে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।']);
             }
             // টিচারের নিজের প্যাকেজ চালু না থাকলে তার সাথে যোগাযোগ বন্ধ
             if (!is_blank(input_str('tutorId')) && preg_match('/^TCH-(\d+)$/', trim((string)input_str('tutorId')), $tm)) {

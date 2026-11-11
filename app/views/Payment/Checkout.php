@@ -28,6 +28,14 @@ $jsMethods = array_map(function ($m) {
     .co-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
     .co-card { background: #fff; border: 1px solid #DCECF5; border-radius: 18px; padding: 20px; box-shadow: 0 4px 18px rgba(8,34,74,.05); }
     .co-card + .co-card { margin-top: 16px; }
+    .co-cp { border: 2px dashed #8B5CF6; background: linear-gradient(135deg, #F5F3FF, #FAF5FF); }
+    .co-cp-h { display: block; margin: 0 0 8px; font-weight: 800; color: #5B21B6; font-size: 15px; cursor: pointer; }
+    .co-cp-h small { display: block; font-weight: 600; color: #7C3AED; font-size: 12.5px; margin-top: 2px; }
+    .co-cp-row { display: flex; gap: 8px; }
+    .co-cp-row input { flex: 1; min-width: 0; height: 44px; border: 1.5px solid #C4B5FD; border-radius: 10px; padding: 0 12px; font-size: 15px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: #fff; outline: none; font-family: inherit; }
+    .co-cp-row button { height: 44px; border: none; border-radius: 10px; background: #7C3AED; color: #fff; font-weight: 800; padding: 0 18px; cursor: pointer; font-family: inherit; }
+    .co-cp-msg { margin-top: 8px; font-size: 13.5px; font-weight: 700; min-height: 1px; }
+    .co-cp.ok { border-style: solid; border-color: #22C55E; background: #F0FDF4; }
     .co-bal { border: 2px dashed #F59E0B; background: linear-gradient(135deg, #FFFBEB, #FFF7D6); }
     .co-bal-h { display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 0; font-weight: 800; color: #92400E; font-size: 15.5px; }
     .co-bal-h input { width: 22px; height: 22px; accent-color: #F59E0B; flex-shrink: 0; }
@@ -184,13 +192,21 @@ $jsMethods = array_map(function ($m) {
                 <input type="hidden" name="methodId" id="coMethodId" />
                 <input type="hidden" name="accountId" id="coAccountId" />
                 <input type="hidden" name="useBalance" id="coUseBalance" value="0" />
+                <input type="hidden" name="couponCode" id="coCouponCode" value="" />
+                <?php if ($pkg->Audience !== 'Course' && empty($pkg->IsLive)): $preCp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('coupon', ''))); ?>
+                <div class="co-card co-cp" id="coCpCard" data-f="couponCode">
+                    <label for="coCpIn" class="co-cp-h"><i class="fas fa-ticket"></i> কুপন কোড আছে? <small>স্পেশাল অফারের কোড দিলে দাম কমে যাবে</small></label>
+                    <div class="co-cp-row"><input type="text" id="coCpIn" maxlength="30" autocomplete="off" placeholder="কুপন কোড লিখুন" value="<?= e($preCp) ?>" /><button type="button" id="coCpBtn">Apply</button></div>
+                    <div class="co-cp-msg" id="coCpMsg"></div>
+                </div>
+                <?php endif; ?>
                 <?php $rfBal = 0; try { if (db()->ReferralSettings()['enabled'] && (int)$pkg->Price > 0) $rfBal = min((int)db()->GetReferralSummary((int)current_user_id())['balance'], (int)$pkg->Price); } catch (Throwable $e) { } ?>
                 <?php if ($rfBal > 0): ?>
                 <div class="co-card co-bal" id="coBalCard">
                     <label class="co-bal-h"><input type="checkbox" id="coBalOn" /> <span><i class="fas fa-gift"></i> রেফারেল ব্যালেন্স দিয়ে ছাড় নিন <small>আপনার ব্যালেন্সে আছে <b><?= e(taka((int)db()->GetReferralSummary((int)current_user_id())['balance'])) ?></b></small></span></label>
                     <div class="co-bal-b" id="coBalBody" hidden>
                         <label for="coBalAmt">কত টাকা ছাড় নেবেন?</label>
-                        <div class="co-bal-row"><span>৳</span><input type="number" id="coBalAmt" min="1" max="<?= $rfBal ?>" value="<?= $rfBal ?>" inputmode="numeric" /><button type="button" id="coBalMax">সব (৳<?= $rfBal ?>)</button></div>
+                        <div class="co-bal-row"><span>৳</span><input type="number" id="coBalAmt" min="1" max="<?= $rfBal ?>" value="<?= $rfBal ?>" inputmode="numeric" data-bal="<?= (int)db()->GetReferralSummary((int)current_user_id())['balance'] ?>" /><button type="button" id="coBalMax">সব</button></div>
                         <div class="co-bal-res" id="coBalRes"></div>
                     </div>
                 </div>
@@ -296,10 +312,11 @@ $jsMethods = array_map(function ($m) {
                 <div class="co-line"><span>নিয়মিত মূল্য</span><s><?= e(taka($pkg->RegularPrice)) ?></s></div>
                 <div class="co-line"><span>ছাড় (<?= e(bn_num($pkg->Discount)) ?>%)</span><span style="color:#157347;">−<?= e(taka($pkg->RegularPrice - $pkg->Price)) ?></span></div>
             <?php endif; ?>
+            <div class="co-line" id="coSumCp" hidden><span><i class="fas fa-ticket" style="color:#7C3AED;"></i> কুপন <b id="coSumCpC"></b></span><span style="color:#157347;" id="coSumCpV"></span></div>
             <div class="co-line" id="coSumDisc" hidden><span><i class="fas fa-gift" style="color:#F59E0B;"></i> রেফারেল ব্যালেন্স থেকে ছাড়</span><span style="color:#157347;" id="coSumDiscV"></span></div>
             <div class="co-line tot"><span id="coSumTotL">মোট</span><span id="coSumTot"><?= e(taka($pkg->Price)) ?></span></div>
             <ul class="co-how">
-                <li><i class="fas fa-mobile-screen-button"></i><span>এজেন্ট নম্বরে Cash Out করে (বা Bank QR স্ক্যান করে) ঠিক <?= e(taka($pkg->Price)) ?> পাঠান</span></li>
+                <li><i class="fas fa-mobile-screen-button"></i><span>এজেন্ট নম্বরে Cash Out করে (বা Bank QR স্ক্যান করে) ঠিক <span id="coHowAmt"><?= e(taka($pkg->Price)) ?></span> পাঠান</span></li>
                 <li><i class="fas fa-camera"></i><span>পেমেন্ট সফল হওয়ার স্ক্রিনশট নিন</span></li>
                 <li><i class="fas fa-file-arrow-up"></i><span>যে নম্বর থেকে পাঠিয়েছেন আর স্ক্রিনশট জমা দিন</span></li>
                 <li><i class="fas fa-circle-check"></i><span>অ্যাডমিন যাচাই করে Accept করলে নোটিফিকেশন পাবেন</span></li>
@@ -416,6 +433,7 @@ $jsMethods = array_map(function ($m) {
     var bOn = document.getElementById('coBalOn');
     function balApply() {
         var on = bOn && bOn.checked, amtIn = document.getElementById('coBalAmt');
+        if (amtIn) { amtIn.max = Math.min(+amtIn.getAttribute('data-bal') || 0, PRICE); if (+amtIn.value > +amtIn.max) amtIn.value = amtIn.max; }
         var max = amtIn ? +amtIn.max : 0, d = on ? Math.max(0, Math.min(max, parseInt(amtIn.value, 10) || 0)) : 0;
         var pay = PRICE - d; FULL = on && d > 0 && pay === 0;
         document.getElementById('coUseBalance').value = d;
@@ -424,20 +442,46 @@ $jsMethods = array_map(function ($m) {
             document.getElementById('coBalRes').innerHTML = d > 0 ? (pay === 0 ? '🎉 পুরো দাম ব্যালেন্স থেকে — কোনো টাকা পাঠাতে হবে না, শুধু নিচে Submit করুন।' : 'ছাড়ের পর পাঠাতে হবে: <b>৳' + pay + '</b>') : 'কত টাকা ছাড় নেবেন লিখুন।';
         }
         AMOUNT = '৳' + toBn(pay);
-        document.getElementById('coAmtB').textContent = AMOUNT; document.getElementById('coAmtCopy').setAttribute('data-copy', pay);
+        document.getElementById('coAmtB').textContent = AMOUNT; var ha = document.getElementById('coHowAmt'); if (ha) ha.textContent = AMOUNT; document.getElementById('coAmtCopy').setAttribute('data-copy', pay);
         document.getElementById('coSumDisc').hidden = !(d > 0); document.getElementById('coSumDiscV').textContent = '−৳' + toBn(d);
         document.getElementById('coSumTot').textContent = AMOUNT; document.getElementById('coSumTotL').textContent = d > 0 ? 'পাঠাতে হবে' : 'মোট';
-        var first = form.querySelector('.co-card:not(#coBalCard)');
+        var first = form.querySelector('.co-card:not(#coBalCard):not(#coCpCard)');
         if (first) first.hidden = FULL;
         ['txnId', 'sender', 'payDate', 'receipt'].forEach(function (f) { var x = form.querySelector('[data-f="' + f + '"]'); if (x) x.style.display = FULL ? 'none' : ''; });
         if (FULL) { document.getElementById('coPayCard').hidden = true; document.getElementById('coDetails').hidden = false; }
         else if (cur) { document.getElementById('coPayCard').hidden = false; pickAccount(curAcc ? curAcc.id : cur.accounts[0].id); }
         else document.getElementById('coDetails').hidden = true;
     }
+    // কুপন কোড
+    var BASE = PRICE, cpIn = document.getElementById('coCpIn'), cpMsg = document.getElementById('coCpMsg'), cpCard = document.getElementById('coCpCard'), cpHid = document.getElementById('coCouponCode');
+    function cpSet(code, price) {
+        PRICE = price; cpHid.value = code; cpCard.classList.toggle('ok', !!code);
+        document.getElementById('coSumCp').hidden = !code;
+        if (code) { document.getElementById('coSumCpC').textContent = code; document.getElementById('coSumCpV').textContent = '−৳' + toBn(BASE - price); }
+        balApply();
+    }
+    async function cpApply() {
+        var v = cpIn.value.replace(/\s+/g, '').toUpperCase(); cpIn.value = v;
+        if (!v) { cpSet('', BASE); cpMsg.textContent = ''; return; }
+        var fd = new FormData(); fd.append('code', v); fd.append('packageId', <?= (int)$pkg->Id ?>); fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        cpMsg.style.color = '#64748B'; cpMsg.textContent = 'যাচাই হচ্ছে...';
+        try {
+            var d = await (await fetch('/Payment/CheckCoupon', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            cpMsg.textContent = d.message || ''; cpMsg.style.color = d.success ? '#15803D' : '#DC2626';
+            cpSet(d.success ? d.code : '', d.success ? +d.price : BASE);
+        } catch (x) { cpMsg.style.color = '#DC2626'; cpMsg.textContent = 'যাচাই করা যায়নি — আবার চেষ্টা করুন।'; }
+    }
+    if (cpIn) {
+        document.getElementById('coCpBtn').addEventListener('click', cpApply);
+        cpIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); cpApply(); } });
+        cpIn.addEventListener('input', function () { if (cpHid.value && cpIn.value.replace(/\s+/g, '').toUpperCase() !== cpHid.value) { cpSet('', BASE); cpMsg.textContent = ''; } });
+        if (cpIn.value) cpApply();
+    }
+
     if (bOn) {
         bOn.addEventListener('change', balApply);
         document.getElementById('coBalAmt').addEventListener('input', balApply);
-        document.getElementById('coBalMax').addEventListener('click', function () { var a = document.getElementById('coBalAmt'); a.value = a.max; balApply(); });
+        document.getElementById('coBalMax').addEventListener('click', function () { var a = document.getElementById('coBalAmt'); a.value = Math.min(+a.getAttribute('data-bal') || 0, PRICE); balApply(); });
     }
 
     form.addEventListener('submit', async function (e) {

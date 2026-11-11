@@ -59,7 +59,7 @@ class TuitionController extends Controller
         // পেমেন্টের নিয়ম চালু থাকলে পোস্ট করতে ক্রেডিট লাগবে (অ্যাডমিন বাদে)
         $needCredit = session_get('UserRole') !== 'Admin' && $this->db->PaymentRules()['student'];
         if ($needCredit && $this->db->GetStudentPostCredits($userId) === 0) json_response(['success' => false, 'needPackage' => '/Package?for=student',
-            'message' => 'Tuition Post করতে শিক্ষার্থী প্যাকেজ লাগবে (১ মাস ৳50, ৩ মাস ৳100)। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
+            'message' => 'Tuition Post করতে শিক্ষার্থী প্যাকেজ লাগবে (' . package_price_hint('Student') . ')। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
         // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন — Special Request (content) ঐচ্ছিক
         foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 120) === '') $this->fail($m);
         if ((int)preg_replace('/[^0-9]/', '', (string)input_str('budget', '')) <= 0) $this->fail('বাজেট (৳/মাস) দিন।');

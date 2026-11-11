@@ -1178,6 +1178,23 @@ function bn_num($n): string { return strtr((string)$n, ['0' => '০', '1' => '�
 function taka($n): string { return '৳' . number_format((int)$n); }
 
 /** প্যাকেজের মেয়াদ/পরিমাণ লেখা: "১ মাস", "১২ মাস", "১টি পোস্ট", "৩টি পোস্ট · ১ মাস মেয়াদ" */
+/** চালু প্যাকেজের দাম এক লাইনে — যেমন "৩ মাস ৳300, ৬ মাস ৳500, ১ বছর ৳900" ($live = Premium লাইভ প্যাকেজগুলো) */
+function package_price_hint(string $audience, bool $live = false, int $max = 4): string
+{
+    static $c = [];
+    $k = $audience . (int)$live . $max;
+    if (isset($c[$k])) return $c[$k];
+    $parts = [];
+    try {
+        foreach (db()->GetPackages($audience, true) as $p) {
+            if ((bool)$p->IsLive !== $live) continue;
+            $parts[] = trim((string)$p->Name) . ' ৳' . (int)$p->Price;
+            if (count($parts) >= $max) break;
+        }
+    } catch (Throwable $e) { }
+    return $c[$k] = $parts ? implode(', ', $parts) : 'প্যাকেজ পেজ দেখুন';
+}
+
 function package_duration_label($p): string
 {
     $m = (int)($p->DurationMonths ?? 0); $l = (int)($p->PostLimit ?? 0);

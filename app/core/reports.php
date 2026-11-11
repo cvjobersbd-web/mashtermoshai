@@ -50,7 +50,7 @@ function report_base(): array
     static $b = null;
     if ($b !== null) return $b;
     $db = db();
-    try { $db->EnsureRefCodeCols(); $db->EnsureKycTable(); $db->EnsurePaymentTables(); $db->EnsureReferenceCols(); } catch (Throwable $e) { }
+    try { $db->EnsureRefCodeCols(); $db->EnsureKycTable(); $db->EnsurePaymentTables(); $db->EnsureReferenceCols(); $db->EnsureCouponTable(); } catch (Throwable $e) { }
     $users = [];
     foreach ($db->all('SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `IsActive`, `CreatedAt`, `LastLoginAt` FROM `Users` ORDER BY `Id` DESC') as $u) $users[(int)$u->Id] = $u;
     $now = now();
@@ -161,12 +161,12 @@ function build_report(string $type, string $from, string $to, string $q): array
                     'name' => report_name($u), 'user' => $u ? '@' . $u->UserName : '', 'email' => (string)($u->Email ?? ''),
                     'for' => ['Teacher' => 'টিচার', 'Student' => 'শিক্ষার্থী', 'Course' => 'কোর্স'][(string)$p->Audience] ?? (string)$p->Audience,
                     'pkg' => (string)$p->PackageName, 'months' => (int)$p->DurationMonths ?: '', 'price' => (int)$p->Amount + $disc, 'disc' => $disc, 'amount' => (int)$p->Amount,
-                    'method' => (string)$p->MethodName, 'txn' => (string)$p->TxnId, 'refcode' => (string)($p->RefCode ?? ''),
+                    'method' => (string)$p->MethodName, 'txn' => (string)$p->TxnId, 'refcode' => (string)($p->RefCode ?? ''), 'coupon' => (string)($p->CouponCode ?? ''),
                     'status' => ['Approved' => 'Accepted', 'Pending' => 'অপেক্ষায়', 'Rejected' => 'Rejected'][(string)$p->Status] ?? (string)$p->Status,
                     'reviewed' => report_dt($p->ReviewedAt, 'd M Y, h:i A'), 'via' => $u ? joined_via_text((int)$p->UserId) : ''];
             }
             $cols = ['id' => '#', 'date' => 'জমার তারিখ', 'name' => 'নাম', 'user' => 'ইউজারনেম', 'email' => 'ইমেইল', 'for' => 'কার জন্য', 'pkg' => 'প্যাকেজ', 'months' => 'মাস',
-                'price' => 'দাম ৳', 'disc' => 'রেফারেল ছাড় ৳', 'amount' => 'পাঠিয়েছে ৳', 'method' => 'মাধ্যম', 'txn' => 'TxnID', 'refcode' => 'রেফারেল কোড', 'status' => 'অবস্থা',
+                'price' => 'দাম ৳', 'disc' => 'রেফারেল ছাড় ৳', 'amount' => 'পাঠিয়েছে ৳', 'method' => 'মাধ্যম', 'txn' => 'TxnID', 'refcode' => 'রেফারেল কোড', 'coupon' => 'কুপন', 'status' => 'অবস্থা',
                 'reviewed' => 'যাচাইয়ের তারিখ', 'via' => 'কার রেফারেন্সে'];
             $ok = array_filter($rows, fn($x) => $x['status'] === 'Accepted');
             $totals = ['মোট পেমেন্ট' => count($rows), 'Accepted' => count($ok), 'অপেক্ষায়' => count(array_filter($rows, fn($x) => $x['status'] === 'অপেক্ষায়')),

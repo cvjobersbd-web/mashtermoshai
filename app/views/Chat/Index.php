@@ -228,7 +228,7 @@ $role = current_role();
                         <form id="chClsForm" autocomplete="off" novalidate>
                             <h3 id="chDlgT"><i class="fas fa-video"></i> লাইভ ক্লাস সেট করুন</h3>
                             <?php if (empty($ViewBag->LiveOk)): ?>
-                                <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-crown"></i> সাইট থেকে সরাসরি লাইভ ক্লাস নিতে <b>Premium টিচার প্যাকেজ</b> লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — বৃষ্টি, বন্যা বা যেতে না পারলে শিক্ষার্থীকে অনলাইনে পড়ান। <a href="/Package?for=teacher">প্যাকেজ দেখুন</a></p>
+                                <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-crown"></i> সাইট থেকে সরাসরি লাইভ ক্লাস নিতে <b>Premium টিচার প্যাকেজ</b> লাগবে (<?= e(package_price_hint('Teacher', true)) ?>) — বৃষ্টি, বন্যা বা যেতে না পারলে শিক্ষার্থীকে অনলাইনে পড়ান। <a href="/Package?for=teacher">প্যাকেজ দেখুন</a></p>
                             <?php else: ?>
                                 <p class="sub">মাষ্টার মশাই এর নিজের লাইভ ক্লাস — আলাদা কোনো অ্যাপ লাগবে না। সময় হলে কার্ডের <b>লাইভ শুরু করুন</b> চাপুন, <?= e($cur->OtherName) ?> <b>Join Class</b> চেপে যোগ দেবে।</p>
                             <?php endif; ?>
