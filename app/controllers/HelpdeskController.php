@@ -40,7 +40,7 @@ class HelpdeskController extends Controller
     {
         $this->requireAjaxLogin();
         $map = fn($c) => [
-            'id' => $c->Id, 'content' => $c->Content, 'mediaUrl' => $c->MediaUrl, 'mediaType' => $c->MediaType,
+            'id' => $c->Id, 'userId' => (int)($c->UserId ?? 0), 'content' => $c->Content, 'mediaUrl' => $c->MediaUrl, 'mediaType' => $c->MediaType,
             'isAdminReply' => (bool)$c->IsAdminReply, 'createdAt' => to_dt($c->CreatedAt)?->format('Y-m-d\TH:i:s'),
             'userFullName' => $c->UserFullName, 'userName' => $c->UserName, 'userRole' => $c->UserRole,
             'userProfileImage' => $c->UserProfileImage, 'initials' => $c->Initials, 'timeAgo' => $c->TimeAgo,

@@ -533,6 +533,8 @@ $userProfileImg = session_get('ProfileImageLink');
         background: #b8e6c9;
     }
 
+    .hd-ulink { color: inherit; text-decoration: none; cursor: pointer; }
+    .hd-ulink:hover { color: #0369A1; text-decoration: underline; }
     .hd-comment-text a, .hd-post-content a, .hd-link { color: #0369A1; text-decoration: underline; word-break: break-all; font-weight: 600; }
     .hd-comment-text a:hover, .hd-post-content a:hover { color: #075985; }
     /* ===== Comments Section ===== */
@@ -1088,17 +1090,17 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
 
                     <!-- Post Header -->
                     <div class="hd-post-header">
-                        <div class="hd-avatar">
+                        <a class="hd-avatar" href="/Profile/Show/<?= (int)$post->UserId ?>" title="প্রোফাইল দেখুন" style="text-decoration:none;">
                             <?php if ($avatarUrl !== null): ?>
                                 <img src="<?= e($avatarUrl) ?>" alt="<?= e($post->UserFullName) ?>" />
                             <?php else: ?>
                                 <?= e($post->Initials) ?>
                             <?php endif; ?>
-                        </div>
+                        </a>
 
                         <div class="hd-post-header-info">
                             <div class="hd-post-author">
-                                <span class="name"><?= e($post->UserFullName) ?></span>
+                                <a class="name hd-ulink" href="/Profile/Show/<?= (int)$post->UserId ?>" title="প্রোফাইল দেখুন"><?= e($post->UserFullName) ?></a>
                                 <?php if ($post->IsAdminPost): ?>
                                     <span class="hd-admin-badge">
                                         <i class="fas fa-shield-alt"></i> Admin
@@ -1467,11 +1469,11 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
 
             return `
                 <div class="hd-comment ${adminClass}" data-comment-id="${c.id}">
-                    <div class="hd-avatar sm">${avatarUrl}</div>
+                    ${c.userId ? `<a class="hd-avatar sm" href="/Profile/Show/${c.userId}" title="প্রোফাইল দেখুন" style="text-decoration:none;">${avatarUrl}</a>` : `<div class="hd-avatar sm">${avatarUrl}</div>`}
                     <div class="hd-comment-body">
                         <div class="hd-comment-bubble">
                             <div class="hd-comment-head">
-                                <span class="name">${escapeHtml(c.userFullName)}</span>
+                                ${c.userId ? `<a class="name hd-ulink" href="/Profile/Show/${c.userId}" title="প্রোফাইল দেখুন">${escapeHtml(c.userFullName)}</a>` : `<span class="name">${escapeHtml(c.userFullName)}</span>`}
                                 ${adminBadge}
                                 <span class="time">${escapeHtml(c.timeAgo)}</span>
                             </div>
