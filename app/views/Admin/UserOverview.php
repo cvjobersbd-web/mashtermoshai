@@ -323,6 +323,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                 <div style="padding: 16px 20px; background: #02B8F5; color: white; font-weight: 700; border-radius: 14px 14px 0 0; position: sticky; top: 0; z-index: 10;">
                     All Users (<?= e(count($allUsers)) ?>)
                 </div>
+                <div style="padding:10px 12px 4px;"><?php partial('Admin/_ListSearch', ['items' => '.user-item', 'ph' => 'নাম, ইউজারনেম বা ইমেইল', 'margin' => '0']); ?></div>
 
                 <?php if (count($allUsers) === 0): ?>
                     <div class="text-center p-4 text-muted" style="font-size: 13px;">
@@ -335,7 +336,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                         $roleClass = $u->Role === 'Teacher' ? 'teacher' : 'user';
                         ?>
 
-                        <a href="/Admin/UserOverview?id=<?= e($u->Id) ?>" class="user-item <?= $isActive ? 'active' : '' ?>">
+                        <a href="/Admin/UserOverview?id=<?= e($u->Id) ?>" class="user-item <?= $isActive ? 'active' : '' ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$u->FullName, (string)$u->UserName, '@' . $u->UserName, (string)$u->Email, (string)($u->MobileNumber ?? '')]))) ?>">
                             <div class="u-avatar">
                                 <?php if (!is_blank($u->ProfileImageLink)): ?>
                                     <img src="<?= e($u->ProfileImageLink) ?>" alt="<?= e($u->FullName) ?>" />
@@ -345,6 +346,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                             </div>
                             <div class="u-info" style="min-width: 0;">
                                 <div class="u-name"><?= e($u->FullName) ?></div>
+                                <div class="u-email" style="font-weight:700;">@<?= e((string)$u->UserName) ?></div>
                                 <div class="u-email">
                                     <i class="fas fa-envelope me-1" style="font-size:10px;"></i><?= e($u->Email) ?>
                                 </div>

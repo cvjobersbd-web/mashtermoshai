@@ -273,6 +273,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                 <div style="padding: 16px 20px; background: #02B8F5; color: white; font-weight: 700; border-radius: 14px 14px 0 0; position: sticky; top: 0; z-index: 10;">
                     All Teachers (<?= e(count($allTeachers)) ?>)
                 </div>
+                <div style="padding:10px 12px 4px;"><?php partial('Admin/_ListSearch', ['items' => '.teacher-item', 'ph' => 'নাম, ইউজারনেম বা ইমেইল', 'margin' => '0']); ?></div>
 
                 <?php if (count($allTeachers) === 0): ?>
                     <div class="text-center p-4 text-muted" style="font-size: 13px;">
@@ -281,7 +282,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                 <?php else: ?>
                     <?php foreach ($allTeachers as $t): ?>
                         <?php $isActive = $selectedTeacher !== null && $selectedTeacher->Id === $t->Id; ?>
-                        <a href="/Admin/TeacherOverview?id=<?= e($t->Id) ?>" class="teacher-item <?= $isActive ? 'active' : '' ?>">
+                        <a href="/Admin/TeacherOverview?id=<?= e($t->Id) ?>" class="teacher-item <?= $isActive ? 'active' : '' ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$t->FullName, (string)$t->UserName, '@' . $t->UserName, (string)$t->Email, (string)($t->MobileNumber ?? '')]))) ?>">
                             <div class="t-avatar">
                                 <?php if (!is_blank($t->ProfileImageLink)): ?>
                                     <img src="<?= e($t->ProfileImageLink) ?>" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />
@@ -291,6 +292,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                             </div>
                             <div class="t-info" style="min-width: 0;">
                                 <div class="t-name"><?= e($t->FullName) ?></div>
+                                <div class="t-email" style="font-weight:700;">@<?= e((string)$t->UserName) ?></div>
                                 <div class="t-email"><i class="fas fa-envelope me-1" style="font-size:10px;"></i><?= e($t->Email) ?></div>
                             </div>
                         </a>

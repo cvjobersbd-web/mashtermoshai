@@ -123,12 +123,13 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
         <?php endforeach; ?>
     </div>
 
+    <?php if ($list) partial('Admin/_ListSearch', ['items' => '.ap-item', 'ph' => 'নাম, ইউজারনেম, ইমেইল, মোবাইল বা TxnID দিয়ে খুঁজুন']); ?>
     <?php if (!$list): ?>
         <div class="ap-empty"><i class="fas fa-inbox"></i><h5 style="color:#08224A;">কোনো পেমেন্ট নেই</h5><p style="margin:0;">ইউজার প্যাকেজ নিয়ে পেমেন্টের প্রমাণ জমা দিলে এখানে দেখাবে।</p></div>
     <?php endif; ?>
 
     <?php foreach ($list as $p): ?>
-        <div class="ap-item <?= e($p->Status) ?>" id="ap-<?= (int)$p->Id ?>">
+        <div class="ap-item <?= e($p->Status) ?>" id="ap-<?= (int)$p->Id ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$p->FullName, (string)$p->UserName, '@' . $p->UserName, (string)$p->Email, (string)($p->MobileNumber ?? ''), (string)$p->TxnId, (string)$p->PackageName, (string)($p->RefCode ?? '')]))) ?>">
             <?php if ((string)$p->ReceiptUrl === ''): ?>
                 <span class="ap-rc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#FFFBEB;color:#92400E;font-weight:700;font-size:12.5px;text-align:center;padding:8px;"><i class="fas fa-gift" style="font-size:26px;color:#F59E0B;"></i>রিসিট লাগেনি — পুরো দাম রেফারেল ব্যালেন্স থেকে</span>
             <?php elseif ($p->IsPdf): ?>
