@@ -139,6 +139,12 @@ trait PackageData
                 } catch (Throwable $e) { error_log('[coupon seed] ' . $e->getMessage()); }
                 $this->SaveSiteContent(['pkg_v3' => '1', 'pkg_special_v1' => '1', 'pkg_t6_v1' => '1']);
             }
+            // Premium (লাইভ ক্লাস) প্যাকেজ বন্ধ (একবারই) — লাইভ ক্লাস এখন টিচারের নিজের দামে আলাদা পেইড ক্লাস (কোর্স), সাইট কমিশন রাখে।
+            // যারা আগে কিনেছে তাদের মেয়াদ শেষ পর্যন্ত চ্যাট থেকে লাইভ ক্লাস চলবে।
+            if (($this->GetSiteContent(['pkg_v4' => ''])['pkg_v4'] ?? '') === '') {
+                $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 1");
+                $this->SaveSiteContent(['pkg_v4' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
     }
 

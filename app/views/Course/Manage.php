@@ -20,7 +20,7 @@ $pct = course_admin_pct();
     <div class="cx-wrap">
         <a class="cx-back" href="<?= is_admin() ? '/Admin/Courses' : '/Teacher/TeacherDashboard' ?>"><i class="fas fa-arrow-left"></i> <?= is_admin() ? 'Admin → Courses' : 'Teacher Dashboard' ?></a>
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
-            <div><h1 class="cx-h1"><i class="fas fa-chalkboard-user" style="color:#0EA5E9;"></i> আমার কোর্স</h1><p class="cx-sub">নিজের কোর্স বানিয়ে সাইটে বিক্রি করুন — রেকর্ড ক্লাস, লাইভ ক্লাস, অ্যাসাইনমেন্ট, কুইজ, সার্টিফিকেট সব এক জায়গায়।</p></div>
+            <div><h1 class="cx-h1"><i class="fas fa-chalkboard-user" style="color:#0EA5E9;"></i> আমার কোর্স</h1><p class="cx-sub">নিজের কোর্স বা <b>লাইভ ক্লাস ব্যাচ</b> বানিয়ে নিজের দামে বিক্রি করুন — রেকর্ড ক্লাস, লাইভ ক্লাস, অ্যাসাইনমেন্ট, কুইজ, সার্টিফিকেট সব এক জায়গায়। শুধু লাইভ ক্লাস দিয়েও বানাতে পারেন (কোর্স খুলে "লাইভ ক্লাস" যোগ করুন)।</p></div>
             <a class="cx-btn pri lg" href="/Course/Edit"><i class="fas fa-plus"></i> নতুন কোর্স</a>
         </div>
         <div class="cx-stats">
