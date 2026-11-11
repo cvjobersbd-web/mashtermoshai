@@ -338,6 +338,7 @@ class ProfileController extends Controller
         $user = $this->requireUser();
         foreach (['Gender', 'AgeRange', 'PrimaryDeviceType', 'YearsOfExperience', 'AreaType'] as $f) $user->$f = $this->cleanStr($f, 30);
         $ok = $this->db->UpdateUserProfile($user);
+        if ($ok) $this->db->SyncProfileToTeacherDetails((int)$user->Id);   // Become a Tutor / Tutor Details এর মিল থাকা ঘরও আপডেট
         $this->finishUpdate('additional', $ok, $ok ? 'Additional Information আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 
@@ -349,6 +350,7 @@ class ProfileController extends Controller
         $user->StreetAddress = $this->cleanStr('StreetAddress', 200);
         $user->PermanentAddress = $this->cleanStr('PermanentAddress', 200);
         $ok = $this->db->UpdateUserProfile($user);
+        if ($ok) $this->db->SyncProfileToTeacherDetails((int)$user->Id);   // Become a Tutor / Tutor Details এর মিল থাকা ঘরও আপডেট
         $this->finishUpdate('address', $ok, $ok ? 'Address আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 
@@ -365,6 +367,7 @@ class ProfileController extends Controller
         $user->PassingYear = $year;
         $user->IsCSEStudent = input_bool('IsCSEStudent');
         $ok = $this->db->UpdateUserProfile($user);
+        if ($ok) $this->db->SyncProfileToTeacherDetails((int)$user->Id);   // Become a Tutor / Tutor Details এর মিল থাকা ঘরও আপডেট
         $this->finishUpdate('education', $ok, $ok ? 'Education আপডেট হয়েছে।' : 'আপডেট করা যায়নি।');
     }
 

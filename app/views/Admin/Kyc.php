@@ -65,7 +65,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
     <p class="sub">টিচার আর শিক্ষার্থীর জমা দেওয়া তথ্য, NID / ID কার্ডের ছবি দেখে Approve বা Reject করুন। নতুন টিচার আবেদনে: <b>Teacher Verification Approve</b> + <b>Teacher Payment Requests এ পেমেন্ট Accept</b> — দুটো হলেই ইউজার টিচার হয়ে যায়। Student Verification Approve হলে প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারে।</p>
 
     <div class="kc-kinds">
-        <?php foreach (['teacher' => ['t', 'fa-chalkboard-user', 'Teacher Verification', 'প্রতিষ্ঠানের ID কার্ড, মোবাইল, WhatsApp + আবেদনের ফর্ম'], 'student' => ['s', 'fa-user-graduate', 'Student Verification', 'বাবা-মা, ঠিকানা, ক্লাস, রেজাল্ট, ID কার্ড']] as $kk => [$cls, $ic, $lbl, $hint]): $pc = (int)$C[$kk]['Pending']; ?>
+        <?php foreach (['teacher' => ['t', 'fa-chalkboard-user', 'Teacher Verification', 'Academic ID Card, মোবাইল, WhatsApp + আবেদনের ফর্ম'], 'student' => ['s', 'fa-user-graduate', 'Student Verification', 'বাবা-মা, ঠিকানা, ক্লাস, রেজাল্ট, ID কার্ড']] as $kk => [$cls, $ic, $lbl, $hint]): $pc = (int)$C[$kk]['Pending']; ?>
             <a class="kc-kind <?= $cls ?><?= $kind === $kk ? ' on' : '' ?>" href="/Admin/Kyc?k=<?= $kk ?>"><span class="ic"><i class="fas <?= $ic ?>"></i></span><span><b><?= $lbl ?></b><small><?= $hint ?> · মোট <?= array_sum($C[$kk]) ?></small></span><?php if ($pc): ?><span class="pend"><?= $pc ?> যাচাই বাকি</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
@@ -145,7 +145,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                 <div class="kc-ids">
                     <?php
                     if ($kind !== 'teacher') $imgs = ['front' => 'ID কার্ড · সামনে', 'back' => 'ID কার্ড · পেছনে'];
-                    elseif (!empty($D['uniCard'])) $imgs = ['front' => 'প্রতিষ্ঠানের ID · সামনে', 'back' => 'প্রতিষ্ঠানের ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []);
+                    elseif (!empty($D['uniCard'])) $imgs = ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []);
                     else $imgs = ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে'];
                     foreach ($imgs as $side => $sl2): $u = '/Kyc/File/' . (int)$k->Id . '?side=' . $side; ?>
                         <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="" loading="lazy" /><span><?= e($sl2) ?></span></a>

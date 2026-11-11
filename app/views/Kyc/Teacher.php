@@ -13,7 +13,7 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
         <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> টিচারের পরিচয় যাচাই (Teacher Verification)</h1>
         <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য টিচারের শিক্ষা প্রতিষ্ঠানের (বিশ্ববিদ্যালয় / কলেজ / স্কুল) ID কার্ড আর যোগাযোগের নম্বর যাচাই করা হয় (NID ঐচ্ছিক)।</p>
         <?php if ($st === 'Pending'): ?>
-            <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন। ভুল ছবি দিয়ে থাকলে (যেমন প্রতিষ্ঠানের ID কার্ডের জায়গায় NID) — Approve হওয়ার আগে নিচে ছবিতে চাপ দিয়ে বদলে "আপডেট করুন" চাপুন।</p></div></div>
+            <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন। ভুল ছবি দিয়ে থাকলে (যেমন Academic ID Card এর জায়গায় NID) — Approve হওয়ার আগে নিচে ছবিতে চাপ দিয়ে বদলে "আপডেট করুন" চাপুন।</p></div></div>
         <?php elseif ($st === 'Approved'): ?>
             <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার Teacher Verification Approve হয়েছে</b><p>ধন্যবাদ! আপনার পরিচয় যাচাই করা হয়েছে।</p></div></div>
         <?php elseif ($st === 'Rejected'): ?>
@@ -21,7 +21,7 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
         <?php endif; ?>
 
         <?php $isUni = !empty($D['uniCard']); $reuse = $k && $isUni;
-            $imgs = $isUni ? ['front' => 'প্রতিষ্ঠানের ID · সামনে', 'back' => 'প্রতিষ্ঠানের ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []) : ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে']; ?>
+            $imgs = $isUni ? ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []) : ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে']; ?>
         <?php if (!$showForm): ?>
             <div class="ky-card">
                 <div class="ky-sum">
@@ -42,7 +42,7 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
             </div>
             <div class="ky-lock"><i class="fas fa-lock"></i> ছবিগুলো শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</div>
             <div class="ky-g2">
-                <?php foreach (['UniFront' => ['front', 'শিক্ষা প্রতিষ্ঠানের ID কার্ড — সামনে', true], 'UniBack' => ['back', 'শিক্ষা প্রতিষ্ঠানের ID কার্ড — পেছনে', true], 'FileFront' => ['nidfront', 'NID — সামনে', false], 'FileBack' => ['nidback', 'NID — পেছনে', false]] as $nm => [$sd, $lbl, $req]):
+                <?php foreach (['UniFront' => ['front', 'Academic ID Card — সামনে', true], 'UniBack' => ['back', 'Academic ID Card — পেছনে', true], 'FileFront' => ['nidfront', 'NID — সামনে', false], 'FileBack' => ['nidback', 'NID — পেছনে', false]] as $nm => [$sd, $lbl, $req]):
                     $oldName = $reuse ? ($sd === 'front' ? $k->FileFront : ($sd === 'back' ? $k->FileBack : ($D[$sd === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
                     $has = $oldName && kyc_file_path($oldName); ?>
                     <div class="ky-f" data-f="kyc<?= $nm ?>"><label class="l"><?= $lbl ?> <?= $req ? '<span class="r">*</span>' : '<small>(ঐচ্ছিক)</small>' ?></label>

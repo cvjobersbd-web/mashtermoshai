@@ -111,8 +111,69 @@ trait TeacherDetailsData
                 && !(int)$this->scalar('SELECT COUNT(*) FROM `UserProfileExtras` WHERE `UserId` = :u', ['u' => $userId])) {
                 $this->exec('INSERT INTO `UserProfileExtras` (`UserId`, `City`, `Subjects`, `Levels`, `TeachMode`, `FeeMin`) VALUES (:u, :c, :s, :l, :m, :f)', $vals);
             }
-            if (in_array($d['gender'] ?? '', ['Male', 'Female'], true)) $this->exec('UPDATE `Users` SET `Gender` = :g WHERE `Id` = :u', ['g' => $d['gender'], 'u' => $userId]);
         } catch (Throwable $e) { error_log('[SaveTeacherDetails sync] ' . $e->getMessage()); }
+        $this->SyncTeacherDetailsToProfile($userId, $d);   // লিঙ্গ, দেশ, ঠিকানা, প্রতিষ্ঠান, অভিজ্ঞতা → প্রোফাইলের About
+    }
+
+    // ============================================================ প্রোফাইল (About) ↔ Become a Tutor ফর্মের মিল থাকা তথ্য
+    // প্রোফাইলের Users কলাম => Tutor Details ঘর (একই তথ্য — এক জায়গায় দিলে অন্য জায়গায় অটো বসে যায়)
+    private const TD_PROFILE_MAP = ['Gender' => 'gender', 'Country' => 'livingCountry', 'StreetAddress' => 'presentAddress', 'PermanentAddress' => 'permanentAddress', 'InstitutionName' => 'university'];
+    private const TD_EXP_TO_PROFILE = ['Fresher' => '0-1 year', '1 Year' => '1-2 years', '2 Years' => '1-2 years', '3 Years' => '3-5 years', '4 Years' => '3-5 years', '5 Years' => '3-5 years', '6-10 Years' => '5-10 years', '10+ Years' => '10+ years'];
+    private const TD_EXP_FROM_PROFILE = ['0-1 year' => 'Fresher', '1-2 years' => '1 Year', '3-5 years' => '3 Years', '5-10 years' => '6-10 Years', '10+ years' => '10+ Years'];
+
+    /** ফর্ম খোলার সময়: Tutor Details এর খালি ঘরগুলো প্রোফাইলের মিল থাকা তথ্য দিয়ে ভরে দেয় */
+    public function FillTeacherDetailsFromProfile(int $userId, array $d): array
+    {
+        try {
+            $u = $this->GetUserById($userId);
+            if (!$u) return $d;
+            foreach (self::TD_PROFILE_MAP as $col => $k) {
+                $v = trim((string)($u->$col ?? ''));
+                if ($v === '' || trim((string)($d[$k] ?? '')) !== '') continue;
+                if ($k === 'gender' && !in_array($v, ['Male', 'Female'], true)) continue;
+                $d[$k] = $v;
+            }
+            $ex = (string)($u->YearsOfExperience ?? '');
+            if (trim((string)($d['experienceYears'] ?? '')) === '' && isset(self::TD_EXP_FROM_PROFILE[$ex])) $d['experienceYears'] = self::TD_EXP_FROM_PROFILE[$ex];
+        } catch (Throwable $e) { error_log('[FillTeacherDetailsFromProfile] ' . $e->getMessage()); }
+        return $d;
+    }
+
+    /** Become a Tutor / Tutor Details সেভ হলে: মিল থাকা তথ্য প্রোফাইলের About এ বসে যায় (খালি ঘর দিয়ে প্রোফাইলের তথ্য মোছে না) */
+    public function SyncTeacherDetailsToProfile(int $userId, array $d): void
+    {
+        try {
+            $set = []; $p = ['u' => $userId];
+            foreach (self::TD_PROFILE_MAP as $col => $k) {
+                $v = trim((string)($d[$k] ?? ''));
+                if ($v === '') continue;
+                $set[] = "`$col` = :$col"; $p[$col] = $v;
+            }
+            $ex = self::TD_EXP_TO_PROFILE[(string)($d['experienceYears'] ?? '')] ?? null;
+            if ($ex !== null) { $set[] = '`YearsOfExperience` = :ex'; $p['ex'] = $ex; }
+            if ($set) $this->exec('UPDATE `Users` SET ' . implode(', ', $set) . ' WHERE `Id` = :u', $p);
+        } catch (Throwable $e) { error_log('[SyncTeacherDetailsToProfile] ' . $e->getMessage()); }
+    }
+
+    /** প্রোফাইলের About এডিট হলে: Tutor Details আগে থেকে থাকলে মিল থাকা ঘরগুলোও আপডেট হয় */
+    public function SyncProfileToTeacherDetails(int $userId): void
+    {
+        try {
+            if (!$this->HasTeacherDetails($userId)) return;
+            $u = $this->GetUserById($userId);
+            if (!$u) return;
+            $d = $this->GetTeacherDetails($userId); $changed = false;
+            foreach (self::TD_PROFILE_MAP as $col => $k) {
+                $v = trim((string)($u->$col ?? ''));
+                if ($v === '' || $v === (string)$d[$k] || ($k === 'gender' && !in_array($v, ['Male', 'Female'], true))) continue;
+                $d[$k] = $v; $changed = true;
+            }
+            $ex = (string)($u->YearsOfExperience ?? '');
+            if (isset(self::TD_EXP_FROM_PROFILE[$ex]) && (self::TD_EXP_TO_PROFILE[$d['experienceYears']] ?? '') !== $ex) { $d['experienceYears'] = self::TD_EXP_FROM_PROFILE[$ex]; $changed = true; }
+            if (!$changed) return;
+            $d = self::cleanTeacherDetails($d);
+            $this->exec('UPDATE `TeacherDetails` SET `Data` = :d, `UpdatedAt` = :t WHERE `UserId` = :u', ['d' => json_encode($d, JSON_UNESCAPED_UNICODE), 't' => now(), 'u' => $userId]);
+        } catch (Throwable $e) { error_log('[SyncProfileToTeacherDetails] ' . $e->getMessage()); }
     }
 
     /** ডিটেইলস পেজ কতবার দেখা হয়েছে (একই ব্রাউজার সেশনে একবারই গোনা হয়) */

@@ -187,7 +187,7 @@ $forms = !$isOwner ? [] : [
                         <div class="ab-tutor"><i class="fas fa-circle-xmark" style="color:#e74c3c;"></i><div><strong>আগের আবেদন গ্রহণ হয়নি</strong><p>তথ্য ঠিক করে আবার আবেদন করতে পারেন।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> আবার আবেদন করুন</a>
                     <?php else: ?>
-                        <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>১) ফর্ম পূরণ করুন (প্রতিষ্ঠানের ID কার্ড সহ) → ২) অ্যাডমিন যাচাই করে Approve করলে আপনি টিচার, Tutor List এ আসবেন → ৩) টিচার প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</p></div></div>
+                        <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>১) ফর্ম পূরণ করুন (Academic ID Card সহ) → ২) অ্যাডমিন যাচাই করে Approve করলে আপনি টিচার, Tutor List এ আসবেন → ৩) টিচার প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> Become a Tutor</a>
                         <a href="/Package?for=teacher" class="ps-btn" style="margin:6px 0 0 6px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-tags"></i> Subscription প্যাকেজ দেখুন</a>
                     <?php endif; ?>

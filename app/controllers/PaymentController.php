@@ -249,7 +249,7 @@ class PaymentController extends Controller
             if ($tr && in_array($tr->Status, ['AwaitingPayment', 'Pending', 'Expired'], true)) {
                 $this->db->SetTeacherRequestState((int)$tr->Id, 'Pending', $id);
                 foreach ($this->db->GetAdmins() as $a) {
-                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — আগে Teacher Verification (প্রতিষ্ঠানের ID কার্ড) Approve, তারপর Teacher Payment Requests এ পেমেন্ট Accept করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher');
+                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — আগে Teacher Verification (Academic ID Card) Approve, তারপর Teacher Payment Requests এ পেমেন্ট Accept করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher');
                 }
                 json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
                     'message' => 'পেমেন্ট আর টিচার আবেদন অ্যাডমিনের কাছে পাঠানো হয়েছে! যাচাই করে Approve করলে আপনি টিচার হয়ে যাবেন।']);

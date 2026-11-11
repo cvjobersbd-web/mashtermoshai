@@ -129,9 +129,9 @@ $ViewData['Title'] = 'Become a Tutor';
                         <label style="font-size:12.5px;margin-top:5px;color:#475569;"><input type="checkbox" id="kycSameWa" /> মোবাইল নম্বরটাই WhatsApp</label></div>
                     <div class="col-md-4 mb-3"><label for="kycUniversity" class="form-label fw-bold">শিক্ষা প্রতিষ্ঠান <span class="required-star">*</span></label><input type="text" name="kycUniversity" id="kycUniversity" class="form-control" maxlength="150" placeholder="বিশ্ববিদ্যালয় / কলেজ / স্কুলের নাম" value="<?= e((string)input_str('kycUniversity', $kD['university'] ?? '')) ?>" required /></div>
                 </div>
-                <div class="kyc-h"><i class="fas fa-building-columns"></i> শিক্ষা প্রতিষ্ঠানের ID কার্ড <span class="required-star">*</span> <small>— যে বিশ্ববিদ্যালয় / কলেজ / স্কুলে পড়ছেন বা পড়েছেন</small></div>
+                <div class="kyc-h"><i class="fas fa-building-columns"></i> Academic ID Card <span class="required-star">*</span> <small>— যে বিশ্ববিদ্যালয় / কলেজ / স্কুলে পড়ছেন বা পড়েছেন</small></div>
                 <div class="row">
-                    <?php foreach (['UniFront' => ['front', 'ID কার্ডের সামনের ছবি', true], 'UniBack' => ['back', 'ID কার্ডের পেছনের ছবি', true], 'FileFront' => ['nidfront', 'NID এর সামনের ছবি', false], 'FileBack' => ['nidback', 'NID এর পেছনের ছবি', false]] as $nm => [$side, $lbl, $req]):
+                    <?php foreach (['UniFront' => ['front', 'Academic ID Card এর সামনের ছবি', true], 'UniBack' => ['back', 'Academic ID Card এর পেছনের ছবি', true], 'FileFront' => ['nidfront', 'NID এর সামনের ছবি', false], 'FileBack' => ['nidback', 'NID এর পেছনের ছবি', false]] as $nm => [$side, $lbl, $req]):
                         $oldName = $kReuse ? ($side === 'front' ? $kOld->FileFront : ($side === 'back' ? $kOld->FileBack : ($kD[$side === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
                         $has = $oldName && kyc_file_path($oldName); ?>
                         <?php if ($nm === 'FileFront'): ?></div><div class="kyc-h" style="margin-top:6px;"><i class="fas fa-id-card"></i> NID কার্ড <small style="color:#94A3B8;">(ঐচ্ছিক — থাকলে দিন)</small></div><div class="row"><?php endif; ?>
@@ -169,7 +169,7 @@ $ViewData['Title'] = 'Become a Tutor';
                 if (tdUni && uni && !uni.value) { uni.value = tdUni.value; tdUni.addEventListener('input', function () { if (!uni.dataset.touched) uni.value = tdUni.value; }); uni.addEventListener('input', function () { uni.dataset.touched = '1'; }); }
                 document.getElementById('teacherForm').addEventListener('submit', function (e) {
                     var miss = ['UniFront', 'UniBack'].filter(function (s) { var f = document.getElementById('kyc' + s); return f.dataset.kycReq === '1' && !f.files.length; });
-                    if (miss.length) { e.preventDefault(); alert('শিক্ষা প্রতিষ্ঠানের ID কার্ডের ' + (miss.length === 2 ? 'সামনের আর পেছনের' : (miss[0] === 'UniFront' ? 'সামনের' : 'পেছনের')) + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
+                    if (miss.length) { e.preventDefault(); alert('Academic ID Card এর ' + (miss.length === 2 ? 'সামনের আর পেছনের' : (miss[0] === 'UniFront' ? 'সামনের' : 'পেছনের')) + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
                 });
             })();
             </script>

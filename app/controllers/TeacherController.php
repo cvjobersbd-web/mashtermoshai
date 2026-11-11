@@ -41,7 +41,10 @@ class TeacherController extends Controller
         $model->Email = $user->Email ?? '';
         $model->MobileNumber = $user->MobileNumber ?? '';
         $model->Status = 'Pending';
-        $this->view(null, $model);
+        // প্রোফাইলের About এ আগে দেওয়া মিল থাকা তথ্য ফর্মে অটো বসে যায় (চাইলে বদলানো যায়)
+        $model->Education = (string)($user->ExamDegreeTitle ?? '');
+        $model->CvLink = (string)($user->CvLink ?? '');
+        $this->view(null, $model, ['Details' => $this->db->FillTeacherDetailsFromProfile($userId, $this->db->GetTeacherDetails($userId))]);
     }
 
     /** ডিটেইলস ফর্ম (td[...]) পরিষ্কার করে + বাধ্যতামূলক ঘরগুলো যাচাই — ভুল থাকলে বার্তার তালিকা */
@@ -140,6 +143,11 @@ class TeacherController extends Controller
                         if (is_blank($user->MobileNumber ?? '')) $this->db->exec('UPDATE `Users` SET `MobileNumber` = :m WHERE `Id` = :u', ['m' => $kyc[0]['mobile'], 'u' => $userId]);
                     } catch (Throwable $e) { error_log('[teacher kyc] ' . $e->getMessage()); }
                 }
+                // ফর্মের মিল থাকা তথ্য প্রোফাইলের About এ (Highest Education → Degree / Exam, CV Link)
+                try {
+                    if ($model->Education !== '') $this->db->exec('UPDATE `Users` SET `ExamDegreeTitle` = :v WHERE `Id` = :u', ['v' => mb_substr($model->Education, 0, 120), 'u' => $userId]);
+                    if ($model->CvLink !== '') $this->db->exec('UPDATE `Users` SET `CvLink` = :v WHERE `Id` = :u', ['v' => mb_substr($model->CvLink, 0, 300), 'u' => $userId]);
+                } catch (Throwable $e) { error_log('[teacher profile sync] ' . $e->getMessage()); }
                 $who = (string)($user->FullName ?? '') ?: (string)session_get('UserName');
                 foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '🎓 নতুন টিচার আবেদন', "$who Become a Tutor ফর্ম জমা দিয়েছেন (শিক্ষা প্রতিষ্ঠান: " . ($kyc[0]['university'] ?? '') . ') — Teacher Verification দেখে Approve করুন।', 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher'); } catch (Throwable $e) { } }
                 // টিচার প্যাকেজ থাকলে: আগে প্যাকেজ কিনে পেমেন্ট, তারপর আবেদন অ্যাডমিনের কাছে যায়

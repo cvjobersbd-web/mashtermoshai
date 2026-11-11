@@ -151,7 +151,7 @@ class KycController extends Controller
         $cleanup = function () use (&$new) { foreach ($new as $n) kyc_delete_file($n); };
         // বিশ্ববিদ্যালয়ের ID কার্ড — বাধ্যতামূলক
         $uniFiles = [];
-        foreach (['Front' => 'শিক্ষা প্রতিষ্ঠানের ID কার্ডের সামনের', 'Back' => 'শিক্ষা প্রতিষ্ঠানের ID কার্ডের পেছনের'] as $side => $bn) {
+        foreach (['Front' => 'Academic ID Card এর সামনের', 'Back' => 'Academic ID Card এর পেছনের'] as $side => $bn) {
             $f = upload_file('kycUni' . $side);
             $prop = 'File' . $side;
             if (!$f && $oldD && kyc_file_path($old->$prop)) { $uniFiles[] = (string)$old->$prop; continue; }

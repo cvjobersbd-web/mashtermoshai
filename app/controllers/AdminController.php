@@ -341,7 +341,7 @@ class AdminController extends Controller
         $extra = '';
         try {
             if ($act === 'Approve') {
-                $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification Approve হয়েছে ✅', $isT ? 'আপনার পরিচয় (শিক্ষা প্রতিষ্ঠানের ID কার্ড) যাচাই সম্পন্ন হয়েছে।' : 'আপনার শিক্ষার্থী Teacher Verification Approve হয়েছে — এখন প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারবেন।', 'success', $isT ? $link : '/Package?for=student', 'fa-id-card');
+                $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification Approve হয়েছে ✅', $isT ? 'আপনার পরিচয় (Academic ID Card) যাচাই সম্পন্ন হয়েছে।' : 'আপনার শিক্ষার্থী Teacher Verification Approve হয়েছে — এখন প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারবেন।', 'success', $isT ? $link : '/Package?for=student', 'fa-id-card');
                 if ($isT) {
                     $tr = $this->db->GetLatestTeacherRequest($k->UserId);
                     if ($tr && in_array($tr->Status, ['Pending', 'AwaitingPayment'], true) && $this->db->FinalizeTeacherIfReady((int)$tr->Id)) {
