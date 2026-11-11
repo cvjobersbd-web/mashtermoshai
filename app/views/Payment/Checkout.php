@@ -167,7 +167,8 @@ $jsMethods = array_map(function ($m) {
 </style>
 
 <div class="co-wrap">
-    <?php if ($pkg->Audience === 'Course'): ?><a class="co-back" href="/Course/Details/<?= (int)$pkg->CourseId ?>"><i class="fas fa-arrow-left"></i> কোর্সে ফিরে যান</a>
+    <?php if ($pkg->Audience === 'Publish'): ?><a class="co-back" href="/Course/Build/<?= (int)$pkg->CourseId ?>"><i class="fas fa-arrow-left"></i> ফিরে যান</a>
+    <?php elseif ($pkg->Audience === 'Course'): ?><a class="co-back" href="/Course/Details/<?= (int)$pkg->CourseId ?>"><i class="fas fa-arrow-left"></i> কোর্সে ফিরে যান</a>
     <?php else: ?><a class="co-back" href="/Package?for=<?= $pkg->Audience === 'Student' ? 'student' : 'teacher' ?>"><i class="fas fa-arrow-left"></i> সব প্যাকেজ</a><?php endif; ?>
     <h1 class="co-h1">পেমেন্ট করুন</h1>
     <p class="co-lead">bKash, Nagad, Rocket বা Upay এর এজেন্ট নম্বরে Cash Out করুন অথবা Bank Transfer এর QR স্ক্যান করুন — তারপর রসিদ জমা দিন। অ্যাডমিন যাচাই করে Accept করলেই প্যাকেজ চালু হবে।</p>
@@ -189,11 +190,12 @@ $jsMethods = array_map(function ($m) {
                 <?= csrf_field() ?>
                 <input type="hidden" name="packageId" value="<?= (int)$pkg->Id ?>" />
                 <?php if ($pkg->Audience === 'Course'): ?><input type="hidden" name="courseId" value="<?= (int)$pkg->CourseId ?>" /><?php endif; ?>
+                <?php if ($pkg->Audience === 'Publish'): ?><input type="hidden" name="publishId" value="<?= (int)$pkg->CourseId ?>" /><?php endif; ?>
                 <input type="hidden" name="methodId" id="coMethodId" />
                 <input type="hidden" name="accountId" id="coAccountId" />
                 <input type="hidden" name="useBalance" id="coUseBalance" value="0" />
                 <input type="hidden" name="couponCode" id="coCouponCode" value="" />
-                <?php if ($pkg->Audience !== 'Course' && empty($pkg->IsLive)): $preCp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('coupon', ''))); ?>
+                <?php if (!in_array($pkg->Audience, ['Course', 'Publish'], true) && empty($pkg->IsLive)): $preCp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('coupon', ''))); ?>
                 <div class="co-card co-cp" id="coCpCard" data-f="couponCode">
                     <label for="coCpIn" class="co-cp-h"><i class="fas fa-ticket"></i> কুপন কোড আছে? <small>স্পেশাল অফারের কোড দিলে দাম কমে যাবে</small></label>
                     <div class="co-cp-row"><input type="text" id="coCpIn" maxlength="30" autocomplete="off" placeholder="কুপন কোড লিখুন" value="<?= e($preCp) ?>" /><button type="button" id="coCpBtn">Apply</button></div>
@@ -304,7 +306,7 @@ $jsMethods = array_map(function ($m) {
         <aside class="co-card co-sum">
             <h3>অর্ডার সারাংশ</h3>
             <div class="co-pkg">
-                <div class="aud"><?= $pkg->Audience === 'Course' ? ((db()->CourseKindMap()[(int)($pkg->CourseId ?? 0)] ?? '') === 'live' ? 'লাইভ ক্লাস' : 'কোর্স') : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ') ?></div>
+                <div class="aud"><?= $pkg->Audience === 'Publish' ? 'প্রকাশ ফি' : ($pkg->Audience === 'Course' ? ((db()->CourseKindMap()[(int)($pkg->CourseId ?? 0)] ?? '') === 'live' ? 'লাইভ ক্লাস' : 'কোর্স') : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ')) ?></div>
                 <div class="nm"><?= e($pkg->Name) ?></div>
                 <div class="du"><i class="far fa-clock"></i> <?= e($pkg->DurationLabel) ?></div>
             </div>

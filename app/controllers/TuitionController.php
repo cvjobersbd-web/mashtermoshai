@@ -103,8 +103,9 @@ class TuitionController extends Controller
             tg_notify_post('📚 Tuition Circular এ নতুন পোস্ট', tg_who() . ' টিউটর চেয়েছেন' . "\n"
                 . implode(' · ', array_filter([$post->ClassLevel ? 'ক্লাস: ' . $post->ClassLevel : '', $post->Subjects ? 'বিষয়: ' . $post->Subjects : '', $post->PreferredArea ? 'এলাকা: ' . $post->PreferredArea : '', $post->Budget ? 'বাজেট: ৳' . $post->Budget : '', $post->TuitionType ?: '']))
                 . ($content !== '' ? "\n" . $content : ''), '/Tuition/Circular#circular-post-' . (int)$post->Id);
+            $matched = $this->db->NotifyMatchingTeachers($post);
             pixel_track('PostRequest', ['content_name' => 'Tuition Requirement', 'post_type' => 'student', 'content_category' => (string)($post->Subjects ?? ''), 'location' => (string)($post->PreferredArea ?? '')]);
-            json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।']);
+            json_response(['success' => true, 'id' => $post->Id, 'message' => 'পোস্ট হয়েছে! আগ্রহী শিক্ষকরা আপনার সাথে যোগাযোগ করবেন।' . ($matched > 0 ? " আপনার বিষয় আর এলাকার {$matched} জন টিচারকে খবর পাঠানো হয়েছে।" : '')]);
         }
         delete_upload($imageUrl); delete_upload($videoUrl);
         $this->fail('পোস্ট করা যায়নি। আবার চেষ্টা করুন।');

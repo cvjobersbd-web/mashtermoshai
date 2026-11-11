@@ -118,6 +118,17 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
         <form class="ac-pct" id="acPct">কোর্স ও লাইভ ক্লাসের দামের <input type="number" name="pct" min="0" max="100" value="<?= $pct ?>" />% অ্যাডমিন রাখবে (বাকিটা টিচার)। <button class="ac-btn" type="submit"><i class="fas fa-floppy-disk"></i> সেভ</button>
             <small style="color:#94A3B8;width:100%;">বদলালে শুধু এরপরের বিক্রিতে লাগবে — আগের বিক্রির হিসাব যেমন আছে তেমনই থাকবে। অ্যাডমিনের নিজের কোর্সের পুরো টাকা অ্যাডমিনের।</small></form>
     </div>
+    <?php $fc = course_publish_fee('course'); $fl = course_publish_fee('live'); ?>
+    <div class="ac-card" id="pubFee">
+        <h3><i class="fas fa-rocket" style="color:#DC2626;"></i> প্রকাশ ফি — টিচার কোর্স / লাইভ ক্লাস ছাড়তে কত দেবে</h3>
+        <p style="font-size:13px;color:#64748B;margin:0 0 12px;">টিচার নিজের কোর্স বা লাইভ ক্লাস প্রকাশ করার আগে এই ফি একবার দেবে (প্রতিটা কোর্স / লাইভ ক্লাসের জন্য আলাদা)। <b>ঘর ফাঁকা রাখলে টিচাররা প্রকাশ করতে পারবে না</b> (বানিয়ে Draft এ রাখতে পারবে)। <b>0</b> দিলে ফ্রিতে প্রকাশ।</p>
+        <form class="ac-pct" id="acFee">
+            কোর্স প্রকাশ ফি ৳<input type="number" name="feeCourse" min="0" value="<?= $fc === null ? '' : $fc ?>" placeholder="বন্ধ" style="width:110px;" />
+            &nbsp; লাইভ ক্লাস প্রকাশ ফি ৳<input type="number" name="feeLive" min="0" value="<?= $fl === null ? '' : $fl ?>" placeholder="বন্ধ" style="width:110px;" />
+            <button class="ac-btn" type="submit"><i class="fas fa-floppy-disk"></i> সেভ</button>
+            <small style="width:100%;font-weight:700;color:<?= $fc === null || $fl === null ? '#B45309' : '#15803D' ?>;">এখন: কোর্স — <?= $fc === null ? 'বন্ধ (প্রকাশ করা যাবে না)' : ($fc === 0 ? 'ফ্রি' : '৳' . $fc) ?> · লাইভ ক্লাস — <?= $fl === null ? 'বন্ধ (প্রকাশ করা যাবে না)' : ($fl === 0 ? 'ফ্রি' : '৳' . $fl) ?></small>
+        </form>
+    </div>
     <?php endif; ?>
 </div>
 <script>
@@ -140,5 +151,7 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     }); });
     var p = document.getElementById('acPct');
     if (p) p.addEventListener('submit', async function (e) { e.preventDefault(); var d = await post('/Admin/SaveCourseSettings', new FormData(p)); toast(d.message || ''); });
+    var fe = document.getElementById('acFee');
+    if (fe) fe.addEventListener('submit', async function (e) { e.preventDefault(); var d = await post('/Admin/SavePublishFee', new FormData(fe)); toast(d.message || ''); if (d.success) setTimeout(function () { location.reload(); }, 900); });
 })();
 </script>

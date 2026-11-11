@@ -136,6 +136,19 @@ function teacher_live_enabled(?int $userId): bool
     try { return $c[$userId] = db()->TeacherHasLivePackage($userId); } catch (Throwable $e) { return $c[$userId] = false; }
 }
 
+/**
+ * টিচারের কোর্স / লাইভ ক্লাস প্রকাশ (ছাড়া) করার ফি — অ্যাডমিন Admin → Courses থেকে ঠিক করেন।
+ * null = এখনো ঠিক করা হয়নি → টিচাররা প্রকাশ করতে পারবে না; 0 = ফ্রি।
+ */
+function course_publish_fee(string $kind): ?int
+{
+    static $c = [];
+    $k = $kind === 'live' ? 'live' : 'course';
+    if (array_key_exists($k, $c)) return $c[$k];
+    try { $v = trim((string)(db()->GetSiteContent(['course_fee_' . $k => ''])['course_fee_' . $k] ?? '')); } catch (Throwable $e) { $v = ''; }
+    return $c[$k] = $v === '' || !ctype_digit($v) ? null : (int)$v;
+}
+
 /** কোর্স বিক্রির কত % অ্যাডমিন রাখবে (ডিফল্ট ৫০%) */
 function course_admin_pct(): int
 {

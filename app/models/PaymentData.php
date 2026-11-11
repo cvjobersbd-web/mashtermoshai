@@ -365,6 +365,13 @@ trait PaymentData
             $n = $this->exec("UPDATE `PaymentRequests` SET `Status` = 'Approved', `AdminNote` = :n, `ReviewedBy` = :a, `ReviewedAt` = :t WHERE `Id` = :i AND `Status` = 'Pending'",
                 ['n' => $note !== '' ? $note : null, 'a' => $adminId, 't' => now(), 'i' => $id]);
             if (!$n) { $this->pdo->rollBack(); return null; }
+            // টিচারের কোর্স / লাইভ ক্লাস প্রকাশ ফি — Accept হলে প্রকাশ হয়ে যায় (ভর্তি / ভাগ নেই, পুরো টাকা অ্যাডমিনের)
+            if ($p->Audience === 'Publish' && !empty($p->CourseId)) {
+                $this->exec("UPDATE `Courses` SET `PublishPaid` = 1, `Status` = 'published', `UpdatedAt` = :u WHERE `Id` = :i", ['u' => now(), 'i' => (int)$p->CourseId]);
+                $this->pdo->commit();
+                if ((int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'SettleReferralDiscount')) $this->SettleReferralDiscount($id, true);
+                return $this->GetPaymentRequest($id);
+            }
             // কোর্স কেনা — Subscription না, কোর্সে ভর্তি (দামের ভাগ টিচার / অ্যাডমিন)
             if (!empty($p->CourseId) && method_exists($this, 'Enroll')) {
                 $this->Enroll((int)$p->CourseId, (int)$p->UserId, $id, (int)$p->Amount + (int)($p->RefDiscount ?? 0), 'payment');   // রেফারেল ছাড় অ্যাডমিন বহন করেন — টিচারের ভাগ পুরো দামে

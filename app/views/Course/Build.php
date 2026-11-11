@@ -63,7 +63,7 @@ $taskJson = function ($t) use ($dtv) {
                         <span><i class="fas fa-user-graduate"></i> <?= (int)$ViewBag->Students ?> জন শিক্ষার্থী</span>
                     </div>
                     <div class="bd-acts">
-                        <button type="button" class="cx-btn <?= $pub ? 'ghost' : 'ok' ?> sm" id="bdPub" data-on="<?= $pub ? 0 : 1 ?>"><i class="fas <?= $pub ? 'fa-eye-slash' : 'fa-rocket' ?>"></i> <?= $pub ? 'Draft এ নিন' : 'প্রকাশ করুন' ?></button>
+                        <button type="button" class="cx-btn <?= $pub ? 'ghost' : 'ok' ?> sm" id="bdPub" data-on="<?= $pub ? 0 : 1 ?>"><i class="fas <?= $pub ? 'fa-eye-slash' : 'fa-rocket' ?>"></i> <?= $pub ? 'Draft এ নিন' : 'প্রকাশ করুন' ?></button><?php if (!$pub && !$c->PublishPaid && ($c->TeacherRole ?? '') !== 'Admin'): $pf = course_publish_fee($c->Kind); ?><small style="display:block;margin-top:4px;font-size:12px;font-weight:700;color:<?= $pf === null ? '#B45309' : '#475569' ?>;"><?= $pf === null ? '🔒 প্রকাশ এখনো চালু হয়নি' : ($pf === 0 ? 'প্রকাশ ফ্রি' : 'প্রকাশ ফি ৳' . $pf . ' (একবার)') ?></small><?php endif; ?>
                         <a class="cx-btn ghost sm" href="/Course/Edit/<?= (int)$c->Id ?>"><i class="fas fa-pen"></i> তথ্য / দাম</a>
                         <a class="cx-btn ghost sm" href="/Course/Students/<?= (int)$c->Id ?>"><i class="fas fa-users"></i> শিক্ষার্থী ও জমা</a>
                         <a class="cx-btn ghost sm" href="/Course/Details/<?= (int)$c->Id ?>" target="_blank" rel="noopener"><i class="fas fa-eye"></i> পেজ দেখুন</a>
@@ -216,7 +216,10 @@ $taskJson = function ($t) use ($dtv) {
 
     // ---------- প্রকাশ
     document.getElementById('bdPub').addEventListener('click', async function () {
-        this.disabled = true; var d = await cxPost('/Course/Publish', { id: CID, on: this.dataset.on }); cxToast(d.message || '');
+        this.disabled = true; var d = await cxPost('/Course/Publish', { id: CID, on: this.dataset.on });
+        if (!d.success && d.needPay) { if (confirm((d.message || '') + '\n\nএখনই পেমেন্ট পেজে যাবেন?')) { location.href = d.needPay; return; } this.disabled = false; return; }
+        if (!d.success && d.locked) { alert(d.message || ''); this.disabled = false; return; }
+        cxToast(d.message || '');
         if (d.success) setTimeout(reload, 900); else this.disabled = false;
     });
 

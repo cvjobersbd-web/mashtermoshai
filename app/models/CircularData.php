@@ -200,4 +200,56 @@ trait CircularData
             return $ids;
         } catch (Throwable $e) { error_log('[DeleteFeedCommentTree] ' . $e->getMessage()); return []; }
     }
+
+    // ============================================================ মিলে যাওয়া টিচারদের খবর
+    /**
+     * নতুন Tuition Circular পোস্ট এলে — যেসব টিচারের বিষয় আর এলাকা মেলে তাদের নোটিফিকেশন।
+     * বিষয়: টিচারের প্রোফাইল / Tutor Details এর বিষয়ের সাথে যেকোনো একটা মিললে।
+     * এলাকা: টিচারের শহর / থাকার এলাকা / পছন্দের এলাকা পোস্টের লোকেশনের সাথে মিললে (অনলাইন টিউশনে এলাকা লাগে না)।
+     * @return int কতজন টিচারকে জানানো হলো
+     */
+    public function NotifyMatchingTeachers(Obj $post, int $limit = 300): int
+    {
+        try {
+            $norm = fn($x) => trim(mb_strtolower(preg_replace('/\s+/u', ' ', (string)$x)));
+            $split = fn($s) => array_values(array_unique(array_filter(array_map($norm, preg_split('#[,/|;&\n]+#u', (string)$s)), fn($x) => mb_strlen($x) >= 2)));
+            $pSubs = $split($post->Subjects ?? '');
+            if (!$pSubs) return 0;
+            $pArea = $norm(($post->PreferredArea ?? '') . ' ' . ($post->Title ?? ''));
+            $online = ($post->TuitionType ?? '') === 'Online';
+            $hit = function (array $a, array $b): bool {
+                foreach ($a as $x) foreach ($b as $y) {
+                    if ($x === $y) return true;
+                    if (mb_strlen($x) >= 3 && mb_strlen($y) >= 3 && (str_contains($x, $y) || str_contains($y, $x))) return true;
+                }
+                return false;
+            };
+            $this->EnsureTutorDirectory();
+            try { $this->EnsureTeacherDetailsTable(); } catch (Throwable $e) { }
+            try { $susp = $this->GetActiveSuspensionsMap(); } catch (Throwable $e) { $susp = []; }
+            $rows = $this->all("SELECT u.`Id`, x.`City`, x.`Subjects`, x.`TeachMode`, d.`Data` FROM `Users` u LEFT JOIN `UserProfileExtras` x ON x.`UserId` = u.`Id`
+                LEFT JOIN `TeacherDetails` d ON d.`UserId` = u.`Id` WHERE u.`Role` = 'Teacher' AND u.`IsActive` = 1");
+            $label = implode(' · ', array_filter([$post->ClassLevel ?? '', $post->Subjects ?? '', $post->PreferredArea ?? '', !empty($post->Budget) ? 'বাজেট ৳' . $post->Budget : '']));
+            $n = 0;
+            foreach ($rows as $t) {
+                $tid = (int)$t->Id;
+                if ($tid === (int)$post->UserId || isset($susp[$tid])) continue;
+                $d = json_decode((string)($t->Data ?? ''), true) ?: [];
+                $tSubs = array_merge($split($t->Subjects ?? ''), array_map($norm, (array)($d['subjects'] ?? [])));
+                if (!$tSubs || !$hit($pSubs, $tSubs)) continue;
+                if (!$online) {
+                    if (($t->TeachMode ?? '') === 'Online') continue;   // শুধু অনলাইনে পড়ান — বাসায় গিয়ে টিউশন না
+                    $areas = array_filter(array_merge([$norm($t->City ?? ''), $norm($d['livingCity'] ?? ''), $norm($d['livingArea'] ?? '')], array_map($norm, (array)($d['preferredAreas'] ?? []))), fn($x) => mb_strlen($x) >= 3);
+                    $ok = false;
+                    foreach ($areas as $a) if (str_contains($pArea, $a)) { $ok = true; break; }
+                    if (!$ok) continue;
+                }
+                $canWork = $this->TeacherCanWork($tid);
+                $this->CreateNotification($tid, '🎯 আপনার জন্য নতুন টিউশন', $label . ' — আপনার বিষয় ও এলাকার সাথে মিলেছে।' . ($canWork ? ' এখনই আবেদন করুন!' : ' আবেদন করতে টিচার প্যাকেজ নিন।'),
+                    'success', '/Tuition/Circular#circular-post-' . (int)$post->Id, 'fa-bullseye');
+                if (++$n >= $limit) break;
+            }
+            return $n;
+        } catch (Throwable $e) { error_log('[NotifyMatchingTeachers] ' . $e->getMessage()); return 0; }
+    }
 }

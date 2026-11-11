@@ -29,7 +29,7 @@ $payPend = ['Teacher' => 0, 'Student' => 0, 'Course' => 0, 'Live' => 0];
 try {
     $km = []; try { $km = db()->CourseKindMap(); } catch (Throwable $e) { }
     foreach (db()->all("SELECT `Audience`, `CourseId` FROM `PaymentRequests` WHERE `Status` = 'Pending'") as $r) {
-        $a = $r->Audience === 'Course' ? (($km[(int)$r->CourseId] ?? 'course') === 'live' ? 'Live' : 'Course') : ($r->Audience === 'Teacher' ? 'Teacher' : 'Student');
+        $a = in_array($r->Audience, ['Course', 'Publish'], true) ? (($km[(int)$r->CourseId] ?? 'course') === 'live' ? 'Live' : 'Course') : ($r->Audience === 'Teacher' ? 'Teacher' : 'Student');
         $payPend[$a]++;
     }
 } catch (Throwable $e) { }

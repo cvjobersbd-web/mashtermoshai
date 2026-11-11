@@ -1331,6 +1331,21 @@ class AdminController extends Controller
     }
 
     /** POST /Admin/SaveCourseSettings (pct) — কোর্সের দামের কত % অ্যাডমিন রাখবে (এরপরের বিক্রি থেকে) */
+    /** POST /Admin/SavePublishFee (feeCourse, feeLive) — ফাঁকা = টিচাররা প্রকাশ করতে পারবে না, 0 = ফ্রি */
+    public function SavePublishFee_POST(): void
+    {
+        $this->requireAdminJson();
+        if (!admin_is_super()) json_response(['success' => false, 'message' => 'এটা শুধু Super Admin বদলাতে পারেন।']);
+        $out = [];
+        foreach (['feeCourse' => 'course_fee_course', 'feeLive' => 'course_fee_live'] as $in => $key) {
+            $v = trim((string)input_str($in, ''));
+            if ($v !== '' && (!ctype_digit($v) || (int)$v > 100000)) json_response(['success' => false, 'message' => 'ফি সঠিক সংখ্যা দিন (অথবা ফাঁকা রাখুন)।']);
+            $out[$key] = $v === '' ? '' : (string)(int)$v;
+        }
+        $this->db->SaveSiteContent($out);
+        json_response(['success' => true, 'message' => 'সেভ হয়েছে।']);
+    }
+
     public function SaveCourseSettings_POST(): void
     {
         $this->requireAdminJson();
@@ -2081,7 +2096,7 @@ class AdminController extends Controller
         $st = input_str('status', 'Pending');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
         $km = []; try { $km = $this->db->CourseKindMap(); } catch (Throwable $e) { }
-        $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : ($x->Audience === 'Course' ? (($km[(int)($x->CourseId ?? 0)] ?? 'course') === 'live' ? 'Live' : 'Course') : 'Student');
+        $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : (in_array($x->Audience, ['Course', 'Publish'], true) ? (($km[(int)($x->CourseId ?? 0)] ?? 'course') === 'live' ? 'Live' : 'Course') : 'Student');
         $all = $this->db->GetPaymentRequests(null);
         $cnt = []; $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
         foreach ($all as $x) {
@@ -2136,6 +2151,12 @@ class AdminController extends Controller
         try { $p = $this->db->ApprovePayment((int)input_int('id', 0), (int)current_user_id(), $note); }
         catch (Throwable $e) { error_log('[approve payment] ' . $e->getMessage()); $p = null; }
         if (!$p) json_response(['success' => false, 'message' => 'পেমেন্টটি আগেই যাচাই করা হয়েছে বা পাওয়া যায়নি।']);
+        if ($p->Audience === 'Publish') {
+            $c = $this->db->GetCourse((int)$p->CourseId);
+            $kl = $c && $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
+            try { $this->db->CreateNotification((int)$p->UserId, $kl . ' প্রকাশ হয়েছে 🎉', 'প্রকাশ ফি এর পেমেন্ট Accept হয়েছে — “' . ($c->Title ?? '') . '” এখন সবাই দেখতে ও কিনতে পারবে।', 'success', '/Course/Build/' . (int)$p->CourseId, 'fa-rocket'); } catch (Throwable $e) { }
+            json_response(['success' => true, 'payment' => $p, 'message' => 'Accept হয়েছে — টিচারের ' . $kl . ' প্রকাশ হয়ে গেছে।']);
+        }
         // কোর্স কেনা — শিক্ষার্থী ভর্তি হয়ে গেছে; টিচারকে বিক্রির খবর
         if (!empty($p->CourseId)) {
             $c = $this->db->GetCourse((int)$p->CourseId);

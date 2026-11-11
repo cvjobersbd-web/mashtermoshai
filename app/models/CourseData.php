@@ -70,6 +70,14 @@ trait CourseData
             ] as $sql) $this->pdo->exec($sql);
         }
         // ধরন: course (রেকর্ড করা কোর্স) | live (লাইভ ক্লাস / ব্যাচ) — বিক্রি, হিসাব, পেমেন্ট আলাদা দেখানোর জন্য
+        try { $this->pdo->query('SELECT `PublishPaid` FROM `Courses` LIMIT 1'); }
+        catch (Throwable $ex) {
+            try {
+                $this->pdo->exec('ALTER TABLE `Courses` ADD COLUMN `PublishPaid` INT NOT NULL DEFAULT 0');
+                // আগে থেকে প্রকাশিত কোর্সগুলোর জন্য প্রকাশ ফি লাগবে না
+                $this->pdo->exec("UPDATE `Courses` SET `PublishPaid` = 1 WHERE `Status` = 'published'");
+            } catch (Throwable $e2) { error_log('[Courses PublishPaid] ' . $e2->getMessage()); }
+        }
         foreach (['Courses', 'CoursePayouts'] as $t) {
             try { $this->pdo->query("SELECT `Kind` FROM `$t` LIMIT 1"); }
             catch (Throwable $ex) { try { $this->pdo->exec("ALTER TABLE `$t` ADD COLUMN `Kind` VARCHAR(10) NOT NULL DEFAULT 'course'"); } catch (Throwable $e2) { error_log("[$t Kind] " . $e2->getMessage()); } }
@@ -88,6 +96,7 @@ trait CourseData
         $c->IncludesList = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)($c->Includes ?? ''))), fn($x) => $x !== ''));
         $c->IsLive = $c->Status === 'published' && !$c->AdminHidden;
         $c->Kind = ($c->Kind ?? '') === 'live' ? 'live' : 'course';
+        $c->PublishPaid = (int)($c->PublishPaid ?? 0) === 1;
         $c->KindLabel = $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
         return $c;
     }
@@ -494,6 +503,8 @@ trait CourseData
         $pending = (int)$this->scalar("SELECT COUNT(*) FROM `PaymentRequests` p JOIN `Courses` c ON c.`Id` = p.`CourseId` WHERE c.`TeacherId` = :t AND p.`Status` = 'Pending'", ['t' => $teacherId]);
         return ['sales' => $sales, 'count' => count($sales), 'gross' => $gross, 'teacher' => $mine, 'admin' => $admin, 'paid' => $paid, 'due' => max(0, $mine - $paid), 'payouts' => $payouts, 'pending' => $pending];
     }
+
+    public function SetCoursePublishPaid(int $id): void { $this->EnsureCourseTables(); $this->exec('UPDATE `Courses` SET `PublishPaid` = 1 WHERE `Id` = :i', ['i' => $id]); }
 
     /** [courseId => 'course'|'live'] */
     public function CourseKindMap(): array

@@ -68,6 +68,26 @@ class PaymentController extends Controller
             'DurationLabel' => 'আজীবন অ্যাক্সেস · ' . ($c->TeacherName ?: 'মাষ্টার মশাই'), 'DurationMonths' => 0, 'PostLimit' => 0]);
     }
 
+    /** টিচারের নিজের কোর্স / লাইভ ক্লাস প্রকাশ ফি — প্যাকেজের মতো অবজেক্ট */
+    private function publishPkg(int $courseId): ?Obj
+    {
+        $c = $courseId ? $this->db->GetCourse($courseId) : null;
+        $me = (int)current_user_id();
+        if (!$c || (int)$c->TeacherId !== $me || $c->PublishPaid) return null;
+        $fee = course_publish_fee($c->Kind);
+        if (!$fee) return null;
+        $kl = $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
+        return obj(['Id' => 0, 'CourseId' => $c->Id, 'Course' => $c, 'Name' => $kl . ' প্রকাশ ফি — ' . $c->Title, 'Price' => $fee, 'Audience' => 'Publish', 'IsActive' => true,
+            'RegularPrice' => null, 'Discount' => 0, 'DurationLabel' => 'একবারই — পেমেন্ট Accept হলে ' . $kl . ' প্রকাশ হবে', 'DurationMonths' => 0, 'PostLimit' => 0, 'IsPublishFee' => true]);
+    }
+
+    private function publishBlockReason(Obj $pkg): ?string
+    {
+        if ((int)$this->db->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `CourseId` = :c AND `Audience` = 'Publish' AND `Status` = 'Pending'", ['c' => $pkg->CourseId]) > 0)
+            return 'এই প্রকাশ ফি এর পেমেন্ট যাচাইয়ের অপেক্ষায় আছে — অ্যাডমিন Accept করলেই প্রকাশ হয়ে যাবে।';
+        return null;
+    }
+
     private function courseBlockReason(Obj $pkg): ?string
     {
         $uid = (int)current_user_id();
@@ -83,8 +103,15 @@ class PaymentController extends Controller
     {
         $id = (int)input_int('id', 0);
         $courseId = (int)input_int('course', 0);
+        $pubId = (int)input_int('publish', 0);
         if (current_user_id() === null) $this->redirectToAction('Login', 'Account', ['returnUrl' => $courseId ? '/Payment/Checkout?course=' . $courseId : '/Payment/Checkout/' . $id]);
         $uid = (int)current_user_id();
+        if ($pubId) {
+            $pkg = $this->publishPkg($pubId);
+            if (!$pkg) redirect('/Course/Manage');
+            $this->view(null, $pkg, ['Methods' => $this->db->GetPaymentMethods(true), 'BlockReason' => $this->publishBlockReason($pkg),
+                'PendingCount' => $this->db->CountUserPendingPayments($uid), 'RefOptions' => [], 'RefSel' => ['', '']]);
+        }
         if ($courseId) {
             $pkg = $this->coursePkg($courseId);
             if (!$pkg) redirect('/Course');
@@ -108,7 +135,13 @@ class PaymentController extends Controller
         $uid = current_user_id();
         if ($uid === null) $this->fail('পেমেন্ট জমা দিতে লগইন করুন।');
         $courseId = (int)input_int('courseId', 0);
-        if ($courseId) {
+        $pubId = (int)input_int('publishId', 0);
+        if ($pubId) {
+            $pkg = $this->publishPkg($pubId);
+            if (!$pkg) $this->fail('এই প্রকাশ ফি দেওয়ার দরকার নেই বা কোর্স পাওয়া যায়নি।');
+            if ($why = $this->publishBlockReason($pkg)) $this->fail($why);
+            $courseId = $pubId;
+        } elseif ($courseId) {
             $pkg = $this->coursePkg($courseId);
             if (!$pkg) $this->fail('কোর্সটি পাওয়া যায়নি।');
             if ($why = $this->courseBlockReason($pkg)) $this->fail($why);
@@ -196,7 +229,7 @@ class PaymentController extends Controller
         try {
             if ($courseId) $this->db->EnsureCourseTables();
             $id = $this->db->CreatePaymentRequest(($courseId ? ['CourseId' => $courseId] : []) + [
-                'UserId' => $uid, 'PackageId' => $courseId ? null : $pkg->Id, 'PackageName' => $courseId ? mb_substr('কোর্স: ' . $pkg->Name, 0, 80) : $pkg->Name, 'Audience' => $pkg->Audience, 'Amount' => $payable,
+                'UserId' => $uid, 'PackageId' => $courseId ? null : $pkg->Id, 'PackageName' => $courseId ? mb_substr((!empty($pkg->IsPublishFee) ? '' : 'কোর্স: ') . $pkg->Name, 0, 80) : $pkg->Name, 'Audience' => $pkg->Audience, 'Amount' => $payable,
                 'DurationMonths' => $pkg->DurationMonths, 'PostLimit' => $pkg->PostLimit, 'MethodId' => $full ? null : $method->Id, 'MethodName' => $full ? 'রেফারেল ব্যালেন্স' : $method->Name,
                 'AccountId' => $full ? null : $acc->Id, 'AccountInfo' => mb_substr($info, 0, 200), 'TxnId' => $txn !== '' ? $txn : null, 'PayDate' => $date,
                 'ReceiptUrl' => $url, 'Note' => $note !== '' ? $note : null,
@@ -224,7 +257,7 @@ class PaymentController extends Controller
         }
         foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, 'New Payment', $full ? "$who “{$pkg->Name}” প্যাকেজ পুরোটা রেফারেল ব্যালেন্স (৳$disc) দিয়ে নিতে চেয়েছেন — Accept করুন।"
-                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', $pkg->Audience === 'Course' ? (($this->db->CourseKindMap()[(int)$courseId] ?? 'course') === 'live' ? '/Admin/LivePayments' : '/Admin/CoursePayments') : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
+                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', in_array($pkg->Audience, ['Course', 'Publish'], true) ? (($this->db->CourseKindMap()[(int)$courseId] ?? 'course') === 'live' ? '/Admin/LivePayments' : '/Admin/CoursePayments') : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
         }
         json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
             'message' => 'পেমেন্টের তথ্য জমা হয়েছে! অ্যাডমিন যাচাই করে Accept করলে আপনার প্যাকেজ চালু হবে।']);

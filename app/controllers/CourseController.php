@@ -278,6 +278,18 @@ class CourseController extends Controller
         $c = $this->manageable((int)input_int('id', 0));
         $on = input_bool('on');
         if ($on && !$this->db->GetLessons($c->Id)) $this->fail('প্রকাশ করার আগে অন্তত একটা ক্লাস যোগ করুন।');
+        // প্রকাশ ফি — অ্যাডমিন দাম ঠিক না করা পর্যন্ত টিচার প্রকাশ করতে পারবে না; দাম দিলে আগে ফি দিতে হয় (একবারই)
+        if ($on && !$c->PublishPaid && ($c->TeacherRole ?? '') !== 'Admin') {
+            $kl = $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
+            $fee = course_publish_fee($c->Kind);
+            if ($fee === null) $this->fail("{$kl} প্রকাশ করার সুবিধা এখনো চালু হয়নি — অ্যাডমিন প্রকাশ ফি ঠিক করলে তখন প্রকাশ করতে পারবেন। ততক্ষণ সব তৈরি করে Draft এ রাখুন।", ['locked' => true]);
+            if ($fee === 0) $this->db->SetCoursePublishPaid($c->Id);
+            else {
+                if ((int)$this->db->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `CourseId` = :c AND `Audience` = 'Publish' AND `Status` = 'Pending'", ['c' => $c->Id]) > 0)
+                    $this->fail("এই {$kl} এর প্রকাশ ফি এর পেমেন্ট যাচাই হচ্ছে — অ্যাডমিন Accept করলেই নিজে থেকে প্রকাশ হয়ে যাবে।");
+                $this->fail("{$kl} প্রকাশ করতে একবার " . taka($fee) . ' প্রকাশ ফি দিতে হবে।', ['needPay' => '/Payment/Checkout?publish=' . $c->Id]);
+            }
+        }
         $this->db->SetCourseStatus($c->Id, $on ? 'published' : 'draft');
         json_response(['success' => true, 'message' => $on ? ($c->AdminHidden ? 'প্রকাশ করা হয়েছে — তবে অ্যাডমিন কোর্সটা লুকিয়ে রেখেছেন।' : 'কোর্স প্রকাশিত — এখন Course পেজে দেখাবে।') : 'কোর্স Draft এ নেওয়া হয়েছে — Course পেজে দেখাবে না।']);
     }
