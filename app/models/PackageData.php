@@ -91,6 +91,22 @@ trait PackageData
                 foreach ($this->all("SELECT `Id` FROM `Packages` WHERE `Audience` = 'Teacher' ORDER BY COALESCE(`IsLive`, 0), `DurationMonths`, `Price`, `Id`") as $r) $this->exec('UPDATE `Packages` SET `SortOrder` = :s WHERE `Id` = :i', ['s' => ++$i, 'i' => (int)$r->Id]);
                 $this->SaveSiteContent(['pkg_t6_v1' => '1']);
             }
+            // স্পেশাল প্যাকেজ (একবারই): টিচার ৬ মাস ৳500 (লাইভ ক্লাস ছাড়া), শিক্ষার্থী ৬ মাস ৳200।
+            // আগের নরমাল ৬ মাসের টিচার প্যাকেজ বন্ধ (মুছে না — পুরোনো পেমেন্টের রেকর্ড থাকে)
+            if (($this->GetSiteContent(['pkg_special_v1' => ''])['pkg_special_v1'] ?? '') === '') {
+                $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = 'Teacher' AND `DurationMonths` = 6 AND COALESCE(`IsLive`, 0) = 0 AND `Name` NOT LIKE :sp", ['sp' => '%স্পেশাল%']);
+                $this->insertPackage(['Audience' => 'Teacher', 'Name' => 'স্পেশাল ৬ মাস', 'DurationMonths' => 6, 'PostLimit' => 0, 'Price' => 500, 'RegularPrice' => null, 'Badge' => 'স্পেশাল',
+                    'Description' => 'স্পেশাল অফার — ৬ মাস মাত্র ৳500 (লাইভ ক্লাস ছাড়া)', 'Features' => self::TEACHER_FEATURES_V2, 'IsFeatured' => 1, 'IsLive' => 0]);
+                $this->insertPackage(['Audience' => 'Student', 'Name' => 'স্পেশাল ৬ মাস', 'DurationMonths' => 6, 'PostLimit' => 0, 'Price' => 200, 'RegularPrice' => null, 'Badge' => 'স্পেশাল',
+                    'Description' => 'স্পেশাল অফার — ৬ মাস মাত্র ৳200', 'Features' => self::STUDENT_FEATURES_V2, 'IsFeatured' => 0]);
+                // সাজানো: টিচার — নরমাল (কম মেয়াদ আগে) তারপর Premium; শিক্ষার্থী — কম মেয়াদ আগে
+                foreach (['Teacher', 'Student'] as $aud) {
+                    $i = 0;
+                    foreach ($this->all("SELECT `Id` FROM `Packages` WHERE `Audience` = :a ORDER BY COALESCE(`IsLive`, 0), `DurationMonths`, `Price`, `Id`", ['a' => $aud]) as $r)
+                        $this->exec('UPDATE `Packages` SET `SortOrder` = :s WHERE `Id` = :i', ['s' => ++$i, 'i' => (int)$r->Id]);
+                }
+                $this->SaveSiteContent(['pkg_special_v1' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
     }
 
