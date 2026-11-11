@@ -345,6 +345,22 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                 $howMap = $ViewBag->HowMap ?? []; $isSuperAdm = admin_is_super();
                 $ptMap = $ViewBag->PartnerMap ?? []; $ptCount = count(array_filter($Model, fn($u) => isset($ptMap[(int)$u->Id]) && !isset($refMap[(int)$u->Id])));
                 echo joined_via_css(); ?>
+            <style>
+                .au-search { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+                .au-search .box { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 10px; border: 1.5px solid #CFE3EA; border-radius: 12px; padding: 0 14px; background: #fff; }
+                .au-search .box:focus-within { border-color: #134856; box-shadow: 0 0 0 3px rgba(19,72,86,.1); }
+                .au-search .box i { color: #94A3B8; }
+                .au-search input { border: none; outline: none; height: 46px; flex: 1; min-width: 0; font-size: 15px; font-family: inherit; background: transparent; }
+                .au-search select { height: 48px; border: 1.5px solid #CFE3EA; border-radius: 12px; padding: 0 12px; font-weight: 700; font-family: inherit; color: #134856; background: #fff; cursor: pointer; }
+                .au-count { font-size: 13px; color: #64748B; margin: -4px 0 10px; font-weight: 600; }
+            </style>
+            <div class="au-search">
+                <div class="box"><i class="fas fa-magnifying-glass"></i><input type="search" id="auQ" placeholder="নাম, ইমেইল, ইউজারনেম, মোবাইল বা ID দিয়ে খুঁজুন" autocomplete="off" /></div>
+                <select id="auRole" aria-label="ধরন">
+                    <option value="">সব ধরন</option><option value="user">User</option><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="au-count" id="auCount" hidden></div>
             <div class="jv-filter" id="jvFilter">
                 <button type="button" class="on" data-jv="all">সব (<?= count($Model) ?>)</button>
                 <button type="button" data-jv="ref"><i class="fas fa-gift"></i> রেফারেলে এসেছে (<?= (int)$refCount ?>)</button>
@@ -367,14 +383,16 @@ $ViewBag->PendingCount = $pendingTeacherCount;
                     </thead>
                     <tbody>
                         <?php foreach ($Model as $user): $jvRef = $refMap[(int)$user->Id] ?? null; $jvPt = $ptMap[(int)$user->Id] ?? null; ?>
-                            <tr data-jv="<?= trim(($jvRef ? 'ref ' : '') . ($jvPt ? 'partner' : '')) ?: 'direct' ?>">
+                            <tr data-jv="<?= trim(($jvRef ? 'ref ' : '') . ($jvPt ? 'partner' : '')) ?: 'direct' ?>" data-role="<?= e(strtolower(role_label((string)$user->Role, (int)$user->Id))) ?>"
+                                data-s="<?= e(mb_strtolower(implode(' ', [(string)$user->Id, '#' . $user->Id, (string)$user->FullName, (string)$user->UserName, '@' . $user->UserName, (string)$user->Email, (string)($user->MobileNumber ?? '')]))) ?>">
                                 <td data-label="ID" class="au-id"><?= e($user->Id) ?></td>
                                 <td data-label="User" class="au-user"><div class="au-u"><b><a href="/Profile/Show/<?= (int)$user->Id ?>" target="_blank" rel="noopener" class="au-plink" title="প্রোফাইল দেখুন"><?= e(!is_blank($user->FullName) ? $user->FullName : $user->UserName) ?></a></b><small>@<?= e($user->UserName) ?></small><small class="em"><?= e($user->Email) ?></small></div></td>
                                 <td data-label="Role">
                                     <?php
                                         $roleClass = $user->Role === 'Admin' ? 'bg-warning' : ($user->Role === 'Teacher' ? 'bg-info' : 'bg-secondary');
                                     ?>
-                                    <span class="badge <?= e($roleClass) ?>"><?= e($user->Role) ?></span>
+                                    <?php $rl = role_label((string)$user->Role, (int)$user->Id); if ($rl === 'Student') $roleClass = 'bg-primary'; ?>
+                                    <span class="badge <?= e($roleClass) ?>"><?= e($rl) ?></span>
                                 </td>
                                 <td data-label="Status">
                                     <?php
@@ -825,14 +843,29 @@ $ViewBag->PendingCount = $pendingTeacherCount;
     </script>
 <?php section_end(); ?>
 <script>
-    // All Users: রেফারেল / ডাইরেক্ট ফিল্টার
+    // All Users: খোঁজা (নাম / ইমেইল / ইউজারনেম / মোবাইল / ID) + ধরন + রেফারেল / ডাইরেক্ট ফিল্টার — সব একসাথে
     (function () {
-        var box = document.getElementById('jvFilter'); if (!box) return;
-        box.addEventListener('click', function (e) {
+        var box = document.getElementById('jvFilter'), q = document.getElementById('auQ'), role = document.getElementById('auRole'), cnt = document.getElementById('auCount');
+        var jv = 'all';
+        function apply() {
+            var v = q ? q.value.trim().toLowerCase().replace(/\s+/g, ' ') : '', r = role ? role.value : '', n = 0, total = 0;
+            var words = v ? v.split(' ') : [];
+            document.querySelectorAll('tr[data-jv]').forEach(function (tr) {
+                total++;
+                var s = tr.getAttribute('data-s') || '';
+                var ok = (jv === 'all' || tr.getAttribute('data-jv').split(' ').indexOf(jv) !== -1)
+                    && (!r || tr.getAttribute('data-role') === r)
+                    && words.every(function (w) { return s.indexOf(w) !== -1; });
+                tr.style.display = ok ? '' : 'none'; if (ok) n++;
+            });
+            if (cnt) { cnt.hidden = !(v || r || jv !== 'all'); cnt.textContent = n ? n + ' জন পাওয়া গেছে (মোট ' + total + ')' : 'কাউকে পাওয়া যায়নি — বানান মিলিয়ে দেখুন।'; cnt.style.color = n ? '' : '#DC2626'; }
+        }
+        if (box) box.addEventListener('click', function (e) {
             var b = e.target.closest('button[data-jv]'); if (!b) return;
             box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
-            var v = b.getAttribute('data-jv');
-            document.querySelectorAll('tr[data-jv]').forEach(function (tr) { tr.style.display = v === 'all' || tr.getAttribute('data-jv').split(' ').indexOf(v) !== -1 ? '' : 'none'; });
+            jv = b.getAttribute('data-jv'); apply();
         });
+        if (q) q.addEventListener('input', apply);
+        if (role) role.addEventListener('change', apply);
     })();
 </script>
