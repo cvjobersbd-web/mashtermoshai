@@ -533,6 +533,8 @@ $userProfileImg = session_get('ProfileImageLink');
         background: #b8e6c9;
     }
 
+    .hd-comment-text a, .hd-post-content a, .hd-link { color: #0369A1; text-decoration: underline; word-break: break-all; font-weight: 600; }
+    .hd-comment-text a:hover, .hd-post-content a:hover { color: #075985; }
     /* ===== Comments Section ===== */
     .hd-comments-section {
         display: none;
@@ -1128,7 +1130,7 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
 
                     <!-- Post Body -->
                     <h3 class="hd-post-title"><?= e($post->Title) ?></h3>
-                    <div class="hd-post-content"><?= e($post->Content) ?></div>
+                    <div class="hd-post-content"><?= linkify_text($post->Content) ?></div>
 
                     <?php if (!is_blank($post->MediaUrl)): ?>
                         <div class="hd-post-media">
@@ -1243,6 +1245,15 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
         function getToken() {
             const t = document.querySelector('input[name="__RequestVerificationToken"]');
             return t ? t.value : '';
+        }
+
+        // লেখার ভিতরের লিংক (https://...) ক্লিক করা যায় — নিজের সাইটের লিংক একই ট্যাবে, অন্য সাইট নতুন ট্যাবে
+        function linkifyHtml(text) {
+            return escapeHtml(text).replace(/\bhttps?:\/\/[^\s<>"']+/gi, function (m) {
+                var url = m.replace(/[.,!?;:)]+$/, ''), tail = m.slice(url.length);
+                var own = url.replace(/&amp;/g, '&').indexOf(location.origin + '/') === 0 || /^https?:\/\/(www\.)?mashtermoshai\.com(\/|$)/i.test(url);
+                return '<a href="' + url + '"' + (own ? '' : ' target="_blank" rel="noopener nofollow ugc"') + ' class="hd-link">' + url + '</a>' + tail;
+            });
         }
 
         function escapeHtml(text) {
@@ -1464,7 +1475,7 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
                                 ${adminBadge}
                                 <span class="time">${escapeHtml(c.timeAgo)}</span>
                             </div>
-                            <div class="hd-comment-text">${escapeHtml(c.content)}</div>
+                            <div class="hd-comment-text">${linkifyHtml(c.content)}</div>
                         </div>
                         <div class="hd-comment-actions">
                             ${replyBtn}
