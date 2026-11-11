@@ -72,6 +72,25 @@ trait PackageData
                 foreach (self::livePackages() as $i => $p) $this->insertPackage($p + ['SortOrder' => $n + $i + 1]);
                 $this->SaveSiteContent(['pkg_live_v1' => '1']);
             }
+            // নতুন: টিচারের নরমাল ৬ মাস ৳500 (লাইভ ক্লাস ছাড়া) — একবারই; আগে থেকে থাকলে চালু করে দেয়
+            if (($this->GetSiteContent(['pkg_t6_v1' => ''])['pkg_t6_v1'] ?? '') === '') {
+                $ex = $this->one("SELECT `Id` FROM `Packages` WHERE `Audience` = 'Teacher' AND `DurationMonths` = 6 AND `Price` = 500 AND COALESCE(`IsLive`, 0) = 0 ORDER BY `IsActive` DESC, `Id` DESC LIMIT 1");
+                if ($ex) $this->exec('UPDATE `Packages` SET `IsActive` = 1 WHERE `Id` = :i', ['i' => (int)$ex->Id]);
+                else {
+                    $n = (int)$this->scalar("SELECT COALESCE(MAX(`SortOrder`), 0) FROM `Packages` WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 0");
+                    $this->insertPackage(['Audience' => 'Teacher', 'Name' => '৬ মাস', 'DurationMonths' => 6, 'PostLimit' => 0, 'Price' => 500, 'RegularPrice' => null, 'Badge' => 'নতুন',
+                        'Description' => 'কম খরচে বেশি সময় — ৬ মাস (লাইভ ক্লাস ছাড়া)', 'Features' => self::TEACHER_FEATURES_V2, 'IsFeatured' => 0, 'IsLive' => 0, 'SortOrder' => $n + 1]);
+                }
+                // নরমাল (লাইভ নয়) প্যাকেজের সুবিধার তালিকা থেকে লাইভ ক্লাসের লাইন সরানো — লাইভ ক্লাস শুধু প্রিমিয়ামে
+                foreach ($this->all("SELECT `Id`, `Features` FROM `Packages` WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 0 AND `Features` LIKE :q", ['q' => '%লাইভ%']) as $r) {
+                    $keep = array_filter(preg_split('/\r?\n/', (string)$r->Features), fn($l) => !preg_match('/লাইভ|Zoom|Google Meet|Join বাটন/u', $l));
+                    $this->exec('UPDATE `Packages` SET `Features` = :f WHERE `Id` = :i', ['f' => implode("\n", $keep) ?: null, 'i' => (int)$r->Id]);
+                }
+                // সাজানো: আগে নরমাল (কম মেয়াদ আগে), তারপর Premium
+                $i = 0;
+                foreach ($this->all("SELECT `Id` FROM `Packages` WHERE `Audience` = 'Teacher' ORDER BY COALESCE(`IsLive`, 0), `DurationMonths`, `Price`, `Id`") as $r) $this->exec('UPDATE `Packages` SET `SortOrder` = :s WHERE `Id` = :i', ['s' => ++$i, 'i' => (int)$r->Id]);
+                $this->SaveSiteContent(['pkg_t6_v1' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
     }
 

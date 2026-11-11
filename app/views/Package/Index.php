@@ -263,6 +263,8 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             </div>
             <?php foreach ($teacherPk as $p) $card($p, 'Subscribe করুন'); ?>
         </div>
+        <div class="pk-note"><i class="fas fa-video" style="margin-top:3px;color:#1D7FE5;"></i>
+            <span>সাইট থেকে <b>লাইভ ক্লাস</b> নেওয়ার সুবিধা শুধু <b>Premium</b> প্যাকেজে। নরমাল প্যাকেজে লাইভ ক্লাস নেই — বাকি সব সুবিধা আছে।</span></div>
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
                 <span class="av"><?= e(initials($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'Your Name')) ?></span>
