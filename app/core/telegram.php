@@ -68,7 +68,7 @@ function tg_call(string $token, string $method, array $params = [], ?string &$er
 function tg_event_of(?string $link): string
 {
     $l = (string)$link;
-    if (preg_match('#/Admin/(Student|Teacher|Course)?Payments#', $l)) return 'payment';
+    if (preg_match('#/Admin/(Student|Teacher|Course|Live)?Payments#', $l)) return 'payment';
     if (str_contains($l, '/Admin/Kyc') || str_contains($l, '/Admin/TeacherRequests')) return 'verify';
     if (str_contains($l, '/Admin/Withdrawals') || str_contains($l, '/Admin/Referrals')) return 'withdraw';
     return 'other';

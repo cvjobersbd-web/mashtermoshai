@@ -112,7 +112,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     <?php $for = (string)($ViewBag->For ?? 'all'); $cnt = $ViewBag->Counts ?? []; ?>
     <?php if (!$locked): ?>
     <div class="ap-aud">
-        <?php foreach (['all' => ['সব পেমেন্ট', 'fa-layer-group'], 'Student' => ['শিক্ষার্থী', 'fa-user-graduate'], 'Teacher' => ['শিক্ষক', 'fa-chalkboard-user'], 'Course' => ['কোর্স', 'fa-book-open-reader']] as $k => [$lbl, $ic]): $pc = (int)($cnt[$k]['Pending'] ?? 0); ?>
+        <?php foreach (['all' => ['সব পেমেন্ট', 'fa-layer-group'], 'Student' => ['শিক্ষার্থী', 'fa-user-graduate'], 'Teacher' => ['শিক্ষক', 'fa-chalkboard-user'], 'Course' => ['কোর্স', 'fa-book-open-reader'], 'Live' => ['লাইভ ক্লাস', 'fa-tower-broadcast']] as $k => [$lbl, $ic]): $pc = (int)($cnt[$k]['Pending'] ?? 0); ?>
             <a class="ap-au<?= $for === $k ? ' on' : '' ?> <?= strtolower($k) ?>" href="/Admin/Payments?<?= e(http_build_query(['for' => $k, 'status' => $st])) ?>"><i class="fas <?= $ic ?>"></i> <?= e($lbl) ?> <span class="c"><?= (int)($cnt[$k]['all'] ?? 0) ?></span><?php if ($pc > 0): ?><span class="pend" title="যাচাই বাকি"><?= $pc ?> নতুন</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
@@ -138,7 +138,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <a class="ap-rc" href="<?= e($p->ReceiptUrl) ?>" data-lb><img src="<?= e($p->ReceiptUrl) ?>" alt="Receipt" loading="lazy" /><span class="zoom"><i class="fas fa-expand"></i> বড় করুন</span></a>
             <?php endif; ?>
             <div style="min-width:0;">
-                <?php $pt = ['Teacher' => ['t', 'fa-chalkboard-user', 'শিক্ষক প্যাকেজ'], 'Course' => ['c', 'fa-book-open-reader', 'কোর্স কিনেছেন'], 'Student' => ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']][$p->Audience] ?? ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']; ?>
+                <?php $pt = ['Teacher' => ['t', 'fa-chalkboard-user', 'শিক্ষক প্যাকেজ'], 'Course' => ['c', 'fa-book-open-reader', 'কোর্স কিনেছেন'], 'Student' => ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']][$p->Audience] ?? ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']; ; $isLiveC = !empty($p->IsLiveClass); if ($isLiveC) $pt = ['c', 'fa-tower-broadcast', 'লাইভ ক্লাস কিনেছেন'];?>
                 <div class="ap-type <?= $pt[0] ?>"><i class="fas <?= $pt[1] ?>"></i> <?= $pt[2] ?><span><?= e(preg_replace('/^কোর্স:\s*/u', '', (string)$p->PackageName)) ?> · <?= e(taka($p->Amount)) ?></span></div>
                 <div class="ap-user">
                     <span class="ap-ava"><?php if (!is_blank($p->ProfileImageLink)): ?><img src="<?= e($p->ProfileImageLink) ?>" alt="" /><?php else: ?><?= e($p->Initials) ?><?php endif; ?></span>
@@ -153,7 +153,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
                 <div class="ap-grid">
                     <div class="amt"><small><?= (int)($p->RefDiscount ?? 0) > 0 ? 'পাঠানোর কথা' : 'Amount' ?></small><b><?= e(taka($p->Amount)) ?></b><?php if ((int)($p->RefDiscount ?? 0) > 0): ?><small style="display:block;color:#B45309;font-weight:700;"><i class="fas fa-gift"></i> রেফারেল ব্যালেন্স থেকে ছাড় <?= e(taka((int)$p->RefDiscount)) ?> (দাম <?= e(taka((int)$p->Amount + (int)$p->RefDiscount)) ?>)</small><?php endif; ?></div>
-                    <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span class="ap-tchip <?= $pt[0] ?>"><?= $p->Audience === 'Teacher' ? 'শিক্ষক' : ($p->Audience === 'Course' ? 'কোর্স' : 'শিক্ষার্থী') ?></span></div>
+                    <div><small>Package</small><b><?= e($p->PackageName) ?></b> <span class="ap-tchip <?= $pt[0] ?>"><?= $p->Audience === 'Teacher' ? 'শিক্ষক' : ($p->Audience === 'Course' ? (!empty($p->IsLiveClass) ? 'লাইভ ক্লাস' : 'কোর্স') : 'শিক্ষার্থী') ?></span></div>
                     <div><small>Method</small><b><?= e($p->MethodName) ?></b></div>
                     <div class="txn"><small>Transaction ID</small><b><?= e($p->TxnId ?: '—') ?></b></div>
                     <div><small>Payment date</small><b><?= e(date('d M Y', strtotime($p->PayDate))) ?></b></div>

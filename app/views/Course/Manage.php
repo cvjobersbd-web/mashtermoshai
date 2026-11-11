@@ -20,8 +20,8 @@ $pct = course_admin_pct();
     <div class="cx-wrap">
         <a class="cx-back" href="<?= is_admin() ? '/Admin/Courses' : '/Teacher/TeacherDashboard' ?>"><i class="fas fa-arrow-left"></i> <?= is_admin() ? 'Admin → Courses' : 'Teacher Dashboard' ?></a>
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
-            <div><h1 class="cx-h1"><i class="fas fa-chalkboard-user" style="color:#0EA5E9;"></i> আমার কোর্স</h1><p class="cx-sub">নিজের কোর্স বা <b>লাইভ ক্লাস ব্যাচ</b> বানিয়ে নিজের দামে বিক্রি করুন — রেকর্ড ক্লাস, লাইভ ক্লাস, অ্যাসাইনমেন্ট, কুইজ, সার্টিফিকেট সব এক জায়গায়। শুধু লাইভ ক্লাস দিয়েও বানাতে পারেন (কোর্স খুলে "লাইভ ক্লাস" যোগ করুন)।</p></div>
-            <a class="cx-btn pri lg" href="/Course/Edit"><i class="fas fa-plus"></i> নতুন কোর্স</a>
+            <div><h1 class="cx-h1"><i class="fas fa-chalkboard-user" style="color:#0EA5E9;"></i> আমার কোর্স</h1><p class="cx-sub"><b>কোর্স</b> (রেকর্ড করা ক্লাস) আর <b>লাইভ ক্লাস / ব্যাচ</b> (নির্দিষ্ট সময়ে অনলাইনে) — দুটোই আলাদা বানিয়ে নিজের দামে বিক্রি করুন।</p></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="cx-btn pri lg" href="/Course/Edit?kind=course"><i class="fas fa-plus"></i> নতুন কোর্স</a><a class="cx-btn lg" href="/Course/Edit?kind=live" style="background:#DC2626;border-color:#DC2626;color:#fff;"><i class="fas fa-tower-broadcast"></i> নতুন লাইভ ক্লাস</a></div>
         </div>
         <div class="cx-stats">
             <div class="cx-stat" style="--c:#0EA5E9;"><small>মোট বিক্রি</small><b><?= (int)$E['count'] ?>টা</b></div>
@@ -31,7 +31,7 @@ $pct = course_admin_pct();
         </div>
         <div class="mg-note"><i class="fas fa-circle-info"></i> কোর্সের দাম থেকে <b><?= 100 - $pct ?>%</b> আপনার, <b><?= $pct ?>%</b> মাষ্টার মশাই এর (যেমন ৳6000 এর কোর্স → আপনি ৳<?= number_format(6000 * (100 - $pct) / 100) ?>)। শিক্ষার্থীর পেমেন্ট অ্যাডমিন যাচাই করলে বিক্রি হিসাবে যোগ হয়; আপনার পাওনা অ্যাডমিন পাঠিয়ে দেন। <a href="/Course/Earnings" style="font-weight:700;">পুরো হিসাব দেখুন →</a></div>
         <div class="cx-card">
-            <h3><i class="fas fa-layer-group"></i> কোর্সগুলো <span class="cx-pill"><?= count($list) ?>টা</span></h3>
+            <h3><i class="fas fa-layer-group"></i> আমার কোর্স ও লাইভ ক্লাস <span class="cx-pill"><?= count($list) ?>টা</span></h3>
             <?php if (!$list): ?><div class="cx-empty"><i class="fas fa-book-open"></i>এখনো কোনো কোর্স বানাননি — উপরের <b>নতুন কোর্স</b> চাপুন।</div><?php endif; ?>
             <?php foreach ($list as $c): ?>
                 <div class="mg-row">
@@ -39,6 +39,7 @@ $pct = course_admin_pct();
                     <div>
                         <h3><a href="/Course/Build/<?= (int)$c->Id ?>"><?= e($c->Title) ?></a></h3>
                         <div class="mg-m">
+                            <?= $c->Kind === 'live' ? '<span class="cx-pill" style="background:#FEE2E2;color:#B91C1C;"><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস</span>' : '<span class="cx-pill" style="background:#E0F2FE;color:#075985;"><i class="fas fa-book-open-reader"></i> কোর্স</span>' ?>
                             <?= $c->AdminHidden ? '<span class="cx-pill no"><i class="fas fa-eye-slash"></i> অ্যাডমিন লুকিয়েছেন</span>' : ($c->Status === 'published' ? '<span class="cx-pill ok">● প্রকাশিত</span>' : '<span class="cx-pill warn">Draft</span>') ?>
                             <?= course_price_html($c) ?>
                             <span><i class="fas fa-circle-play"></i> <?= (int)$c->LessonCount ?>টা ক্লাস</span>

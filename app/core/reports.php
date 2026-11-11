@@ -159,7 +159,7 @@ function build_report(string $type, string $from, string $to, string $q): array
                 $disc = (int)($p->RefDiscount ?? 0);
                 $rows[] = ['_uid' => (int)$p->UserId, 'id' => (int)$p->Id, 'date' => report_dt($p->CreatedAt, 'd M Y, h:i A'),
                     'name' => report_name($u), 'user' => $u ? '@' . $u->UserName : '', 'email' => (string)($u->Email ?? ''),
-                    'for' => ['Teacher' => 'টিচার', 'Student' => 'শিক্ষার্থী', 'Course' => 'কোর্স'][(string)$p->Audience] ?? (string)$p->Audience,
+                    'for' => $p->Audience === 'Course' && (($db->CourseKindMap()[(int)($p->CourseId ?? 0)] ?? '') === 'live') ? 'লাইভ ক্লাস' : (['Teacher' => 'টিচার', 'Student' => 'শিক্ষার্থী', 'Course' => 'কোর্স'][(string)$p->Audience] ?? (string)$p->Audience),
                     'pkg' => (string)$p->PackageName, 'months' => (int)$p->DurationMonths ?: '', 'price' => (int)$p->Amount + $disc, 'disc' => $disc, 'amount' => (int)$p->Amount,
                     'method' => (string)$p->MethodName, 'txn' => (string)$p->TxnId, 'refcode' => (string)($p->RefCode ?? ''), 'coupon' => (string)($p->CouponCode ?? ''),
                     'status' => ['Approved' => 'Accepted', 'Pending' => 'অপেক্ষায়', 'Rejected' => 'Rejected'][(string)$p->Status] ?? (string)$p->Status,

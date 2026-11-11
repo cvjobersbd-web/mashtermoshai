@@ -304,7 +304,7 @@ $jsMethods = array_map(function ($m) {
         <aside class="co-card co-sum">
             <h3>অর্ডার সারাংশ</h3>
             <div class="co-pkg">
-                <div class="aud"><?= $pkg->Audience === 'Course' ? 'কোর্স' : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ') ?></div>
+                <div class="aud"><?= $pkg->Audience === 'Course' ? ((db()->CourseKindMap()[(int)($pkg->CourseId ?? 0)] ?? '') === 'live' ? 'লাইভ ক্লাস' : 'কোর্স') : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ') ?></div>
                 <div class="nm"><?= e($pkg->Name) ?></div>
                 <div class="du"><i class="far fa-clock"></i> <?= e($pkg->DurationLabel) ?></div>
             </div>

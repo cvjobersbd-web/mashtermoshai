@@ -69,6 +69,11 @@ trait CourseData
                     `CreatedBy` INT NULL, `CreatedAt` DATETIME NOT NULL, PRIMARY KEY (`Id`), KEY `IX_CPay_Teacher` (`TeacherId`)) $e",
             ] as $sql) $this->pdo->exec($sql);
         }
+        // ধরন: course (রেকর্ড করা কোর্স) | live (লাইভ ক্লাস / ব্যাচ) — বিক্রি, হিসাব, পেমেন্ট আলাদা দেখানোর জন্য
+        foreach (['Courses', 'CoursePayouts'] as $t) {
+            try { $this->pdo->query("SELECT `Kind` FROM `$t` LIMIT 1"); }
+            catch (Throwable $ex) { try { $this->pdo->exec("ALTER TABLE `$t` ADD COLUMN `Kind` VARCHAR(10) NOT NULL DEFAULT 'course'"); } catch (Throwable $e2) { error_log("[$t Kind] " . $e2->getMessage()); } }
+        }
         $this->EnsurePaymentTables();
         try { $this->pdo->query('SELECT `CourseId` FROM `PaymentRequests` LIMIT 1'); }
         catch (Throwable $ex) { try { $this->pdo->exec('ALTER TABLE `PaymentRequests` ADD COLUMN `CourseId` INT NULL'); } catch (Throwable $e2) { error_log('[CourseId col] ' . $e2->getMessage()); } }
@@ -82,6 +87,8 @@ trait CourseData
         $c->RegularPrice = $c->RegularPrice !== null && $c->RegularPrice !== '' ? (int)$c->RegularPrice : null;
         $c->IncludesList = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)($c->Includes ?? ''))), fn($x) => $x !== ''));
         $c->IsLive = $c->Status === 'published' && !$c->AdminHidden;
+        $c->Kind = ($c->Kind ?? '') === 'live' ? 'live' : 'course';
+        $c->KindLabel = $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
         return $c;
     }
 
@@ -89,7 +96,7 @@ trait CourseData
     public function SaveCourse(int $id, int $teacherId, array $d): int
     {
         $this->EnsureCourseTables();
-        $cols = ['Title', 'Subtitle', 'Description', 'Includes', 'Category', 'Level', 'Price', 'RegularPrice', 'Thumbnail', 'PassPercent', 'Status'];
+        $cols = ['Title', 'Subtitle', 'Description', 'Includes', 'Category', 'Level', 'Price', 'RegularPrice', 'Thumbnail', 'PassPercent', 'Status', 'Kind'];
         $v = [];
         foreach ($cols as $c) if (array_key_exists($c, $d)) $v[$c] = $d[$c];
         if ($id > 0) {
@@ -119,10 +126,11 @@ trait CourseData
     }
 
     /** পাবলিক Course পেজ — Published আর অ্যাডমিন লুকায়নি এমন */
-    public function GetPublicCourses(string $q = '', string $cat = ''): array
+    public function GetPublicCourses(string $q = '', string $cat = '', string $kind = ''): array
     {
         $this->EnsureCourseTables();
         $p = []; $w = "c.`Status` = 'published' AND c.`AdminHidden` = 0";
+        if ($kind !== '') { $w .= $kind === 'live' ? " AND c.`Kind` = 'live'" : " AND c.`Kind` <> 'live'"; }
         if ($q !== '') { $w .= ' AND (LOWER(c.`Title`) LIKE :q OR LOWER(COALESCE(c.`Subtitle`, \'\')) LIKE :q2 OR LOWER(COALESCE(u.`FullName`, \'\')) LIKE :q3)'; $l = '%' . mb_strtolower($q) . '%'; $p += ['q' => $l, 'q2' => $l, 'q3' => $l]; }
         if ($cat !== '') { $w .= ' AND c.`Category` = :cat'; $p['cat'] = $cat; }
         return array_map(fn($c) => $this->mapCourse($c), $this->all($this->courseListSql($w) . ' ORDER BY c.`Id` DESC', $p));
@@ -140,10 +148,11 @@ trait CourseData
         return array_map(fn($c) => $this->mapCourse($c), $this->all($this->courseListSql('c.`TeacherId` = :t') . ' ORDER BY c.`Id` DESC', ['t' => $teacherId]));
     }
 
-    public function GetAllCoursesAdmin(): array
+    public function GetAllCoursesAdmin(string $kind = ''): array
     {
         $this->EnsureCourseTables();
-        return array_map(fn($c) => $this->mapCourse($c), $this->all($this->courseListSql('1 = 1') . ' ORDER BY c.`Id` DESC'));
+        $w = $kind === 'live' ? "c.`Kind` = 'live'" : ($kind === 'course' ? "c.`Kind` <> 'live'" : '1 = 1');
+        return array_map(fn($c) => $this->mapCourse($c), $this->all($this->courseListSql($w) . ' ORDER BY c.`Id` DESC'));
     }
 
     public function SetCourseHidden(int $id, bool $hidden): void { $this->exec('UPDATE `Courses` SET `AdminHidden` = :h WHERE `Id` = :i', ['h' => $hidden ? 1 : 0, 'i' => $id]); }
@@ -486,25 +495,38 @@ trait CourseData
         return ['sales' => $sales, 'count' => count($sales), 'gross' => $gross, 'teacher' => $mine, 'admin' => $admin, 'paid' => $paid, 'due' => max(0, $mine - $paid), 'payouts' => $payouts, 'pending' => $pending];
     }
 
+    /** [courseId => 'course'|'live'] */
+    public function CourseKindMap(): array
+    {
+        static $m = null;
+        if ($m !== null) return $m;
+        $this->EnsureCourseTables();
+        $m = [];
+        foreach ($this->all('SELECT `Id`, `Kind` FROM `Courses`') as $r) $m[(int)$r->Id] = $r->Kind === 'live' ? 'live' : 'course';
+        return $m;
+    }
+
     /** অ্যাডমিন: সব টিচারের হিসাব */
-    public function GetCourseLedger(): array
+    public function GetCourseLedger(string $kind = ''): array
     {
         $this->EnsureCourseTables();
+        $kw = $kind === 'live' ? " AND c.`Kind` = 'live'" : ($kind === 'course' ? " AND c.`Kind` <> 'live'" : '');
+        $pw = $kind === 'live' ? " WHERE `Kind` = 'live'" : ($kind === 'course' ? " WHERE `Kind` <> 'live'" : '');
         $rows = $this->all('SELECT c.`TeacherId`, u.`FullName`, u.`UserName`, u.`MobileNumber`, u.`Role`, COUNT(e.`Id`) AS Sales, COALESCE(SUM(e.`Price`), 0) AS Gross,
             COALESCE(SUM(e.`TeacherShare`), 0) AS TShare, COALESCE(SUM(e.`AdminShare`), 0) AS AShare
-            FROM `CourseEnrollments` e JOIN `Courses` c ON c.`Id` = e.`CourseId` LEFT JOIN `Users` u ON u.`Id` = c.`TeacherId` WHERE e.`Price` > 0
+            FROM `CourseEnrollments` e JOIN `Courses` c ON c.`Id` = e.`CourseId` LEFT JOIN `Users` u ON u.`Id` = c.`TeacherId` WHERE e.`Price` > 0' . $kw . '
             GROUP BY c.`TeacherId`, u.`FullName`, u.`UserName`, u.`MobileNumber`, u.`Role` ORDER BY Gross DESC');
         $paid = [];
-        foreach ($this->all('SELECT `TeacherId`, SUM(`Amount`) AS A FROM `CoursePayouts` GROUP BY `TeacherId`') as $p) $paid[(int)$p->TeacherId] = (int)$p->A;
+        foreach ($this->all("SELECT `TeacherId`, SUM(`Amount`) AS A FROM `CoursePayouts`$pw GROUP BY `TeacherId`") as $p) $paid[(int)$p->TeacherId] = (int)$p->A;
         foreach ($rows as $r) { $r->Paid = $paid[(int)$r->TeacherId] ?? 0; $r->Due = $r->Role === 'Admin' ? 0 : max(0, (int)$r->TShare - $r->Paid); }
         return $rows;
     }
 
-    public function AddCoursePayout(int $teacherId, int $amount, string $method, string $note, int $by): void
+    public function AddCoursePayout(int $teacherId, int $amount, string $method, string $note, int $by, string $kind = 'course'): void
     {
         $this->EnsureCourseTables();
-        $this->insert('INSERT INTO `CoursePayouts` (`TeacherId`, `Amount`, `Method`, `Note`, `CreatedBy`, `CreatedAt`) VALUES (:t, :a, :m, :n, :b, :c)',
-            ['t' => $teacherId, 'a' => $amount, 'm' => $method !== '' ? $method : null, 'n' => $note !== '' ? $note : null, 'b' => $by, 'c' => now()]);
+        $this->insert('INSERT INTO `CoursePayouts` (`TeacherId`, `Amount`, `Method`, `Note`, `CreatedBy`, `CreatedAt`, `Kind`) VALUES (:t, :a, :m, :n, :b, :c, :k)',
+            ['k' => $kind === 'live' ? 'live' : 'course', 't' => $teacherId, 'a' => $amount, 'm' => $method !== '' ? $method : null, 'n' => $note !== '' ? $note : null, 'b' => $by, 'c' => now()]);
     }
 
     // ============================================================ প্রিমিয়াম লাইভ প্যাকেজ

@@ -50,6 +50,7 @@ $me = current_user_id();
         <a class="cx-back" href="/Course"><i class="fas fa-arrow-left"></i> সব কোর্স</a>
         <div class="cd-g">
             <div>
+                <?php if ($c->Kind === 'live'): ?><span class="cx-pill" style="background:#DC2626;color:#fff;"><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস</span><?php endif; ?>
                 <?php if (!is_blank($c->Category)): ?><span class="cx-pill blue"><?= e($c->Category) ?></span><?php endif; ?>
                 <?php if (!$c->IsLive): ?> <span class="cx-pill warn"><?= $c->AdminHidden ? 'অ্যাডমিন লুকিয়েছেন' : 'Draft — এখনো প্রকাশ হয়নি' ?></span><?php endif; ?>
                 <h1><?= e($c->Title) ?></h1>

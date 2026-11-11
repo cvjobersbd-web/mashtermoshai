@@ -224,7 +224,7 @@ class PaymentController extends Controller
         }
         foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, 'New Payment', $full ? "$who “{$pkg->Name}” প্যাকেজ পুরোটা রেফারেল ব্যালেন্স (৳$disc) দিয়ে নিতে চেয়েছেন — Accept করুন।"
-                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', $pkg->Audience === 'Course' ? '/Admin/CoursePayments' : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
+                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', $pkg->Audience === 'Course' ? (($this->db->CourseKindMap()[(int)$courseId] ?? 'course') === 'live' ? '/Admin/LivePayments' : '/Admin/CoursePayments') : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
         }
         json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
             'message' => 'পেমেন্টের তথ্য জমা হয়েছে! অ্যাডমিন যাচাই করে Accept করলে আপনার প্যাকেজ চালু হবে।']);

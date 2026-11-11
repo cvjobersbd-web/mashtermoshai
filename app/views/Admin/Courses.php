@@ -1,6 +1,7 @@
 <?php
 /** Admin → Courses: সব টিচারের কোর্স (লুকানো / দেখানো), কোর্স বিক্রির টাকার ভাগ, টিচারকে পাওনা পাঠানো */
-$ViewData['Title'] = 'Courses';
+$isLv = ($ViewBag->Kind ?? 'course') === 'live'; $kl = $isLv ? 'লাইভ ক্লাস' : 'কোর্স';
+$ViewData['Title'] = $isLv ? 'Live Classes' : 'Courses';
 $list = is_array($Model) ? $Model : []; $ledger = $ViewBag->Ledger ?? []; $pct = (int)$ViewBag->Pct; $pend = (int)$ViewBag->PendingPay;
 $gross = 0; $adm = 0; $tch = 0; $due = 0;
 foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tch += (int)$r->TShare; $due += (int)$r->Due; }
@@ -41,22 +42,22 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
 <div class="admin-main-content ac">
     <?= csrf_field() ?>
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
-        <div><h2><i class="fas fa-graduation-cap" style="color:#0EA5E9;"></i> Courses</h2>
-            <p class="sub">টিচাররা নিজের কোর্স বানিয়ে সাথে সাথে প্রকাশ করতে পারেন — অনুপযুক্ত মনে হলে <b>লুকান</b> (কেনা শিক্ষার্থীরা তবুও ক্লাস করতে পারবে)। কোর্সের পেমেন্ট <a href="/Admin/CoursePayments"><b>Payments → Course</b></a> এ Approve করলে শিক্ষার্থী ভর্তি হয়, আর টাকা <?= $pct ?>% অ্যাডমিন / <?= 100 - $pct ?>% টিচার ভাগ হয়।</p></div>
-        <a class="ac-btn g" href="/Course/Edit" style="height:40px;"><i class="fas fa-plus"></i> অ্যাডমিনের কোর্স বানান</a>
+        <div><h2><?= $isLv ? '<i class="fas fa-tower-broadcast" style="color:#DC2626;"></i> Live Classes' : '<i class="fas fa-graduation-cap" style="color:#0EA5E9;"></i> Courses' ?></h2>
+            <p class="sub">টিচাররা নিজের কোর্স বানিয়ে সাথে সাথে প্রকাশ করতে পারেন — অনুপযুক্ত মনে হলে <b>লুকান</b> (কেনা শিক্ষার্থীরা তবুও ক্লাস করতে পারবে)। <?= $kl ?>ের পেমেন্ট <a href="<?= $isLv ? '/Admin/LivePayments' : '/Admin/CoursePayments' ?>"><b><?= $isLv ? 'Live Class Payment Requests' : 'Course Payment Requests' ?></b></a> এ Approve করলে শিক্ষার্থী ভর্তি হয়, আর টাকা <?= $pct ?>% অ্যাডমিন / <?= 100 - $pct ?>% টিচার ভাগ হয়।</p></div>
+        <a class="ac-btn g" href="/Course/Edit?kind=<?= $isLv ? 'live' : 'course' ?>" style="height:40px;"><i class="fas fa-plus"></i> অ্যাডমিনের <?= $kl ?> বানান</a>
     </div>
-    <?php if ($pend > 0): ?><a class="ac-alert" href="/Admin/CoursePayments"><i class="fas fa-clock"></i> <?= $pend ?>টা কোর্স পেমেন্ট যাচাইয়ের অপেক্ষায় — দেখুন →</a><?php endif; ?>
+    <?php if ($pend > 0): ?><a class="ac-alert" href="<?= $isLv ? '/Admin/LivePayments' : '/Admin/CoursePayments' ?>"><i class="fas fa-clock"></i> <?= $pend ?>টা <?= $kl ?> পেমেন্ট যাচাইয়ের অপেক্ষায় — দেখুন →</a><?php endif; ?>
 
     <div class="ac-stats">
-        <div class="ac-st" style="--c:#0EA5E9;"><small>মোট কোর্স বিক্রি</small><b>৳<?= number_format($gross) ?></b></div>
-        <div class="ac-st" style="--c:#7C3AED;"><small>অ্যাডমিনের ভাগ</small><b>৳<?= number_format($adm) ?></b></div>
+        <div class="ac-st" style="--c:#0EA5E9;"><small>মোট <?= $kl ?> বিক্রি</small><b>৳<?= number_format($gross) ?></b></div>
+        <div class="ac-st" style="--c:#7C3AED;"><small>অ্যাডমিনের ভাগ (আপনার আয়)</small><b>৳<?= number_format($adm) ?></b></div>
         <div class="ac-st" style="--c:#16A34A;"><small>টিচারদের ভাগ</small><b>৳<?= number_format($tch) ?></b></div>
         <div class="ac-st" style="--c:#F59E0B;"><small>টিচারদের পাওনা (বাকি)</small><b>৳<?= number_format($due) ?></b></div>
     </div>
 
     <div class="ac-card">
-        <h3><i class="fas fa-hand-holding-dollar" style="color:#16A34A;"></i> টিচারদের হিসাব ও টাকা পাঠানো</h3>
-        <?php if (!$ledger): ?><div class="ac-empty">এখনো কোনো কোর্স বিক্রি হয়নি।</div><?php else: ?>
+        <h3><i class="fas fa-hand-holding-dollar" style="color:#16A34A;"></i> টিচারদের হিসাব ও টাকা পাঠানো — শুধু <?= $kl ?></h3>
+        <?php if (!$ledger): ?><div class="ac-empty">এখনো কোনো <?= $kl ?> বিক্রি হয়নি।</div><?php else: ?>
         <div class="ac-tw"><table class="ac-t">
             <thead><tr><th>টিচার</th><th>বিক্রি</th><th>মোট</th><th>অ্যাডমিন</th><th>টিচার</th><th>পাঠানো</th><th>বাকি</th><th>টাকা পাঠান</th></tr></thead>
             <tbody>
@@ -85,8 +86,8 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     </div>
 
     <div class="ac-card">
-        <h3><i class="fas fa-layer-group" style="color:#0EA5E9;"></i> সব কোর্স <span class="ac-pill ok" style="background:#F1F5F9;color:#475569;"><?= count($list) ?>টা</span></h3>
-        <?php if (!$list): ?><div class="ac-empty">এখনো কেউ কোর্স বানাননি।</div><?php else: ?>
+        <h3><i class="fas fa-layer-group" style="color:#0EA5E9;"></i> সব <?= $kl ?> <span class="ac-pill ok" style="background:#F1F5F9;color:#475569;"><?= count($list) ?>টা</span></h3>
+        <?php if (!$list): ?><div class="ac-empty">এখনো কেউ <?= $kl ?> বানাননি।</div><?php else: ?>
         <div class="ac-tw"><table class="ac-t">
             <thead><tr><th></th><th>কোর্স</th><th>টিচার</th><th>দাম</th><th>ক্লাস</th><th>শিক্ষার্থী</th><th>অবস্থা</th><th></th></tr></thead>
             <tbody>
@@ -114,7 +115,7 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     <?php if (admin_is_super()): ?>
     <div class="ac-card">
         <h3><i class="fas fa-percent" style="color:#7C3AED;"></i> টাকার ভাগ</h3>
-        <form class="ac-pct" id="acPct">কোর্সের দামের <input type="number" name="pct" min="0" max="100" value="<?= $pct ?>" />% অ্যাডমিন রাখবে (বাকিটা টিচার)। <button class="ac-btn" type="submit"><i class="fas fa-floppy-disk"></i> সেভ</button>
+        <form class="ac-pct" id="acPct">কোর্স ও লাইভ ক্লাসের দামের <input type="number" name="pct" min="0" max="100" value="<?= $pct ?>" />% অ্যাডমিন রাখবে (বাকিটা টিচার)। <button class="ac-btn" type="submit"><i class="fas fa-floppy-disk"></i> সেভ</button>
             <small style="color:#94A3B8;width:100%;">বদলালে শুধু এরপরের বিক্রিতে লাগবে — আগের বিক্রির হিসাব যেমন আছে তেমনই থাকবে। অ্যাডমিনের নিজের কোর্সের পুরো টাকা অ্যাডমিনের।</small></form>
     </div>
     <?php endif; ?>
@@ -134,7 +135,7 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     }); });
     document.querySelectorAll('[data-pay]').forEach(function (f) { f.addEventListener('submit', async function (e) {
         e.preventDefault(); if (!confirm('টাকা পাঠানো হয়েছে হিসেবে রেকর্ড করবেন?')) return;
-        var fd = new FormData(f); fd.append('teacherId', f.dataset.pay);
+        var fd = new FormData(f); fd.append('teacherId', f.dataset.pay); fd.append('kind', <?= js($isLv ? 'live' : 'course') ?>);
         var d = await post('/Admin/AddCoursePayout', fd); toast(d.message || ''); if (d.success) setTimeout(function () { location.reload(); }, 900);
     }); });
     var p = document.getElementById('acPct');

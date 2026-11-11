@@ -1,6 +1,7 @@
 <?php
 /** কোর্সের তথ্য — নাম, বিবরণ (নিজের মতো সাজানো), কী কী থাকছে, দাম, থাম্বনেইল */
 $c = $Model; $isNew = !$c;
+$kind = $c ? (string)$c->Kind : (input_str('kind', '') === 'live' ? 'live' : 'course'); $kl = $kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
 $ViewData['Title'] = $isNew ? 'নতুন কোর্স' : 'কোর্স এডিট — ' . $c->Title;
 $ViewData['Robots'] = 'noindex, nofollow';
 $levels = $ViewBag->Levels ?? []; $cats = $ViewBag->Cats ?? [];
@@ -17,9 +18,16 @@ $pct = course_admin_pct();
 <div class="cx-page">
     <div class="cx-wrap narrow">
         <a class="cx-back" href="<?= $isNew ? '/Course/Manage' : '/Course/Build/' . (int)$c->Id ?>"><i class="fas fa-arrow-left"></i> <?= $isNew ? 'আমার কোর্স' : 'কোর্সে ফিরে যান' ?></a>
-        <h1 class="cx-h1" style="margin-bottom:16px;"><?= $isNew ? '<i class="fas fa-plus-circle" style="color:#16A34A;"></i> নতুন কোর্স বানান' : '<i class="fas fa-pen" style="color:#F59E0B;"></i> কোর্সের তথ্য' ?></h1>
+        <h1 class="cx-h1" style="margin-bottom:16px;"><?= $isNew ? '<i class="fas ' . ($kind === 'live' ? 'fa-tower-broadcast' : 'fa-plus-circle') . '" style="color:' . ($kind === 'live' ? '#DC2626' : '#16A34A') . ';"></i> নতুন ' . $kl . ' বানান' : '<i class="fas fa-pen" style="color:#F59E0B;"></i> ' . $kl . 'ের তথ্য' ?></h1>
         <form id="ceForm" class="cx-card" autocomplete="off">
             <input type="hidden" name="id" value="<?= (int)($c->Id ?? 0) ?>" />
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-weight:800;color:#334155;font-size:13.5px;margin-bottom:6px;">ধরন</label>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <label style="flex:1;min-width:220px;border:1.5px solid #DCE7F0;border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;"><input type="radio" name="kind" value="course"<?= $kind !== 'live' ? ' checked' : '' ?> style="margin-top:4px;" /><span><b><i class="fas fa-book-open-reader" style="color:#0EA5E9;"></i> কোর্স</b><br><small style="color:#64748B;">রেকর্ড করা ভিডিও ক্লাস, অ্যাসাইনমেন্ট, কুইজ — যেকোনো সময় দেখা যায়</small></span></label>
+                    <label style="flex:1;min-width:220px;border:1.5px solid #DCE7F0;border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;"><input type="radio" name="kind" value="live"<?= $kind === 'live' ? ' checked' : '' ?> style="margin-top:4px;" /><span><b><i class="fas fa-tower-broadcast" style="color:#DC2626;"></i> লাইভ ক্লাস / ব্যাচ</b><br><small style="color:#64748B;">নির্দিষ্ট তারিখ ও সময়ে সবাই একসাথে অনলাইনে — শিক্ষার্থীরা পেমেন্ট করে যোগ দেবে</small></span></label>
+                </div>
+            </div>
             <div class="cx-f" data-f="title"><label for="cTitle">কোর্সের নাম *</label><input type="text" id="cTitle" name="title" maxlength="150" value="<?= e($c->Title ?? '') ?>" placeholder="যেমন: HSC Physics — সম্পূর্ণ প্রস্তুতি" /></div>
             <div class="cx-f"><label for="cSub">ছোট বিবরণ <small>(এক লাইনে)</small></label><input type="text" id="cSub" name="subtitle" maxlength="250" value="<?= e($c->Subtitle ?? '') ?>" placeholder="যেমন: ৩ মাসে পুরো সিলেবাস — ক্লাস, নোট, পরীক্ষা" /></div>
             <div class="cx-grid3">

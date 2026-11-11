@@ -55,7 +55,8 @@ class CourseController extends Controller
         $cat = mb_substr(trim((string)input_str('cat', '')), 0, 60);
         $me = current_user_id();
         $mine = $me ? array_flip(array_map(fn($c) => $c->Id, $this->db->GetMyCourses($me))) : [];
-        $this->view(null, $this->db->GetPublicCourses($q, $cat), ['Q' => $q, 'Cat' => $cat, 'Cats' => $this->db->GetCourseCategories(), 'Mine' => $mine]);
+        $kind = input_str('kind', '') === 'live' ? 'live' : (input_str('kind', '') === 'course' ? 'course' : '');
+        $this->view(null, $this->db->GetPublicCourses($q, $cat, $kind), ['Q' => $q, 'Cat' => $cat, 'Cats' => $this->db->GetCourseCategories(), 'Mine' => $mine, 'Kind' => $kind]);
     }
 
     public function Details(): void
@@ -255,7 +256,8 @@ class CourseController extends Controller
         $level = (string)input_str('level', self::LEVELS[0]);
         $data = ['Title' => $title, 'Subtitle' => $clean('subtitle', 250) ?: null, 'Description' => $desc ?: null, 'Includes' => $inc ? implode("\n", $inc) : null,
             'Category' => $clean('category', 60) ?: null, 'Level' => in_array($level, self::LEVELS, true) ? $level : self::LEVELS[0],
-            'Price' => (int)$price, 'RegularPrice' => $reg === '' ? null : (int)$reg, 'PassPercent' => max(0, min(100, (int)input_int('passPercent', 60)))];
+            'Price' => (int)$price, 'RegularPrice' => $reg === '' ? null : (int)$reg, 'PassPercent' => max(0, min(100, (int)input_int('passPercent', 60))),
+            'Kind' => input_str('kind', '') === 'live' ? 'live' : 'course'];
         $file = upload_file('thumbnail');
         if ($file) {
             $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -266,7 +268,7 @@ class CourseController extends Controller
             if ($c && $c->Thumbnail) delete_upload($c->Thumbnail);
         }
         $nid = $this->db->SaveCourse($id, $c ? (int)$c->TeacherId : $me, $data);
-        json_response(['success' => true, 'id' => $nid, 'message' => $id ? 'সেভ হয়েছে।' : 'কোর্স তৈরি হয়েছে — এখন ক্লাস যোগ করুন।', 'redirect' => $id ? null : '/Course/Build/' . $nid]);
+        json_response(['success' => true, 'id' => $nid, 'message' => $id ? 'সেভ হয়েছে।' : ($data['Kind'] === 'live' ? 'লাইভ ক্লাস তৈরি হয়েছে — এখন "লাইভ ক্লাস" যোগ করে তারিখ ও সময় দিন।' : 'কোর্স তৈরি হয়েছে — এখন ক্লাস যোগ করুন।'), 'redirect' => $id ? null : '/Course/Build/' . $nid]);
     }
 
     /** POST /Course/Publish (id, on) */

@@ -1283,12 +1283,20 @@ class AdminController extends Controller
     // ===== কোর্স (সব টিচারের কোর্স, টাকার ভাগ, টিচারকে টাকা দেওয়া) =====
     // ============================================================
     /** GET /Admin/Courses */
-    public function Courses(): void
+    public function Courses(): void { $this->requireAdminPage(); $this->coursesPage('course'); }
+
+    /** GET /Admin/LiveClasses — লাইভ ক্লাস / ব্যাচ: বিক্রি, টাকার ভাগ, টিচারকে পাওনা (কোর্স থেকে আলাদা হিসাব) */
+    public function LiveClasses(): void { $this->requireAdminPage(); $this->coursesPage('live'); }
+
+    private function coursesPage(string $kind): void
     {
-        $this->requireAdminPage();
         $pend = 0;
-        try { $this->db->EnsureCourseTables(); $pend = (int)$this->db->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `CourseId` IS NOT NULL AND `Status` = 'Pending'"); } catch (Throwable $e) { }
-        $this->view(null, $this->db->GetAllCoursesAdmin(), ['Ledger' => $this->db->GetCourseLedger(), 'Pct' => course_admin_pct(), 'PendingPay' => $pend]);
+        try {
+            $this->db->EnsureCourseTables();
+            $km = $this->db->CourseKindMap();
+            foreach ($this->db->all("SELECT `CourseId` FROM `PaymentRequests` WHERE `CourseId` IS NOT NULL AND `Status` = 'Pending'") as $r) if (($km[(int)$r->CourseId] ?? 'course') === $kind) $pend++;
+        } catch (Throwable $e) { }
+        $this->view('Courses', $this->db->GetAllCoursesAdmin($kind), ['Ledger' => $this->db->GetCourseLedger($kind), 'Pct' => course_admin_pct(), 'PendingPay' => $pend, 'Kind' => $kind]);
     }
 
     /** POST /Admin/ToggleCourse (id, hidden) — অ্যাডমিন কোর্স লুকায় / আবার দেখায় */
@@ -1309,14 +1317,15 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $tid = (int)input_int('teacherId', 0);
         $row = null;
-        foreach ($this->db->GetCourseLedger() as $r) if ((int)$r->TeacherId === $tid) $row = $r;
+        $kind = input_str('kind', '') === 'live' ? 'live' : 'course';
+        foreach ($this->db->GetCourseLedger($kind) as $r) if ((int)$r->TeacherId === $tid) $row = $r;
         if (!$row) json_response(['success' => false, 'message' => 'টিচার পাওয়া যায়নি।']);
         $amt = (int)input_int('amount', 0);
         if ($amt <= 0) json_response(['success' => false, 'message' => 'টাকার পরিমাণ দিন।']);
         if ($amt > $row->Due) json_response(['success' => false, 'message' => 'বাকি আছে ' . taka($row->Due) . ' — এর বেশি দেওয়া যাবে না।']);
         $method = mb_substr(trim(strip_tags((string)input_str('method', ''))), 0, 40);
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
-        $this->db->AddCoursePayout($tid, $amt, $method, $note, (int)current_user_id());
+        $this->db->AddCoursePayout($tid, $amt, $method, $note, (int)current_user_id(), $kind);
         try { $this->db->CreateNotification($tid, 'কোর্সের টাকা পাঠানো হয়েছে 💸', 'আপনার কোর্স বিক্রির ভাগ থেকে ' . taka($amt) . ($method !== '' ? " ($method)" : '') . ' পাঠানো হয়েছে।' . ($note !== '' ? ' ' . $note : ''), 'success', '/Course/Earnings', 'fa-money-bill-transfer'); } catch (Throwable $e) { }
         json_response(['success' => true, 'message' => taka($amt) . ' পাঠানো হিসেবে রেকর্ড হয়েছে — টিচার নোটিফিকেশন পাবে।']);
     }
@@ -2054,7 +2063,7 @@ class AdminController extends Controller
         $this->requireAdminPage();
         // আলাদা পেজ হয়ে গেছে — Teacher / Student / Course Payment Requests
         $for = (string)input_str('for', '');
-        $map = ['Teacher' => 'TeacherPayments', 'Student' => 'StudentPayments', 'Course' => 'CoursePayments'];
+        $map = ['Teacher' => 'TeacherPayments', 'Student' => 'StudentPayments', 'Course' => 'CoursePayments', 'Live' => 'LivePayments'];
         if (isset($map[$for])) redirect('/Admin/' . $map[$for] . (($st0 = (string)input_str('status', '')) !== '' ? '?status=' . rawurlencode($st0) : ''));
         $this->paymentsPage('all', 'সব পেমেন্ট', '/Admin/Payments');
     }
@@ -2065,12 +2074,14 @@ class AdminController extends Controller
     public function StudentPayments(): void { $this->requireAdminPage(); $this->paymentsPage('Student', 'Student Payment Requests', '/Admin/StudentPayments'); }
     /** GET /Admin/CoursePayments — কোর্স কেনার পেমেন্ট */
     public function CoursePayments(): void { $this->requireAdminPage(); $this->paymentsPage('Course', 'Course Payment Requests', '/Admin/CoursePayments'); }
+    public function LivePayments(): void { $this->requireAdminPage(); $this->paymentsPage('Live', 'Live Class Payment Requests', '/Admin/LivePayments'); }
 
     private function paymentsPage(string $for, string $title, string $base): void
     {
         $st = input_str('status', 'Pending');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
-        $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : ($x->Audience === 'Course' ? 'Course' : 'Student');
+        $km = []; try { $km = $this->db->CourseKindMap(); } catch (Throwable $e) { }
+        $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : ($x->Audience === 'Course' ? (($km[(int)($x->CourseId ?? 0)] ?? 'course') === 'live' ? 'Live' : 'Course') : 'Student');
         $all = $this->db->GetPaymentRequests(null);
         $cnt = []; $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
         foreach ($all as $x) {
@@ -2082,6 +2093,7 @@ class AdminController extends Controller
             if ($x->Status === 'Approved') $stats['Revenue'] += (int)$x->Amount;
         }
         $list = array_values(array_filter($all, fn($x) => ($st === 'all' || $x->Status === $st) && ($for === 'all' || $audOf($x) === $for)));
+        foreach ($list as $x) $x->IsLiveClass = $audOf($x) === 'Live';
         // টিচার পেমেন্টের সাথে নতুন টিচার আবেদন থাকলে — আবেদন আর Teacher Verification এর অবস্থা
         $apps = [];
         $stu = [];

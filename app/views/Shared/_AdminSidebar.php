@@ -25,8 +25,14 @@ $pendingEduPosts = 0;
 try { $pendingEduPosts = (int)(db()->CountEduPostsByStatus()['Pending'] ?? 0); } catch (Throwable $e) { }
 $pendingPayments = 0;
 try { $pendingPayments = db()->CountPendingPayments(); } catch (Throwable $e) { }
-$payPend = ['Teacher' => 0, 'Student' => 0, 'Course' => 0];
-try { foreach (db()->all("SELECT CASE WHEN `Audience` = 'Course' THEN 'Course' WHEN `Audience` = 'Teacher' THEN 'Teacher' ELSE 'Student' END AS A, COUNT(*) AS N FROM `PaymentRequests` WHERE `Status` = 'Pending' GROUP BY A") as $r) $payPend[$r->A] = (int)$r->N; } catch (Throwable $e) { }
+$payPend = ['Teacher' => 0, 'Student' => 0, 'Course' => 0, 'Live' => 0];
+try {
+    $km = []; try { $km = db()->CourseKindMap(); } catch (Throwable $e) { }
+    foreach (db()->all("SELECT `Audience`, `CourseId` FROM `PaymentRequests` WHERE `Status` = 'Pending'") as $r) {
+        $a = $r->Audience === 'Course' ? (($km[(int)$r->CourseId] ?? 'course') === 'live' ? 'Live' : 'Course') : ($r->Audience === 'Teacher' ? 'Teacher' : 'Student');
+        $payPend[$a]++;
+    }
+} catch (Throwable $e) { }
 $kycPend = ['teacher' => 0, 'student' => 0];
 try { $kc0 = db()->KycCounts(); $kycPend = ['teacher' => $kc0['teacher']['Pending'], 'student' => $kc0['student']['Pending']]; } catch (Throwable $e) { }
 
@@ -310,7 +316,7 @@ try {
 <!-- ✅ মোবাইল/ট্যাবলেটে: ☰ বাটন চাপলে সাইডবার বাম দিক থেকে আসে -->
 <?php
     $adminPages = [
-        'Dashboard' => 'Dashboard', 'Reports' => 'Reports', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Verification', 'Telegram' => 'Telegram নোটিফিকেশন', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'TeacherOverview' => 'Teacher Overview',
+        'Dashboard' => 'Dashboard', 'Reports' => 'Reports', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Verification', 'Telegram' => 'Telegram নোটিফিকেশন', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'LivePayments' => 'Live Class Payment Requests', 'LiveClasses' => 'Live Classes', 'TeacherOverview' => 'Teacher Overview',
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
@@ -384,6 +390,12 @@ try {
             <a href="/Admin/CoursePayments" class="<?= $currentAction === 'CoursePayments' ? 'active' : '' ?>">
                 <i class="fas fa-book-open-reader"></i> Course Payment Requests
                 <?php if ($payPend['Course'] > 0): ?><span class="badge-sidebar warning"><?= (int)$payPend['Course'] ?></span><?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/LivePayments" class="<?= $currentAction === 'LivePayments' ? 'active' : '' ?>">
+                <i class="fas fa-tower-broadcast"></i> Live Class Payment Requests
+                <?php if ($payPend['Live'] > 0): ?><span class="badge-sidebar warning"><?= (int)$payPend['Live'] ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>
@@ -497,6 +509,11 @@ try {
         <li>
             <a href="/Admin/Courses" class="<?= $currentAction === 'Courses' ? 'active' : '' ?>">
                 <i class="fas fa-book-open-reader"></i> Courses
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/LiveClasses" class="<?= $currentAction === 'LiveClasses' ? 'active' : '' ?>">
+                <i class="fas fa-tower-broadcast"></i> Live Classes
             </a>
         </li>
         <?php endif; ?>

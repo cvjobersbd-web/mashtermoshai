@@ -36,10 +36,11 @@ $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?
 </style>
 <section class="ci-hero">
     <div class="cx-wrap">
-        <h1><i class="fas fa-book-open-reader"></i> কোর্স</h1>
+        <h1><i class="fas fa-book-open-reader"></i> কোর্স ও লাইভ ক্লাস</h1>
         <p>অভিজ্ঞ শিক্ষকদের কোর্স — রেকর্ড করা ক্লাস, সরাসরি লাইভ ক্লাস, অ্যাসাইনমেন্ট, কুইজ আর কোর্স শেষে সার্টিফিকেট।</p>
         <div class="ci-feat"><span><i class="fas fa-circle-play"></i> রেকর্ড ক্লাস</span><span><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস</span><span><i class="fas fa-list-check"></i> কুইজ ও অ্যাসাইনমেন্ট</span><span><i class="fas fa-award"></i> সার্টিফিকেট</span></div>
         <form class="ci-srch" method="get" action="/Course">
+            <?php if (!empty($ViewBag->Kind)): ?><input type="hidden" name="kind" value="<?= e($ViewBag->Kind) ?>" /><?php endif; ?>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="কোর্স বা শিক্ষকের নাম লিখুন..." />
             <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= e($cat) ?>" /><?php endif; ?>
             <button type="submit" class="cx-btn pri"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
@@ -48,6 +49,12 @@ $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?
 </section>
 <div class="cx-page" style="padding-top:0;">
     <div class="cx-wrap">
+        <?php $kd = (string)($ViewBag->Kind ?? ''); $kq = fn($v) => '/Course' . (($x = http_build_query(array_filter(['kind' => $v, 'q' => $q, 'cat' => $cat]))) !== '' ? '?' . $x : ''); ?>
+        <div class="ci-kinds" style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 4px;">
+            <?php foreach (['' => ['সব', 'fa-layer-group', '#08224A'], 'course' => ['কোর্স', 'fa-book-open-reader', '#0EA5E9'], 'live' => ['লাইভ ক্লাস', 'fa-tower-broadcast', '#DC2626']] as $kv => [$kl, $ki, $kc]): ?>
+                <a href="<?= e($kq($kv)) ?>" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:999px;font-weight:800;font-size:14px;text-decoration:none;border:1.5px solid <?= $kc ?>;<?= $kd === $kv ? 'background:' . $kc . ';color:#fff;' : 'background:#fff;color:' . $kc . ';' ?>"><i class="fas <?= $ki ?>"></i> <?= $kl ?></a>
+            <?php endforeach; ?>
+        </div>
         <div class="ci-cats">
             <a href="/Course<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>" class="<?= $cat === '' ? 'on' : '' ?>">সব কোর্স</a>
             <?php foreach ($cats as $k): ?><a href="/Course?<?= e(http_build_query(array_filter(['q' => $q, 'cat' => $k]))) ?>" class="<?= $cat === $k ? 'on' : '' ?>"><?= e($k) ?></a><?php endforeach; ?>
@@ -60,7 +67,7 @@ $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?
         <div class="ci-grid">
             <?php foreach ($list as $c): $tn = (string)($c->TeacherName ?: $c->TeacherUser ?: 'মাষ্টার মশাই'); ?>
                 <a class="ci-c" href="/Course/Details/<?= (int)$c->Id ?>">
-                    <div style="position:relative;"><?= course_thumb_html($c) ?><?php if (isset($mine[$c->Id])): ?><span class="cx-pill ok ci-mine"><i class="fas fa-check"></i> ভর্তি আছেন</span><?php endif; ?></div>
+                    <div style="position:relative;"><?= course_thumb_html($c) ?><?php if ($c->Kind === 'live'): ?><span class="cx-pill" style="position:absolute;left:10px;top:10px;background:#DC2626;color:#fff;"><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস</span><?php endif; ?><?php if (isset($mine[$c->Id])): ?><span class="cx-pill ok ci-mine"><i class="fas fa-check"></i> ভর্তি আছেন</span><?php endif; ?></div>
                     <div class="ci-b">
                         <?php if (!is_blank($c->Category)): ?><span class="cx-pill blue" style="align-self:flex-start;"><?= e($c->Category) ?></span><?php endif; ?>
                         <h3><?= e($c->Title) ?></h3>
