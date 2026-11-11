@@ -19,6 +19,8 @@ class TeacherController extends Controller
             tempdata_set('Info', 'আপনার টিচার প্যাকেজের মেয়াদ শেষ হয়েছে — প্যাকেজ রিনিউ করলেই আবার টিচার হয়ে যাবেন (আগের সব তথ্য রাখা আছে)।');
             redirect('/Package?for=teacher&apply=1');
         }
+        // আবেদন যাচাই বাকি — Approve এর আগে ভুল ID কার্ড / NID এর ছবি বদলানোর পেজে নিয়ে যাওয়া
+        if (in_array($status, ['Pending', 'AwaitingPayment'], true) && $this->db->KycStatus($userId, 'teacher') === 'Pending') redirect('/Kyc/Teacher');
         if ($status === 'AwaitingPayment') {
             tempdata_set('Info', 'আপনার ফর্ম জমা আছে — অ্যাডমিন যাচাই করছেন। টিচার প্যাকেজ কিনলে Tutor List এ আপনার ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ চালু থাকবে।');
             redirect('/Package?for=teacher&apply=1');
