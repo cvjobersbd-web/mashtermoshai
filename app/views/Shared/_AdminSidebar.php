@@ -310,7 +310,7 @@ try {
 <!-- ✅ মোবাইল/ট্যাবলেটে: ☰ বাটন চাপলে সাইডবার বাম দিক থেকে আসে -->
 <?php
     $adminPages = [
-        'Dashboard' => 'Dashboard', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Verification', 'Telegram' => 'Telegram নোটিফিকেশন', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'TeacherOverview' => 'Teacher Overview',
+        'Dashboard' => 'Dashboard', 'Reports' => 'Reports', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Verification', 'Telegram' => 'Telegram নোটিফিকেশন', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'TeacherOverview' => 'Teacher Overview',
         'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
@@ -347,6 +347,13 @@ try {
         <li>
             <a href="/Admin/Dashboard" class="<?= $currentAction === 'Dashboard' ? 'active' : '' ?>">
                 <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Reports'))): ?>
+        <li>
+            <a href="/Admin/Reports" class="<?= $currentAction === 'Reports' ? 'active' : '' ?>">
+                <i class="fas fa-file-lines"></i> Reports
             </a>
         </li>
         <?php endif; ?>

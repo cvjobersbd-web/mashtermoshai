@@ -1045,6 +1045,23 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => $on ? "$nm এর রেফারেলে এখন থেকে বোনাস যাবে না — শুধু গোনা হবে।" : "$nm এর রেফারেল বোনাস আবার চালু হয়েছে।"]);
     }
 
+    /**
+     * GET /Admin/Reports?type=&from=&to=&q=&export=csv|print — সাইটের সব রিপোর্ট; Excel (CSV) বা PDF (প্রিন্ট করে Save as PDF)
+     */
+    public function Reports(): void
+    {
+        $this->requireAdminPage();
+        require_once APP_ROOT . '/app/core/reports.php';
+        $type = (string)input_str('type', 'summary');
+        if (!isset(REPORT_TYPES[$type])) $type = 'summary';
+        $from = report_date(input_str('from', '')); $to = report_date(input_str('to', ''));
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
+        $R = build_report($type, $from, $to, $q);
+        $exp = (string)input_str('export', '');
+        if ($exp === 'csv') report_csv($R, 'mashtermoshai-' . $type . '-' . date('Y-m-d'));
+        $this->view(null, $R, ['Type' => $type, 'From' => $from, 'To' => $to, 'Q' => $q, 'Print' => $exp === 'print']);
+    }
+
     /** GET /Admin/ReferralUser/{userId} — একজন ইউজারের রেফারেল বিস্তারিত: লিংক, কোড, কোথায় শেয়ার, কত জন এসেছে / কিনেছে, টাকা তোলা / ছাড় */
     public function ReferralUser(): void
     {
