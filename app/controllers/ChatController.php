@@ -128,6 +128,7 @@ class ChatController extends Controller
         }
         $t = $tid > 0 ? $this->db->GetUserById($tid) : null;
         if (!$t || $t->Role !== 'Teacher' || !(int)$t->IsActive || $this->db->GetActiveSuspension($tid)) { tempdata_set('Error', 'এই টিচারের সাথে এখন চ্যাট করা যাচ্ছে না।'); redirect($back); }
+        if (!teacher_profile_open($tid) && !$this->db->FindDirectChat($me, $tid)) { tempdata_set('Error', 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন চ্যাট শুরু করা যাবে না।'); redirect($back); }
         redirect('/Chat?c=' . $this->db->OpenDirectChat($me, $tid));
     }
 

@@ -20,7 +20,7 @@ class TeacherController extends Controller
             redirect('/Package?for=teacher&apply=1');
         }
         if ($status === 'AwaitingPayment') {
-            tempdata_set('Info', 'আপনার ফর্ম জমা আছে — এখন একটা টিচার প্যাকেজ কিনে পেমেন্ট করুন, তারপর আবেদন অ্যাডমিনের কাছে যাবে।');
+            tempdata_set('Info', 'আপনার ফর্ম জমা আছে — অ্যাডমিন যাচাই করছেন। টিচার প্যাকেজ কিনলে Tutor List এ আপনার ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ চালু থাকবে।');
             redirect('/Package?for=teacher&apply=1');
         }
         if ($status === 'Pending') {
@@ -143,7 +143,7 @@ class TeacherController extends Controller
                 // টিচার প্যাকেজ থাকলে: আগে প্যাকেজ কিনে পেমেন্ট, তারপর আবেদন অ্যাডমিনের কাছে যায়
                 if ($this->db->TeacherApplyNeedsPayment()) {
                     $this->db->SetTeacherRequestState((int)$model->Id, 'AwaitingPayment');
-                    tempdata_set('Success', 'ফর্ম জমা হয়েছে! এখন পছন্দের টিচার প্যাকেজ বেছে পেমেন্ট করুন — তারপর আবেদন অ্যাডমিনের কাছে যাবে।');
+                    tempdata_set('Success', 'ফর্ম জমা হয়েছে! অ্যাডমিন Verification Approve করলেই আপনি টিচার। এখন টিচার প্যাকেজ কিনে রাখলে Tutor List এ আপনার ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ চালু থাকবে।');
                     redirect('/Package?for=teacher&apply=1');
                 }
                 tempdata_set('Success', 'Your teacher request has been submitted successfully! Please wait for admin approval.');

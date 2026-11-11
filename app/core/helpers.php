@@ -2108,6 +2108,42 @@ function viewer_sees_teacher_photos(): bool
     return viewer_can_contact_teachers();
 }
 
+/**
+ * টিচারের নিজের প্যাকেজ চালু আছে কিনা — না থাকলে Tutor List এ শুধু বেসিক তথ্য (ছবি, সম্পূর্ণ তথ্য, যোগাযোগ বন্ধ)।
+ * কোনো টিচার প্যাকেজই চালু না থাকলে (Admin → Packages) সবাই খোলা।
+ */
+function teacher_profile_open(int $teacherId): bool
+{
+    static $need = null;
+    if ($need === null) { try { $need = db()->TeacherApplyNeedsPayment(); } catch (Throwable $e) { $need = true; } }
+    return !$need || is_premium_teacher($teacherId);
+}
+
+/** এই ভিজিটর এই টিচারের ছবি আর সম্পূর্ণ তথ্য দেখবে কিনা — টিচারের প্যাকেজ + ভিজিটরের (শিক্ষার্থীর) প্যাকেজ দুটোই লাগে */
+function viewer_sees_teacher_full(int $teacherId): bool
+{
+    if (is_admin() || (int)(current_user_id() ?? 0) === $teacherId) return true;
+    return teacher_profile_open($teacherId) && viewer_sees_teacher_photos();
+}
+
+/** এই ভিজিটর এই টিচারের সাথে যোগাযোগ করতে পারবে কিনা (মোবাইল, ইমেইল, Direct Request, চ্যাট) */
+function viewer_can_contact_teacher(int $teacherId): bool
+{
+    if (is_admin()) return true;
+    if ((int)(current_user_id() ?? 0) === $teacherId) return false;
+    return teacher_profile_open($teacherId) && viewer_can_contact_teachers();
+}
+
+/** যোগাযোগ বন্ধ থাকলে বাটনের জায়গায় — টিচারের প্যাকেজ নেই হলে বন্ধ লেখা, না হলে শিক্ষার্থী প্যাকেজের লিংক */
+function teacher_contact_lock_html(int $teacherId, string $cls, string $what = 'Request'): string
+{
+    if (!teacher_profile_open($teacherId)) {
+        return '<span class="' . e($cls) . '" style="opacity:.6;cursor:not-allowed;" title="এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ বন্ধ"><i class="fas fa-lock"></i> যোগাযোগ এখন বন্ধ</span>';
+    }
+    return '<a class="' . e($cls) . '" href="' . e(student_package_url()) . '" title="টিচারের ছবি, সম্পূর্ণ তথ্য, মোবাইল নম্বর দেখতে ও ' . e($what) . ' পাঠাতে শিক্ষার্থী প্যাকেজ নিন"><i class="fas fa-lock"></i> '
+        . (current_user_id() === null ? 'লগইন করে ' . e($what) : 'প্যাকেজ নিয়ে ' . e($what)) . '</a>';
+}
+
 /** প্যাকেজ ছাড়া দেখালে টিচারের ছবির জায়গায় এই ছবি */
 function teacher_photo_placeholder(): string
 {
@@ -2121,7 +2157,8 @@ function teacher_photo_placeholder(): string
 function mask_teacher_photos(string $out): string
 {
     static $map = null;
-    if ($out === '' || viewer_sees_teacher_photos()) return $out;
+    if ($out === '' || is_admin()) return $out;
+    $all = !viewer_sees_teacher_photos();   // শিক্ষার্থীর প্যাকেজ নেই → সব টিচারের ছবি বন্ধ; আছে → শুধু প্যাকেজ ছাড়া টিচারদের
     if ($map === null) {
         $map = [];
         try {
@@ -2129,6 +2166,7 @@ function mask_teacher_photos(string $out): string
             $ph = teacher_photo_placeholder();
             foreach (db()->all("SELECT `Id`, `ProfileImageLink` FROM `Users` WHERE `Role` = 'Teacher' AND `ProfileImageLink` IS NOT NULL AND `ProfileImageLink` <> ''") as $r) {
                 if ((int)$r->Id === $me) continue;
+                if (!$all && teacher_profile_open((int)$r->Id)) continue;
                 $u = trim((string)$r->ProfileImageLink);
                 if (strlen($u) < 8) continue;
                 $map[$u] = $ph;
@@ -2162,6 +2200,7 @@ function teacher_chat_button(int $teacherId, string $cls): string
 {
     $me = current_user_id();
     if ($me !== null && ((int)$me === $teacherId || current_role() !== 'User')) return '';
+    if (!teacher_profile_open($teacherId)) return '';   // টিচারের প্যাকেজ নেই — যোগাযোগ বন্ধ
     if (!viewer_can_contact_teachers()) {
         return '<a class="' . e($cls) . '" href="' . e(student_package_url()) . '" title="টিচারের সাথে চ্যাট করতে শিক্ষার্থী প্যাকেজ নিন"><i class="fas fa-lock"></i> '
             . ($me === null ? 'লগইন করে চ্যাট' : 'প্যাকেজ নিয়ে চ্যাট আনলক') . '</a>';

@@ -134,23 +134,56 @@ trait KycData
     }
 
     /**
-     * টিচার আবেদন চূড়ান্ত — KYC Approved (পুরোনো আবেদন যেখানে KYC নেই সেখানে লাগে না) আর পেমেন্ট Accepted (বা প্যাকেজই লাগে না)
-     * হলে ইউজার Teacher হয়। হয়ে গেলে true।
+     * টিচার আবেদন চূড়ান্ত — Teacher Verification Approve হলেই ইউজার Teacher (Tutor List এ আসে, Teacher Dashboard, নীল টিক)।
+     * প্যাকেজ লাগে না; প্যাকেজ কিনলে (পেমেন্ট Accept) ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ খোলে।
+     * পুরোনো আবেদন যেখানে Verification নেই — আগের মতো পেমেন্ট Accept (বা প্যাকেজই না থাকলে) হলে। হয়ে গেলে true।
      */
     public function FinalizeTeacherIfReady(int $requestId): bool
     {
         $this->EnsureTeacherRequestPaymentCol();
         $r = $this->one('SELECT * FROM `TeacherRequests` WHERE `Id` = :i', ['i' => $requestId]);
-        if (!$r || $r->Status !== 'Pending') return false;
+        if (!$r || !in_array($r->Status, ['Pending', 'AwaitingPayment'], true)) return false;
         $kyc = $this->GetKyc((int)$r->UserId, 'teacher');
-        if ($kyc && $kyc->Status !== 'Approved') return false;
-        if (!empty($r->PaymentId)) {
+        if ($kyc) {
+            if ($kyc->Status !== 'Approved') return false;
+        } elseif (!empty($r->PaymentId)) {
             $p = $this->GetPaymentRequest((int)$r->PaymentId);
             if (!$p || $p->Status !== 'Approved') return false;
         } elseif ($this->TeacherApplyNeedsPayment()) return false;
         $this->UpdateTeacherRequest((int)$r->Id, 'Approved', null);
         $this->MakeUserTeacher((int)$r->UserId);
         return true;
+    }
+
+    /**
+     * আগে Verification Approve হয়েছে কিন্তু পেমেন্ট বাকি থাকায় টিচার হয়নি — তাদের এখন টিচার বানানো (নতুন নিয়ম, একবার চলে)
+     * @return int কতজন টিচার হলো
+     */
+    public function FinalizeApprovedTeacherKycs(): int
+    {
+        $n = 0;
+        try {
+            $this->EnsureKycTable();
+            $rows = $this->all("SELECT tr.`Id`, tr.`UserId` FROM `TeacherRequests` tr
+                INNER JOIN `KycRequests` k ON k.`UserId` = tr.`UserId` AND k.`Kind` = 'teacher' AND k.`Status` = 'Approved'
+                WHERE tr.`Status` IN ('Pending', 'AwaitingPayment')
+                  AND tr.`Id` = (SELECT MAX(t2.`Id`) FROM `TeacherRequests` t2 WHERE t2.`UserId` = tr.`UserId`)");
+            foreach ($rows as $r) {
+                if ($this->FinalizeTeacherIfReady((int)$r->Id)) {
+                    $n++;
+                    $this->CreateNotification((int)$r->UserId, "🎓 You're now a Teacher!", 'অভিনন্দন! আপনার Teacher Verification Approve হয়েছে — আপনি এখন টিচার। প্যাকেজ কিনলে Tutor List এ আপনার ছবি, সম্পূর্ণ তথ্য আর যোগাযোগের সুযোগ খুলে যাবে।', 'success', '/Teacher/TeacherDashboard', 'fa-chalkboard-teacher');
+                }
+            }
+            // প্যাকেজের মেয়াদ শেষে আগের নিয়মে সাধারণ ইউজার হয়ে যাওয়া টিচাররা — আবার টিচার (প্রোফাইল লক থাকবে, রিনিউ করলে খুলবে)
+            $exp = $this->all("SELECT tr.`Id`, tr.`UserId` FROM `TeacherRequests` tr INNER JOIN `Users` u ON u.`Id` = tr.`UserId` AND u.`Role` = 'User'
+                WHERE tr.`Status` = 'Expired' AND tr.`Id` = (SELECT MAX(t2.`Id`) FROM `TeacherRequests` t2 WHERE t2.`UserId` = tr.`UserId`)");
+            foreach ($exp as $r) {
+                $this->UpdateTeacherRequest((int)$r->Id, 'Approved', 'নতুন নিয়ম — প্যাকেজ ছাড়াও টিচার (প্রোফাইল লক)');
+                $this->MakeUserTeacher((int)$r->UserId);
+                $n++;
+            }
+        } catch (Throwable $e) { error_log('[FinalizeApprovedTeacherKycs] ' . $e->getMessage()); }
+        return $n;
     }
 
     /** কোনো পেমেন্টের সাথে চালু (Pending) টিচার আবেদন থাকলে সেটা */

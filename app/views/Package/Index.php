@@ -181,7 +181,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             <div style="background:#E6F9FF; border:1.5px solid #00CFFF; border-radius:14px; padding:14px 18px; display:flex; gap:12px; align-items:flex-start; color:#0F172A;">
                 <i class="fas fa-circle-check" style="color:#00B5E0; font-size:22px; margin-top:2px;"></i>
                 <div><b style="font-size:15.5px;"><?= e($TempData['Success'] ?? $TempData['Info'] ?? 'ধাপ ২: টিচার প্যাকেজ বেছে নিন') ?></b>
-                    <div style="font-size:13.5px; color:#334155; margin-top:3px;">১) ফর্ম পূরণ ✅ → <b>২) নিচ থেকে পছন্দের "শিক্ষকদের জন্য" প্যাকেজ বেছে পেমেন্ট করুন</b> → ৩) অ্যাডমিন ফর্ম আর পেমেন্ট দেখে Approve করলে আপনি টিচার।</div></div>
+                    <div style="font-size:13.5px; color:#334155; margin-top:3px;">১) ফর্ম পূরণ ✅ → ২) অ্যাডমিন Verification Approve করলে আপনি টিচার (Tutor List এ আসবেন) → <b>৩) নিচ থেকে "শিক্ষকদের জন্য" প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</b></div></div>
             </div>
         </div>
     <?php endif; ?>

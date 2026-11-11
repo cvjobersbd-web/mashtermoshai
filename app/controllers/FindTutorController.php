@@ -60,6 +60,13 @@ class FindTutorController extends Controller
                 json_response(['success' => false, 'needPackage' => student_package_url(),
                     'message' => current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে আগে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (১ মাস ৳50, ৩ মাস ৳100)।']);
             }
+            // টিচারের নিজের প্যাকেজ চালু না থাকলে তার সাথে যোগাযোগ বন্ধ
+            if (!is_blank(input_str('tutorId')) && preg_match('/^TCH-(\d+)$/', trim((string)input_str('tutorId')), $tm)) {
+                $ttr = $this->db->GetTeacherRequestById((int)$tm[1] - 1000);
+                if ($ttr && !viewer_can_contact_teacher((int)$ttr->UserId)) {
+                    json_response(['success' => false, 'message' => 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন রিকোয়েস্ট পাঠানো যাবে না। অন্য টিচার দেখুন।']);
+                }
+            }
             $studentName = input_str('studentName');
             $phone = input_str('phoneNumber');
             if (is_blank($studentName)) json_response(['success' => false, 'message' => 'Student name is required.']);

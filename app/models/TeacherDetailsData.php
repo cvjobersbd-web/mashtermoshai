@@ -224,10 +224,17 @@ trait TeacherDetailsData
     /**
      * সাইটে কেউ ঢুকলেই চলে (প্রতি ৩০ মিনিটে একবার) — আলাদা Cron লাগে না:
      *  1) মেয়াদ শেষের ৫ দিন আগে আর ১ দিন আগে নোটিফিকেশন (রিনিউ করার জন্য)
-     *  2) টিচারের প্যাকেজের মেয়াদ শেষ (আর কোনো চালু প্যাকেজ নেই) → অ্যাকাউন্ট সাধারণ ইউজার / স্টুডেন্ট, টিউটর তালিকা থেকে সরে যায়
+     *  2) টিচারের প্যাকেজের মেয়াদ শেষ (আর কোনো চালু প্যাকেজ নেই) → টিচারই থাকে, Tutor List এ থাকে, কিন্তু ছবি / সম্পূর্ণ তথ্য / যোগাযোগ বন্ধ (একবার জানানো)
      */
     public function RunSubscriptionHousekeeping(bool $force = false): void
     {
+        // নতুন নিয়ম (একবার): Verification Approve হওয়া কিন্তু পেমেন্ট বাকি থাকায় টিচার না হওয়া আবেদনকারীরা টিচার হয়
+        try {
+            if ($this->GetSiteContent(['mig_kyc_teacher_v1' => ''])['mig_kyc_teacher_v1'] === '') {
+                $this->SaveSiteContent(['mig_kyc_teacher_v1' => (string)time()]);
+                $this->FinalizeApprovedTeacherKycs();
+            }
+        } catch (Throwable $e) { error_log('[mig_kyc_teacher_v1] ' . $e->getMessage()); }
         try {
             $last = $this->GetSiteContent(['sub_sweep_at' => '0'])['sub_sweep_at'];
             if (!$force && (int)$last > time() - 1800) return;
@@ -245,7 +252,7 @@ trait TeacherDetailsData
                     $left = max(1, (int)ceil((strtotime((string)$s->EndsAt) - time()) / 86400));
                     $end = date('d M Y', strtotime((string)$s->EndsAt));
                     if ($s->Audience === 'Teacher') {
-                        $msg = "আপনার টিচার প্যাকেজ “{$s->PackageName}” এর মেয়াদ আর {$left} দিন ($end) — রিনিউ না করলে মেয়াদ শেষে অ্যাকাউন্টটি সাধারণ ইউজার অ্যাকাউন্টে বদলে যাবে।";
+                        $msg = "আপনার টিচার প্যাকেজ “{$s->PackageName}” এর মেয়াদ আর {$left} দিন ($end) — রিনিউ না করলে মেয়াদ শেষে Tutor List এ আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ বন্ধ হয়ে যাবে।";
                         $link = '/Package?for=teacher';
                     } else {
                         $msg = "আপনার প্যাকেজ “{$s->PackageName}” এর মেয়াদ আর {$left} দিন ($end) — চালু রাখতে রিনিউ করুন।";
@@ -265,14 +272,14 @@ trait TeacherDetailsData
                 $this->exec('UPDATE `UserSubscriptions` SET `EndNotifiedAt` = :t WHERE `Id` = :i', ['t' => $now, 'i' => (int)$s->Id]);
             }
 
-            // 2) মেয়াদ শেষ হওয়া টিচার → সাধারণ ইউজার (যাদের কখনো প্যাকেজ ছিল না, তাদের বদলায় না)
-            $expired = $this->all("SELECT u.`Id`, u.`FullName` FROM `Users` u WHERE u.`Role` = 'Teacher'
-                AND EXISTS (SELECT 1 FROM `UserSubscriptions` s WHERE s.`UserId` = u.`Id` AND s.`Audience` = 'Teacher')
-                AND NOT EXISTS (SELECT 1 FROM `UserSubscriptions` s WHERE s.`UserId` = u.`Id` AND s.`Audience` = 'Teacher' AND (s.`EndsAt` IS NULL OR s.`EndsAt` > :n))", ['n' => $now]);
-            foreach ($expired as $u) {
-                $this->exec("UPDATE `Users` SET `Role` = 'User' WHERE `Id` = :u AND `Role` = 'Teacher'", ['u' => (int)$u->Id]);
-                $this->exec("UPDATE `TeacherRequests` SET `Status` = 'Expired', `AdminNote` = :n WHERE `UserId` = :u AND `Status` = 'Approved'", ['u' => (int)$u->Id, 'n' => 'প্যাকেজের মেয়াদ শেষ (' . date('d M Y') . ')']);
-                $this->CreateNotification((int)$u->Id, 'টিচার প্যাকেজের মেয়াদ শেষ', 'আপনার টিচার প্যাকেজের মেয়াদ শেষ হয়েছে — অ্যাকাউন্ট এখন সাধারণ ইউজার / স্টুডেন্ট অ্যাকাউন্ট। প্যাকেজ রিনিউ করলে আবার টিচার হয়ে যাবেন (আপনার সব তথ্য রাখা আছে)।', 'danger', '/Package?for=teacher', 'fa-user-clock');
+            // 2) টিচারের প্যাকেজের মেয়াদ শেষ (পরে নতুন প্যাকেজ নেই) — টিচারই থাকে, শুধু প্রোফাইল লক; একবার জানানো
+            $ended = $this->all("SELECT s.* FROM `UserSubscriptions` s INNER JOIN `Users` u ON u.`Id` = s.`UserId` AND u.`Role` = 'Teacher'
+                WHERE s.`Audience` = 'Teacher' AND s.`EndsAt` IS NOT NULL AND s.`EndsAt` <= :n AND s.`EndsAt` > :old AND s.`EndNotifiedAt` IS NULL
+                AND NOT EXISTS (SELECT 1 FROM `UserSubscriptions` x WHERE x.`UserId` = s.`UserId` AND x.`Audience` = 'Teacher' AND (x.`EndsAt` IS NULL OR x.`EndsAt` > s.`EndsAt`))",
+                ['n' => $now, 'old' => date('Y-m-d H:i:s', time() - 7 * 86400)]);
+            foreach ($ended as $s) {
+                $this->CreateNotification((int)$s->UserId, 'টিচার প্যাকেজের মেয়াদ শেষ', "আপনার টিচার প্যাকেজ “{$s->PackageName}” এর মেয়াদ শেষ — আপনি টিচারই আছেন, Tutor List এও আছেন, কিন্তু শিক্ষার্থীরা এখন শুধু বেসিক তথ্য দেখবে (ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ বন্ধ)। চালু রাখতে প্যাকেজ রিনিউ করুন।", 'danger', '/Package?for=teacher', 'fa-user-clock');
+                $this->exec('UPDATE `UserSubscriptions` SET `EndNotifiedAt` = :t WHERE `Id` = :i', ['t' => $now, 'i' => (int)$s->Id]);
             }
         } catch (Throwable $e) { error_log('[SubscriptionHousekeeping] ' . $e->getMessage()); }
     }

@@ -40,6 +40,12 @@ $about = [
         ['fa-linkedin', 'LinkedIn', $link($u->LinkedInProfile), false, true],
     ]],
 ];
+// টিচারের প্রতিষ্ঠান আর লিংক (CV, LinkedIn ...) — সম্পূর্ণ তথ্য, যোগাযোগের অনুমতি থাকলেই দেখায়
+if ($isTeacher) {
+    foreach ($about['education'][3] as &$__r) if ($__r[1] === 'Institution') $__r[3] = true;
+    foreach ($about['links'][3] as &$__r) $__r[3] = true;
+    unset($__r);
+}
 $brands = ['fa-github', 'fa-linkedin'];
 
 // ===== মালিকের জন্য এখানেই এডিট ফর্ম (আলাদা পেজে যেতে হয় না) =====
@@ -127,7 +133,7 @@ $forms = !$isOwner ? [] : [
                                     <?php if ($v === ''): ?>
                                         <span class="empty">যোগ করা হয়নি</span>
                                     <?php elseif ($priv && !$canPrivate): ?>
-                                        <span class="lock"><i class="fas fa-lock"></i> গোপন — শুধু প্রোফাইলের মালিক দেখতে পারেন</span>
+                                        <span class="lock"><i class="fas fa-lock"></i> <?= $isTeacher ? (teacher_profile_open((int)$u->Id) ? 'লক — দেখতে <a href="' . e(student_package_url()) . '">শিক্ষার্থী প্যাকেজ</a> লাগে' : 'লক — এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই') : 'গোপন — শুধু প্রোফাইলের মালিক দেখতে পারেন' ?></span>
                                     <?php elseif ($isLink): ?>
                                         <a href="<?= e($v) ?>" target="_blank" rel="noopener nofollow"><?= e(preg_replace('#^https?://(www\.)?#i', '', rtrim($v, '/'))) ?></a>
                                     <?php elseif ($lb === 'Email'): ?>
@@ -171,15 +177,15 @@ $forms = !$isOwner ? [] : [
                         <div class="ab-tutor"><i class="fas fa-user-clock" style="color:#e74c3c;"></i><div><strong>টিচার প্যাকেজের মেয়াদ শেষ</strong><p>প্যাকেজ রিনিউ করলেই আবার টিচার হয়ে যাবেন — আপনার আগের সব তথ্য রাখা আছে।</p></div></div>
                         <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-rotate"></i> প্যাকেজ রিনিউ করুন</a>
                     <?php elseif ($st === 'AwaitingPayment'): ?>
-                        <div class="ab-tutor"><i class="fas fa-credit-card" style="color:#f39c12;"></i><div><strong>ফর্ম জমা হয়েছে — এখন প্যাকেজ কিনুন</strong><p>পছন্দের টিচার প্যাকেজ বেছে পেমেন্ট করলে আবেদন অ্যাডমিনের কাছে যাবে।</p></div></div>
+                        <div class="ab-tutor"><i class="fas fa-credit-card" style="color:#f39c12;"></i><div><strong>ফর্ম জমা হয়েছে — যাচাই চলছে</strong><p>অ্যাডমিন আপনার Teacher Verification Approve করলেই আপনি টিচার (Tutor List এ আসবেন)। টিচার প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</p></div></div>
                         <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-tags"></i> টিচার প্যাকেজ বেছে নিন</a>
                     <?php elseif ($st === 'Pending'): ?>
-                        <div class="ab-tutor"><i class="fas fa-hourglass-half" style="color:#f39c12;"></i><div><strong>আবেদন যাচাই হচ্ছে</strong><p>আপনার ফর্ম আর পেমেন্ট অ্যাডমিন যাচাই করছেন — Approve করলে আপনি টিচার হয়ে যাবেন এবং নোটিফিকেশন পাবেন।</p></div></div>
+                        <div class="ab-tutor"><i class="fas fa-hourglass-half" style="color:#f39c12;"></i><div><strong>আবেদন যাচাই হচ্ছে</strong><p>আপনার ফর্ম অ্যাডমিন যাচাই করছেন — Teacher Verification Approve করলে আপনি টিচার হয়ে যাবেন এবং নোটিফিকেশন পাবেন।</p></div></div>
                     <?php elseif ($st === 'Rejected'): ?>
                         <div class="ab-tutor"><i class="fas fa-circle-xmark" style="color:#e74c3c;"></i><div><strong>আগের আবেদন গ্রহণ হয়নি</strong><p>তথ্য ঠিক করে আবার আবেদন করতে পারেন।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> আবার আবেদন করুন</a>
                     <?php else: ?>
-                        <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>১) ফর্ম পূরণ করুন → ২) টিচার প্যাকেজ কিনুন → ৩) অ্যাডমিন যাচাই করে Approve করলে আপনি টিচার।</p></div></div>
+                        <div class="ab-tutor"><i class="fas fa-chalkboard-teacher" style="color:#028EA5;"></i><div><strong>টিচার হতে চান?</strong><p>১) ফর্ম পূরণ করুন (প্রতিষ্ঠানের ID কার্ড সহ) → ২) অ্যাডমিন যাচাই করে Approve করলে আপনি টিচার, Tutor List এ আসবেন → ৩) টিচার প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> Become a Tutor</a>
                         <a href="/Package?for=teacher" class="ps-btn" style="margin:6px 0 0 6px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-tags"></i> Subscription প্যাকেজ দেখুন</a>
                     <?php endif; ?>

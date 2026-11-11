@@ -82,7 +82,7 @@ trait FindTutorData
         $seen = [];
         $out = [];
         try { $susp = $this->GetActiveSuspensionsMap(); } catch (Throwable $e) { $susp = []; }
-        // অ্যাডমিন Approve করলেই টিচার তালিকায় আসে (টিচার হওয়ার আগেই প্যাকেজের পেমেন্ট যাচাই হয়);
+        // Teacher Verification Approve হলেই টিচার তালিকায় আসে (প্যাকেজ না থাকলেও) — প্যাকেজ না থাকলে শুধু বেসিক তথ্য;
         // Subscription চালু থাকলে Premium ব্যাজ দেখায়
         try { $premium = $this->GetActiveTeacherSubscriptionMap(); } catch (Throwable $e) { $premium = []; }
         foreach ($rows as $r) {
@@ -108,23 +108,27 @@ trait FindTutorData
             [$avg, $cnt] = $ratings[$uid] ?? [0.0, 0];
             $mode = in_array($r->TeachMode, self::TEACH_MODES, true) ? $r->TeachMode : '';
             $location = implode(', ', array_filter([trim((string)$r->City), trim((string)$r->Country)]));
+            $open = teacher_profile_open($uid);
+            $full = viewer_sees_teacher_full($uid);
             $out[] = obj([
                 'Id' => (int)$r->Id, 'UserId' => $uid, 'TutorId' => 'TCH-' . (1000 + (int)$r->Id),
                 'FullName' => $name, 'Initials' => initials($name, 'T'),
                 'Gender' => !is_blank($r->Gender) ? (string)$r->Gender : 'Any',
-                'PhotoUrl' => viewer_sees_teacher_photos() || (int)$uid === (int)(current_user_id() ?? 0) ? (string)($r->ProfileImageLink ?? '') : '',   // প্যাকেজ ছাড়া ছবি না — নামের অক্ষর দেখায়
+                // ছবি শুধু টিচারের প্যাকেজ আর দেখা শিক্ষার্থীর প্যাকেজ দুটোই থাকলে — না হলে নামের অক্ষর
+                'PhotoUrl' => $full ? (string)($r->ProfileImageLink ?? '') : '',
+                'Locked' => !$full, 'TeacherOpen' => $open, 'CanContact' => viewer_can_contact_teacher($uid),
                 'Headline' => (string)($r->Headline ?? ''),
                 'Subjects' => $subjects ?: ['General'],
                 'Classes' => $classes ?: ['All Classes'], 'Levels' => $classes, 'Mediums' => $mediums,
                 'Qualification' => !is_blank($r->Education) ? (string)$r->Education : 'Not specified',
-                'Institution' => !is_blank($r->Institution) ? (string)$r->Institution : 'Not specified',
+                'Institution' => $full && !is_blank($r->Institution) ? (string)$r->Institution : 'Not specified',
                 'ExperienceYears' => $exp,
                 'Location' => $location !== '' ? $location : 'Bangladesh', 'City' => trim((string)$r->City),
                 'TeachingMode' => $mode !== '' ? $mode : 'Both',
                 'MonthlyFee' => $feeMin ?? 0, 'FeeMax' => $feeMax ?? 0,
                 'Rating' => $avg, 'TotalReviews' => $cnt, 'Students' => $students[$uid] ?? 0,
-                'AvailableTime' => !is_blank($r->PreferredTime) ? $r->PreferredTime : ((string)$r->AvailableDays ?: 'Contact for schedule'),
-                'About' => !is_blank($r->Bio) ? $r->Bio : (!is_blank($r->WhyTeach) ? $r->WhyTeach : (!is_blank($r->TeachingStyle) ? $r->TeachingStyle : 'Experienced tutor ready to help students excel.')),
+                'AvailableTime' => !$full ? 'Contact for schedule' : (!is_blank($r->PreferredTime) ? $r->PreferredTime : ((string)$r->AvailableDays ?: 'Contact for schedule')),
+                'About' => !$full ? '' : (!is_blank($r->Bio) ? $r->Bio : (!is_blank($r->WhyTeach) ? $r->WhyTeach : (!is_blank($r->TeachingStyle) ? $r->TeachingStyle : 'Experienced tutor ready to help students excel.'))),
                 'IsVerified' => true, 'IsTopRated' => false, 'IsPremium' => isset($premium[$uid]), 'HasTick' => has_blue_tick($uid),
                 'JoinedAt' => $r->RequestDate ?? $r->UCreated,
             ]);

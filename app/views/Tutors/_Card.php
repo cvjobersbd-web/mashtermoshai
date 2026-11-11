@@ -6,7 +6,8 @@
 $words = preg_split('/\s+/u', trim((string)$t->FullName)) ?: [];
 $short = count($words) > 2 ? $words[0] . ' ' . $words[1] . ' ' . implode('. ', array_map(fn($w) => mb_strtoupper(mb_substr($w, 0, 1)), array_slice($words, 2))) . '.' : (string)$t->FullName;
 $city = $t->City !== '' ? $t->City : ($t->Location !== '' ? explode(',', $t->Location)[0] : 'Bangladesh');
-$inst = $t->Institution !== 'Not specified' ? $t->Institution : 'N/A';
+// সম্পূর্ণ তথ্য বন্ধ থাকলে (প্যাকেজ নেই) প্রতিষ্ঠানের জায়গায় বিষয়
+$inst = $t->Institution !== 'Not specified' ? $t->Institution : (!empty($t->Locked) ? implode(', ', array_slice((array)$t->Subjects, 0, 2)) : 'N/A');
 ?>
 <div class="tl-card">
     <a class="tl-pic" href="/Tutors/Profile/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">

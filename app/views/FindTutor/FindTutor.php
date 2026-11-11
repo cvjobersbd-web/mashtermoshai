@@ -3147,7 +3147,8 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + '  </div>'
                     + '  <div class="ft2-acts">'
                     + '    <a class="ft2-btn outline" href="/Profile/Show/' + t.userId + '">View Profile</a>'
-                    + '    <button type="button" class="ft2-btn blue" onclick="openRequestTutorModal(' + t.id + ')"><i class="fas fa-paper-plane"></i> Request Tutor</button>'
+                    + (t.teacherOpen ? '    <button type="button" class="ft2-btn blue" onclick="openRequestTutorModal(' + t.id + ')"><i class="fas fa-paper-plane"></i> Request Tutor</button>'
+                        : '    <button type="button" class="ft2-btn blue" disabled style="opacity:.55;cursor:not-allowed;" title="এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই"><i class="fas fa-lock"></i> যোগাযোগ বন্ধ</button>')
                     + '  </div>'
                     + (tags ? '  <div class="ft2-tags">' + tags + '</div>' : '')
                     + '</div>';
@@ -3292,11 +3293,13 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + '  <div class="tp-stat"><div class="num">' + t.experienceYears + '+</div><div class="lbl">Years Exp.</div></div>'
                     + '  <div class="tp-stat"><div class="num">' + escapeHtml(t.gender) + '</div><div class="lbl">Gender</div></div>'
                     + '</div>'
-                    + '<div class="tp-block"><div class="tp-block-title"><i class="fas fa-user"></i>About Tutor</div><p>' + escapeHtml(t.about) + '</p></div>'
+                    + (t.locked ? '<div class="tp-block" style="background:#FFFBEB;border:1px dashed #F59E0B;border-radius:10px;padding:12px 14px;color:#92400E;"><i class="fas fa-lock"></i> '
+                        + (t.teacherOpen ? 'টিচারের ছবি, সম্পূর্ণ তথ্য দেখতে আর যোগাযোগ করতে শিক্ষার্থী প্যাকেজ নিন।' : 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — শুধু বেসিক তথ্য দেখা যাচ্ছে, যোগাযোগ বন্ধ।') + '</div>'
+                        : '<div class="tp-block"><div class="tp-block-title"><i class="fas fa-user"></i>About Tutor</div><p>' + escapeHtml(t.about) + '</p></div>')
                     + '<div class="tp-block"><div class="tp-block-title"><i class="fas fa-graduation-cap"></i>Education</div>'
                     + '  <div class="tp-info-grid">'
                     + '    <div class="tp-info-item"><div class="label">Qualification</div><div class="value">' + escapeHtml(t.qualification) + '</div></div>'
-                    + '    <div class="tp-info-item"><div class="label">Institution</div><div class="value">' + escapeHtml(t.institution) + '</div></div>'
+                    + '    <div class="tp-info-item"><div class="label">Institution</div><div class="value">' + (t.locked ? '<i class="fas fa-lock"></i> লক' : escapeHtml(t.institution)) + '</div></div>'
                     + '  </div>'
                     + '</div>'
                     + '<div class="tp-block"><div class="tp-block-title"><i class="fas fa-book"></i>Subjects</div><div class="tp-chips">' + subjectChips + '</div></div>'
@@ -3305,15 +3308,17 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + '  <div class="tp-info-grid">'
                     + '    <div class="tp-info-item"><div class="label">Location</div><div class="value">' + escapeHtml(t.location) + '</div></div>'
                     + '    <div class="tp-info-item"><div class="label">Teaching Mode</div><div class="value">' + escapeHtml(t.teachingMode) + '</div></div>'
-                    + '    <div class="tp-info-item"><div class="label">Available Time</div><div class="value">' + escapeHtml(t.availableTime) + '</div></div>'
+                    + '    <div class="tp-info-item"><div class="label">Available Time</div><div class="value">' + (t.locked ? '<i class="fas fa-lock"></i> লক' : escapeHtml(t.availableTime)) + '</div></div>'
                     + '    <div class="tp-info-item"><div class="label">Experience</div><div class="value">' + t.experienceYears + '+ years</div></div>'
                     + '  </div>'
                     + '</div>'
                     + '<div class="tp-cta">'
                     + '  <p><i class="fas fa-shield-alt me-1"></i> For privacy, we never share tutor contact details. All requests go through our admin team.</p>'
-                    + '  <button class="btn-request-tr" style="width:100%; padding:14px;" onclick="switchToRequest(' + t.id + ')">'
-                    + '    <i class="fas fa-paper-plane"></i> Request This Tutor'
-                    + '  </button>'
+                    + (t.canContact
+                        ? '  <button class="btn-request-tr" style="width:100%; padding:14px;" onclick="switchToRequest(' + t.id + ')"><i class="fas fa-paper-plane"></i> Request This Tutor</button>'
+                        : (t.teacherOpen
+                            ? '  <a class="btn-request-tr" style="width:100%; padding:14px; display:block; text-align:center; text-decoration:none;" href="' + <?= js(student_package_url()) ?> + '"><i class="fas fa-lock"></i> <?= current_user_id() === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request' ?></a>'
+                            : '  <button class="btn-request-tr" style="width:100%; padding:14px; opacity:.6; cursor:not-allowed;" disabled><i class="fas fa-lock"></i> যোগাযোগ এখন বন্ধ</button>'))
                     + '</div>';
 
                 new bootstrap.Modal(document.getElementById('tutorProfileModal')).show();
@@ -3334,6 +3339,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 }
 
                 var t = tutorId ? allTutors.find(function (x) { return x.id === tutorId; }) : null;
+                if (t && !t.teacherOpen) { alert('এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন রিকোয়েস্ট পাঠানো যাবে না।'); return; }
 
                 var headerInfo = t
                     ? '<div class="form-intro"><p>Requesting <strong>' + escapeHtml(t.fullName) + '</strong> '
@@ -3341,7 +3347,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + escapeHtml((t.subjects || []).join(', ')) + '. Your request goes to our admin team.</p></div>'
                     : '<div class="form-intro"><p>Already know your tutor? Select them below and submit your request. Our admin team will forward it.</p></div>';
 
-                var tutorOptions = allTutors.map(function (x) {
+                var tutorOptions = allTutors.filter(function (x) { return x.teacherOpen; }).map(function (x) {
                     var sel = (t && t.id === x.id) ? ' selected' : '';
                     return '<option value="' + x.id + '"' + sel + '>'
                         + escapeHtml(x.tutorId) + ' — ' + escapeHtml(x.fullName)
@@ -3883,7 +3889,8 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 }
                 if (reqUid) {
                     var rt = (window.allTutors || []).find(function (x) { return +x.userId === reqUid; });
-                    if (rt) setTimeout(function () { openRequestTutorModal(rt.id); }, 300);
+                    if (rt && rt.teacherOpen) setTimeout(function () { openRequestTutorModal(rt.id); }, 300);
+                    else if (rt) alert('এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন রিকোয়েস্ট পাঠানো যাবে না।');
                 }
 
                 var tidInput = document.getElementById('tidInput');

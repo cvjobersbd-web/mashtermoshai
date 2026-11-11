@@ -26,16 +26,29 @@ $preface = $d['preface'] !== '' ? $d['preface'] : ($d['whyHire'] === '' ? (strin
 $gender = $d['gender'] !== '' ? $d['gender'] : (in_array($t->Gender, ['Male', 'Female'], true) ? $t->Gender : '');
 $reqHref = '/FindTutor?req=' . (int)$t->UserId;
 $canRequest = !$isOwner && $role !== 'Teacher' && $role !== 'Admin' && $t->TutorId !== '';
-$canContact = viewer_can_contact_teachers();   // প্যাকেজ নেওয়া শিক্ষার্থী
-$lockBtn = '<a class="tp-btn pri" href="' . e(student_package_url()) . '" title="টিচারের ছবি, মোবাইল নম্বর দেখতে ও Direct Request পাঠাতে প্যাকেজ নিন"><i class="fas fa-lock"></i> ' . ($me === null ? 'লগইন করে Direct Request' : 'প্যাকেজ নিয়ে Direct Request') . '</a>';
+// সম্পূর্ণ তথ্য, ছবি আর যোগাযোগ — টিচারের প্যাকেজ চালু আর দেখা শিক্ষার্থীর প্যাকেজ দুটোই লাগে (না হলে শুধু বেসিক তথ্য)
+$tOpen = teacher_profile_open((int)$t->UserId);
+$full = $canPrivate || viewer_sees_teacher_full((int)$t->UserId);
+$canContact = viewer_can_contact_teacher((int)$t->UserId);
+$lockBtn = teacher_contact_lock_html((int)$t->UserId, 'tp-btn pri', 'Direct Request');
+$lk = '<span class="tp-na"><i class="fas fa-lock"></i> লক</span>';
+$lockMsg = !$tOpen ? 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই ছবি, সম্পূর্ণ তথ্য আর যোগাযোগের সুযোগ বন্ধ। শুধু বেসিক তথ্য দেখা যাচ্ছে।'
+    : ($me === null ? 'টিচারের ছবি, সম্পূর্ণ তথ্য (শিক্ষা, ব্যক্তিগত তথ্য, সময়) দেখতে আর যোগাযোগ করতে <a href="' . e(student_package_url()) . '">লগইন করে</a> শিক্ষার্থী প্যাকেজ নিন।'
+    : 'টিচারের ছবি, সম্পূর্ণ তথ্য (শিক্ষা, ব্যক্তিগত তথ্য, সময়) দেখতে আর যোগাযোগ করতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন।');
+$lockCard = fn($title) => '<div class="tp-card"><h2 class="tp-ttl">' . $title . '</h2><div class="tp-lockbox"><i class="fas fa-lock"></i><p>' . $lockMsg . '</p></div></div>';
 $ViewData['Title'] = $t->FullName;
 $ViewData['FullTitle'] = $t->FullName . ' — Tutor Details | মাষ্টার মশাই';
 $ViewData['Description'] = $t->FullName . ' — ' . ($univ ?: 'Tutor') . '। ' . ($subjects ? implode(', ', array_slice($subjects, 0, 5)) . ' পড়ান। ' : '') . ($city ? "$city এ।" : '');
-if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
+if ($t->PhotoUrl !== '' && $full) $ViewData['OgImage'] = $t->PhotoUrl;
+if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subjects ? implode(', ', array_slice($subjects, 0, 5)) . ' পড়ান। ' : '') . ($city ? "$city এ।" : '');
 ?>
 <?php partial('Tutors/_Styles'); ?>
 <style>
     .tp { background: #F3F6FA; padding: 26px 0 60px; }
+    .tp-lockbox { display: flex; gap: 12px; align-items: flex-start; background: #FFFBEB; border: 1px dashed #F59E0B; border-radius: 10px; padding: 14px 16px; color: #92400E; font-size: 13.5px; line-height: 1.6; }
+    .tp-lockbox i { font-size: 18px; margin-top: 2px; }
+    .tp-lockbox p { margin: 0; }
+    .tp-lockbox a { color: #B45309; font-weight: 700; }
     .tp-wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
     .tp-card { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(15,27,45,.05); padding: 26px 28px; margin-bottom: 18px; }
     .tp-ttl { display: flex; align-items: center; gap: 14px; margin: 0 0 18px; font-size: 17px; font-weight: 700; color: #1F2937; }
@@ -144,7 +157,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
         <div class="tp-card">
             <div class="tp-head">
                 <div class="tp-id">
-                    <span class="tl-pic"><span><?= e($t->Initials) ?></span><?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" onerror="this.remove()" /><?php endif; ?></span>
+                    <span class="tl-pic"><span><?= e($t->Initials) ?></span><?php if ($t->PhotoUrl !== '' && $full): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" onerror="this.remove()" /><?php endif; ?></span>
                     <div class="tl-badges">
                         <?php if ($t->IsPremium): ?><i class="fas fa-crown pr" title="Premium Tutor"></i><?php endif; ?>
                         <?php if ($t->IsTopRated): ?><i class="fas fa-award tp" title="Top Rated"></i><?php endif; ?>
@@ -152,17 +165,21 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
                     </div>
                     <h1><?= e($t->FullName) ?></h1>
                     <div class="tp-meta">
-                        <div><b>University :</b><span><?= $val($univ) ?></span></div>
+                        <div><b>University :</b><span><?= $full ? $val($univ) : $lk ?></span></div>
                         <div><b>Tutor ID :</b><span><?= $val($t->TutorId) ?></span></div>
-                        <div><b>Department :</b><span><?= $val($d['department']) ?></span></div>
+                        <div><b>Department :</b><span><?= $full ? $val($d['department']) : $lk ?></span></div>
                         <div><b>Profile Views :</b><span><i class="fas fa-eye eye"></i> <?= number_format((int)$ViewBag->Views) ?></span></div>
                     </div>
                 </div>
+                <?php if (!$full): ?>
+                <div class="tp-about"><div class="tp-lockbox"><i class="fas fa-lock"></i><p><?= $lockMsg ?></p></div></div>
+                <?php else: ?>
                 <div class="tp-about">
                     <h3>Preface</h3><p><?= $preface !== '' ? e($preface) : $na ?></p>
                     <h3>Tuition Job Experience</h3><p><?= $val($d['tuitionExperience']) ?></p>
                     <h3>Reasons to be Getting Hired</h3><p><?= $val($d['whyHire']) ?></p>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -191,17 +208,21 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
             <div class="tp-rows">
                 <b>Living Country :</b><div><?= $val($d['livingCountry'] !== '' ? $d['livingCountry'] : 'Bangladesh') ?></div>
                 <b>Living City :</b><div><?= $val($city) ?></div>
-                <b>Living Location :</b><div><?= $val($d['livingArea']) ?></div>
-                <b>Preferred Tutoring Location :</b><div><?= $chips($d['preferredAreas']) ?></div>
+                <b>Living Location :</b><div><?= $full ? $val($d['livingArea']) : $lk ?></div>
+                <b>Preferred Tutoring Location :</b><div><?= $full ? $chips($d['preferredAreas']) : $lk ?></div>
                 <span class="gap"></span>
                 <b>Preferred Tutoring Category :</b><div><?= $chips($mediums) ?></div>
                 <b>Preferred Tutoring Classes &amp; Courses :</b><div><?= $chips($classes) ?></div>
                 <b>Preferred Tutoring Subjects :</b><div><?= $chips($subjects) ?></div>
                 <span class="gap"></span>
                 <b>Preferred Tutoring Method :</b><div><?= $chips($methods) ?></div>
+                <?php if ($full): ?>
                 <b>Availability Day :</b><div><?= $chips($d['days']) ?></div>
                 <b>Available From :</b><div><?= $d['timeFrom'] !== '' ? e($tm($d['timeFrom'])) : ($d['timeTo'] === '' && $t->AvailableTime !== '' && $t->AvailableTime !== 'Contact for schedule' ? e($t->AvailableTime) : $na) ?></div>
                 <b>Available To :</b><div><?= $val($tm($d['timeTo'])) ?></div>
+                <?php else: ?>
+                <b>Availability :</b><div><?= $lk ?></div>
+                <?php endif; ?>
                 <span class="gap"></span>
                 <b>Tutoring Experience :</b><div><?= $val($exp) ?></div>
                 <b>Expected Salary :</b><div><?= $salary !== '' ? e($salary) . ' Tk' : $na ?></div>
@@ -209,6 +230,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
         </div>
 
         <!-- ===== শিক্ষা ===== -->
+        <?php if (!$full): ?><?= $lockCard('Educational Information') ?><?php else: ?>
         <div class="tp-card">
             <h2 class="tp-ttl">Educational Information</h2>
             <div class="tp-sub">Undergraduate Info :</div>
@@ -226,17 +248,22 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
                 <?php endforeach; ?>
             </table></div>
         </div>
+        <?php endif; ?>
 
         <!-- ===== ব্যক্তিগত ===== -->
         <div class="tp-card">
             <h2 class="tp-ttl">Personal Information</h2>
             <div class="tp-rows">
                 <b>Gender :</b><div><?= $val($gender) ?></div>
+                <?php if ($full): ?>
                 <b>Blood Group :</b><div><?= $val($d['bloodGroup']) ?></div>
                 <b>Religion :</b><div><?= $val($d['religion']) ?></div>
                 <span class="gap"></span>
                 <b>Nationality :</b><div><?= $val($d['nationality']) ?></div>
                 <b>Date of Birth :</b><div><?= $d['dob'] !== '' ? e(date('d M, Y', strtotime($d['dob']))) : $na ?></div>
+                <?php else: ?>
+                <b>Blood Group, Religion, Date of Birth :</b><div><?= $lk ?></div>
+                <?php endif; ?>
                 <span class="gap"></span>
                 <b>Member Since :</b><div><?= !empty($u->CreatedAt) ? e(date('d M, Y', strtotime((string)$u->CreatedAt))) : $na ?></div>
                 <b>Last Active :</b><div><?= !empty($ViewBag->LastSeen) ? e(date('d M, Y', strtotime((string)$ViewBag->LastSeen))) : $na ?></div>
@@ -270,7 +297,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
             <div class="tp-stat"><i class="fas fa-circle-xmark" style="background:#EF4444;"></i><div><b><?= (int)$st['notSelected'] ?></b><span>Not Selected</span></div></div>
         </div>
 
-        <?php if ($ViewBag->Cv !== '' && ($me !== null)): ?>
+        <?php if ($ViewBag->Cv !== '' && $me !== null && $full): ?>
             <div class="tp-card tp-bar" style="margin-top:22px;">
                 <p><i class="fas fa-file-pdf" style="color:#DC2626; font-size:22px; vertical-align:middle;"></i> টিচারের CV দেখতে পারেন।</p>
                 <a class="tp-btn pri" href="<?= e($ViewBag->Cv) ?>" target="_blank" rel="noopener nofollow"><i class="fas fa-download"></i> View CV</a>
@@ -325,7 +352,7 @@ if ($t->PhotoUrl !== '') $ViewData['OgImage'] = $t->PhotoUrl;
         <?php if (!$isOwner): ?>
             <div class="tp-card tp-hire">
                 <?php if ($canRequest): ?><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><?= $canContact ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Request This Tutor</button>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?></div><?php endif; ?>
-                <?php if ($canRequest && !$canContact): ?><p style="margin:8px 0 0;"><i class="fas fa-lock" style="color:#B45309;"></i> টিচারের প্রোফাইল ছবি, মোবাইল নম্বর, ইমেইল দেখতে, সরাসরি রিকোয়েস্ট পাঠাতে আর চ্যাট আনলক করতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন — ১ মাস ৳50, ৩ মাস ৳100।</p><?php endif; ?>
+                <?php if ($canRequest && !$canContact): ?><p style="margin:8px 0 0;"><i class="fas fa-lock" style="color:#B45309;"></i> <?= !$tOpen ? 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন যোগাযোগ করা যাবে না।' : 'টিচারের প্রোফাইল ছবি, সম্পূর্ণ তথ্য দেখতে, সরাসরি রিকোয়েস্ট পাঠাতে আর চ্যাট আনলক করতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন — ১ মাস ৳50, ৩ মাস ৳100।' ?></p><?php endif; ?>
                 <p>এই টিউটর সম্পর্কে আরো জানতে Tutor ID "<b><?= e($t->TutorId) ?></b>" দিয়ে <a href="/Helpdesk">Helpdesk</a> এ যোগাযোগ করুন।</p>
             </div>
         <?php endif; ?>

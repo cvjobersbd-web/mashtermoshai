@@ -344,11 +344,11 @@ class AdminController extends Controller
                 $this->db->CreateNotification($k->UserId, ($isT ? 'Teacher' : 'Student') . ' Verification Approve হয়েছে ✅', $isT ? 'আপনার পরিচয় (শিক্ষা প্রতিষ্ঠানের ID কার্ড) যাচাই সম্পন্ন হয়েছে।' : 'আপনার শিক্ষার্থী Teacher Verification Approve হয়েছে — এখন প্যাকেজ কিনতে ও টিউশন পোস্ট করতে পারবেন।', 'success', $isT ? $link : '/Package?for=student', 'fa-id-card');
                 if ($isT) {
                     $tr = $this->db->GetLatestTeacherRequest($k->UserId);
-                    if ($tr && $tr->Status === 'Pending') {
-                        if ($this->db->FinalizeTeacherIfReady((int)$tr->Id)) {
-                            $extra = ' পেমেন্ট আগেই Accept ছিল — ইউজার এখন টিচার।';
-                            $this->db->CreateNotification($k->UserId, "🎓 You're now a Teacher!", 'অভিনন্দন! আপনার টিচার আবেদন Approve হয়েছে — Teacher Dashboard থেকে শুরু করুন।', 'success', '/Teacher/TeacherDashboard', 'fa-chalkboard-teacher');
-                        } elseif (!empty($tr->PaymentId)) $extra = ' এখন Teacher Payment Requests থেকে পেমেন্ট Accept করুন — তাহলেই টিচার হয়ে যাবেন।';
+                    if ($tr && in_array($tr->Status, ['Pending', 'AwaitingPayment'], true) && $this->db->FinalizeTeacherIfReady((int)$tr->Id)) {
+                        // Verification Approve = টিচার (Tutor List এ আসে); প্যাকেজ কিনলে ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ খোলে
+                        $hasPkg = $this->db->GetActiveTeacherSubscription($k->UserId) !== null;
+                        $extra = ' ইউজার এখন টিচার — Tutor List এ দেখা যাবে।' . ($hasPkg ? '' : (!empty($tr->PaymentId) ? ' প্যাকেজের পেমেন্ট Teacher Payment Requests এ Accept করলে ছবি, সম্পূর্ণ তথ্য আর যোগাযোগ খুলবে।' : ' প্যাকেজ না কেনা পর্যন্ত শুধু বেসিক তথ্য দেখাবে (ছবি / যোগাযোগ বন্ধ)।'));
+                        $this->db->CreateNotification($k->UserId, "🎓 You're now a Teacher!", 'অভিনন্দন! আপনার টিচার আবেদন Approve হয়েছে — Teacher Dashboard থেকে শুরু করুন।' . ($hasPkg ? '' : ' টিচার প্যাকেজ কিনলে Tutor List এ আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলে যাবে।'), 'success', '/Teacher/TeacherDashboard', 'fa-chalkboard-teacher');
                     }
                 }
             } else {
