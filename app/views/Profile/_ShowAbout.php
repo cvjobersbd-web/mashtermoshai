@@ -179,8 +179,10 @@ $forms = !$isOwner ? [] : [
                     <?php elseif ($st === 'AwaitingPayment'): ?>
                         <div class="ab-tutor"><i class="fas fa-credit-card" style="color:#f39c12;"></i><div><strong>ফর্ম জমা হয়েছে — যাচাই চলছে</strong><p>অ্যাডমিন আপনার Teacher Verification Approve করলেই আপনি টিচার (Tutor List এ আসবেন)। টিচার প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</p></div></div>
                         <a href="/Package?for=teacher&amp;apply=1" class="ps-btn primary"><i class="fas fa-tags"></i> টিচার প্যাকেজ বেছে নিন</a>
+                        <?php if (db()->KycStatus((int)$u->Id, 'teacher') === 'Pending'): ?><a href="/Kyc/Teacher" class="ps-btn" style="margin:6px 0 0 6px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-pen"></i> ID কার্ডের ছবি / তথ্য এডিট করুন</a><?php endif; ?>
                     <?php elseif ($st === 'Pending'): ?>
-                        <div class="ab-tutor"><i class="fas fa-hourglass-half" style="color:#f39c12;"></i><div><strong>আবেদন যাচাই হচ্ছে</strong><p>আপনার ফর্ম অ্যাডমিন যাচাই করছেন — Teacher Verification Approve করলে আপনি টিচার হয়ে যাবেন এবং নোটিফিকেশন পাবেন।</p></div></div>
+                        <div class="ab-tutor"><i class="fas fa-hourglass-half" style="color:#f39c12;"></i><div><strong>আবেদন যাচাই হচ্ছে</strong><p>আপনার ফর্ম অ্যাডমিন যাচাই করছেন — Teacher Verification Approve করলে আপনি টিচার হয়ে যাবেন এবং নোটিফিকেশন পাবেন। ভুল ছবি দিয়ে থাকলে Approve এর আগে বদলাতে পারবেন।</p></div></div>
+                        <?php if (db()->KycStatus((int)$u->Id, 'teacher') === 'Pending'): ?><a href="/Kyc/Teacher" class="ps-btn" style="margin:6px 0 0 6px;background:#fff;border:1.5px solid #DCECF5;color:#1D7FE5;"><i class="fas fa-pen"></i> ID কার্ডের ছবি / তথ্য এডিট করুন</a><?php endif; ?>
                     <?php elseif ($st === 'Rejected'): ?>
                         <div class="ab-tutor"><i class="fas fa-circle-xmark" style="color:#e74c3c;"></i><div><strong>আগের আবেদন গ্রহণ হয়নি</strong><p>তথ্য ঠিক করে আবার আবেদন করতে পারেন।</p></div></div>
                         <a href="/Teacher/RequestForm" class="ps-btn primary"><i class="fas fa-paper-plane"></i> আবার আবেদন করুন</a>

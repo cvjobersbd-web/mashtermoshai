@@ -4,7 +4,7 @@ $k = $Model; $st = $k ? (string)$k->Status : 'None'; $u = $ViewBag->User;
 $ViewData['Title'] = 'টিচারের Teacher Verification';
 $ViewData['Robots'] = 'noindex, nofollow';
 $D = $k ? $k->D : [];
-$showForm = $st === 'None' || $st === 'Rejected';
+$showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // যাচাই বাকি থাকলেও ছবি / তথ্য বদলানো যায়
 ?>
 <?php partial('Kyc/_Styles'); ?>
 <?= csrf_field() ?>
@@ -13,7 +13,7 @@ $showForm = $st === 'None' || $st === 'Rejected';
         <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> টিচারের পরিচয় যাচাই (Teacher Verification)</h1>
         <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য টিচারের শিক্ষা প্রতিষ্ঠানের (বিশ্ববিদ্যালয় / কলেজ / স্কুল) ID কার্ড আর যোগাযোগের নম্বর যাচাই করা হয় (NID ঐচ্ছিক)।</p>
         <?php if ($st === 'Pending'): ?>
-            <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন।</p></div></div>
+            <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন। ভুল ছবি দিয়ে থাকলে (যেমন প্রতিষ্ঠানের ID কার্ডের জায়গায় NID) — Approve হওয়ার আগে নিচে ছবিতে চাপ দিয়ে বদলে "আপডেট করুন" চাপুন।</p></div></div>
         <?php elseif ($st === 'Approved'): ?>
             <div class="ky-state ok"><i class="fas fa-circle-check"></i><div><b>আপনার Teacher Verification Approve হয়েছে</b><p>ধন্যবাদ! আপনার পরিচয় যাচাই করা হয়েছে।</p></div></div>
         <?php elseif ($st === 'Rejected'): ?>
@@ -56,7 +56,7 @@ $showForm = $st === 'None' || $st === 'Rejected';
             </div>
             <div class="ky-f" data-f="kycNid" style="max-width:300px;"><label class="l" for="kycNid">NID নম্বর <small>(ঐচ্ছিক)</small></label><input type="text" id="kycNid" name="kycNid" maxlength="20" inputmode="numeric" value="<?= e((string)($D['nid'] ?? '')) ?>" /></div>
             <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-                <button type="submit" class="ky-btn" id="kyBtn"><i class="fas fa-paper-plane"></i> জমা দিন</button>
+                <button type="submit" class="ky-btn" id="kyBtn"><?= $st === 'Pending' ? '<i class="fas fa-rotate"></i> আপডেট করুন' : '<i class="fas fa-paper-plane"></i> জমা দিন' ?></button>
                 <span class="ky-msg" id="kyMsg"></span>
             </div>
         </form>

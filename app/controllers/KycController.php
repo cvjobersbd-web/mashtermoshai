@@ -178,9 +178,20 @@ class KycController extends Controller
         $me = $this->me(true);
         if (is_admin()) $this->fail('অ্যাডমিন অ্যাকাউন্টের Teacher Verification লাগে না।');
         $old = $this->db->GetKyc($me, 'teacher');
-        if ($old && $old->Status === 'Pending') $this->fail('আপনার তথ্য যাচাই হচ্ছে — অ্যাডমিন দেখার পর আবার জমা দিতে পারবেন।');
         if ($old && $old->Status === 'Approved') $this->fail('আপনার Teacher Verification আগেই Approve হয়েছে।');
         [$d, $front, $back] = self::readTeacherKyc($this->db, $me, $old, fn($m, $f = null) => $this->fail($m, $f));
+        // যাচাই বাকি — Approve এর আগে ভুল ছবি (যেমন ID কার্ডের জায়গায় NID) বদলানো যায়: একই আবেদন আপডেট, পুরোনো বাদ পড়া ছবি মুছে যায়
+        if ($old && $old->Status === 'Pending') {
+            $keep = array_filter([$front, $back, $d['nidFront'] ?? '', $d['nidBack'] ?? '']);
+            if (!$this->db->UpdatePendingKyc($old->Id, $d, $front, $back)) {
+                foreach ([$front, $back, $d['nidFront'] ?? '', $d['nidBack'] ?? ''] as $n) if ($n && !in_array($n, [$old->FileFront, $old->FileBack, $old->D['nidFront'] ?? '', $old->D['nidBack'] ?? ''], true)) kyc_delete_file($n);
+                $this->fail('আপনার আবেদন এইমাত্র অ্যাডমিন দেখে ফেলেছেন — পেজটা রিফ্রেশ করুন।');
+            }
+            foreach ([$old->FileFront, $old->FileBack, $old->D['nidFront'] ?? '', $old->D['nidBack'] ?? ''] as $n) if ($n && !in_array($n, $keep, true)) kyc_delete_file($n);
+            $who = (string)(session_get('UserFullName') ?: session_get('UserName'));
+            foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '✏️ Teacher Verification আপডেট', "$who যাচাই বাকি থাকা অবস্থায় তার তথ্য / ID কার্ডের ছবি বদলেছেন — Teacher Verification দেখে Approve করুন।", 'info', '/Admin/Kyc?k=teacher', 'fa-id-card'); } catch (Throwable $e) { } }
+            json_response(['success' => true, 'message' => 'আপডেট হয়েছে! অ্যাডমিন নতুন ছবি দেখে Approve করবেন।', 'redirect' => '/Kyc/Teacher']);
+        }
         // চালু টিচার আবেদন থাকলে তার সাথে জুড়ে দেওয়া (প্রত্যাখ্যাত Teacher Verification আবার জমা)
         $tr = $this->db->GetLatestTeacherRequest($me);
         $trId = $tr && in_array($tr->Status, ['Pending', 'AwaitingPayment'], true) ? (int)$tr->Id : null;

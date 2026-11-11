@@ -91,6 +91,14 @@ trait KycData
             ['u' => $userId, 'k' => $kind, 'd' => json_encode($data, JSON_UNESCAPED_UNICODE), 'f' => $front, 'b' => $back, 't' => $teacherRequestId, 'c' => now()]);
     }
 
+    /** যাচাই বাকি থাকা অবস্থায় ইউজার নিজের তথ্য / ID কার্ডের ছবি বদলালে — একই আবেদন আপডেট (নতুন সারি না) */
+    public function UpdatePendingKyc(int $id, array $data, string $front, string $back): bool
+    {
+        $this->EnsureKycTable();
+        return $this->exec('UPDATE `KycRequests` SET `Data` = :d, `FileFront` = :f, `FileBack` = :b WHERE `Id` = :i AND `Status` = \'Pending\'',
+            ['d' => json_encode($data, JSON_UNESCAPED_UNICODE), 'f' => $front, 'b' => $back, 'i' => $id]) > 0;
+    }
+
     public function LinkKycTeacherRequest(int $kycId, int $requestId): void
     {
         $this->EnsureKycTable();
