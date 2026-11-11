@@ -41,8 +41,11 @@
     .ef-imgs img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
     .ef-imgs button:hover img { transform: scale(1.02); }
     .ef-imgs.n1 { grid-template-columns: 1fr; }
-    .ef-imgs.n1 button { max-height: 560px; background: #0F172A; }
-    .ef-imgs.n1 img { object-fit: contain; max-height: 560px; }
+    /* একটা ছবি: যে সাইজই হোক পুরো ছবি দেখাবে — কাটা যাবে না, পাশে কালো বর্ডার না; খুব লম্বা ছবিতে পাশে ঝাপসা একই ছবি */
+    .ef-imgs.n1 button { width: 100%; background: #F1F5F9; }
+    .ef-imgs.n1 button::before { content: ""; position: absolute; inset: -20px; background: var(--bg) center / cover no-repeat; filter: blur(18px) brightness(.9); }
+    .ef-imgs.n1 img { position: relative; width: 100%; height: auto; max-height: min(80vh, 720px); object-fit: contain; }
+    .ef-imgs.n1 button:hover img { transform: none; }
     .ef-imgs.n2 { grid-template-columns: 1fr 1fr; } .ef-imgs.n2 button { aspect-ratio: 1 / 1; }
     .ef-imgs.n3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; aspect-ratio: 3 / 2; }
     .ef-imgs.n3 button:first-child { grid-row: span 2; }
