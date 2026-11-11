@@ -1026,7 +1026,8 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $off = $this->db->RefNoBonusIds();
         $out = array_map(fn($u) => ['id' => (int)$u->Id, 'name' => (string)($u->FullName ?: $u->UserName), 'user' => (string)$u->UserName, 'email' => (string)$u->Email,
-            'role' => role_label((string)$u->Role, (int)$u->Id), 'code' => (string)($u->Code ?? ''), 'off' => in_array((int)$u->Id, $off, true)],
+            'role' => role_label((string)$u->Role, (int)$u->Id), 'code' => (string)($u->Code ?? ''), 'off' => in_array((int)$u->Id, $off, true),
+            'joined' => fmt_date($u->CreatedAt, 'd M Y, h:i A', ''), 'photo' => (string)($u->ProfileImageLink ?? ''), 'ini' => initials((string)($u->FullName ?: $u->UserName))],
             $this->db->SearchUsersForReferral((string)input_str('q', ''), 12));
         json_response(['success' => true, 'users' => $out]);
     }

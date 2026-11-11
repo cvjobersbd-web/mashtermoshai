@@ -294,6 +294,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                     </h1>
                     <?php if ($headline !== ''): ?><div class="tp-headline" id="tpHeadline"><?= e($headline) ?></div><?php endif; ?>
                     <div class="pf-meta">
+                        <?php if (!is_blank($u->UserName ?? '')): ?><span title="Username"><i class="fas fa-at"></i> <?= e((string)$u->UserName) ?></span><?php endif; ?>
                         <?php if ($location !== ''): ?><span><i class="fas fa-location-dot"></i> <?= e($location) ?></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></span>
                     </div>

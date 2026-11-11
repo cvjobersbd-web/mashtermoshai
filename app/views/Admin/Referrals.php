@@ -91,9 +91,10 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <div class="rfa-tw"><table class="rfa-tbl">
             <tr><th>ইউজার</th><th>কোড</th><th></th></tr>
             <?php foreach ($nb as $u): ?>
-                <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <small style="color:#64748B;">@<?= e((string)$u->UserName) ?> · <?= e((string)$u->Email) ?></small></td>
+                <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
                     <td><span class="rfg-code"><?= e((string)($u->Code ?: '—')) ?></span></td>
-                    <td style="white-space:nowrap;text-align:right;"><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Admin/ReferralUser/<?= (int)$u->Id ?>">বিস্তারিত</a>
+                    <td style="white-space:nowrap;text-align:right;"><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Profile/Show/<?= (int)$u->Id ?>" target="_blank" rel="noopener"><i class="fas fa-user"></i> প্রোফাইল</a>
+                        <a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Admin/ReferralUser/<?= (int)$u->Id ?>">বিস্তারিত</a>
                         <button type="button" class="rfa-btn g" style="height:32px;font-size:12px;" data-nb="<?= (int)$u->Id ?>" data-on="0">বোনাস চালু করুন</button></td></tr>
             <?php endforeach; ?>
         </table></div>
@@ -206,8 +207,12 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         nbT = setTimeout(async function () {
             var r = await post('/Admin/RefUserSearch', { q: v }); if (nbQ.value.trim() !== v) return;
             nbRes.innerHTML = (r.users || []).length ? r.users.map(function (u) {
-                return '<div style="display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid #E5ECF3;border-radius:10px;padding:8px 12px;margin-bottom:6px;">'
-                    + '<span><b>' + escH(u.name) + '</b> <small style="color:#64748B;">@' + escH(u.user) + ' · ' + escH(u.role) + ' · ' + escH(u.email) + (u.code ? ' · ' + escH(u.code) : '') + '</small></span>'
+                var av = '<span style="width:42px;height:42px;border-radius:50%;background:#1E3A8A;color:#fff;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;position:relative;">' + escH(u.ini)
+                    + (u.photo ? '<img src="' + escH(u.photo) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()" />' : '') + '</span>';
+                return '<div style="display:flex;align-items:center;gap:12px;border:1px solid #E5ECF3;border-radius:10px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap;">' + av
+                    + '<div style="flex:1;min-width:200px;"><b>' + escH(u.name) + '</b> <span class="rfg-code" style="font-size:12px;">@' + escH(u.user) + '</span>'
+                    + '<br><small style="color:#64748B;">' + escH(u.role) + ' · ' + escH(u.email) + (u.code ? ' · কোড ' + escH(u.code) : '') + (u.joined ? ' · যোগ দিয়েছে ' + escH(u.joined) : '') + '</small></div>'
+                    + '<a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Profile/Show/' + u.id + '" target="_blank" rel="noopener"><i class="fas fa-user"></i> প্রোফাইল দেখুন</a>'
                     + (u.off ? '<span class="rfa-pill no">আগেই তালিকায়</span>' : '<button type="button" class="rfa-btn r" style="height:32px;font-size:12px;" data-nb="' + u.id + '" data-on="1">বোনাস বন্ধ করুন</button>') + '</div>';
             }).join('') : '<div class="rfa-empty" style="padding:8px 0;">কাউকে পাওয়া যায়নি।</div>';
         }, 300);

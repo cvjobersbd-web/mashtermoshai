@@ -103,6 +103,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                         <?php if ($Model->IsSuspended): ?><span class="pf-warn"><i class="fas fa-ban"></i> Suspended</span><?php endif; ?>
                     </h1>
                     <div class="pf-meta">
+                        <?php if (!is_blank($u->UserName ?? '')): ?><span title="Username"><i class="fas fa-at"></i> <?= e((string)$u->UserName) ?></span><?php endif; ?>
                         <span><i class="fas <?= $isTeacher ? 'fa-chalkboard-user' : 'fa-graduation-cap' ?>"></i> <?= $roleLabel ?></span>
                         <?php if ($location !== ''): ?><span><i class="fas fa-location-dot"></i> <span id="pfLoc"><?= e($location) ?></span></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></span>

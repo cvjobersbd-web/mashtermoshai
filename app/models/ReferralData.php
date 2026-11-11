@@ -97,7 +97,7 @@ trait ReferralData
         if (mb_strlen($q) < 2) return [];
         $this->EnsureReferralTables();
         $like = '%' . str_replace(['%', '_'], '', $q) . '%';
-        return $this->all("SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id`
+        return $this->all("SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, u.`CreatedAt`, u.`ProfileImageLink`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id`
             WHERE u.`Role` <> 'Admin' AND (u.`FullName` LIKE :a OR u.`UserName` LIKE :b OR u.`Email` LIKE :c OR u.`MobileNumber` LIKE :d OR c.`Code` = :e)
             ORDER BY u.`Id` DESC LIMIT " . max(1, min(30, $limit)), ['a' => $like, 'b' => $like, 'c' => $like, 'd' => $like, 'e' => strtoupper($q)]);
     }
