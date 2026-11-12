@@ -4,7 +4,10 @@
  * প্যাকেজগুলো অ্যাডমিন প্যানেল (Admin → Packages) থেকে সাজানো হয়। পেমেন্ট সিস্টেম পরে যুক্ত হবে।
  */
 $ViewData['Title'] = 'Packages';
-$teacherPk = $ViewBag->TeacherPackages ?? [];
+$teacherPkAll = $ViewBag->TeacherPackages ?? [];
+// নরমাল আর Premium (লাইভ ক্লাস সহ) আলাদা দেখানো
+$teacherPk = array_values(array_filter($teacherPkAll, fn($p) => empty($p->IsLive)));
+$premiumPk = array_values(array_filter($teacherPkAll, fn($p) => !empty($p->IsLive)));
 $studentPk = $ViewBag->StudentPackages ?? [];
 $tab = $ViewBag->Tab === 'student' ? 'student' : 'teacher';
 $isLoggedIn = session_get('UserName') != null;
@@ -135,6 +138,8 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
     .pk-sec-h p { margin: 0 auto; max-width: 620px; color: #64748B; font-size: 14.5px; line-height: 1.7; }
 
     .pk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; align-items: stretch; }
+    .pk-premium .pk-card { border: 2px solid #C4B5FD; background: linear-gradient(180deg, #FAF5FF, #fff 40%); }
+    .pk-premium .pk-badge { background: #7C3AED !important; color: #fff !important; }
     .pk-grid.few { grid-template-columns: repeat(auto-fit, minmax(260px, 320px)); justify-content: center; }
     .pk-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; background: #fff; border: 1.5px solid #E3ECF5; border-radius: 18px; padding: 22px 20px 20px;
         box-shadow: 0 6px 22px rgba(8,34,74,.06); transition: transform .2s, box-shadow .2s; }
@@ -275,6 +280,15 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             </div>
             <?php foreach ($teacherPk as $p) $card($p, 'Subscribe করুন'); ?>
         </div>
+        <?php if ($premiumPk): ?>
+        <div class="pk-sec-h" style="margin-top:34px;">
+            <h2><i class="fas fa-tower-broadcast" style="color:#7C3AED;"></i> Premium — লাইভ ক্লাস সহ</h2>
+            <p>বাকি সব সুবিধার পাশাপাশি সাইট থেকেই শিক্ষার্থীদের লাইভ ক্লাস নিন — চ্যাট থেকে এক ক্লিকে ক্লাস শুরু, Zoom / Google Meet লাগবে না।</p>
+        </div>
+        <div class="pk-grid pk-premium<?= count($premiumPk) < 3 ? ' few' : '' ?>">
+            <?php foreach ($premiumPk as $p) $card($p, 'Premium নিন'); ?>
+        </div>
+        <?php endif; ?>
         
         <div class="pk-tick-demo">
             <div class="pk-tick-card">

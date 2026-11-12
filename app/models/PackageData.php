@@ -145,6 +145,20 @@ trait PackageData
                 $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 1");
                 $this->SaveSiteContent(['pkg_v4' => '1']);
             }
+            // আবার Premium (একবারই): টিচারের ২টা প্রিমিয়াম প্যাকেজ — ১ মাস ৳200, ৩ মাস ৳500। বাকি সব সুবিধার সাথে চ্যাট থেকে লাইভ ক্লাস।
+            // আলাদা পেইড লাইভ ক্লাস (কোর্সের মতো বিক্রি) বন্ধ — লাইভ ক্লাস এখন শুধু Premium প্যাকেজে।
+            if (($this->GetSiteContent(['pkg_v5' => ''])['pkg_v5'] ?? '') === '') {
+                $base = $this->one("SELECT `Features` FROM `Packages` WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 0 AND `IsActive` = 1 AND `Features` IS NOT NULL ORDER BY `DurationMonths`, `Id` LIMIT 1");
+                $feat = "সাইট থেকেই সরাসরি লাইভ ক্লাস নিতে পারবেন — Zoom / Google Meet লাগবে না\nচ্যাট থেকে এক ক্লিকে ক্লাস শুরু — শিক্ষার্থী Join বাটন পাবে\nক্লাসের রেকর্ডিং পরে দেখা যায়\n"
+                    . ($base && !is_blank($base->Features) ? (string)$base->Features : self::TEACHER_FEATURES_V2);
+                $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 1");
+                $n = (int)$this->scalar("SELECT COALESCE(MAX(`SortOrder`), 0) FROM `Packages` WHERE `Audience` = 'Teacher'");
+                foreach ([[1, 'Premium ১ মাস', 200, 0], [3, 'Premium ৩ মাস', 500, 1]] as $i => [$m, $nm, $price, $fe]) {
+                    $this->insertPackage(['Audience' => 'Teacher', 'Name' => $nm, 'DurationMonths' => $m, 'PostLimit' => 0, 'Price' => $price, 'RegularPrice' => null, 'Badge' => 'লাইভ ক্লাস',
+                        'Description' => 'সব সুবিধা + লাইভ ক্লাস — ' . ($m === 1 ? '১ মাস' : '৩ মাস'), 'Features' => $feat, 'IsFeatured' => $fe, 'IsLive' => 1, 'SortOrder' => $n + $i + 1]);
+                }
+                $this->SaveSiteContent(['pkg_v5' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
     }
 

@@ -228,7 +228,7 @@ $role = current_role();
                         <form id="chClsForm" autocomplete="off" novalidate>
                             <h3 id="chDlgT"><i class="fas fa-video"></i> লাইভ ক্লাস সেট করুন</h3>
                             <?php if (empty($ViewBag->LiveOk)): ?>
-                                <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-tower-broadcast"></i> এখানে ক্লাসের সময়সূচি রাখতে পারবেন। <b>লাইভ (অনলাইন) ক্লাস</b> এখন আলাদা পেইড ক্লাস — <a href="/Course/Manage">Course থেকে লাইভ ক্লাস / ব্যাচ বানান</a>, নিজে দাম ঠিক করুন, শিক্ষার্থীরা পেমেন্ট করে যোগ দেবে (সাইট শুধু <?= (int)course_admin_pct() ?>% কমিশন রাখে)।</p>
+                                <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-tower-broadcast"></i> এখানে ক্লাসের সময়সূচি রাখতে পারবেন। <b>লাইভ (অনলাইন) ক্লাস</b> নিতে <a href="/Package?for=teacher">Premium প্যাকেজ</a> লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — নিলে এখান থেকেই এক ক্লিকে লাইভ ক্লাস শুরু করতে পারবেন।</p>
                             <?php else: ?>
                                 <p class="sub">মাষ্টার মশাই এর নিজের লাইভ ক্লাস — আলাদা কোনো অ্যাপ লাগবে না। সময় হলে কার্ডের <b>লাইভ শুরু করুন</b> চাপুন, <?= e($cur->OtherName) ?> <b>Join Class</b> চেপে যোগ দেবে।</p>
                             <?php endif; ?>
@@ -568,7 +568,7 @@ $role = current_role();
             ok.disabled = true; err.textContent = '';
             try {
                 var r = await post('/Chat/CreateClass', { title: cf.elements['title'].value.trim(), date: cf.date.value, time: cf.time.value, duration: cf.duration.value });
-                if (!r.success) { err.innerHTML = ''; err.textContent = r.message || 'সেট করা যায়নি।'; if (r.premium) { var a = document.createElement('a'); a.href = r.courseUrl || '/Course/Manage'; a.textContent = ' লাইভ ক্লাস / ব্যাচ বানান →'; err.appendChild(a); } if (r.closed) { closeDlg(); setClosed(); } return; }
+                if (!r.success) { err.innerHTML = ''; err.textContent = r.message || 'সেট করা যায়নি।'; if (r.premium) { var a = document.createElement('a'); a.href = r.courseUrl || '/Package?for=teacher'; a.textContent = ' Premium প্যাকেজ নিন →'; err.appendChild(a); } if (r.closed) { closeDlg(); setClosed(); } return; }
                 setClasses(r.classes); append(r.messages); cf.reset(); closeDlg();
             } catch (er) { err.textContent = 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন।'; }
             finally { ok.disabled = false; }

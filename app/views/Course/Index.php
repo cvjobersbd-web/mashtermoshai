@@ -36,7 +36,7 @@ $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?
 </style>
 <section class="ci-hero">
     <div class="cx-wrap">
-        <h1><i class="fas fa-book-open-reader"></i> কোর্স ও লাইভ ক্লাস</h1>
+        <h1><i class="fas fa-book-open-reader"></i> কোর্স</h1>
         <p>অভিজ্ঞ শিক্ষকদের কোর্স — রেকর্ড করা ক্লাস, সরাসরি লাইভ ক্লাস, অ্যাসাইনমেন্ট, কুইজ আর কোর্স শেষে সার্টিফিকেট।</p>
         <div class="ci-feat"><span><i class="fas fa-circle-play"></i> রেকর্ড ক্লাস</span><span><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস</span><span><i class="fas fa-list-check"></i> কুইজ ও অ্যাসাইনমেন্ট</span><span><i class="fas fa-award"></i> সার্টিফিকেট</span></div>
         <form class="ci-srch" method="get" action="/Course">
@@ -51,7 +51,10 @@ $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?
     <div class="cx-wrap">
         <?php $kd = (string)($ViewBag->Kind ?? ''); $kq = fn($v) => '/Course' . (($x = http_build_query(array_filter(['kind' => $v, 'q' => $q, 'cat' => $cat]))) !== '' ? '?' . $x : ''); ?>
         <div class="ci-kinds" style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 4px;">
-            <?php foreach (['' => ['সব', 'fa-layer-group', '#08224A'], 'course' => ['কোর্স', 'fa-book-open-reader', '#0EA5E9'], 'live' => ['লাইভ ক্লাস', 'fa-tower-broadcast', '#DC2626']] as $kv => [$kl, $ki, $kc]): ?>
+            <?php $kinds = ['' => ['সব', 'fa-layer-group', '#08224A'], 'course' => ['কোর্স', 'fa-book-open-reader', '#0EA5E9'], 'live' => ['লাইভ ক্লাস', 'fa-tower-broadcast', '#DC2626']];
+            // আলাদা পেইড লাইভ ক্লাস বন্ধ — আগের কোনোটা প্রকাশিত থাকলে তবেই "লাইভ ক্লাস" ট্যাব; না থাকলে ট্যাবই দেখায় না
+            if ($kd !== 'live' && !db()->GetPublicCourses('', '', 'live')) $kinds = [];
+            foreach ($kinds as $kv => [$kl, $ki, $kc]): ?>
                 <a href="<?= e($kq($kv)) ?>" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:999px;font-weight:800;font-size:14px;text-decoration:none;border:1.5px solid <?= $kc ?>;<?= $kd === $kv ? 'background:' . $kc . ';color:#fff;' : 'background:#fff;color:' . $kc . ';' ?>"><i class="fas <?= $ki ?>"></i> <?= $kl ?></a>
             <?php endforeach; ?>
         </div>

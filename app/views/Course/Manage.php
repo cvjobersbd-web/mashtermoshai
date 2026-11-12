@@ -20,8 +20,8 @@ $pct = course_admin_pct();
     <div class="cx-wrap">
         <a class="cx-back" href="<?= is_admin() ? '/Admin/Courses' : '/Teacher/TeacherDashboard' ?>"><i class="fas fa-arrow-left"></i> <?= is_admin() ? 'Admin → Courses' : 'Teacher Dashboard' ?></a>
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
-            <div><h1 class="cx-h1"><i class="fas fa-chalkboard-user" style="color:#0EA5E9;"></i> আমার কোর্স</h1><p class="cx-sub"><b>কোর্স</b> (রেকর্ড করা ক্লাস) আর <b>লাইভ ক্লাস / ব্যাচ</b> (নির্দিষ্ট সময়ে অনলাইনে) — দুটোই আলাদা বানিয়ে নিজের দামে বিক্রি করুন।</p></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="cx-btn pri lg" href="/Course/Edit?kind=course"><i class="fas fa-plus"></i> নতুন কোর্স</a><a class="cx-btn lg" href="/Course/Edit?kind=live" style="background:#DC2626;border-color:#DC2626;color:#fff;"><i class="fas fa-tower-broadcast"></i> নতুন লাইভ ক্লাস</a></div>
+            <div><h1 class="cx-h1"><i class="fas fa-chalkboard-user" style="color:#0EA5E9;"></i> আমার কোর্স</h1><p class="cx-sub"><b>কোর্স</b> (রেকর্ড করা ক্লাস, কুইজ, অ্যাসাইনমেন্ট) বানিয়ে নিজের দামে বিক্রি করুন। শিক্ষার্থীদের <b>লাইভ ক্লাস</b> নিতে <a href="/Package?for=teacher">Premium প্যাকেজ</a> নিন — চ্যাট থেকে এক ক্লিকে ক্লাস শুরু।</p></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="cx-btn pri lg" href="/Course/Edit?kind=course"><i class="fas fa-plus"></i> নতুন কোর্স</a></div>
         </div>
         <div class="cx-stats">
             <div class="cx-stat" style="--c:#0EA5E9;"><small>মোট বিক্রি</small><b><?= (int)$E['count'] ?>টা</b></div>

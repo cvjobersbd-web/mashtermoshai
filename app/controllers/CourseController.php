@@ -257,7 +257,8 @@ class CourseController extends Controller
         $data = ['Title' => $title, 'Subtitle' => $clean('subtitle', 250) ?: null, 'Description' => $desc ?: null, 'Includes' => $inc ? implode("\n", $inc) : null,
             'Category' => $clean('category', 60) ?: null, 'Level' => in_array($level, self::LEVELS, true) ? $level : self::LEVELS[0],
             'Price' => (int)$price, 'RegularPrice' => $reg === '' ? null : (int)$reg, 'PassPercent' => max(0, min(100, (int)input_int('passPercent', 60))),
-            'Kind' => input_str('kind', '') === 'live' ? 'live' : 'course'];
+            // আলাদা পেইড লাইভ ক্লাস বন্ধ — নতুন সবই "কোর্স"; আগের লাইভ ক্লাস যেমন ছিল তেমন থাকে (লাইভ ক্লাস এখন Premium প্যাকেজে চ্যাট থেকে)
+            'Kind' => $c && $c->Kind === 'live' ? 'live' : 'course'];
         $file = upload_file('thumbnail');
         if ($file) {
             $ext = strtolower('.' . pathinfo($file['name'], PATHINFO_EXTENSION));

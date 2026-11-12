@@ -171,7 +171,7 @@ class ChatController extends Controller
         if (!$t) json_response(['success' => false, 'closed' => true, 'message' => 'এই চ্যাটটি বন্ধ হয়ে গেছে।']);
         if ($t->TeacherId !== $me) json_response(['success' => false, 'message' => 'শুধু টিচার ক্লাস সেট করতে পারবেন।']);
         // Zoom / Google Meet আর না — সাইটের নিজের লাইভ ক্লাস (BigBlueButton), শুধু Premium টিচার প্যাকেজে
-        if (!teacher_live_enabled($me)) json_response(['success' => false, 'premium' => true, 'courseUrl' => '/Course/Manage', 'message' => 'লাইভ ক্লাস এখন আলাদা পেইড ক্লাস হিসেবে চলে — Course থেকে লাইভ ক্লাস / ব্যাচ বানিয়ে নিজে দাম ঠিক করুন, শিক্ষার্থীরা পেমেন্ট করে যোগ দেবে।']);
+        if (!teacher_live_enabled($me)) json_response(['success' => false, 'premium' => true, 'courseUrl' => '/Package?for=teacher', 'message' => 'লাইভ ক্লাস নিতে Premium প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — বাকি সব সুবিধার সাথে চ্যাট থেকে লাইভ ক্লাস।']);
         if (!bbb_ready()) json_response(['success' => false, 'message' => 'লাইভ ক্লাসের সার্ভার এখনো চালু হয়নি — অ্যাডমিনকে জানান।']);
         $title = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str('title', ''))), 0, 150);
         $platform = 'মাষ্টার মশাই লাইভ';
