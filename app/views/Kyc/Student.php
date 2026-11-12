@@ -32,7 +32,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
             <div class="ky-state no"><i class="fas fa-circle-xmark"></i><div><b>ফর্মটা গ্রহণ করা হয়নি</b><p><?= !is_blank($k->AdminNote) ? 'কারণ: ' . e($k->AdminNote) . '<br>' : '' ?>নিচে তথ্য ঠিক করে আবার জমা দিন।</p></div></div>
         <?php endif; ?>
 
-        <?php if (!$showForm && !($teacherAcc && ($st === 'None' || $st === 'Rejected'))): ?>
+        <?php if (!$showForm && !($teacherAcc && ($st === 'None' || $st === 'Rejected')) && empty($D['adminGranted'])): ?>
             <div class="ky-card">
                 <h3><i class="fas fa-user-graduate" style="color:#0EA5E9;"></i> জমা দেওয়া তথ্য</h3>
                 <div class="ky-sum">

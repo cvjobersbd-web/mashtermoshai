@@ -99,6 +99,26 @@ trait KycData
             ['d' => json_encode($data, JSON_UNESCAPED_UNICODE), 'f' => $front, 'b' => $back, 'i' => $id]) > 0;
     }
 
+    /**
+     * User Role পেজ: অ্যাডমিন সরাসরি স্টুডেন্ট বানালে — যাচাই বাকি ফর্ম থাকলে সেটাই Approve, না থাকলে
+     * "অ্যাডমিনের দেওয়া" Approved Student Verification (ছবি ছাড়া)। $on = false হলে স্টুডেন্ট থেকে সাধারণ ইউজার।
+     */
+    public function SetStudentByAdmin(int $userId, bool $on, int $adminId): void
+    {
+        $this->EnsureKycTable();
+        $k = $this->GetKyc($userId, 'student');
+        if ($on) {
+            if ($k && $k->Status === 'Approved') return;
+            if ($k && $k->Status === 'Pending') { $this->SetKycStatus($k->Id, 'Approved', 'অ্যাডমিন User Role পেজ থেকে স্টুডেন্ট করেছেন', $adminId); return; }
+            $this->insert('INSERT INTO `KycRequests` (`UserId`, `Kind`, `Status`, `Data`, `FileFront`, `FileBack`, `AdminNote`, `ReviewedBy`, `ReviewedAt`, `CreatedAt`) VALUES (:u, \'student\', \'Approved\', :d, NULL, NULL, :n, :a, :t, :t2)',
+                ['u' => $userId, 'd' => json_encode(['adminGranted' => 1], JSON_UNESCAPED_UNICODE), 'n' => 'অ্যাডমিনের দেওয়া (User Role পেজ)', 'a' => $adminId, 't' => now(), 't2' => now()]);
+            return;
+        }
+        if (!$k || $k->Status !== 'Approved') return;
+        if (!empty($k->D['adminGranted'])) $this->exec('DELETE FROM `KycRequests` WHERE `Id` = :i', ['i' => $k->Id]);
+        else $this->SetKycStatus($k->Id, 'Rejected', 'অ্যাডমিন রোল বদলে সাধারণ ইউজার করেছেন', $adminId);
+    }
+
     public function LinkKycTeacherRequest(int $kycId, int $requestId): void
     {
         $this->EnsureKycTable();

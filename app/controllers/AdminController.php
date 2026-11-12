@@ -1922,12 +1922,14 @@ class AdminController extends Controller
         $acc = $u->Role === 'Admin' ? $this->db->GetAdminAccess($id) : null;
         if ($acc && $acc['super']) json_response(['success' => false, 'message' => 'Super Admin এর রোল এখান থেকে বদলানো যায় না।']);
         $role = (string)input_str('role', '');
-        if ($role === 'Student') $role = 'User';
-        if (!in_array($role, ['User', 'Teacher', 'Admin', 'Instructor'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
-        $cur = $u->Role === 'User' && is_instructor($id) ? 'Instructor' : (string)$u->Role;
-        $bn = ['User' => role_label('User', $id) === 'Student' ? 'স্টুডেন্ট' : 'ইউজার', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
+        if (!in_array($role, ['User', 'Student', 'Teacher', 'Admin', 'Instructor'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
+        $cur = $u->Role === 'User' ? (is_instructor($id) ? 'Instructor' : (role_label('User', $id) === 'Student' ? 'Student' : 'User')) : (string)$u->Role;
+        $bn = ['User' => 'ইউজার', 'Student' => 'স্টুডেন্ট', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
         if ($role === $cur) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '।']);
-        $this->db->SetUserRoleBySuper($id, $role);
+        // স্টুডেন্ট = সাধারণ ইউজার + Approved Student Verification; ইউজার করলে স্টুডেন্ট অবস্থা তুলে নেওয়া হয়
+        $this->db->SetUserRoleBySuper($id, $role === 'Student' ? 'User' : $role);
+        if ($role === 'Student') $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+        elseif ($role === 'User') $this->db->SetStudentByAdmin($id, false, (int)current_user_id());
         try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : '')), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
         json_response(['success' => true, 'message' => "রোল বদলে $bn করা হয়েছে।" . ($role === 'Admin' ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
     }

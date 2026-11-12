@@ -90,7 +90,7 @@ trait AdminAccessData
             $r->Id = (int)$r->Id;
             $r->Name = !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName;
             $r->RoleLabel = role_label((string)$r->Role, $r->Id);
-            $r->RoleKey = $r->Role === 'Admin' ? 'Admin' : ($r->Role === 'Teacher' ? 'Teacher' : (is_instructor($r->Id) ? 'Instructor' : 'User'));
+            $r->RoleKey = $r->Role === 'Admin' ? 'Admin' : ($r->Role === 'Teacher' ? 'Teacher' : (is_instructor($r->Id) ? 'Instructor' : ($r->RoleLabel === 'Student' ? 'Student' : 'User')));
             $a = $r->Role === 'Admin' ? $this->GetAdminAccess($r->Id) : null;
             $r->IsSuper = $a && $a['super'];
         }

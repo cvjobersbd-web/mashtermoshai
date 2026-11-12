@@ -145,7 +145,8 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                 </div>
                 <div class="kc-ids">
                     <?php
-                    if ($kind !== 'teacher') $imgs = ['front' => 'ID কার্ড · সামনে', 'back' => 'ID কার্ড · পেছনে'];
+                    if (!empty($D['adminGranted'])) { $imgs = []; echo '<div style="grid-column:1/-1;font-size:13px;color:#7C3AED;font-weight:700;"><i class="fas fa-user-gear"></i> অ্যাডমিন User Role পেজ থেকে স্টুডেন্ট করেছেন — ফর্ম / ছবি নেই।</div>'; }
+                    elseif ($kind !== 'teacher') $imgs = ['front' => 'ID কার্ড · সামনে', 'back' => 'ID কার্ড · পেছনে'];
                     elseif (!empty($D['uniCard'])) $imgs = ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []);
                     else $imgs = ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে'];
                     foreach ($imgs as $side => $sl2): $u = '/Kyc/File/' . (int)$k->Id . '?side=' . $side; ?>
