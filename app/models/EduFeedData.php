@@ -92,8 +92,7 @@ trait EduFeedData
     {
         $this->EnsureEduFeedTables();
         $w = ["p.`Status` = 'Approved'"]; $p = [];
-        // টিচারদের পোস্ট শুধু প্যাকেজ নেওয়া শিক্ষার্থী / টিচার / অ্যাডমিন দেখেন
-        if (function_exists('viewer_sees_teacher_photos') && !viewer_sees_teacher_photos()) { $w[] = "(u.`Role` IS NULL OR u.`Role` <> 'Teacher')"; }
+        // Edu Feed: অ্যাডমিন Approve করা সব পোস্ট (টিচার / শিক্ষার্থী / ইউজার) সবাই দেখে — প্যাকেজ লাগে না
         if ($before) { $w[] = 'p.`Id` < :b'; $p['b'] = $before; }
         if ($subject !== '') { $w[] = 'p.`Subject` = :s'; $p['s'] = $subject; }
         if ($q !== '') { $w[] = '(p.`Content` LIKE :q OR p.`Subject` LIKE :q2 OR u.`FullName` LIKE :q3)'; $p['q'] = $p['q2'] = $p['q3'] = '%' . $q . '%'; }
@@ -107,7 +106,6 @@ trait EduFeedData
         $this->EnsureEduFeedTables();
         $p = ['u' => $authorId];
         $w = 'p.`UserId` = :u' . ($viewer === $authorId ? '' : " AND p.`Status` = 'Approved'");
-        if ($viewer !== $authorId && function_exists('viewer_sees_teacher_photos') && !viewer_sees_teacher_photos()) $w .= " AND (u.`Role` IS NULL OR u.`Role` <> 'Teacher')";
         if ($before) { $w .= ' AND p.`Id` < :b'; $p['b'] = $before; }
         return $this->decorateEduPosts($this->all($this->eduSelect() . " WHERE $w ORDER BY p.`Id` DESC LIMIT " . max(1, min(50, $limit)), $p), $viewer);
     }

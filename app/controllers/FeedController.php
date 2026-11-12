@@ -44,8 +44,6 @@ class FeedController extends Controller
     {
         if (!$p) return false;
         if (is_admin() || ($me !== null && $p->UserId === $me)) return true;
-        // টিচারদের পোস্ট — শিক্ষার্থী প্যাকেজ ছাড়া দেখা যায় না
-        if ($p->AuthorRole === 'Teacher' && !viewer_sees_teacher_photos()) return false;
         return $p->Status === 'Approved';
     }
 

@@ -98,9 +98,6 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
                 <!-- ===== কম্পোজার ===== -->
                 <?php partial('Feed/_Composer', ['me' => $me, 'isAdmin' => $isAdmin, 'myName' => $myName, 'myPhoto' => $myPhoto, 'videoMb' => $videoMb, 'subjects' => $subjects, 'opts' => $opts, 'returnUrl' => '/Feed']); ?>
                 <?php if ($me !== null && !$isAdmin): ?><div style="font-size:12.5px;color:#64748B;margin:-6px 0 12px;padding:0 4px;"><i class="fas fa-circle-info" style="color:#00B5E0;"></i> আপনার পোস্ট অ্যাডমিন দেখে Approve করলে ফিডে দেখাবে।</div><?php endif; ?>
-                <?php if ($me !== null && current_role() === 'User' && !viewer_sees_teacher_photos()): ?>
-                    <div style="background:#FFFBEB;border:1px dashed #F59E0B;border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;color:#92400E;"><i class="fas fa-lock"></i> টিচারদের পোস্ট দেখতে <a href="/Package?for=student" style="font-weight:800;color:#B45309;">শিক্ষার্থী প্যাকেজ</a> নিন।</div>
-                <?php endif; ?>
 
                 <?php if ($tab === 'all' && $subjects): ?>
                     <nav class="efp-mchips" aria-label="Subjects">
