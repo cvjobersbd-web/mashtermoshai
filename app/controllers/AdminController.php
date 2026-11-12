@@ -1925,7 +1925,7 @@ class AdminController extends Controller
         if ($role === 'Student') $role = 'User';
         if (!in_array($role, ['User', 'Teacher', 'Admin', 'Instructor'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
         $cur = $u->Role === 'User' && is_instructor($id) ? 'Instructor' : (string)$u->Role;
-        $bn = ['User' => 'স্টুডেন্ট / ইউজার', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
+        $bn = ['User' => role_label('User', $id) === 'Student' ? 'স্টুডেন্ট' : 'ইউজার', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
         if ($role === $cur) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '।']);
         $this->db->SetUserRoleBySuper($id, $role);
         try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : '')), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }

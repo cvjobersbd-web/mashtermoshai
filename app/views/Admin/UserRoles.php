@@ -5,7 +5,7 @@
 $ViewData['Title'] = 'User Role';
 $list = is_array($Model) ? $Model : [];
 $q = (string)$ViewBag->Q; $inst = (array)$ViewBag->Instructors;
-$roles = ['User' => 'স্টুডেন্ট / ইউজার', 'Teacher' => 'টিচার', 'Instructor' => 'Instructor', 'Admin' => 'অ্যাডমিন'];
+$roles = ['User' => 'ইউজার', 'Teacher' => 'টিচার', 'Instructor' => 'Instructor', 'Admin' => 'অ্যাডমিন'];
 $tagCls = ['Teacher' => 't', 'Admin' => 'a', 'Instructor' => 'i', 'Student' => 's', 'User' => 'u'];
 $me = (int)current_user_id();
 $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
@@ -17,7 +17,7 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
         <td><span class="ur-tag <?= $tagCls[$u->RoleLabel] ?? 'u' ?>"><?= e($u->IsSuper ? 'Super Admin' : $u->RoleLabel) ?></span></td>
         <td><?php if ($lock): ?><small style="color:#94A3B8;"><?= $lock ?></small><?php else: ?>
             <div class="ur-ch" data-uid="<?= $u->Id ?>">
-                <select><?php foreach ($roles as $k => $l): ?><option value="<?= $k ?>"<?= $u->RoleKey === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?></select>
+                <select><?php foreach ($roles as $k => $l): ?><option value="<?= $k ?>"<?= $u->RoleKey === $k ? ' selected' : '' ?>><?= $k === 'User' && $u->RoleLabel === 'Student' ? 'স্টুডেন্ট' : $l ?></option><?php endforeach; ?></select>
                 <button type="button" data-save><i class="fas fa-check"></i> বদলান</button>
                 <div class="ur-msg"></div>
             </div><?php endif; ?></td>
@@ -65,7 +65,7 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
             <button type="submit"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
         </form>
         <div class="ur-roles">
-            <div><b><i class="fas fa-user-graduate" style="color:#16A34A;"></i> স্টুডেন্ট / ইউজার</b>সাধারণ অ্যাকাউন্ট। Student Verification Approve হলে "Student" দেখায়।</div>
+            <div><b><i class="fas fa-user" style="color:#64748B;"></i> ইউজার</b>সাধারণ অ্যাকাউন্ট। Student Verification ফর্ম জমা দিয়ে Approve হলে নিজে থেকেই <b style="display:inline;color:#166534;">স্টুডেন্ট</b> হয়ে যায়।</div>
             <div><b><i class="fas fa-chalkboard-user" style="color:#2563EB;"></i> টিচার</b>Teacher Dashboard, Tutor List, টিউশনে আবেদন — সাথে সাথে চালু।</div>
             <div><b><i class="fas fa-person-chalkboard" style="color:#9333EA;"></i> Instructor</b>Helpdesk আর Edu Feed এ পোস্ট — Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ, নামের পাশে "Instructor" ব্যাজ।</div>
             <div><b><i class="fas fa-user-shield" style="color:#DC2626;"></i> অ্যাডমিন</b>আবার লগইন করলে অ্যাডমিন প্যানেল। কোন পেজ দেখবে Admins পেজ থেকে ঠিক করুন।</div>
