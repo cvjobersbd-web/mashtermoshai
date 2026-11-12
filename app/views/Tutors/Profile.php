@@ -352,8 +352,8 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
         <!-- ===== Hire ===== -->
         <?php if (!$isOwner): ?>
             <div class="tp-card tp-hire">
-                <?php if ($canRequest): ?><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><?= $canContact ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Request This Tutor</button>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?></div><?php endif; ?>
-                <?php if ($canRequest && !$canContact): ?><p style="margin:8px 0 0;"><i class="fas fa-lock" style="color:#B45309;"></i> <?= !$tOpen ? 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন যোগাযোগ করা যাবে না।' : 'টিচারের প্রোফাইল ছবি, সম্পূর্ণ তথ্য দেখতে, সরাসরি রিকোয়েস্ট পাঠাতে আর চ্যাট আনলক করতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন — ' . package_price_hint('Student') . '।' ?></p><?php endif; ?>
+                <?php if ($canRequest): ?><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><?= $canReq ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Request This Tutor</button>' : '<a class="tp-btn pri" href="' . e(student_package_url()) . '"><i class="fas fa-lock"></i> ' . ($me === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request') . '</a>' ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?></div><?php endif; ?>
+                <?php if ($canRequest && !$canReq): ?><p style="margin:8px 0 0;"><i class="fas fa-lock" style="color:#B45309;"></i> এই টিচারকে টিউশন রিকোয়েস্ট পাঠাতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ</a> নিন — <?= e(package_price_hint('Student')) ?>।</p><?php endif; ?>
                 <p>এই টিউটর সম্পর্কে আরো জানতে Tutor ID "<b><?= e($t->TutorId) ?></b>" দিয়ে <a href="/Helpdesk">Helpdesk</a> এ যোগাযোগ করুন।</p>
             </div>
         <?php endif; ?>

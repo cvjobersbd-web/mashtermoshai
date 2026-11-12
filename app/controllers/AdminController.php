@@ -1928,7 +1928,15 @@ class AdminController extends Controller
         if ($role === $cur) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '।']);
         // স্টুডেন্ট = সাধারণ ইউজার + Approved Student Verification; ইউজার করলে স্টুডেন্ট অবস্থা তুলে নেওয়া হয়
         $this->db->SetUserRoleBySuper($id, $role === 'Student' ? 'User' : $role);
-        if ($role === 'Student') $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+        if ($role === 'Student') {
+            // এক অ্যাকাউন্ট = এক রোল: স্টুডেন্ট করলে চালু টিচার আবেদন (Become a Tutor) বাতিল, না হলে অ্যাকাউন্ট "টিচার" ধরা হয় আর Student Verification লুকানো থাকে
+            try {
+                $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Rejected' WHERE `UserId` = :u AND `Status` IN ('Pending', 'AwaitingPayment', 'Expired')", ['u' => $id]);
+                $tk = $this->db->GetKyc($id, 'teacher');
+                if ($tk && $tk->Status === 'Pending') $this->db->SetKycStatus($tk->Id, 'Rejected', 'অ্যাডমিন অ্যাকাউন্টটি স্টুডেন্ট করেছেন', (int)current_user_id());
+            } catch (Throwable $e) { error_log('[ChangeUserRole student] ' . $e->getMessage()); }
+            $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+        }
         elseif ($role === 'User') $this->db->SetStudentByAdmin($id, false, (int)current_user_id());
         try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : '')), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
         json_response(['success' => true, 'message' => "রোল বদলে $bn করা হয়েছে।" . ($role === 'Admin' ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
