@@ -121,12 +121,13 @@ class FeedController extends Controller
     {
         $me = $this->me();
         $isAdmin = is_admin();
+        $isInstructor = is_instructor($me);   // Instructor এর পোস্ট Approve ছাড়াই প্রকাশ হয়
         // টিচার, শিক্ষার্থী, ইউজার — সবাই পোস্ট করতে পারে; অ্যাডমিন Approve করলে ফিডে দেখায়
         $content = str_replace(["\r\n", "\r"], "\n", (string)input_str('content', ''));
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $content) ?? '') ?? '');
         if (mb_strlen($content) > self::MAX_POST_LEN) $this->fail('পোস্ট সর্বোচ্চ ' . self::MAX_POST_LEN . ' অক্ষর হতে পারে।');
         $subject = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('subject', '')))), 0, 60);
-        if (!$isAdmin && $this->db->CountRecentEdu('post', $me, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+        if (!$isAdmin && !$isInstructor && $this->db->CountRecentEdu('post', $me, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।');
 
         // ----- YouTube লিংক -----
         $yt = '';
@@ -178,9 +179,9 @@ class FeedController extends Controller
         }
         if ($yt !== '') $media['youtube'] = $yt;
 
-        $status = $isAdmin ? 'Approved' : 'Pending';
+        $status = $isAdmin || $isInstructor ? 'Approved' : 'Pending';
         $id = $this->db->CreateEduPost($me, $content, $subject, $media, $status);
-        if (!$isAdmin) {
+        if ($status === 'Pending') {
             $name = session_get('UserFullName') ?? session_get('UserName') ?? 'একজন ইউজার';
             foreach ($this->db->GetAdminUserIds() as $aid) {
                 $this->db->CreateNotification($aid, 'Educational Feed — নতুন পোস্ট', "$name একটি পোস্ট দিয়েছেন — রিভিউ করে Approve করুন।", 'info', '/Admin/EduFeed', 'fa-newspaper');
@@ -188,7 +189,7 @@ class FeedController extends Controller
         }
         $p = $this->db->GetEduPost($id, $me);
         json_response(['success' => true, 'status' => $status, 'id' => $id,
-            'message' => $isAdmin ? 'পোস্ট ফিডে প্রকাশ হয়েছে।' : 'পোস্ট পাঠানো হয়েছে! অ্যাডমিন রিভিউ করে Approve করলে ফিডে দেখাবে।',
+            'message' => $status === 'Approved' ? 'পোস্ট ফিডে প্রকাশ হয়েছে।' : 'পোস্ট পাঠানো হয়েছে! অ্যাডমিন রিভিউ করে Approve করলে ফিডে দেখাবে।',
             'html' => $this->render('Feed/_Post', ['p' => $p, 'me' => $me])]);
     }
 

@@ -54,7 +54,7 @@ $url = fn(array $x) => '/Admin/ProfilePosts?' . http_build_query(array_filter(ar
 </style>
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content pp">
-    <h2><i class="fas fa-id-card-clip" style="color:#0EA5E9;"></i> Profile Posts</h2>
+    <h2><i class="fas fa-address-card" style="color:#0EA5E9;"></i> Profile Posts</h2>
     <p class="sub">টিচার আর শিক্ষার্থী / ইউজার নিজের প্রোফাইলে যা পোস্ট করে, সব এখানে (নতুন আগে)। Only me পোস্টও আপনি দেখতে পাবেন। নামে চাপ দিলে তার প্রোফাইলে যাবেন।</p>
     <?= csrf_field() ?>
     <div class="pp-bar">
@@ -71,7 +71,7 @@ $url = fn(array $x) => '/Admin/ProfilePosts?' . http_build_query(array_filter(ar
     </div>
 
     <?php if (!$posts): ?>
-        <div class="pp-empty"><i class="fas fa-id-card-clip"></i><?= $q !== '' ? '"' . e($q) . '" দিয়ে কোনো পোস্ট পাওয়া যায়নি।' : 'এখনো কেউ প্রোফাইলে পোস্ট করেনি।' ?></div>
+        <div class="pp-empty"><i class="fas fa-address-card"></i><?= $q !== '' ? '"' . e($q) . '" দিয়ে কোনো পোস্ট পাওয়া যায়নি।' : 'এখনো কেউ প্রোফাইলে পোস্ট করেনি।' ?></div>
     <?php else: ?>
     <div class="pp-list">
         <?php foreach ($posts as $p):

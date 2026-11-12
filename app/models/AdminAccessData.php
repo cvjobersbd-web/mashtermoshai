@@ -53,6 +53,9 @@ trait AdminAccessData
     public function SetUserRoleBySuper(int $userId, string $role): void
     {
         $this->EnsureAdminAccessTables();
+        // Instructor = সাধারণ ইউজার + Instructor তালিকায়; অন্য রোলে গেলে তালিকা থেকে বাদ
+        if (function_exists('set_instructor')) set_instructor($userId, $role === 'Instructor');
+        if ($role === 'Instructor') $role = 'User';
         $this->exec('UPDATE `Users` SET `Role` = :r WHERE `Id` = :u', ['r' => $role, 'u' => $userId]);
         if ($role === 'Admin') {
             if (!(int)$this->scalar('SELECT COUNT(*) FROM `AdminAccess` WHERE `UserId` = :u', ['u' => $userId]))
@@ -60,6 +63,38 @@ trait AdminAccessData
         } else {
             $this->exec('DELETE FROM `AdminAccess` WHERE `UserId` = :u', ['u' => $userId]);
         }
+    }
+
+    /** User Role পেজ: নাম / ইউজারনেম / ইমেইল / মোবাইল / ID দিয়ে খোঁজা */
+    public function SearchUsersForRole(string $q, int $limit = 30): array
+    {
+        $q = trim($q);
+        if ($q === '') return [];
+        $p = ['a' => "%$q%", 'b' => "%$q%", 'c' => "%$q%", 'd' => "%$q%"];
+        $w = '`FullName` LIKE :a OR `UserName` LIKE :b OR `Email` LIKE :c OR `MobileNumber` LIKE :d';
+        if (ctype_digit(ltrim($q, '#'))) { $w .= ' OR `Id` = :i'; $p['i'] = (int)ltrim($q, '#'); }
+        $rows = $this->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `IsActive`, `ProfileImageLink`, `CreatedAt` FROM `Users` WHERE $w ORDER BY `Id` DESC LIMIT " . max(1, min(50, $limit)), $p);
+        return $this->decorateRoleRows($rows);
+    }
+
+    public function GetUsersByIds(array $ids): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (!$ids) return [];
+        return $this->decorateRoleRows($this->all('SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `IsActive`, `ProfileImageLink`, `CreatedAt` FROM `Users` WHERE `Id` IN (' . implode(',', $ids) . ') ORDER BY `FullName`'));
+    }
+
+    private function decorateRoleRows(array $rows): array
+    {
+        foreach ($rows as $r) {
+            $r->Id = (int)$r->Id;
+            $r->Name = !is_blank($r->FullName) ? (string)$r->FullName : (string)$r->UserName;
+            $r->RoleLabel = role_label((string)$r->Role, $r->Id);
+            $r->RoleKey = $r->Role === 'Admin' ? 'Admin' : ($r->Role === 'Teacher' ? 'Teacher' : (is_instructor($r->Id) ? 'Instructor' : 'User'));
+            $a = $r->Role === 'Admin' ? $this->GetAdminAccess($r->Id) : null;
+            $r->IsSuper = $a && $a['super'];
+        }
+        return $rows;
     }
 
     /** সব অ্যাডমিন (Super আগে) — Admins পেজের জন্য */

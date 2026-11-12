@@ -321,7 +321,7 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
-        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'ProfilePosts' => 'Profile Posts', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
+        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'ProfilePosts' => 'Profile Posts', 'PackageDetails' => 'Package Details', 'UserRoles' => 'User Role', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
     $adminPendingTotal = $kycPend['teacher'] + $kycPend['student'] + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
@@ -469,7 +469,7 @@ try {
         <?php if (admin_can(admin_action_rule('ProfilePosts'))): ?>
         <li>
             <a href="/Admin/ProfilePosts" class="<?= $currentAction === 'ProfilePosts' ? 'active' : '' ?>">
-                <i class="fas fa-id-card-clip"></i> Profile Posts
+                <i class="fas fa-address-card"></i> Profile Posts
             </a>
         </li>
         <?php endif; ?>
@@ -495,6 +495,13 @@ try {
         <li>
             <a href="/Admin/Subscriptions" class="<?= $currentAction === 'Subscriptions' ? 'active' : '' ?>">
                 <i class="fas fa-id-card-clip"></i> Subscriptions
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('PackageDetails'))): ?>
+        <li>
+            <a href="/Admin/PackageDetails" class="<?= $currentAction === 'PackageDetails' ? 'active' : '' ?>">
+                <i class="fas fa-box-open"></i> Package Details
             </a>
         </li>
         <?php endif; ?>
@@ -584,6 +591,11 @@ try {
         <li>
             <a href="/Admin/Admins" class="<?= $currentAction === 'Admins' ? 'active' : '' ?>">
                 <i class="fas fa-user-shield"></i> Admins
+            </a>
+        </li>
+        <li>
+            <a href="/Admin/UserRoles" class="<?= $currentAction === 'UserRoles' ? 'active' : '' ?>">
+                <i class="fas fa-user-gear"></i> User Role
             </a>
         </li>
         <li>

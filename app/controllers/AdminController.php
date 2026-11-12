@@ -1922,12 +1922,56 @@ class AdminController extends Controller
         $acc = $u->Role === 'Admin' ? $this->db->GetAdminAccess($id) : null;
         if ($acc && $acc['super']) json_response(['success' => false, 'message' => 'Super Admin এর রোল এখান থেকে বদলানো যায় না।']);
         $role = (string)input_str('role', '');
-        if (!in_array($role, ['User', 'Teacher', 'Admin'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
-        if ($role === $u->Role) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $role . '।']);
+        if ($role === 'Student') $role = 'User';
+        if (!in_array($role, ['User', 'Teacher', 'Admin', 'Instructor'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
+        $cur = $u->Role === 'User' && is_instructor($id) ? 'Instructor' : (string)$u->Role;
+        $bn = ['User' => 'স্টুডেন্ট / ইউজার', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
+        if ($role === $cur) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '।']);
         $this->db->SetUserRoleBySuper($id, $role);
-        $bn = ['User' => 'শিক্ষার্থী / ইউজার', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন'][$role];
-        try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ''), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
+        try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : '')), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
         json_response(['success' => true, 'message' => "রোল বদলে $bn করা হয়েছে।" . ($role === 'Admin' ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
+    }
+
+    /** GET /Admin/PackageDetails — কে কোন প্যাকেজ কিনেছে (টিচার / শিক্ষার্থী) + মেয়াদ বাড়ানো (aud=all|Teacher|Student, st=all|active|expiring|expired, q=) */
+    public function PackageDetails(): void
+    {
+        $this->requireAdminPage();
+        $aud = (string)input_str('aud', 'all'); if (!in_array($aud, ['all', 'Teacher', 'Student'], true)) $aud = 'all';
+        $st = (string)input_str('st', 'all'); if (!in_array($st, ['all', 'active', 'expiring', 'expired'], true)) $st = 'all';
+        $q = mb_strtolower(trim((string)input_str('q', '')));
+        $all = $this->db->GetSubscriptionOverview();
+        $hist = $this->db->GetSubscriptionHistoryMap();
+        $counts = ['all' => count($all), 'Teacher' => 0, 'Student' => 0];
+        foreach ($all as $o) $counts[$o->Audience] = ($counts[$o->Audience] ?? 0) + 1;
+        $rows = array_values(array_filter($all, function ($o) use ($aud, $st, $q) {
+            if ($aud !== 'all' && $o->Audience !== $aud) return false;
+            if ($st === 'active' && !in_array($o->State, ['active', 'expiring', 'credit'], true)) return false;
+            if ($st !== 'all' && $st !== 'active' && $o->State !== $st) return false;
+            if ($q !== '' && !str_contains(mb_strtolower($o->Name . ' ' . $o->UserName . ' #' . $o->UserId), $q)) return false;
+            return true;
+        }));
+        foreach ($rows as $o) $o->History = $hist[$o->Audience . ':' . $o->UserId] ?? [];
+        $this->view(null, $rows, ['Aud' => $aud, 'St' => $st, 'Q' => (string)input_str('q', ''), 'Counts' => $counts]);
+    }
+
+    /** GET /Admin/UserRoles — নাম / ইউজারনেম / ইমেইল দিয়ে খুঁজে রোল বদল (স্টুডেন্ট / টিচার / অ্যাডমিন / Instructor) */
+    public function UserRoles(): void
+    {
+        $this->requireAdminPage();
+        $q = trim((string)input_str('q', ''));
+        $this->view(null, $q !== '' ? $this->db->SearchUsersForRole($q) : [], ['Q' => $q, 'Instructors' => $this->db->GetUsersByIds(array_keys(instructor_ids()))]);
+    }
+
+    /** POST /Admin/RoleUserSearch — q (Package Details থেকে কাউকে নতুন প্যাকেজ দেওয়ার জন্য) */
+    public function RoleUserSearch_POST(): void
+    {
+        $this->requireAdminJson();
+        $out = [];
+        foreach ($this->db->SearchUsersForRole((string)input_str('q', ''), 10) as $u) {
+            if ($u->Role === 'Admin') continue;
+            $out[] = ['id' => (int)$u->Id, 'name' => $u->Name, 'userName' => (string)$u->UserName, 'role' => $u->RoleLabel];
+        }
+        json_response(['success' => true, 'users' => $out]);
     }
 
     /** GET /Admin/ProfilePosts — টিচার / শিক্ষার্থী নিজের প্রোফাইলে যা পোস্ট করে (role=all|Teacher|User, q=) */

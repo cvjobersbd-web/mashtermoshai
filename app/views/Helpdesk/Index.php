@@ -1105,6 +1105,10 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
                                     <span class="hd-admin-badge">
                                         <i class="fas fa-shield-alt"></i> Admin
                                     </span>
+                                <?php elseif (is_instructor((int)$post->UserId)): ?>
+                                    <span class="hd-admin-badge" style="background:linear-gradient(135deg,#7C3AED,#A855F7);">
+                                        <i class="fas fa-chalkboard-user"></i> Instructor
+                                    </span>
                                 <?php endif; ?>
                             </div>
                             <div class="hd-post-time">

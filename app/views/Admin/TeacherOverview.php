@@ -333,8 +333,6 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                     </div>
                 </div>
 
-                <?php partial('Admin/_SuperUserTools', ['user' => $selectedTeacher]); ?>
-
                 <!-- ২. স্ট্যাটস গ্রিড -->
                 <div class="stat-grid">
                     <div class="stat-card posts">

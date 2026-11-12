@@ -254,11 +254,36 @@ function verified_student_ids(): array
     return $ids;
 }
 
-/** দেখানোর নাম: Teacher / Admin / Student (ভেরিফাইড) / User (নতুন, এখনো ভেরিফাই হয়নি) */
+/**
+ * Instructor — অ্যাডমিনের দেওয়া বিশেষ রোল (Users.Role = 'User' থাকে, তালিকা SiteContents এ `instructor_ids`)।
+ * Edu Feed এ পোস্ট সরাসরি প্রকাশ (Approve লাগে না), Helpdesk পোস্টে "Instructor" ব্যাজ।
+ */
+function instructor_ids(bool $fresh = false): array
+{
+    static $ids = null;
+    if ($ids !== null && !$fresh) return $ids;
+    $ids = [];
+    try {
+        $raw = (string)(db()->GetSiteContent(['instructor_ids' => ''])['instructor_ids'] ?? '');
+        foreach (preg_split('/[,\s]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) as $x) if (ctype_digit($x)) $ids[(int)$x] = true;
+    } catch (Throwable $e) { }
+    return $ids;
+}
+function is_instructor($userId): bool { return $userId !== null && isset(instructor_ids()[(int)$userId]); }
+function set_instructor(int $userId, bool $on): void
+{
+    $ids = instructor_ids(true);
+    if ($on) $ids[$userId] = true; else unset($ids[$userId]);
+    db()->SaveSiteContent(['instructor_ids' => implode(',', array_keys($ids))]);
+    instructor_ids(true);
+}
+
+/** দেখানোর নাম: Teacher / Admin / Instructor / Student (ভেরিফাইড) / User (নতুন, এখনো ভেরিফাই হয়নি) */
 function role_label(?string $role, $userId): string
 {
     if ($role === 'Teacher') return 'Teacher';
     if ($role === 'Admin') return 'Admin';
+    if (is_instructor($userId)) return 'Instructor';
     return isset(verified_student_ids()[(int)$userId]) ? 'Student' : 'User';
 }
 

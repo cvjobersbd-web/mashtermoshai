@@ -439,6 +439,19 @@ trait PaymentData
     }
 
     /** @return array<int,string> userId => EndsAt — যাদের Subscription চালু */
+    /** Package Details: প্রতি ইউজারের (Audience:UserId) কেনা সব প্যাকেজ, নতুন আগে */
+    public function GetSubscriptionHistoryMap(): array
+    {
+        $m = [];
+        try {
+            $this->EnsurePaymentTables();
+            foreach ($this->all('SELECT s.`UserId`, s.`Audience`, s.`PackageName`, s.`StartsAt`, s.`EndsAt`, s.`CreatedAt`, s.`PaymentId`, p.`Amount`
+                FROM `UserSubscriptions` s LEFT JOIN `PaymentRequests` p ON p.`Id` = s.`PaymentId` ORDER BY s.`Id` DESC') as $r)
+                $m[$r->Audience . ':' . (int)$r->UserId][] = $r;
+        } catch (Throwable $e) { error_log('[GetSubscriptionHistoryMap] ' . $e->getMessage()); }
+        return $m;
+    }
+
     /** ইউজারের প্যাকেজের অবস্থা (Teacher / Student) — সর্বশেষ মেয়াদ, চালু কিনা */
     public function GetUserPackageState(int $userId): array
     {
