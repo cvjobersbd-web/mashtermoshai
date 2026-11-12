@@ -2189,6 +2189,16 @@ function viewer_can_contact_teacher(int $teacherId): bool
     return teacher_profile_open($teacherId) && viewer_can_contact_teachers();
 }
 
+/**
+ * শিক্ষার্থী এই টিচারকে টিউশন রিকোয়েস্ট পাঠাতে পারবে কিনা — শুধু শিক্ষার্থীর প্যাকেজ লাগে।
+ * টিচারের প্যাকেজ না থাকলেও (শুধু Verification) রিকোয়েস্ট যায়; টিচার প্যাকেজ কিনলে তবেই দেখতে / Accept করে চ্যাট খুলতে পারে।
+ */
+function viewer_can_request_teacher(int $teacherId): bool
+{
+    if ((int)(current_user_id() ?? 0) === $teacherId) return false;
+    return viewer_can_contact_teachers();
+}
+
 /** যোগাযোগ বন্ধ থাকলে বাটনের জায়গায় — টিচারের প্যাকেজ নেই হলে বন্ধ লেখা, না হলে শিক্ষার্থী প্যাকেজের লিংক */
 function teacher_contact_lock_html(int $teacherId, string $cls, string $what = 'Request'): string
 {

@@ -318,8 +318,8 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn primary"><i class="fas fa-id-card"></i> Tutor Details</a>
                         <?php elseif (!$isAdminViewer): ?>
                             <?php if (current_role() !== 'Teacher'): ?>
-                                <?php if (viewer_can_contact_teacher((int)$u->Id)): ?><button type="button" class="pf-btn primary" data-req-open><i class="fas fa-paper-plane"></i> Request Tutor</button>
-                                <?php else: ?><?= teacher_contact_lock_html((int)$u->Id, 'pf-btn primary') ?><?php endif; ?>
+                                <?php if (viewer_can_request_teacher((int)$u->Id)): ?><button type="button" class="pf-btn primary" data-req-open><i class="fas fa-paper-plane"></i> Request Tutor</button>
+                                <?php else: ?><a class="pf-btn primary" href="<?= e(student_package_url()) ?>"><i class="fas fa-lock"></i> <?= current_user_id() === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request' ?></a><?php endif; ?>
                                 <?= teacher_chat_button((int)$u->Id, 'pf-btn') ?>
                             <?php endif; ?>
                             <a href="/Tutors/Profile/<?= (int)$u->Id ?>" class="pf-btn"><i class="fas fa-id-card"></i> Full Details</a>
@@ -1180,4 +1180,4 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
 })();
 </script>
 <?php section_end(); ?>
-<?php if (!$isOwner && !$isAdminViewer && current_role() !== 'Teacher' && viewer_can_contact_teacher((int)$u->Id)) partial('Tutors/_RequestModal', ['uid' => (int)$u->Id, 'name' => (string)($u->FullName ?: $u->UserName)]); ?>
+<?php if (!$isOwner && !$isAdminViewer && current_role() !== 'Teacher' && viewer_can_request_teacher((int)$u->Id)) partial('Tutors/_RequestModal', ['uid' => (int)$u->Id, 'name' => (string)($u->FullName ?: $u->UserName)]); ?>

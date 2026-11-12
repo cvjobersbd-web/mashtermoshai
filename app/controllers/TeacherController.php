@@ -235,6 +235,7 @@ class TeacherController extends Controller
         if ($me === null || current_role() !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু টিচার এটা করতে পারবেন।']);
         $status = (string)input_str('status', '');
         if (!in_array($status, ['Accepted', 'Rejected', 'Pending'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+        if (!teacher_profile_open((int)$me)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher', 'message' => 'টিউশন রিকোয়েস্ট দেখতে আর গ্রহণ করতে আগে টিচার প্যাকেজ কিনুন।']);
         $user = $this->db->GetUserById((int)$me);
         $r = $this->db->TeacherDecideRequest(input_int('id', 0), (int)$me, (string)($user->FullName ?? ''), $status);
         if (!$r) json_response(['success' => false, 'message' => 'রিকোয়েস্টটি পাওয়া যায়নি।']);

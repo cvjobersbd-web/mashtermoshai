@@ -412,6 +412,9 @@ $ViewData['Title'] = 'Tutor Requests';
                 <div class="req-tags">
                     <?php if (!is_blank($r->TutorName)): ?>
                         <?php if (!empty($r->TeacherUserId)): ?><a class="req-tag tr-plink" href="/Profile/Show/<?= (int)$r->TeacherUserId ?>" target="_blank" rel="noopener" title="টিচারের প্রোফাইল দেখুন"><i class="fas fa-chalkboard-teacher"></i>Tutor: <?= e($r->TutorName) ?></a><?php else: ?><span class="req-tag"><i class="fas fa-chalkboard-teacher"></i>Tutor: <?= e($r->TutorName) ?></span><?php endif; ?>
+                        <?php if (!empty($r->TeacherUserId)): ?><?= teacher_profile_open((int)$r->TeacherUserId)
+                            ? '<span class="req-tag" style="background:#DCFCE7;color:#166534;"><i class="fas fa-circle-check"></i>টিচারের প্যাকেজ আছে</span>'
+                            : '<span class="req-tag" style="background:#FEF3C7;color:#92400E;" title="টিচার রিকোয়েস্টের কথা জানে, কিন্তু প্যাকেজ কিনলে তবেই শিক্ষার্থীর তথ্য দেখবে আর Accept করে চ্যাট করতে পারবে"><i class="fas fa-lock"></i>টিচারের প্যাকেজ নেই — কিনলে দেখবে</span>' ?><?php endif; ?>
                     <?php endif; ?>
                     <?php if (!is_blank($r->TutorId)): ?>
                         <span class="req-tag"><i class="fas fa-id-badge"></i><?= e($r->TutorId) ?></span>

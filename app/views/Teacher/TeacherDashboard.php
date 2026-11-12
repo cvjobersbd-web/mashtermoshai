@@ -606,6 +606,15 @@ if ($activeSection === '') { $activeSection = 'overview'; }
         <div class="td-section <?= $activeSection === 'direct-requests' ? 'active' : '' ?>" id="sec-direct-requests">
             <h3 style="color:#08224A; font-weight:800; margin-bottom:20px;">Direct Requests (<?= count($Model->TutorRequests ?? []) ?>)</h3>
 
+            <?php $drLocked = !teacher_profile_open((int)current_user_id()); /* প্যাকেজ নেই — রিকোয়েস্ট আছে জানবে, কিন্তু শিক্ষার্থীর তথ্য / যোগাযোগ দেখবে না */ ?>
+            <?php if ($drLocked && !empty($Model->TutorRequests)): ?>
+                <div style="background:linear-gradient(135deg,#FFF7ED,#FEF3C7);border:1.5px solid #FCD34D;border-radius:14px;padding:16px 18px;margin-bottom:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+                    <i class="fas fa-lock" style="font-size:26px;color:#D97706;"></i>
+                    <div style="flex:1;min-width:220px;"><b style="color:#92400E;font-size:15.5px;">আপনি টিচার হিসেবে <?= count($Model->TutorRequests) ?>টি টিউশন রিকোয়েস্ট পেয়েছেন।</b>
+                        <div style="color:#92400E;font-size:13.5px;margin-top:2px;">টিউশনটি নিতে প্যাকেজ কিনুন — প্যাকেজ কিনলেই শিক্ষার্থীর পুরো তথ্য দেখবেন আর রিকোয়েস্ট Accept করে চ্যাট শুরু করতে পারবেন।</div></div>
+                    <a href="/Package?for=teacher" class="btn" style="background:#F59E0B;color:#fff;font-weight:700;border-radius:10px;padding:9px 18px;"><i class="fas fa-tags"></i> প্যাকেজ কিনুন</a>
+                </div>
+            <?php endif; ?>
             <?php if (empty($Model->TutorRequests)): ?>
                 <div class="td-empty">
                     <i class="fas fa-inbox"></i>
@@ -633,7 +642,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                             </div>
 
                             <h5 style="color: #08224A; font-weight: 700; margin-bottom: 8px;">
-                                <i class="fas fa-user-graduate me-1"></i> <?= e($req->StudentName) ?>
+                                <i class="fas fa-user-graduate me-1"></i> <?= $drLocked ? 'একজন শিক্ষার্থী <span style="font-size:12px;color:#B45309;font-weight:600;"><i class="fas fa-lock"></i> নাম ও যোগাযোগ প্যাকেজ কিনলে দেখবেন</span>' : e($req->StudentName) ?>
                             </h5>
 
                             <div style="font-size: 13.5px; color: #64748B; display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px;">
@@ -643,7 +652,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                                 <?php if ((string)$req->RequiredSubject !== ''): ?>
                                     <span><i class="fas fa-book-open" style="color:#08224A;"></i> <?= e($req->RequiredSubject) ?></span>
                                 <?php endif; ?>
-                                <?php if ((string)$req->PreferredArea !== ''): ?>
+                                <?php if ((string)$req->PreferredArea !== '' && !$drLocked): ?>
                                     <span><i class="fas fa-map-marker-alt" style="color:#08224A;"></i> <?= e($req->PreferredArea) ?></span>
                                 <?php endif; ?>
                                 <?php if ((string)$req->MonthlyBudget !== ''): ?>
@@ -651,6 +660,10 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                                 <?php endif; ?>
                             </div>
 
+                            <?php if ($drLocked): ?>
+                                <div class="mt-3 pt-3 border-top"><a href="/Package?for=teacher" class="btn btn-sm" style="background:#F59E0B;color:#fff;border-radius:8px;font-weight:700;"><i class="fas fa-lock-open"></i> প্যাকেজ কিনে রিকোয়েস্ট দেখুন</a></div>
+                        </div>
+                    <?php continue; endif; ?>
                             <?php if ((string)$req->AdditionalNotes !== ''): ?>
                                 <div style="background: #F5FBFF; padding: 12px; border-radius: 8px; font-size: 13px; color: #334155; margin-bottom: 16px; border: 1px dashed #DCECF5;">
                                     <strong>Notes:</strong> <?= e($req->AdditionalNotes) ?>

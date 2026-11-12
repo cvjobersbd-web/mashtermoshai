@@ -30,6 +30,7 @@ $canRequest = !$isOwner && $role !== 'Teacher' && $role !== 'Admin' && $t->Tutor
 $tOpen = teacher_profile_open((int)$t->UserId);
 $full = $canPrivate || viewer_sees_teacher_full((int)$t->UserId);
 $canContact = viewer_can_contact_teacher((int)$t->UserId);
+$canReq = viewer_can_request_teacher((int)$t->UserId);   // টিচারের প্যাকেজ না থাকলেও শিক্ষার্থী রিকোয়েস্ট পাঠাতে পারে
 $lockBtn = teacher_contact_lock_html((int)$t->UserId, 'tp-btn pri', 'Direct Request');
 $lk = '<span class="tp-na"><i class="fas fa-lock"></i> লক</span>';
 $lockMsg = !$tOpen ? 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই ছবি, সম্পূর্ণ তথ্য আর যোগাযোগের সুযোগ বন্ধ। শুধু বেসিক তথ্য দেখা যাচ্ছে।'
@@ -191,7 +192,7 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
             <?php else: ?>
                 <p>পছন্দ হলে সরাসরি রিকোয়েস্ট পাঠান, অথবা পরে দেখার জন্য সেভ করে রাখুন।</p>
                 <div class="tp-acts">
-                    <?php if ($canRequest): ?><?= $canContact ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Direct Request</button>' : $lockBtn ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?><?php endif; ?>
+                    <?php if ($canRequest): ?><?= $canReq ? '<button type="button" class="tp-btn pri" data-req-open><i class="fas fa-paper-plane"></i> Direct Request</button>' : '<a class="tp-btn pri" href="' . e(student_package_url()) . '"><i class="fas fa-lock"></i> ' . ($me === null ? 'লগইন করে Direct Request' : 'প্যাকেজ নিয়ে Direct Request') . '</a>' ?><?= teacher_chat_button((int)$t->UserId, 'tp-btn chat') ?><?php endif; ?>
                     <?php if ($me !== null && $role !== 'Admin'): ?>
                         <button type="button" class="tp-btn<?= $ViewBag->Saved ? ' on' : '' ?>" data-save-type="tutor" data-save-id="<?= (int)$t->UserId ?>"><i class="<?= $ViewBag->Saved ? 'fas' : 'far' ?> fa-bookmark"></i> <span><?= $ViewBag->Saved ? 'Saved' : 'Bookmark' ?></span></button>
                     <?php elseif ($me === null): ?>
@@ -403,4 +404,4 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
 })();
 </script>
 <?php section_end(); ?>
-<?php if ($canRequest && $canContact) partial('Tutors/_RequestModal', ['uid' => (int)$t->UserId, 'name' => (string)$t->FullName]); ?>
+<?php if ($canRequest && $canReq) partial('Tutors/_RequestModal', ['uid' => (int)$t->UserId, 'name' => (string)$t->FullName]); ?>

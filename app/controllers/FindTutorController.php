@@ -60,11 +60,16 @@ class FindTutorController extends Controller
                 json_response(['success' => false, 'needPackage' => student_package_url(),
                     'message' => current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে আগে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।']);
             }
-            // টিচারের নিজের প্যাকেজ চালু না থাকলে তার সাথে যোগাযোগ বন্ধ
+            // টিচারের প্যাকেজ না থাকলেও রিকোয়েস্ট যায় (টিচার প্যাকেজ কিনলে দেখবে)। একই টিচারকে ২৪ ঘণ্টায় একবারই — সাড়া না পেলে পরে আবার পাঠানো যায়
             if (!is_blank(input_str('tutorId')) && preg_match('/^TCH-(\d+)$/', trim((string)input_str('tutorId')), $tm)) {
                 $ttr = $this->db->GetTeacherRequestById((int)$tm[1] - 1000);
-                if ($ttr && !viewer_can_contact_teacher((int)$ttr->UserId)) {
-                    json_response(['success' => false, 'message' => 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন রিকোয়েস্ট পাঠানো যাবে না। অন্য টিচার দেখুন।']);
+                $sMe = current_user_id();
+                if ($ttr && $sMe !== null && current_role() !== 'Admin') {
+                    $last = $this->db->LastPendingRequestAt((int)$sMe, (int)$ttr->UserId);
+                    if ($last && strtotime($last) > time() - 86400) {
+                        $h = max(1, (int)ceil((strtotime($last) + 86400 - time()) / 3600));
+                        json_response(['success' => false, 'message' => "এই টিচারকে আপনার রিকোয়েস্ট পাঠানো আছে। ২৪ ঘণ্টার মধ্যে সাড়া না পেলে আবার পাঠাতে পারবেন (আর প্রায় $h ঘণ্টা পর)।"]);
+                    }
                 }
             }
             $studentName = input_str('studentName');
@@ -120,9 +125,16 @@ class FindTutorController extends Controller
                             // কে পাঠাল আর কোন টিচারের কাছে গেল — টিচার Accept করলে দুজনের চ্যাট খোলে
                             if ($tr) $this->db->SetTutorRequestUsers((int)$req->Id, $studentUid !== (int)$tr->UserId ? $studentUid : null, (int)$tr->UserId);
                             if ($tr && $this->db->GetUserById($tr->UserId)) {
-                                $this->db->CreateNotification($tr->UserId, '📩 New Tutor Request!',
-                                    "{$req->StudentName} ({$req->PhoneNumber}) wants to contact you for {$req->RequiredSubject} tuition. Dashboard থেকে Accept বা Reject করুন।",
-                                    'info', '/Teacher/TeacherDashboard?section=direct-requests', 'fa-envelope-open-text');
+                                if (teacher_profile_open((int)$tr->UserId)) {
+                                    $this->db->CreateNotification($tr->UserId, '📩 New Tutor Request!',
+                                        "{$req->StudentName} ({$req->PhoneNumber}) wants to contact you for {$req->RequiredSubject} tuition. Dashboard থেকে Accept বা Reject করুন।",
+                                        'info', '/Teacher/TeacherDashboard?section=direct-requests', 'fa-envelope-open-text');
+                                } else {
+                                    // প্যাকেজ নেই — শিক্ষার্থীর কোনো যোগাযোগের তথ্য না দিয়ে শুধু জানানো
+                                    $this->db->CreateNotification($tr->UserId, '📩 আপনি টিউশন রিকোয়েস্ট পেয়েছেন',
+                                        'আপনি টিচার হিসেবে টিউশন রিকোয়েস্ট পেয়েছেন' . (!is_blank($req->RequiredSubject) ? " ({$req->RequiredSubject})" : '') . '। টিউশনটি নিতে প্যাকেজ কিনুন।',
+                                        'info', '/Package?for=teacher', 'fa-envelope-open-text');
+                                }
                             }
                         }
                     }

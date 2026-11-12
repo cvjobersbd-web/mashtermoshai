@@ -431,6 +431,14 @@ trait ChatData
         return self::mapTutorRequest($r);
     }
 
+    /** এই শিক্ষার্থী এই টিচারকে শেষ কবে রিকোয়েস্ট পাঠিয়েছে (এখনো Pending) — ২৪ ঘণ্টার নিয়মের জন্য */
+    public function LastPendingRequestAt(int $studentId, int $teacherId): ?string
+    {
+        $this->EnsureTutorRequestUserColumns();
+        $v = $this->scalar("SELECT MAX(`CreatedAt`) FROM `TutorRequests` WHERE `StudentUserId` = :s AND `TeacherUserId` = :t AND `Status` = 'Pending'", ['s' => $studentId, 't' => $teacherId]);
+        return $v ? (string)$v : null;
+    }
+
     public function SetTutorRequestUsers(int $reqId, ?int $studentId, ?int $teacherId): void
     {
         $this->EnsureTutorRequestUserColumns();
