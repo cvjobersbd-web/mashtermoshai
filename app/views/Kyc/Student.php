@@ -40,6 +40,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                     <div><small>ক্লাস</small><b><?= e($cls[$v('classLevel')] ?? '') ?><?= $v('group') !== '' ? ' · ' . e($v('group')) : '' ?></b></div>
                     <div><small>প্রতিষ্ঠান</small><b><?= e($v('institution')) ?></b></div>
                     <div><small>নিজের মোবাইল</small><b><?= e($v('mobile') ?: '—') ?></b></div>
+                    <div><small>WhatsApp</small><b><?= e($v('whatsapp') ?: '—') ?></b></div>
                     <div><small>বাবা</small><b><?= e($v('fatherName')) ?><?= $v('fatherMobile') !== '' ? ' · ' . e($v('fatherMobile')) : '' ?></b></div>
                     <div><small>মা</small><b><?= e($v('motherName') ?: '—') ?><?= $v('motherMobile') !== '' ? ' · ' . e($v('motherMobile')) : '' ?></b></div>
                     <div><small>গ্রামের বাড়ি (স্থায়ী ঠিকানা)</small><b><?= e($v('permanentAddress')) ?></b></div>
@@ -56,6 +57,8 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                 <div class="ky-g2">
                     <div class="ky-f" data-f="fullName"><label class="l" for="fullName">শিক্ষার্থীর পুরো নাম <span class="r">*</span></label><input type="text" id="fullName" name="fullName" maxlength="80" value="<?= e($v('fullName', (string)($u->FullName ?? ''))) ?>" /></div>
                     <div class="ky-f" data-f="mobile"><label class="l" for="mobile">নিজের মোবাইল নম্বর <small>(থাকলে)</small></label><input type="tel" id="mobile" name="mobile" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e($v('mobile', (string)($u->MobileNumber ?? ''))) ?>" /></div>
+                    <div class="ky-f" data-f="whatsapp"><label class="l" for="whatsapp"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp নম্বর <span class="r">*</span></label><input type="tel" id="whatsapp" name="whatsapp" maxlength="16" inputmode="numeric" placeholder="01XXXXXXXXX" value="<?= e($v('whatsapp')) ?>" />
+                        <label class="ky-chk"><input type="checkbox" id="kySameWaS" /> নিজের মোবাইলটাই WhatsApp</label></div>
                 </div>
             </div>
 
@@ -159,6 +162,9 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
     refresh();
     var same = document.getElementById('kySameAddr');
     same.addEventListener('change', function () { if (same.checked) f.elements.presentAddress.value = f.elements.permanentAddress.value; });
+    var sw = document.getElementById('kySameWaS'), mo = document.getElementById('mobile'), wa = document.getElementById('whatsapp');
+    sw.addEventListener('change', function () { if (sw.checked) wa.value = mo.value; });
+    mo.addEventListener('input', function () { if (sw.checked) wa.value = mo.value; });
     kyBind(f, '/Kyc/Student', document.getElementById('kyBtn'), document.getElementById('kyMsg'));
 })();
 </script>

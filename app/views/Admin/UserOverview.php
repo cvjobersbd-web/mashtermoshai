@@ -390,6 +390,8 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                     </div>
                 </div>
 
+                <?php partial('Admin/_SuperUserTools', ['user' => $selected]); ?>
+
                 <!-- ২. স্ট্যাটস গ্রিড -->
                 <div class="stat-grid">
                     <div class="stat-card posts">

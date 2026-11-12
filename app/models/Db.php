@@ -2755,6 +2755,28 @@ class Db
         } catch (Throwable $e) { error_log('[DeleteProfilePost] ' . $e->getMessage()); return false; }
     }
 
+    /** Admin → Profile Posts: টিচার / শিক্ষার্থী / ইউজারের প্রোফাইলের সব পোস্ট (নতুন আগে) — $role: all | Teacher | User */
+    public function GetProfilePostsAdmin(string $role, string $q, int $limit, int $offset, ?int &$total = null): array
+    {
+        try {
+            $this->EnsureProfilePostTables();
+            $where = ["COALESCE(u.`Role`, 'User') <> 'Admin'"]; $p = [];
+            if ($role === 'Teacher') $where[] = "u.`Role` = 'Teacher'";
+            elseif ($role === 'User') $where[] = "COALESCE(u.`Role`, 'User') NOT IN ('Teacher', 'Admin')";
+            $q = trim($q);
+            if ($q !== '') {
+                $where[] = '(u.`FullName` LIKE :q1 OR u.`UserName` LIKE :q2 OR u.`Email` LIKE :q3 OR p.`Content` LIKE :q4' . (ctype_digit($q) ? ' OR p.`UserId` = :qi' : '') . ')';
+                foreach (['q1', 'q2', 'q3', 'q4'] as $k) $p[$k] = '%' . $q . '%';
+                if (ctype_digit($q)) $p['qi'] = (int)$q;
+            }
+            $w = ' WHERE ' . implode(' AND ', $where);
+            $total = (int)$this->scalar('SELECT COUNT(*) FROM `ProfilePosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`' . $w, $p);
+            $limit = max(1, min(50, $limit)); $offset = max(0, $offset);
+            $rows = $this->all(self::PROFILE_POST_SELECT . $w . " ORDER BY p.`Id` DESC LIMIT $limit OFFSET $offset", $p);
+            return $this->hydrateProfilePosts(array_map(fn($r) => $this->mapProfilePost($r), $rows), current_user_id(), true);
+        } catch (Throwable $e) { error_log('[GetProfilePostsAdmin] ' . $e->getMessage()); $total = 0; return []; }
+    }
+
     /** শেষ X মিনিটে কয়টা পোস্ট / কমেন্ট (স্প্যাম ঠেকাতে) */
     public function CountRecentProfileActivity(string $what, int $userId, int $minutes): int
     {

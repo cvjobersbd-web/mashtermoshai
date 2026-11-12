@@ -1895,6 +1895,70 @@ class AdminController extends Controller
         ]);
     }
 
+    /** POST /Admin/ExtendPackage — userId, aud (Teacher|Student), days — শুধু Super Admin */
+    public function ExtendPackage_POST(): void
+    {
+        $this->requireAdminJson();
+        $u = $this->db->GetUserById((int)input_int('userId', 0));
+        if (!$u || $u->Role === 'Admin') json_response(['success' => false, 'message' => 'ইউজার পাওয়া যায়নি।']);
+        $aud = (string)input_str('aud', '');
+        if (!in_array($aud, ['Teacher', 'Student'], true)) json_response(['success' => false, 'message' => 'কোন প্যাকেজ (টিচার / শিক্ষার্থী) বাছাই করুন।']);
+        $days = (int)input_int('days', 0);
+        if ($days < 1 || $days > 3650) json_response(['success' => false, 'message' => 'কত দিন বাড়াবেন লিখুন (১ — ৩৬৫০)।']);
+        $end = $this->db->ExtendUserPackage((int)$u->Id, $aud, $days);
+        $d = date('d M Y', strtotime($end));
+        try { $this->db->CreateNotification((int)$u->Id, '🎁 প্যাকেজের মেয়াদ বেড়েছে', 'অ্যাডমিন আপনার ' . ($aud === 'Teacher' ? 'টিচার' : 'শিক্ষার্থী') . " প্যাকেজের মেয়াদ $days দিন বাড়িয়ে দিয়েছেন — এখন $d পর্যন্ত চালু।", 'success', '/Payment/My', 'fa-gift'); } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => ($aud === 'Teacher' ? 'টিচার' : 'শিক্ষার্থী') . " প্যাকেজ $days দিন বাড়ানো হয়েছে — এখন $d পর্যন্ত।"]);
+    }
+
+    /** POST /Admin/ChangeUserRole — userId, role (User|Teacher|Admin) — শুধু Super Admin (টিচার / শিক্ষার্থীর সুবিধা যাচাইয়ের জন্য) */
+    public function ChangeUserRole_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('userId', 0);
+        $u = $this->db->GetUserById($id);
+        if (!$u) json_response(['success' => false, 'message' => 'ইউজার পাওয়া যায়নি।']);
+        if ($id === (int)current_user_id()) json_response(['success' => false, 'message' => 'নিজের রোল নিজে বদলানো যায় না।']);
+        $acc = $u->Role === 'Admin' ? $this->db->GetAdminAccess($id) : null;
+        if ($acc && $acc['super']) json_response(['success' => false, 'message' => 'Super Admin এর রোল এখান থেকে বদলানো যায় না।']);
+        $role = (string)input_str('role', '');
+        if (!in_array($role, ['User', 'Teacher', 'Admin'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
+        if ($role === $u->Role) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $role . '।']);
+        $this->db->SetUserRoleBySuper($id, $role);
+        $bn = ['User' => 'শিক্ষার্থী / ইউজার', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন'][$role];
+        try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ''), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => "রোল বদলে $bn করা হয়েছে।" . ($role === 'Admin' ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
+    }
+
+    /** GET /Admin/ProfilePosts — টিচার / শিক্ষার্থী নিজের প্রোফাইলে যা পোস্ট করে (role=all|Teacher|User, q=) */
+    public function ProfilePosts(): void
+    {
+        $this->requireAdminPage();
+        $role = (string)input_str('role', 'all');
+        if (!in_array($role, ['all', 'Teacher', 'User'], true)) $role = 'all';
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 80);
+        $page = max(1, (int)input_int('page', 1)); $per = 20; $total = 0;
+        $posts = $this->db->GetProfilePostsAdmin($role, $q, $per, ($page - 1) * $per, $total);
+        $counts = [];
+        foreach (['all', 'Teacher', 'User'] as $r) { $n = 0; $this->db->GetProfilePostsAdmin($r, '', 1, 0, $n); $counts[$r] = $n; }
+        $this->view(null, $posts, ['Role' => $role, 'Q' => $q, 'Page' => $page, 'Pages' => max(1, (int)ceil($total / $per)), 'Total' => $total, 'Counts' => $counts]);
+    }
+
+    /** POST /Admin/DeleteProfilePost — id */
+    public function DeleteProfilePost_POST(): void
+    {
+        $this->requireAdminJson();
+        $p = $this->db->GetProfilePostById((int)input_int('id', 0));
+        if (!$p) json_response(['success' => false, 'message' => 'পোস্টটি পাওয়া যায়নি।']);
+        $ok = $this->db->DeleteProfilePost($p->Id);
+        if ($ok) {
+            delete_upload($p->ImageUrl);
+            if (!empty($p->Meta['file']['url'])) delete_upload((string)$p->Meta['file']['url']);
+            try { $this->db->CreateNotification($p->UserId, 'Post Removed', 'আপনার একটি প্রোফাইল পোস্ট অ্যাডমিন সরিয়ে দিয়েছেন।', 'warning', '/Profile/Show/' . $p->UserId, 'fa-trash'); } catch (Throwable $e) { }
+        }
+        json_response(['success' => $ok, 'message' => $ok ? 'পোস্ট মুছে ফেলা হয়েছে।' : 'মুছা যায়নি।']);
+    }
+
     /** POST /Admin/EduFeedStatus — id, status (Approved|Rejected|Pending), reason */
     public function EduFeedStatus_POST(): void
     {

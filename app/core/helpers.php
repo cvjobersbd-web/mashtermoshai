@@ -1735,7 +1735,7 @@ function admin_action_rule(string $action): string
             'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
-            'edufeed' => ['EduFeed', 'EduFeedStatus'],
+            'edufeed' => ['EduFeed', 'EduFeedStatus', 'ProfilePosts', 'DeleteProfilePost'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
             'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'ReferralUser', 'RefUserSearch', 'SetRefNoBonus', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'LiveClasses', 'LivePayments', 'ToggleCourse', 'AddCoursePayout', 'SaveCourseSettings', 'SavePublishFee', 'ProcessWithdrawal', 'SetReferralStatus',
                 'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],

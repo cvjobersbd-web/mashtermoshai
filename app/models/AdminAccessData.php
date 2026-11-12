@@ -49,6 +49,19 @@ trait AdminAccessData
         } catch (Throwable $e) { error_log('[GetAdminAccess] ' . $e->getMessage()); return null; }
     }
 
+    /** Super Admin: ইউজারের রোল বদল (User / Teacher / Admin) — Admin বানালে কোনো পেজের অনুমতি ছাড়া (Admins পেজ থেকে দেওয়া যায়) */
+    public function SetUserRoleBySuper(int $userId, string $role): void
+    {
+        $this->EnsureAdminAccessTables();
+        $this->exec('UPDATE `Users` SET `Role` = :r WHERE `Id` = :u', ['r' => $role, 'u' => $userId]);
+        if ($role === 'Admin') {
+            if (!(int)$this->scalar('SELECT COUNT(*) FROM `AdminAccess` WHERE `UserId` = :u', ['u' => $userId]))
+                $this->exec("INSERT INTO `AdminAccess` (`UserId`, `IsSuper`, `Perms`) VALUES (:u, 0, '[]')", ['u' => $userId]);
+        } else {
+            $this->exec('DELETE FROM `AdminAccess` WHERE `UserId` = :u', ['u' => $userId]);
+        }
+    }
+
     /** সব অ্যাডমিন (Super আগে) — Admins পেজের জন্য */
     public function GetAdminList(): array
     {

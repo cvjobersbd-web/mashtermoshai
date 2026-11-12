@@ -80,6 +80,10 @@ class KycController extends Controller
             $d[$k] = $raw === '' ? '' : (self::cleanMobile($raw) ?? $this->fail("$who মোবাইল নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।", $k));
         }
         if ($d['fatherMobile'] === '' && $d['motherMobile'] === '') $this->fail('বাবা অথবা মায়ের মোবাইল নম্বর দিন।', 'fatherMobile');
+        // WhatsApp — বাধ্যতামূলক (অ্যাডমিন এক চাপে WhatsApp এ যোগাযোগ করতে পারেন)
+        $wa = trim((string)input_str('whatsapp', ''));
+        if ($wa === '') $this->fail('WhatsApp নম্বর দিন — অ্যাডমিন দরকারে এই নম্বরে যোগাযোগ করবেন।', 'whatsapp');
+        $d['whatsapp'] = self::cleanMobile($wa) ?? $this->fail('WhatsApp নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।', 'whatsapp');
 
         // SSC / HSC — ক্লাস অনুযায়ী; Running হলে সাল / রেজাল্ট লাগে না
         foreach (['ssc' => 'SSC', 'hsc' => 'HSC'] as $ex => $EX) {

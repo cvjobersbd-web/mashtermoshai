@@ -439,6 +439,42 @@ trait PaymentData
     }
 
     /** @return array<int,string> userId => EndsAt — যাদের Subscription চালু */
+    /** ইউজারের প্যাকেজের অবস্থা (Teacher / Student) — সর্বশেষ মেয়াদ, চালু কিনা */
+    public function GetUserPackageState(int $userId): array
+    {
+        $o = [];
+        try {
+            $this->EnsurePaymentTables();
+            foreach (['Teacher', 'Student'] as $a) {
+                $r = $this->one("SELECT `PackageName`, `EndsAt` FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = :a
+                    ORDER BY CASE WHEN `EndsAt` IS NULL THEN 1 ELSE 0 END DESC, `EndsAt` DESC, `Id` DESC LIMIT 1", ['u' => $userId, 'a' => $a]);
+                $o[$a] = $r ? ['name' => (string)$r->PackageName, 'ends' => $r->EndsAt, 'active' => $r->EndsAt === null || (string)$r->EndsAt > now()] : null;
+            }
+        } catch (Throwable $e) { error_log('[GetUserPackageState] ' . $e->getMessage()); }
+        return $o;
+    }
+
+    /**
+     * Super Admin: কারো প্যাকেজের মেয়াদ $days দিন বাড়ানো। চালু প্যাকেজ থাকলে তার শেষ তারিখ থেকে বাড়ে,
+     * না থাকলে আজ থেকে $days দিনের নতুন প্যাকেজ (অ্যাডমিনের দেওয়া, ফ্রি)। নতুন শেষ তারিখ ফেরত দেয়।
+     */
+    public function ExtendUserPackage(int $userId, string $aud, int $days): string
+    {
+        $this->EnsurePaymentTables();
+        $days = max(1, min(3650, $days));
+        $r = $this->one("SELECT `Id`, `EndsAt` FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = :a AND `EndsAt` IS NOT NULL AND `EndsAt` > :n
+            ORDER BY `EndsAt` DESC, `Id` DESC LIMIT 1", ['u' => $userId, 'a' => $aud, 'n' => now()]);
+        if ($r) {
+            $end = date('Y-m-d H:i:s', strtotime((string)$r->EndsAt . " +$days days"));
+            $this->exec('UPDATE `UserSubscriptions` SET `EndsAt` = :e WHERE `Id` = :i', ['e' => $end, 'i' => (int)$r->Id]);
+            return $end;
+        }
+        $end = date('Y-m-d H:i:s', strtotime("+$days days"));
+        $this->insert('INSERT INTO `UserSubscriptions` (`UserId`, `PaymentId`, `PackageName`, `Audience`, `StartsAt`, `EndsAt`, `PostsTotal`, `PostsUsed`, `CreatedAt`)
+            VALUES (:u, NULL, :n, :a, :s, :e, 0, 0, :c)', ['u' => $userId, 'n' => 'অ্যাডমিনের দেওয়া · ' . $days . ' দিন', 'a' => $aud, 's' => now(), 'e' => $end, 'c' => now()]);
+        return $end;
+    }
+
     public function GetActiveTeacherSubscriptionMap(): array
     {
         try {

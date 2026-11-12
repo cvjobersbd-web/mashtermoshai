@@ -107,6 +107,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                             <div><small>বাবা</small><b><?= e($D['fatherName'] ?? '') ?></b></div>
                             <div><small>বাবার মোবাইল</small><b><?= !empty($D['fatherMobile']) ? '<a class="tel" href="tel:' . e($D['fatherMobile']) . '">' . e($D['fatherMobile']) . '</a>' : '—' ?></b></div>
                             <div><small>নিজের মোবাইল</small><b><?= !empty($D['mobile']) ? '<a class="tel" href="tel:' . e($D['mobile']) . '">' . e($D['mobile']) . '</a>' : '—' ?></b></div>
+                            <div><small>WhatsApp</small><b><?= !empty($D['whatsapp']) ? '<a class="tel" href="https://wa.me/88' . e($D['whatsapp']) . '" target="_blank" rel="noopener"><i class="fab fa-whatsapp" style="color:#25D366;"></i> ' . e($D['whatsapp']) . '</a>' : '—' ?></b></div>
                             <div><small>মা</small><b><?= e(($D['motherName'] ?? '') ?: '—') ?></b></div>
                             <div><small>মায়ের মোবাইল</small><b><?= !empty($D['motherMobile']) ? '<a class="tel" href="tel:' . e($D['motherMobile']) . '">' . e($D['motherMobile']) . '</a>' : '—' ?></b></div>
                             <div><small>জেলা</small><b><?= e($D['district'] ?? '') ?></b></div>

@@ -14,6 +14,10 @@ $posts = [];
 try {
     $posts = db()->GetAllTeachWantedPosts($userId);
 } catch (Throwable $ex) { error_log($ex->getMessage()); }
+// টিচারদের "পড়াতে চাই" পোস্ট — শিক্ষার্থী / ইউজার প্যাকেজ কিনলে তবেই দেখবে (টিচার ও অ্যাডমিন সবসময় দেখে)
+$postsLocked = !$isTeacher && !viewer_has_package();
+$lockedPostCount = $postsLocked ? count($posts) : 0;
+if ($postsLocked) $posts = [];
 
 // নামের প্রথম অক্ষর (বড় হাতের), খালি হলে ডিফল্ট
 $firstUpper = fn($s, string $d) => mb_strlen((string)$s) > 0 ? mb_strtoupper(mb_substr((string)$s, 0, 1)) : $d;
@@ -2092,10 +2096,17 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 <!-- ===== টিচারদের পোস্ট ===== -->
                 <div class="ft2-list-h" style="margin-top:22px;">
-                    <h2><i class="fas fa-chalkboard-user"></i> টিচারদের পোস্ট <span class="ft2-count" id="postCountBadge"><?= count($posts) ?>টি</span></h2>
+                    <h2><i class="fas fa-chalkboard-user"></i> টিচারদের পোস্ট <span class="ft2-count" id="postCountBadge"><?= count($posts) ?: $lockedPostCount ?>টি</span></h2>
                 </div>
             <div class="post-feed" id="postFeed">
-                <?php if (empty($posts)): ?>
+                <?php if ($postsLocked): ?>
+                    <div class="empty-state">
+                        <div class="es-icon"><i class="fas fa-lock"></i></div>
+                        <h4>টিচারদের পোস্ট দেখতে শিক্ষার্থী প্যাকেজ লাগবে</h4>
+                        <p><?= $lockedPostCount ? 'এখানে ' . e(bn_num($lockedPostCount)) . 'টি পোস্ট আছে। ' : '' ?>শিক্ষার্থী প্যাকেজ কিনলে টিচারদের "পড়াতে চাই" পোস্ট দেখতে আর যোগাযোগ করতে পারবেন।</p>
+                        <a href="<?= $isLoggedIn ? '/Package?for=student' : '/Account/Login?returnUrl=' . rawurlencode('/Package?for=student') ?>" style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 18px;border-radius:10px;background:#00A8D6;color:#fff;font-weight:700;text-decoration:none;"><i class="fas fa-tags"></i> শিক্ষার্থী প্যাকেজ দেখুন</a>
+                    </div>
+                <?php elseif (empty($posts)): ?>
                     <div class="empty-state">
                         <div class="es-icon"><i class="fas fa-chalkboard-teacher"></i></div>
                         <h4>কোনো পোস্ট পাওয়া যায়নি</h4>
