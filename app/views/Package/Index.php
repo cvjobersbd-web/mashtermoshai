@@ -8,6 +8,14 @@ $teacherPkAll = $ViewBag->TeacherPackages ?? [];
 // নরমাল আর Premium (লাইভ ক্লাস সহ) আলাদা দেখানো
 $teacherPk = array_values(array_filter($teacherPkAll, fn($p) => empty($p->IsLive)));
 $premiumPk = array_values(array_filter($teacherPkAll, fn($p) => !empty($p->IsLive)));
+// Premium (লাইভ ক্লাস সহ) কার্ডগুলো একই সারিতে — Special Package (কুপন অফারের প্যাকেজ) এর ঠিক পাশে; না থাকলে শেষে
+$teacherCards = [];
+$premPlaced = false;
+foreach ($teacherPk as $p) {
+    $teacherCards[] = $p;
+    if (!$premPlaced && $premiumPk && db()->CouponOfferFor($p)) { foreach ($premiumPk as $pp) $teacherCards[] = $pp; $premPlaced = true; }
+}
+if (!$premPlaced) foreach ($premiumPk as $pp) $teacherCards[] = $pp;
 $studentPk = $ViewBag->StudentPackages ?? [];
 $tab = $ViewBag->Tab === 'student' ? 'student' : 'teacher';
 $isLoggedIn = session_get('UserName') != null;
@@ -44,7 +52,7 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
 $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student';
     $cpo = $free ? null : db()->CouponOfferFor($p);
     $badge = $cpo ? 'Special Package' : (string)$p->Badge; // কুপন অফার থাকলে "জনপ্রিয়"-এর বদলে Special Package ?>
-    <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
+    <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?><?= !empty($p->IsLive) ? ' pk-prem' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
             <div class="pk-name"><?= e($p->Name) ?></div>
             <?php if (!is_blank($badge)): ?><span class="pk-badge"><?= e($badge) ?></span><?php endif; ?>
@@ -138,8 +146,8 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
     .pk-sec-h p { margin: 0 auto; max-width: 620px; color: #64748B; font-size: 14.5px; line-height: 1.7; }
 
     .pk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; align-items: stretch; }
-    .pk-premium .pk-card { border: 2px solid #C4B5FD; background: linear-gradient(180deg, #FAF5FF, #fff 40%); }
-    .pk-premium .pk-badge { background: #7C3AED !important; color: #fff !important; }
+    .pk-card.pk-prem { border: 2px solid #C4B5FD; background: linear-gradient(180deg, #FAF5FF, #fff 40%); }
+    .pk-card.pk-prem .pk-badge { background: #7C3AED !important; color: #fff !important; }
     .pk-grid.few { grid-template-columns: repeat(auto-fit, minmax(260px, 320px)); justify-content: center; }
     .pk-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; background: #fff; border: 1.5px solid #E3ECF5; border-radius: 18px; padding: 22px 20px 20px;
         box-shadow: 0 6px 22px rgba(8,34,74,.06); transition: transform .2s, box-shadow .2s; }
@@ -258,7 +266,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             <h2>শিক্ষকদের জন্য Subscription</h2>
             <p>আপনার প্রোফাইল সক্রিয় করুন এবং শিক্ষার্থীদের সাথে সহজেই যুক্ত হোন</p>
         </div>
-        <div class="pk-grid<?= count($teacherPk) + 1 < 3 ? ' few' : '' ?>">
+        <div class="pk-grid<?= count($teacherCards) + 1 < 3 ? ' few' : '' ?>">
             <div class="pk-card pk-free">
                 <div class="pk-top"><div class="pk-name">Free Teacher</div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;">সবসময় ফ্রি</span></div>
                 <div class="pk-price"><b>৳0</b></div>
@@ -278,17 +286,8 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
                     <a class="pk-btn" href="/Account/Register">ফ্রি Account খুলুন <i class="fas fa-arrow-right"></i></a>
                 <?php endif; ?>
             </div>
-            <?php foreach ($teacherPk as $p) $card($p, 'Subscribe করুন'); ?>
+            <?php foreach ($teacherCards as $p) $card($p, !empty($p->IsLive) ? 'Premium নিন' : 'Subscribe করুন'); ?>
         </div>
-        <?php if ($premiumPk): ?>
-        <div class="pk-sec-h" style="margin-top:34px;">
-            <h2><i class="fas fa-tower-broadcast" style="color:#7C3AED;"></i> Premium — লাইভ ক্লাস সহ</h2>
-            <p>বাকি সব সুবিধার পাশাপাশি সাইট থেকেই শিক্ষার্থীদের লাইভ ক্লাস নিন — চ্যাট থেকে এক ক্লিকে ক্লাস শুরু, Zoom / Google Meet লাগবে না।</p>
-        </div>
-        <div class="pk-grid pk-premium<?= count($premiumPk) < 3 ? ' few' : '' ?>">
-            <?php foreach ($premiumPk as $p) $card($p, 'Premium নিন'); ?>
-        </div>
-        <?php endif; ?>
         
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
