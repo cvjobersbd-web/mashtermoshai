@@ -132,7 +132,7 @@ trait ReferralData
 
     /**
      * নতুন ইউজার কারো লিংক দিয়ে সাইনআপ করলে রেফারেল রেকর্ড হয় (Waiting — এখনো টাকা না)।
-     * নিজেকে নিজে, অ্যাডমিন অ্যাকাউন্ট, বা দিনে ২০ জনের বেশি — রেকর্ড হয় না। রিটার্ন: রেফারারের Id
+     * নিজেকে নিজে বা অ্যাডমিন অ্যাকাউন্ট — রেকর্ড হয় না (দিনে যত জনই হোক সব রেকর্ড হয়)। রিটার্ন: রেফারারের Id
      */
     public function CreditReferral(string $code, int $newUserId, string $ip, string $src = 'link'): ?int
     {
@@ -143,7 +143,8 @@ trait ReferralData
             if (!$ref || $ref === $newUserId) return null;
             $u = $this->GetUserById($ref);
             if (!$u || $u->Role === 'Admin' || !(int)$u->IsActive) return null;
-            if ((int)$this->scalar('SELECT COUNT(*) FROM `Referrals` WHERE `ReferrerId` = :r AND `CreatedAt` >= :t', ['r' => $ref, 't' => date('Y-m-d H:i:s', time() - 86400)]) >= 20) return null;
+            // আগে দিনে ২০ জনের বেশি রেকর্ড হতো না — মাঠের ক্যাম্পেইনে ২০ এর পরের সাইনআপ হারিয়ে যেত। এখন সীমা নেই
+            // (বোনাস শুধু প্যাকেজ কেনায়; সন্দেহজনক হলে অ্যাডমিন Referrals পেজ থেকে বাতিল / No-bonus করতে পারেন)
             $this->EnsureRefCodeCols();
             $src = $src === 'code' ? 'code' : (self::CleanRefSrc($src) ?: 'link');
             $this->exec('INSERT INTO `Referrals` (`ReferrerId`, `ReferredUserId`, `Bonus`, `Status`, `Ip`, `CreatedAt`, `Via`, `Src`) VALUES (:r, :n, 0, \'Waiting\', :ip, :t, :v, :s)',
@@ -332,11 +333,11 @@ trait ReferralData
     }
 
     /** আমার রেফার করা ইউজাররা (নতুন আগে) */
-    public function GetMyReferrals(int $userId, int $limit = 100): array
+    public function GetMyReferrals(int $userId, int $limit = 2000): array
     {
         $this->EnsureReferralTables();
         return $this->all('SELECT r.*, u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink` FROM `Referrals` r LEFT JOIN `Users` u ON u.`Id` = r.`ReferredUserId`
-            WHERE r.`ReferrerId` = :u ORDER BY r.`Id` DESC LIMIT ' . max(1, min(500, $limit)), ['u' => $userId]);
+            WHERE r.`ReferrerId` = :u ORDER BY r.`Id` DESC LIMIT ' . max(1, min(5000, $limit)), ['u' => $userId]);
     }
 
     public function GetMyWithdrawals(int $userId): array
