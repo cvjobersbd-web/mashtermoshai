@@ -24,6 +24,9 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <?php
     // লগইন থাকলে Tuition Circular-এ সরাসরি পোস্ট লেখার বক্স খোলে, না থাকলে আগে লগইন
     $heroSlider = count($heroImages) > 1 && $settings->SliderEnabled;
+    // ডিফল্ট টিচার-স্টুডেন্ট ছবিটা থাকলে অ্যানিমেটেড সংস্করণ দেখায়; অ্যাডমিন অন্য ছবি দিলে সেটাই স্থির দেখাবে
+    $heroAnimated = !$heroSlider && $heroImages[0] === HomeController::HERO_IMAGE;
+    $hxA = '/uploads/hero/anim/v1-';
 ?>
 <style>
     /* ✅ ক্লিন হিরো — হালকা ব্যাকগ্রাউন্ড, বাঁয়ে লেখা + সার্চ, ডানে ছবি */
@@ -70,6 +73,41 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     @keyframes hxMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     @media (prefers-reduced-motion: reduce) { .hx-mq-track { animation: none; } }
     @media (max-width: 640px) { .hx-mq { font-size: 14.5px; } .hx-mq-track span { padding-right: 60px; } }
+    /* ===== অ্যানিমেটেড ছবি: স্যার কথা বলছেন আর হাতে দেখাচ্ছেন, ছাত্র মাথা দুলিয়ে শুনছে আর খাতায় লিখছে ===== */
+    .hx-anim { position: relative; width: 100%; max-width: 560px; aspect-ratio: 600 / 429; container-type: inline-size; }
+    .hx-anim > img, .hx-anim .ly { position: absolute; display: block; max-width: none; height: auto; mix-blend-mode: normal; user-select: none; pointer-events: none; }
+    .hx-anim > img.base { inset: 0; width: 100%; height: 100%; mix-blend-mode: multiply; }
+    .hx-anim .ly img { display: block; width: 100%; max-width: none; height: auto; mix-blend-mode: normal; }
+    .ly.t-head  { left: 27.417%; top: 26.923%; width: 16.083%; transform-origin: 57.5% 97%; animation: hxTalk 4.2s ease-in-out infinite; }
+    .ly.t-arm   { left: 39.084%; top: 54.196%; width: 13.416%; transform-origin: 6.8% 74.8%; animation: hxPoint 3.4s ease-in-out infinite; }
+    .ly.s-head  { left: 59.084%; top: 36.247%; width: 16.584%; transform-origin: 47.7% 93%; animation: hxDream 5.6s ease-in-out infinite; }
+    .ly.s-hand  { left: 56.917%; top: 62.587%; width: 7.750%;  animation: hxWrite 1.6s linear infinite; }
+    .ly.plant   { left: 8.417%;  top: 51.865%; width: 14.916%; transform-origin: 57.5% 98.8%; animation: hxSway 5s ease-in-out infinite; }
+    .ly.vine    { left: 76.416%; top: 33.683%; width: 8.250%;  transform-origin: 43.4% 2%; animation: hxSway 4.4s ease-in-out infinite reverse; }
+    @keyframes hxTalk  { 0%, 100% { transform: rotate(0); } 18% { transform: rotate(-2.2deg) translateY(-.6%); } 36% { transform: rotate(.8deg); } 55% { transform: rotate(-1.6deg) translateY(-.4%); } 75% { transform: rotate(.6deg); } }
+    @keyframes hxPoint { 0%, 100% { transform: rotate(0); } 14% { transform: rotate(-4.5deg); } 28% { transform: rotate(.6deg); } 42% { transform: rotate(-3.5deg); } 56% { transform: rotate(0); } }
+    @keyframes hxDream { 0%, 100% { transform: rotate(0); } 35% { transform: rotate(2.4deg); } 50% { transform: rotate(2.4deg); } 80% { transform: rotate(-.8deg); } }
+    @keyframes hxWrite { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(3%, -2%); } 30% { transform: translate(-1%, 1.5%); } 45% { transform: translate(4%, -1%); } 60% { transform: translate(1%, 2%); } 75% { transform: translate(6%, 0); } 90% { transform: translate(2%, 1%); } }
+    @keyframes hxSway  { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+    /* চোখের পাতা — মাঝে মাঝে পলক */
+    .ly .lid { position: absolute; border-radius: 50%; background: #F2B777; transform: scaleY(0); transform-origin: 50% 0; box-shadow: inset 0 -1.5px 0 #3B2B22; animation: hxBlink 4.6s infinite; }
+    .t-head .lid { animation-delay: .8s; } .s-head .lid { animation-duration: 5.3s; animation-delay: 2.1s; }
+    @keyframes hxBlink { 0%, 93%, 100% { transform: scaleY(0); } 95.5% { transform: scaleY(1); } }
+    /* খাতায় লেখার দাগ */
+    .hx-ink { position: absolute; left: 63.882%; top: 71.6%; width: 8.775%; overflow: visible; }
+    .hx-ink path { fill: none; stroke: #1F2A44; stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 60; stroke-dashoffset: 60; animation: hxInk 3.2s ease-in-out infinite; opacity: .55; }
+    .hx-ink path + path { animation-delay: 1.6s; }
+    @keyframes hxInk { 0% { stroke-dashoffset: 60; opacity: .55; } 45% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; opacity: .55; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+    /* ল্যাপটপের স্ক্রিনে আলো */
+    .hx-glow { position: absolute; inset: 0; clip-path: polygon(77.8% 61.5%, 91.4% 59.7%, 89.6% 76%, 74.6% 77.4%);
+        background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.45) 50%, transparent 60%) no-repeat; background-size: 300% 100%; animation: hxGlowMove 4s ease-in-out infinite; }
+    @keyframes hxGlowMove { 0% { background-position: 100% 0; } 60%, 100% { background-position: 0 0; } }
+    /* ছোট তারা — ছাত্রের মাথার পাশে */
+    .hx-spark { position: absolute; width: 3.042%; aspect-ratio: 1; color: #00CFFF; animation: hxTwinkle 2.6s ease-in-out infinite; }
+    .hx-spark svg { display: block; width: 100%; height: 100%; }
+    .hx-spark.a { left: 76.050%; top: 41%; } .hx-spark.b { left: 57.330%; top: 33%; width: 2.223%; animation-delay: -.9s; } .hx-spark.c { left: 78.975%; top: 52%; width: 1.872%; animation-delay: -1.7s; color: #FFC233; }
+    @keyframes hxTwinkle { 0%, 100% { transform: scale(.3) rotate(0); opacity: 0; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .hx-anim *, .hx-anim .ly { animation: none !important; } .hx-ink path { stroke-dashoffset: 0; } }
 </style>
 <?php $hx = hero_texts(); $hxTitle = trim(html_entity_decode(strip_tags(str_replace('<br>', ' ', $hx['hx_title_html'])), ENT_QUOTES, 'UTF-8')); ?>
 <section class="hx" aria-label="<?= e($hxTitle) ?>">
@@ -92,6 +130,23 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                 <?php endforeach; ?>
                 <div class="hx-dotsnav">
                     <?php foreach ($heroImages as $idx => $img): ?><button type="button" class="slider-dot<?= $idx === 0 ? ' on' : '' ?>" data-index="<?= (int)$idx ?>" aria-label="ছবি <?= $idx + 1 ?>"></button><?php endforeach; ?>
+                </div>
+            <?php elseif ($heroAnimated): ?>
+                <div class="hx-anim" role="img" aria-label="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন">
+                    <img class="base" src="<?= $hxA ?>base.webp" alt="" width="1200" height="858" fetchpriority="high" />
+                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="" /></span>
+                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="" /></span>
+                    <span class="hx-glow"></span>
+                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="" /></span>
+                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="" />
+                        <i class="lid" style="left:52.3%;top:55.8%;width:15.5%;height:12%;"></i><i class="lid" style="left:80.3%;top:48.2%;width:14.5%;height:13%;"></i></span>
+                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="" />
+                        <i class="lid" style="left:11.6%;top:50.9%;width:10%;height:15%;"></i><i class="lid" style="left:30.7%;top:59%;width:12%;height:12.7%;"></i></span>
+                    <svg class="hx-ink" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 6 q4 -4 8 0 t8 0 t8 0 t8 0"/><path d="M2 13 q4 -4 8 0 t8 0 t8 0 t8 0 t8 0"/></svg>
+                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="" /></span>
+                    <span class="hx-spark a"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
+                    <span class="hx-spark b"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
+                    <span class="hx-spark c"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                 </div>
             <?php else: ?>
                 <img src="<?= e($heroImages[0]) ?>" alt="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন" fetchpriority="high" />
