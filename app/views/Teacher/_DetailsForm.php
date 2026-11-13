@@ -20,6 +20,15 @@ $sel = function (string $name, array $list, string $cur, string $ph) {
     return $o . '</select>';
 };
 $req = '<span class="required-star">*</span>';
+// SSC / HSC এর বোর্ড আর গ্রুপ — টাইপ না করে তালিকা থেকে বাছাই (আগের লেখা মান তালিকায় না থাকলেও রাখা হয়)
+$eduBoards = ['Dhaka', 'Rajshahi', 'Cumilla', 'Jashore', 'Chattogram', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh', 'Madrasah', 'Technical', 'Cambridge / Edexcel (O/A Level)'];
+$eduGroups = ['Science', 'Arts', 'Commerce'];
+$eduSel = function (string $name, array $list, string $cur, string $ph) {
+    $o = '<select name="td[' . $name . ']" class="form-select" style="min-width:130px;font-size:14px;color:#334155;"><option value="">' . e($ph) . '</option>';
+    foreach ($list as $v) $o .= '<option value="' . e($v) . '"' . (strcasecmp($v, $cur) === 0 ? ' selected' : '') . '>' . e($v) . '</option>';
+    if ($cur !== '' && !in_array(strtolower($cur), array_map('strtolower', $list), true)) $o .= '<option value="' . e($cur) . '" selected>' . e($cur) . '</option>';
+    return $o . '</select>';
+};
 // আগে বাছাই করা কিন্তু তালিকায় নেই এমন বিষয় / ক্লাস (পুরোনো তথ্য) হারিয়ে না যায়
 $classList = array_values(array_unique(array_merge($opts['classes'], $d['classes'])));
 $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subjects'])));
@@ -104,8 +113,8 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
                         <td><?= e($lbl) ?><?= $k !== 'post' ? ' <span style="color:#e74c3c">*</span>' : '' ?><small class="edu-na">প্রযোজ্য নয়</small></td>
                         <td data-l="Exam Title"><input name="td[<?= $k ?>Title]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Title']) ?>" placeholder="<?= $ph ?>" /></td>
                         <td data-l="Institute"><input name="td[<?= $k ?>Institute]" class="form-control" maxlength="150" value="<?= e($d[$k . 'Institute']) ?>" /></td>
-                        <td data-l="Board"><input name="td[<?= $k ?>Board]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Board']) ?>" placeholder="Dhaka" /></td>
-                        <td data-l="Group"><input name="td[<?= $k ?>Group]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Group']) ?>" placeholder="Science" /></td>
+                        <td data-l="Board"><?= $eduSel($k . 'Board', $eduBoards, (string)$d[$k . 'Board'], '— বোর্ড —') ?></td>
+                        <td data-l="Group"><?= $eduSel($k . 'Group', $eduGroups, (string)$d[$k . 'Group'], '— গ্রুপ —') ?></td>
                         <td data-l="Year"><?php $yv = (string)$d[$k . 'Year']; $run = strcasecmp($yv, 'Running') === 0; ?>
                             <select name="td[<?= $k ?>Year]" class="form-select td-year" data-res="td[<?= $k ?>Result]" data-study="0" style="width:140px;font-size:14px;color:#334155;">
                                 <option value="">— সাল —</option>

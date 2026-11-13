@@ -164,11 +164,15 @@ class KycController extends Controller
             if (!$name) { $cleanup(); $fail("$bn ছবি: " . $err, 'kycUni' . $side); }
             $uniFiles[] = $new[] = $name;
         }
-        // NID — ঐচ্ছিক
+        // NID কার্ডের ছবি — বাধ্যতামূলক (সামনে + পেছনে)
         foreach (['Front' => 'NID এর সামনের', 'Back' => 'NID এর পেছনের'] as $side => $bn) {
             $key = 'nid' . $side;
             $f = upload_file('kycFile' . $side);
-            if (!$f) { $d[$key] = $oldD && kyc_file_path($oldD[$key] ?? null) ? (string)$oldD[$key] : ''; continue; }
+            if (!$f) {
+                $d[$key] = $oldD && kyc_file_path($oldD[$key] ?? null) ? (string)$oldD[$key] : '';
+                if ($d[$key] === '') { $cleanup(); $fail("$bn ছবি দিন — NID কার্ডের সামনে আর পেছনে দুটো ছবিই লাগবে।", 'kycFile' . $side); }
+                continue;
+            }
             $err = null;
             $name = kyc_store_image($f, $me, 'nid' . strtolower($side), $err);
             if (!$name) { $cleanup(); $fail("$bn ছবি: " . $err, 'kycFile' . $side); }

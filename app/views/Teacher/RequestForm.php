@@ -131,15 +131,15 @@ $ViewData['Title'] = 'Become a Tutor';
                 </div>
                 <div class="kyc-h"><i class="fas fa-building-columns"></i> Academic ID Card <span class="required-star">*</span> <small>— যে বিশ্ববিদ্যালয় / কলেজ / স্কুলে পড়ছেন বা পড়েছেন</small></div>
                 <div class="row">
-                    <?php foreach (['UniFront' => ['front', 'Academic ID Card এর সামনের ছবি', true], 'UniBack' => ['back', 'Academic ID Card এর পেছনের ছবি', true], 'FileFront' => ['nidfront', 'NID এর সামনের ছবি', false], 'FileBack' => ['nidback', 'NID এর পেছনের ছবি', false]] as $nm => [$side, $lbl, $req]):
+                    <?php foreach (['UniFront' => ['front', 'Academic ID Card এর সামনের ছবি', true], 'UniBack' => ['back', 'Academic ID Card এর পেছনের ছবি', true], 'FileFront' => ['nidfront', 'NID এর সামনের ছবি', true], 'FileBack' => ['nidback', 'NID এর পেছনের ছবি', true]] as $nm => [$side, $lbl, $req]):
                         $oldName = $kReuse ? ($side === 'front' ? $kOld->FileFront : ($side === 'back' ? $kOld->FileBack : ($kD[$side === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
                         $has = $oldName && kyc_file_path($oldName); ?>
-                        <?php if ($nm === 'FileFront'): ?></div><div class="kyc-h" style="margin-top:6px;"><i class="fas fa-id-card"></i> NID কার্ড <small style="color:#94A3B8;">(ঐচ্ছিক — থাকলে দিন)</small></div><div class="row"><?php endif; ?>
+                        <?php if ($nm === 'FileFront'): ?></div><div class="kyc-h" style="margin-top:6px;"><i class="fas fa-id-card"></i> NID কার্ড <span class="required-star">*</span> <small>— জাতীয় পরিচয়পত্রের সামনে ও পেছনের ছবি</small></div><div class="row"><?php endif; ?>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold"><?= $lbl ?><?= $req ? ' <span class="required-star">*</span>' : '' ?></label>
                             <label class="kyc-drop" for="kyc<?= $nm ?>">
                                 <img alt="" id="kycPrev<?= $nm ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . $side . '"' : ' hidden' ?> />
-                                <span id="kycPh<?= $nm ?>"<?= $has ? ' hidden' : '' ?>><i class="fas <?= $req ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
+                                <span id="kycPh<?= $nm ?>"<?= $has ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
                             </label>
                             <input type="file" name="kyc<?= $nm ?>" id="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" hidden data-kyc-req="<?= $req && !$has ? '1' : '0' ?>" />
                             <?php if ($has): ?><small class="text-muted">আগের ছবিটাই থাকবে — বদলাতে চাইলে উপরে চাপুন।</small><?php endif; ?>
@@ -168,8 +168,9 @@ $ViewData['Title'] = 'Become a Tutor';
                 var uni = document.getElementById('kycUniversity'), tdUni = document.querySelector('input[name="td[university]"]');
                 if (tdUni && uni && !uni.value) { uni.value = tdUni.value; tdUni.addEventListener('input', function () { if (!uni.dataset.touched) uni.value = tdUni.value; }); uni.addEventListener('input', function () { uni.dataset.touched = '1'; }); }
                 document.getElementById('teacherForm').addEventListener('submit', function (e) {
-                    var miss = ['UniFront', 'UniBack'].filter(function (s) { var f = document.getElementById('kyc' + s); return f.dataset.kycReq === '1' && !f.files.length; });
-                    if (miss.length) { e.preventDefault(); alert('Academic ID Card এর ' + (miss.length === 2 ? 'সামনের আর পেছনের' : (miss[0] === 'UniFront' ? 'সামনের' : 'পেছনের')) + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
+                    var lbl = { UniFront: 'Academic ID Card এর সামনের', UniBack: 'Academic ID Card এর পেছনের', FileFront: 'NID এর সামনের', FileBack: 'NID এর পেছনের' };
+                    var miss = ['UniFront', 'UniBack', 'FileFront', 'FileBack'].filter(function (s) { var f = document.getElementById('kyc' + s); return f.dataset.kycReq === '1' && !f.files.length; });
+                    if (miss.length) { e.preventDefault(); alert(miss.map(function (s) { return lbl[s]; }).join(', ') + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
                 });
             })();
             </script>

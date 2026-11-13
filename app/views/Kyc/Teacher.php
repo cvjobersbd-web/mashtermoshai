@@ -11,7 +11,7 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
 <div class="ky-page">
     <div class="ky-wrap">
         <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> টিচারের পরিচয় যাচাই (Teacher Verification)</h1>
-        <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য টিচারের শিক্ষা প্রতিষ্ঠানের (বিশ্ববিদ্যালয় / কলেজ / স্কুল) ID কার্ড আর যোগাযোগের নম্বর যাচাই করা হয় (NID ঐচ্ছিক)।</p>
+        <p class="ky-sub">শিক্ষার্থী ও অভিভাবকদের নিরাপত্তার জন্য টিচারের শিক্ষা প্রতিষ্ঠানের (বিশ্ববিদ্যালয় / কলেজ / স্কুল) Academic ID Card, NID কার্ড আর যোগাযোগের নম্বর যাচাই করা হয়।</p>
         <?php if ($st === 'Pending'): ?>
             <div class="ky-state p"><i class="fas fa-hourglass-half"></i><div><b>তথ্য যাচাই হচ্ছে</b><p>অ্যাডমিন দেখে Approve করলে নোটিফিকেশন পাবেন। ভুল ছবি দিয়ে থাকলে (যেমন Academic ID Card এর জায়গায় NID) — Approve হওয়ার আগে নিচে ছবিতে চাপ দিয়ে বদলে "আপডেট করুন" চাপুন।</p></div></div>
         <?php elseif ($st === 'Approved'): ?>
@@ -42,13 +42,13 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
             </div>
             <div class="ky-lock"><i class="fas fa-lock"></i> ছবিগুলো শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</div>
             <div class="ky-g2">
-                <?php foreach (['UniFront' => ['front', 'Academic ID Card — সামনে', true], 'UniBack' => ['back', 'Academic ID Card — পেছনে', true], 'FileFront' => ['nidfront', 'NID — সামনে', false], 'FileBack' => ['nidback', 'NID — পেছনে', false]] as $nm => [$sd, $lbl, $req]):
+                <?php foreach (['UniFront' => ['front', 'Academic ID Card — সামনে', true], 'UniBack' => ['back', 'Academic ID Card — পেছনে', true], 'FileFront' => ['nidfront', 'NID — সামনে', true], 'FileBack' => ['nidback', 'NID — পেছনে', true]] as $nm => [$sd, $lbl, $req]):
                     $oldName = $reuse ? ($sd === 'front' ? $k->FileFront : ($sd === 'back' ? $k->FileBack : ($D[$sd === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
                     $has = $oldName && kyc_file_path($oldName); ?>
                     <div class="ky-f" data-f="kyc<?= $nm ?>"><label class="l"><?= $lbl ?> <?= $req ? '<span class="r">*</span>' : '<small>(ঐচ্ছিক)</small>' ?></label>
                         <label class="ky-drop" id="kyDrop<?= $nm ?>" for="kyc<?= $nm ?>">
                             <img alt=""<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . $sd . '"' : ' hidden' ?> />
-                            <span<?= $has ? ' hidden' : '' ?>><i class="fas <?= $req ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে</small></span>
+                            <span<?= $has ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে</small></span>
                         </label>
                         <input type="file" id="kyc<?= $nm ?>" name="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" data-file="kyDrop<?= $nm ?>" hidden />
                     </div>
