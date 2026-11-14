@@ -192,7 +192,7 @@ class AdminController extends Controller
             json_response(['success' => false, 'message' => 'Suspend করা যায়নি।']);
         }
         $when = $permanent ? 'স্থায়ীভাবে' : date('d M Y, h:i A', strtotime($until)) . ' পর্যন্ত';
-        $this->db->CreateNotification($id, 'Account Suspended', "আপনার অ্যাকাউন্ট $when Suspend করা হয়েছে।" . ($reason !== '' ? " কারণ: $reason" : ''), 'danger', null, 'fa-user-slash');
+        $this->db->CreateNotification($id, 'Account Suspended', "আপনার অ্যাকাউন্ট $when Suspend করা হয়েছে।" . ($reason !== '' ? ' কারণ: ' . rtrim($reason, '।.') . '।' : ''), 'danger', null, 'fa-user-slash');
         json_response(['success' => true, 'message' => ($user->FullName ?: $user->UserName) . " — $when Suspend করা হয়েছে।"]);
     }
 
@@ -1090,6 +1090,35 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => 'কুপন সেভ হয়েছে।']);
     }
 
+    /** GET /Admin/CouponUsers/{id} — এই কোড দিয়ে কে কে প্যাকেজ কিনেছে */
+    public function CouponUsers(): void
+    {
+        $this->requireAdminPage();
+        $c = $this->db->GetCoupon((int)input_int('id', 0));
+        if (!$c) not_found('কুপনটি পাওয়া যায়নি।');
+        $this->view('CouponUsers', $c, ['Users' => $this->db->GetCouponUsers((string)$c->Code)]);
+    }
+
+    /** POST /Admin/CouponImage (id, image) — কুপনের কার্ডের ছবি বদলানো */
+    public function CouponImage_POST(): void
+    {
+        $this->requireAdminJson();
+        $c = $this->db->GetCoupon((int)input_int('id', 0));
+        if (!$c) json_response(['success' => false, 'message' => 'কুপনটি পাওয়া যায়নি।']);
+        $f = upload_file('image');
+        if (!$f) json_response(['success' => false, 'message' => 'একটা ছবি বাছাই করুন।']);
+        $ext = strtolower('.' . pathinfo((string)$f['name'], PATHINFO_EXTENSION));
+        if ($ext === '.jpeg') $ext = '.jpg';
+        if (!in_array($ext, ['.jpg', '.png', '.webp'], true)) json_response(['success' => false, 'message' => 'JPG, PNG বা WEBP ছবি দিন।']);
+        if ((int)$f['size'] > 5 * 1024 * 1024) json_response(['success' => false, 'message' => 'ছবি ৫ MB এর কম হতে হবে।']);
+        if (@getimagesize($f['tmp_name']) === false) json_response(['success' => false, 'message' => 'ছবিটি সঠিক নয়।']);
+        $url = save_upload($f, 'coupons', 'c' . (int)$c->Id . '_' . bin2hex(random_bytes(4)), $ext);
+        $old = (string)($c->ImageUrl ?? '');
+        $this->db->SetCouponImage((int)$c->Id, $url);
+        if ($old !== '' && str_starts_with($old, '/uploads/coupons/c')) delete_upload($old);
+        json_response(['success' => true, 'message' => 'ছবি বদলানো হয়েছে।', 'url' => $url]);
+    }
+
     /** POST /Admin/DeleteCoupon (id) */
     public function DeleteCoupon_POST(): void
     {
@@ -1309,6 +1338,39 @@ class AdminController extends Controller
         $this->db->SetCourseHidden($c->Id, $h);
         if ($h) { try { $this->db->CreateNotification((int)$c->TeacherId, 'কোর্স লুকানো হয়েছে', "অ্যাডমিন “{$c->Title}” কোর্সটি Course পেজ থেকে লুকিয়েছেন — বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।", 'warning', '/Course/Manage', 'fa-eye-slash'); } catch (Throwable $e) { } }
         json_response(['success' => true, 'message' => $h ? 'কোর্স লুকানো হয়েছে — Course পেজে দেখাবে না (কেনা শিক্ষার্থীরা ক্লাস করতে পারবে)।' : 'কোর্স আবার দেখাচ্ছে।']);
+    }
+
+    /** GET /Admin/CourseView/{id} — একটা কোর্সের সব কিছু: টিচার, দাম, ক্লাস, অ্যাসাইনমেন্ট, কুইজ, কে কে কিনেছে */
+    public function CourseView(): void
+    {
+        $this->requireAdminPage();
+        $c = $this->db->GetCourse((int)input_int('id', 0));
+        if (!$c) not_found('কোর্সটি পাওয়া যায়নি।');
+        $pend = [];
+        try { $pend = $this->db->all("SELECT p.*, u.`FullName`, u.`UserName`, u.`MobileNumber` FROM `PaymentRequests` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId` WHERE p.`CourseId` = :c AND p.`Audience` = 'Course' AND p.`Status` = 'Pending' ORDER BY p.`Id` DESC", ['c' => $c->Id]); } catch (Throwable $e) { }
+        $this->view('CourseView', $c, ['Lessons' => $this->db->GetLessons($c->Id), 'Tasks' => $this->db->GetTasks($c->Id), 'Students' => $this->db->GetCourseStudentsAdmin($c->Id), 'Pending' => $pend]);
+    }
+
+    /** POST /Admin/BlockCourse (id, blocked, reason) — কোর্স পুরো বন্ধ: কেউ কিনতে / দেখতে পারবে না, টিচার এডিট করতে পারবে না */
+    public function BlockCourse_POST(): void
+    {
+        $this->requireAdminJson();
+        $c = $this->db->GetCourse((int)input_int('id', 0));
+        if (!$c) json_response(['success' => false, 'message' => 'কোর্সটি পাওয়া যায়নি।']);
+        $b = input_bool('blocked');
+        $reason = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('reason', '')))), 0, 300);
+        $this->db->SetCourseBlocked($c->Id, $b, $reason);
+        $kl = $c->KindLabel;
+        try {
+            if ($b) {
+                $this->db->CreateNotification((int)$c->TeacherId, $kl . ' ব্লক করা হয়েছে', "অ্যাডমিন আপনার “{$c->Title}” {$kl}টি ব্লক করেছেন।" . ($reason !== '' ? " কারণ: $reason" : '') . ' বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।', 'warning', '/Course/Manage', 'fa-ban');
+                foreach ($this->db->GetEnrolledUserIds($c->Id) as $uid) $this->db->CreateNotification($uid, $kl . ' সাময়িক বন্ধ', "“{$c->Title}” {$kl}টি অ্যাডমিন সাময়িকভাবে বন্ধ করেছেন। বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।", 'warning', '/Course/My', 'fa-ban');
+            } else {
+                $this->db->CreateNotification((int)$c->TeacherId, $kl . ' আবার চালু', "আপনার “{$c->Title}” {$kl}টি অ্যাডমিন আবার চালু করেছেন।", 'success', '/Course/Manage', 'fa-circle-check');
+                foreach ($this->db->GetEnrolledUserIds($c->Id) as $uid) $this->db->CreateNotification($uid, $kl . ' আবার চালু', "“{$c->Title}” {$kl}টি আবার চালু হয়েছে — ক্লাস করতে পারবেন।", 'success', '/Course/Learn/' . $c->Id, 'fa-circle-check');
+            }
+        } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => $b ? $kl . ' ব্লক হয়েছে — কেউ কিনতে বা দেখতে পারবে না, টিচার এডিট করতে পারবে না।' : $kl . ' আবার চালু হয়েছে।']);
     }
 
     /** POST /Admin/AddCoursePayout (teacherId, amount, method, note) — টিচারকে তার ভাগের টাকা পাঠানোর রেকর্ড */

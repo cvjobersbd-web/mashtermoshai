@@ -187,6 +187,43 @@ trait PackageData
         $this->EnsurePaymentTables();
         try { $this->pdo->query('SELECT `CouponCode` FROM `PaymentRequests` LIMIT 1'); }
         catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `PaymentRequests` ADD COLUMN `CouponCode` ' . ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? 'TEXT' : 'VARCHAR(30)') . ' NULL'); } catch (Throwable $e2) { error_log('[CouponCode col] ' . $e2->getMessage()); } }
+        // কুপনের কার্ডের ছবি (ফ্লায়ার) — অ্যাডমিন Coupons পেজ থেকে বদলাতে পারেন
+        try { $this->pdo->query('SELECT `ImageUrl` FROM `Coupons` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `Coupons` ADD COLUMN `ImageUrl` VARCHAR(300) NULL'); } catch (Throwable $e2) { error_log('[Coupon ImageUrl] ' . $e2->getMessage()); } }
+        // একবারই: ফ্লায়ারের দুইটা কোড চালু, বাকি সব কুপন বন্ধ (মুছে না — আগের ব্যবহারের হিসাব থাকে)
+        try {
+            if (($this->GetSiteContent(['cpn_v2' => ''])['cpn_v2'] ?? '') === '') {
+                $this->exec('UPDATE `Coupons` SET `IsActive` = 0');
+                foreach ([['MM200-6B4D', 'Student', 200, '/uploads/coupons/student.jpg', 'ফ্লায়ার — শিক্ষার্থী ৬ মাস ৳200'],
+                          ['MM500-A7XU', 'Teacher', 500, '/uploads/coupons/teacher.jpg', 'ফ্লায়ার — টিচার ৬ মাস ৳500']] as [$code, $aud, $price, $img, $note]) {
+                    $ex = $this->GetCouponByCode($code);
+                    $id = $this->SaveCoupon($ex ? (int)$ex->Id : null, ['Code' => $code, 'Audience' => $aud, 'DurationMonths' => 6, 'Price' => $price, 'EndsAt' => null, 'MaxUses' => 0, 'IsActive' => 1, 'Note' => $note]);
+                    $this->SetCouponImage($id, $img);
+                }
+                $this->SaveSiteContent(['cpn_v2' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[coupon v2] ' . $e->getMessage()); }
+    }
+
+    public function SetCouponImage(int $id, ?string $url): void
+    {
+        $this->exec('UPDATE `Coupons` SET `ImageUrl` = :u WHERE `Id` = :i', ['u' => $url, 'i' => $id]);
+    }
+
+    public function GetCoupon(int $id): ?Obj
+    {
+        $this->EnsureCouponTable();
+        return $this->one('SELECT * FROM `Coupons` WHERE `Id` = :i', ['i' => $id]);
+    }
+
+    /** এই কোড দিয়ে কে কে প্যাকেজ কিনেছে / কেনার চেষ্টা করেছে — নতুনটা আগে */
+    public function GetCouponUsers(string $code): array
+    {
+        $this->EnsureCouponTable();
+        return $this->all('SELECT p.`Id`, p.`UserId`, p.`PackageName`, p.`Audience`, p.`Amount`, p.`MethodName`, p.`TxnId`, p.`Status`, p.`CreatedAt`, p.`ReviewedAt`,
+                u.`FullName`, u.`UserName`, u.`MobileNumber`, u.`Email`, u.`ProfileImageLink`
+            FROM `PaymentRequests` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`
+            WHERE UPPER(p.`CouponCode`) = :c ORDER BY p.`Id` DESC', ['c' => strtoupper(trim($code))]);
     }
 
     /** @return Obj[] সব কুপন + কতবার ব্যবহার হয়েছে (বাতিল পেমেন্ট বাদে) */

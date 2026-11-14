@@ -82,6 +82,12 @@ trait CourseData
             try { $this->pdo->query("SELECT `Kind` FROM `$t` LIMIT 1"); }
             catch (Throwable $ex) { try { $this->pdo->exec("ALTER TABLE `$t` ADD COLUMN `Kind` VARCHAR(10) NOT NULL DEFAULT 'course'"); } catch (Throwable $e2) { error_log("[$t Kind] " . $e2->getMessage()); } }
         }
+        // অ্যাডমিন ব্লক — কোর্স পুরো বন্ধ (কেনা, দেখা, এডিট সব)
+        try { $this->pdo->query('SELECT `AdminBlocked` FROM `Courses` LIMIT 1'); }
+        catch (Throwable $ex) {
+            try { $this->pdo->exec('ALTER TABLE `Courses` ADD COLUMN `AdminBlocked` INT NOT NULL DEFAULT 0'); $this->pdo->exec('ALTER TABLE `Courses` ADD COLUMN `BlockReason` VARCHAR(300) NULL'); }
+            catch (Throwable $e2) { error_log('[Courses AdminBlocked] ' . $e2->getMessage()); }
+        }
         $this->EnsurePaymentTables();
         try { $this->pdo->query('SELECT `CourseId` FROM `PaymentRequests` LIMIT 1'); }
         catch (Throwable $ex) { try { $this->pdo->exec('ALTER TABLE `PaymentRequests` ADD COLUMN `CourseId` INT NULL'); } catch (Throwable $e2) { error_log('[CourseId col] ' . $e2->getMessage()); } }
@@ -91,10 +97,11 @@ trait CourseData
     // ============================================================ কোর্স
     private function mapCourse(Obj $c): Obj
     {
-        foreach (['Id', 'TeacherId', 'Price', 'AdminHidden', 'PassPercent'] as $k) $c->$k = (int)($c->$k ?? 0);
+        foreach (['Id', 'TeacherId', 'Price', 'AdminHidden', 'AdminBlocked', 'PassPercent'] as $k) $c->$k = (int)($c->$k ?? 0);
+        $c->BlockReason = (string)($c->BlockReason ?? '');
         $c->RegularPrice = $c->RegularPrice !== null && $c->RegularPrice !== '' ? (int)$c->RegularPrice : null;
         $c->IncludesList = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)($c->Includes ?? ''))), fn($x) => $x !== ''));
-        $c->IsLive = $c->Status === 'published' && !$c->AdminHidden;
+        $c->IsLive = $c->Status === 'published' && !$c->AdminHidden && !$c->AdminBlocked;
         $c->Kind = ($c->Kind ?? '') === 'live' ? 'live' : 'course';
         $c->PublishPaid = (int)($c->PublishPaid ?? 0) === 1;
         $c->KindLabel = $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
@@ -130,7 +137,9 @@ trait CourseData
     {
         return "SELECT c.*, u.`FullName` AS TeacherName, u.`UserName` AS TeacherUser, u.`ProfileImageLink` AS TeacherPhoto, u.`Role` AS TeacherRole,
             (SELECT COUNT(*) FROM `CourseLessons` l WHERE l.`CourseId` = c.`Id`) AS LessonCount,
-            (SELECT COUNT(*) FROM `CourseEnrollments` e WHERE e.`CourseId` = c.`Id`) AS StudentCount
+            (SELECT COUNT(*) FROM `CourseEnrollments` e WHERE e.`CourseId` = c.`Id`) AS StudentCount,
+            (SELECT COUNT(*) FROM `CourseTasks` t WHERE t.`CourseId` = c.`Id` AND t.`Kind` <> 'quiz') AS AssignmentCount,
+            (SELECT COUNT(*) FROM `CourseTasks` t2 WHERE t2.`CourseId` = c.`Id` AND t2.`Kind` = 'quiz') AS QuizCount
             FROM `Courses` c LEFT JOIN `Users` u ON u.`Id` = c.`TeacherId` WHERE $where";
     }
 
@@ -138,7 +147,7 @@ trait CourseData
     public function GetPublicCourses(string $q = '', string $cat = '', string $kind = ''): array
     {
         $this->EnsureCourseTables();
-        $p = []; $w = "c.`Status` = 'published' AND c.`AdminHidden` = 0";
+        $p = []; $w = "c.`Status` = 'published' AND c.`AdminHidden` = 0 AND c.`AdminBlocked` = 0";
         if ($kind !== '') { $w .= $kind === 'live' ? " AND c.`Kind` = 'live'" : " AND c.`Kind` <> 'live'"; }
         if ($q !== '') { $w .= ' AND (LOWER(c.`Title`) LIKE :q OR LOWER(COALESCE(c.`Subtitle`, \'\')) LIKE :q2 OR LOWER(COALESCE(u.`FullName`, \'\')) LIKE :q3)'; $l = '%' . mb_strtolower($q) . '%'; $p += ['q' => $l, 'q2' => $l, 'q3' => $l]; }
         if ($cat !== '') { $w .= ' AND c.`Category` = :cat'; $p['cat'] = $cat; }
@@ -148,7 +157,7 @@ trait CourseData
     public function GetCourseCategories(): array
     {
         $this->EnsureCourseTables();
-        return array_map(fn($r) => (string)$r->Category, $this->all("SELECT DISTINCT `Category` FROM `Courses` WHERE `Status` = 'published' AND `AdminHidden` = 0 AND `Category` IS NOT NULL AND `Category` <> '' ORDER BY `Category`"));
+        return array_map(fn($r) => (string)$r->Category, $this->all("SELECT DISTINCT `Category` FROM `Courses` WHERE `Status` = 'published' AND `AdminHidden` = 0 AND `AdminBlocked` = 0 AND `Category` IS NOT NULL AND `Category` <> '' ORDER BY `Category`"));
     }
 
     public function GetTeacherCourses(int $teacherId): array
@@ -162,6 +171,28 @@ trait CourseData
         $this->EnsureCourseTables();
         $w = $kind === 'live' ? "c.`Kind` = 'live'" : ($kind === 'course' ? "c.`Kind` <> 'live'" : '1 = 1');
         return array_map(fn($c) => $this->mapCourse($c), $this->all($this->courseListSql($w) . ' ORDER BY c.`Id` DESC'));
+    }
+
+    /** অ্যাডমিন কোর্স ব্লক / আনব্লক (কারণসহ) */
+    public function SetCourseBlocked(int $id, bool $blocked, string $reason = ''): void
+    {
+        $this->EnsureCourseTables();
+        $this->exec('UPDATE `Courses` SET `AdminBlocked` = :b, `BlockReason` = :r WHERE `Id` = :i', ['b' => $blocked ? 1 : 0, 'r' => $blocked && $reason !== '' ? $reason : null, 'i' => $id]);
+    }
+
+    /** অ্যাডমিনের কোর্স ডিটেইলস পেজের শিক্ষার্থী তালিকা — পেমেন্টের তথ্যসহ */
+    public function GetCourseStudentsAdmin(int $courseId): array
+    {
+        $rows = $this->GetCourseStudents($courseId);
+        $pay = [];
+        $ids = array_values(array_filter(array_map(fn($r) => (int)($r->PaymentId ?? 0), $rows)));
+        if ($ids) {
+            try {
+                foreach ($this->all('SELECT * FROM `PaymentRequests` WHERE `Id` IN (' . implode(',', $ids) . ')') as $p) $pay[(int)$p->Id] = $p;
+            } catch (Throwable $e) { }
+        }
+        foreach ($rows as $r) $r->Payment = $pay[(int)($r->PaymentId ?? 0)] ?? null;
+        return $rows;
     }
 
     public function SetCourseHidden(int $id, bool $hidden): void { $this->exec('UPDATE `Courses` SET `AdminHidden` = :h WHERE `Id` = :i', ['h' => $hidden ? 1 : 0, 'i' => $id]); }

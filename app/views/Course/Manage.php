@@ -40,7 +40,7 @@ $pct = course_admin_pct();
                         <h3><a href="/Course/Build/<?= (int)$c->Id ?>"><?= e($c->Title) ?></a></h3>
                         <div class="mg-m">
                             <?= $c->Kind === 'live' ? '<span class="cx-pill" style="background:#FEE2E2;color:#B91C1C;"><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাস</span>' : '<span class="cx-pill" style="background:#E0F2FE;color:#075985;"><i class="fas fa-book-open-reader"></i> কোর্স</span>' ?>
-                            <?= $c->AdminHidden ? '<span class="cx-pill no"><i class="fas fa-eye-slash"></i> অ্যাডমিন লুকিয়েছেন</span>' : ($c->Status === 'published' ? '<span class="cx-pill ok">● প্রকাশিত</span>' : '<span class="cx-pill warn">Draft</span>') ?>
+                            <?= $c->AdminBlocked ? '<span class="cx-pill no" title="' . e($c->BlockReason) . '"><i class="fas fa-ban"></i> অ্যাডমিন ব্লক করেছেন' . ($c->BlockReason !== '' ? ' — ' . e($c->BlockReason) : '') . '</span>' : ($c->AdminHidden ? '<span class="cx-pill no"><i class="fas fa-eye-slash"></i> অ্যাডমিন লুকিয়েছেন</span>' : ($c->Status === 'published' ? '<span class="cx-pill ok">● প্রকাশিত</span>' : '<span class="cx-pill warn">Draft</span>')) ?>
                             <?= course_price_html($c) ?>
                             <span><i class="fas fa-circle-play"></i> <?= (int)$c->LessonCount ?>টা ক্লাস</span>
                             <span><i class="fas fa-user-graduate"></i> <?= (int)$c->StudentCount ?> জন</span>

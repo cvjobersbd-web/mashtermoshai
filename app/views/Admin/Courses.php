@@ -27,7 +27,8 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     .ac-pill.ok { background: #DCFCE7; color: #166534; } .ac-pill.w { background: #FEF3C7; color: #92400E; } .ac-pill.no { background: #FEE2E2; color: #991B1B; }
     .ac-btn { height: 34px; padding: 0 12px; border-radius: 9px; border: none; background: #08224A; color: #fff; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; text-decoration: none; }
     .ac-btn.l { background: #F1F5F9; color: #334155; } .ac-btn.r { background: #FEE2E2; color: #B91C1C; } .ac-btn.g { background: #15803D; }
-    .ac-btn:hover { filter: brightness(1.05); color: inherit; }
+    .ac-btn:hover { filter: brightness(1.05); }
+    .ac-t td a.ac-btn { color: #fff; } .ac-t td a.ac-btn.l { color: #334155; } .ac-t td a.ac-btn:hover { text-decoration: none; }
     .ac-pay { display: flex; gap: 6px; flex-wrap: wrap; }
     .ac-pay input { height: 34px; border: 1.5px solid #DCECF5; border-radius: 9px; padding: 0 10px; font-size: 13px; font-family: inherit; min-width: 0; outline: none; }
     .ac-pay input[name=amount] { width: 92px; } .ac-pay input[name=method] { width: 110px; } .ac-pay input[name=note] { width: 150px; }
@@ -43,7 +44,7 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
     <?= csrf_field() ?>
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
         <div><h2><?= $isLv ? '<i class="fas fa-tower-broadcast" style="color:#DC2626;"></i> Live Classes' : '<i class="fas fa-graduation-cap" style="color:#0EA5E9;"></i> Courses' ?></h2>
-            <p class="sub">টিচাররা নিজের কোর্স বানিয়ে সাথে সাথে প্রকাশ করতে পারেন — অনুপযুক্ত মনে হলে <b>লুকান</b> (কেনা শিক্ষার্থীরা তবুও ক্লাস করতে পারবে)। <?= $kl ?>ের পেমেন্ট <a href="<?= $isLv ? '/Admin/LivePayments' : '/Admin/CoursePayments' ?>"><b><?= $isLv ? 'Live Class Payment Requests' : 'Course Payment Requests' ?></b></a> এ Approve করলে শিক্ষার্থী ভর্তি হয়, আর টাকা <?= $pct ?>% অ্যাডমিন / <?= 100 - $pct ?>% টিচার ভাগ হয়।</p></div>
+            <p class="sub">কোর্সের নাম বা <b>ডিটেইলস</b> চাপলে সব দেখবেন — কয়টা ক্লাস, অ্যাসাইনমেন্ট, কে কে কিনেছে, আর সেখান থেকে <b>ব্লক</b> করতে পারবেন। <b>লুকান</b> = শুধু Course পেজ থেকে সরে যায় (কেনা শিক্ষার্থীরা ক্লাস করতে পারবে)। <?= $kl ?>ের পেমেন্ট <a href="<?= $isLv ? '/Admin/LivePayments' : '/Admin/CoursePayments' ?>"><b><?= $isLv ? 'Live Class Payment Requests' : 'Course Payment Requests' ?></b></a> এ Approve করলে শিক্ষার্থী ভর্তি হয়, আর টাকা <?= $pct ?>% অ্যাডমিন / <?= 100 - $pct ?>% টিচার ভাগ হয়।</p></div>
         <a class="ac-btn g" href="/Course/Edit?kind=<?= $isLv ? 'live' : 'course' ?>" style="height:40px;"><i class="fas fa-plus"></i> অ্যাডমিনের <?= $kl ?> বানান</a>
     </div>
     <?php if ($pend > 0): ?><a class="ac-alert" href="<?= $isLv ? '/Admin/LivePayments' : '/Admin/CoursePayments' ?>"><i class="fas fa-clock"></i> <?= $pend ?>টা <?= $kl ?> পেমেন্ট যাচাইয়ের অপেক্ষায় — দেখুন →</a><?php endif; ?>
@@ -89,20 +90,21 @@ foreach ($ledger as $r) { $gross += (int)$r->Gross; $adm += (int)$r->AShare; $tc
         <h3><i class="fas fa-layer-group" style="color:#0EA5E9;"></i> সব <?= $kl ?> <span class="ac-pill ok" style="background:#F1F5F9;color:#475569;"><?= count($list) ?>টা</span></h3>
         <?php if (!$list): ?><div class="ac-empty">এখনো কেউ <?= $kl ?> বানাননি।</div><?php else: ?>
         <div class="ac-tw"><table class="ac-t">
-            <thead><tr><th></th><th>কোর্স</th><th>টিচার</th><th>দাম</th><th>ক্লাস</th><th>শিক্ষার্থী</th><th>অবস্থা</th><th></th></tr></thead>
+            <thead><tr><th></th><th>কোর্স</th><th>টিচার</th><th>দাম</th><th>ক্লাস</th><th>অ্যাসাইনমেন্ট</th><th>কুইজ</th><th>শিক্ষার্থী</th><th>অবস্থা</th><th></th></tr></thead>
             <tbody>
             <?php foreach ($list as $c): ?>
                 <tr>
                     <td><div class="ac-th"><?= course_thumb_html($c) ?></div></td>
-                    <td><a href="/Course/Details/<?= (int)$c->Id ?>" target="_blank" rel="noopener"><?= e($c->Title) ?></a><br><small style="color:#94A3B8;"><?= e($c->Category ?: '') ?></small></td>
+                    <td><a href="/Admin/CourseView/<?= (int)$c->Id ?>"><?= e($c->Title) ?></a><br><small style="color:#94A3B8;"><?= e($c->Category ?: '') ?></small></td>
                     <td><a href="/Admin/UserDetails/<?= (int)$c->TeacherId ?>"><?= e($c->TeacherName ?: ($c->TeacherUser ?? '')) ?></a></td>
                     <td>৳<?= number_format($c->Price) ?></td>
                     <td><?= (int)($c->LessonCount ?? 0) ?></td>
-                    <td><?= (int)($c->StudentCount ?? 0) ?></td>
-                    <td><?= $c->AdminHidden ? '<span class="ac-pill no">লুকানো</span>' : ($c->Status === 'published' ? '<span class="ac-pill ok">প্রকাশিত</span>' : '<span class="ac-pill w">Draft</span>') ?></td>
+                    <td><?= (int)($c->AssignmentCount ?? 0) ?></td>
+                    <td><?= (int)($c->QuizCount ?? 0) ?></td>
+                    <td><a href="/Admin/CourseView/<?= (int)$c->Id ?>"><?= (int)($c->StudentCount ?? 0) ?> জন</a></td>
+                    <td><?= $c->AdminBlocked ? '<span class="ac-pill no"><i class="fas fa-ban"></i> ব্লক</span>' : ($c->AdminHidden ? '<span class="ac-pill no">লুকানো</span>' : ($c->Status === 'published' ? '<span class="ac-pill ok">প্রকাশিত</span>' : '<span class="ac-pill w">Draft</span>')) ?></td>
                     <td style="white-space:nowrap;">
-                        <a class="ac-btn l" href="/Course/Build/<?= (int)$c->Id ?>" title="ক্লাস ও কাজ"><i class="fas fa-layer-group"></i></a>
-                        <a class="ac-btn l" href="/Course/Students/<?= (int)$c->Id ?>" title="শিক্ষার্থী"><i class="fas fa-users"></i></a>
+                        <a class="ac-btn" href="/Admin/CourseView/<?= (int)$c->Id ?>"><i class="fas fa-circle-info"></i> ডিটেইলস</a>
                         <button class="ac-btn <?= $c->AdminHidden ? 'g' : 'r' ?>" type="button" data-hide="<?= (int)$c->Id ?>" data-h="<?= $c->AdminHidden ? 0 : 1 ?>"><i class="fas <?= $c->AdminHidden ? 'fa-eye' : 'fa-eye-slash' ?>"></i> <?= $c->AdminHidden ? 'দেখান' : 'লুকান' ?></button>
                     </td>
                 </tr>

@@ -24,13 +24,48 @@ $audBn = ['Teacher' => 'টিচার', 'Student' => 'শিক্ষার্
     .cp-code { font-family: ui-monospace, monospace; font-weight: 800; font-size: 15px; letter-spacing: 1px; background: #F5F3FF; color: #5B21B6; border-radius: 8px; padding: 4px 10px; }
     .cp-pill { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
     .cp-pill.on { background: #DCFCE7; color: #166534; } .cp-pill.off { background: #F1F5F9; color: #64748B; } .cp-pill.exp { background: #FEE2E2; color: #991B1B; }
-    @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 14px; } .cp-f .wide { grid-column: auto; } }
+    .cp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .cp-cc { border: 1.5px solid #E2E8F0; border-radius: 14px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+    .cp-cc .img { display: block; aspect-ratio: 1600/711; background: #EEF2F7; position: relative; }
+    .cp-cc .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cp-cc .img .no { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-weight: 700; font-size: 13px; }
+    .cp-cc .img:hover img { filter: brightness(.93); }
+    .cp-cc .bd { padding: 12px 14px 14px; }
+    .cp-cc .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cp-cc a.code { font-family: ui-monospace, monospace; font-weight: 800; font-size: 18px; letter-spacing: 1px; background: #F5F3FF; color: #5B21B6; border-radius: 8px; padding: 5px 12px; text-decoration: none; }
+    .cp-cc .st { font-size: 13px; color: #475569; margin: 8px 0 10px; }
+    .cp-cc .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cp-cc .acts .cp-btn { height: 34px; font-size: 12.5px; padding: 0 12px; text-decoration: none; }
+    @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 14px; } .cp-f .wide { grid-column: auto; } .cp-cards { grid-template-columns: 1fr; } }
 </style>
 <?php partial('Shared/_AdminSidebar'); ?>
 <div class="admin-main-content cp">
     <h2><i class="fas fa-ticket" style="color:#7C3AED;"></i> Coupons</h2>
     <p class="sub">স্পেশাল অফারের কুপন কোড — ইউজার পেমেন্ট পেজে কোডটা দিলে বাছাই করা প্যাকেজ অফারের দামে পাবে। প্যাকেজ পেজে "স্পেশাল অফার · কুপন কোড দিলে মাত্র ৳..." দেখায় (কোডটা দেখায় না — আপনি যাদের দেবেন তারাই পাবে)।</p>
     <?= csrf_field() ?>
+
+    <?php $act = array_values(array_filter($list, fn($c) => $c->IsActive)); if ($act): ?>
+    <div class="cp-card">
+        <h3><i class="fas fa-id-card"></i> চালু কোড — ছবি বা কোডে ক্লিক করলে দেখবেন কে কে কিনেছে</h3>
+        <div class="cp-cards">
+            <?php foreach ($act as $c): $img = (string)($c->ImageUrl ?? ''); $u = '/Admin/CouponUsers/' . (int)$c->Id; ?>
+                <div class="cp-cc">
+                    <a class="img" href="<?= $u ?>" title="কে কে কিনেছে"><?php if ($img !== ''): ?><img src="<?= e($img) ?>" alt="<?= e($c->Code) ?>" loading="lazy" /><?php else: ?><span class="no"><i class="fas fa-image"></i>&nbsp; ছবি নেই</span><?php endif; ?></a>
+                    <div class="bd">
+                        <div class="row"><a class="code" href="<?= $u ?>"><?= e($c->Code) ?></a>
+                            <span style="font-size:13px;font-weight:700;color:#334155;"><?= e($audBn[$c->Audience] ?? $c->Audience) ?> · <?= (int)$c->DurationMonths ? e(bn_num((int)$c->DurationMonths)) . ' মাস' : 'সব প্যাকেজ' ?> · <b style="color:#15803D;"><?= e(taka((int)$c->Price)) ?></b></span></div>
+                        <div class="st"><b style="color:#0F172A;font-size:15px;"><?= (int)$c->UsedApproved ?> জন</b> কিনেছে<?= $c->UsedPending ? ' · <b style="color:#B45309;">' . (int)$c->UsedPending . ' জন</b> পেমেন্ট যাচাইয়ের অপেক্ষায়' : '' ?></div>
+                        <div class="acts">
+                            <a class="cp-btn go" href="<?= $u ?>"><i class="fas fa-users"></i> কে কে কিনেছে</a>
+                            <label class="cp-btn l" style="margin:0;"><i class="fas fa-image"></i> ছবি বদলান<input type="file" accept="image/jpeg,image/png,image/webp" data-img="<?= (int)$c->Id ?>" hidden /></label>
+                            <button type="button" class="cp-btn l" data-edit="<?= e(json_encode(['id' => $c->Id, 'code' => $c->Code, 'audience' => $c->Audience, 'months' => (int)$c->DurationMonths, 'price' => (int)$c->Price, 'endsAt' => $c->EndsAt ? substr((string)$c->EndsAt, 0, 10) : '', 'maxUses' => (int)$c->MaxUses, 'active' => $c->IsActive, 'note' => (string)$c->Note], JSON_UNESCAPED_UNICODE)) ?>"><i class="fas fa-pen"></i> কোড বদলান</button>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="cp-card">
         <h3 id="cpFormT"><i class="fas fa-plus"></i> নতুন কুপন</h3>
@@ -56,7 +91,7 @@ $audBn = ['Teacher' => 'টিচার', 'Student' => 'শিক্ষার্
             <tr><th>কোড</th><th>কার জন্য</th><th>প্যাকেজ</th><th>অফারের দাম</th><th>শেষ তারিখ</th><th>ব্যবহার</th><th>অবস্থা</th><th>নোট</th><th></th></tr>
             <?php foreach ($list as $c): $exp = $c->EndsAt && $c->EndsAt < now(); ?>
                 <tr>
-                    <td><span class="cp-code"><?= e($c->Code) ?></span></td>
+                    <td><a class="cp-code" href="/Admin/CouponUsers/<?= (int)$c->Id ?>" style="text-decoration:none;" title="কে কে কিনেছে"><?= e($c->Code) ?></a></td>
                     <td><?= e($audBn[$c->Audience] ?? $c->Audience) ?></td>
                     <td><?= (int)$c->DurationMonths ? e(bn_num((int)$c->DurationMonths)) . ' মাসের প্যাকেজ' : 'সব নরমাল প্যাকেজ' ?></td>
                     <td><b style="color:#15803D;"><?= e(taka((int)$c->Price)) ?></b></td>
@@ -95,13 +130,19 @@ $audBn = ['Teacher' => 'টিচার', 'Student' => 'শিক্ষার্
         msg.style.color = r.success ? '#15803D' : '#DC2626'; msg.textContent = r.message || '';
         if (r.success) setTimeout(function () { location.reload(); }, 600);
     });
+    document.querySelectorAll('[data-img]').forEach(function (inp) { inp.addEventListener('change', async function () {
+        if (!inp.files || !inp.files[0]) return;
+        var fd = new FormData(); fd.append('id', inp.getAttribute('data-img')); fd.append('image', inp.files[0]); fd.append('__RequestVerificationToken', tok());
+        var r; try { r = await (await fetch('/Admin/CouponImage', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); } catch (x) { r = { success: false, message: 'সার্ভারে সমস্যা' }; }
+        alert(r.message || ''); if (r.success) location.reload(); inp.value = '';
+    }); });
     document.addEventListener('click', async function (e) {
         var b = e.target.closest('[data-edit]');
         if (b) {
             var c = JSON.parse(b.getAttribute('data-edit'));
             f.id.value = c.id; f.code.value = c.code; aud.value = c.audience; fillMonths(c.months); f.price.value = c.price; f.endsAt.value = c.endsAt; f.maxUses.value = c.maxUses; f.note.value = c.note; f.active.checked = !!c.active;
             document.getElementById('cpFormT').innerHTML = '<i class="fas fa-pen"></i> কুপন বদলান — ' + c.code; document.getElementById('cpReset').hidden = false;
-            window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+            document.getElementById('cpFormT').scrollIntoView({ behavior: 'smooth', block: 'start' }); f.code.focus({ preventScroll: true }); return;
         }
         var d = e.target.closest('[data-del]');
         if (d && confirm('এই কুপন মুছে ফেলবেন? (আগে যারা ব্যবহার করেছে তাদের পেমেন্ট ঠিক থাকবে)')) {

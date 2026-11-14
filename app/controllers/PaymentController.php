@@ -73,7 +73,7 @@ class PaymentController extends Controller
     {
         $c = $courseId ? $this->db->GetCourse($courseId) : null;
         $me = (int)current_user_id();
-        if (!$c || (int)$c->TeacherId !== $me || $c->PublishPaid) return null;
+        if (!$c || (int)$c->TeacherId !== $me || $c->PublishPaid || $c->AdminBlocked) return null;
         $fee = course_publish_fee($c->Kind);
         if (!$fee) return null;
         $kl = $c->Kind === 'live' ? 'লাইভ ক্লাস' : 'কোর্স';
