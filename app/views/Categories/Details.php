@@ -191,7 +191,7 @@ $seeAll = '/FindTutor?cat=' . rawurlencode($c->Slug);
                                 <?php if ($t->TotalReviews): ?><span class="stars"><i class="fas fa-star"></i> <?= e(number_format($t->Rating, 1)) ?> (<?= (int)$t->TotalReviews ?>)</span><?php endif; ?>
                                 <span class="loc"><i class="fas fa-location-dot"></i><?= e($t->City !== '' ? $t->City : $t->Location) ?></span>
                             </div>
-                            <a class="cd-see" href="/Profile/Show/<?= (int)$t->UserId ?>">See</a>
+                            <a class="cd-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">View</a>
                         </div>
                     <?php endforeach; ?>
                 </div>
