@@ -74,7 +74,7 @@ $ViewData['Description'] = 'মাষ্টার মশাই এর অনু�
             </div>
             <form class="tl-find" action="/Tutors" method="get" role="search">
                 <i class="fas fa-magnifying-glass"></i>
-                <input name="tid" value="<?= e($ViewBag->Tid) ?>" maxlength="60" placeholder="Tutor ID বা নাম দিয়ে খুঁজুন — যেমন TCH-1024 বা Rahim" aria-label="Tutor ID বা নাম" />
+                <input type="search" autocomplete="off" name="tid" value="<?= e($ViewBag->Tid) ?>" maxlength="60" placeholder="Tutor ID বা নাম দিয়ে খুঁজুন — যেমন TCH-1024 বা Rahim" aria-label="Tutor ID বা নাম" />
                 <button type="submit">Search</button>
             </form>
             <?php if ($ViewBag->TidError !== ''): ?><div class="tl-err"><?= e($ViewBag->TidError) ?></div><?php endif; ?>
@@ -116,6 +116,19 @@ $ViewData['Description'] = 'মাষ্টার মশাই এর অনু�
 </div>
 
 <?php section_start('Scripts'); ?>
+<script>
+// সার্চের ফলাফল: ঠিকানা থেকে ?tid= সরানো (রিলোড দিলে আবার সাধারণ পেজ), আর সার্চ বক্স খালি করলে ফলাফল / ভুলের লেখা সাথে সাথে চলে যায়
+(function () {
+    var inp = document.querySelector('.tl-find input[name="tid"]');
+    if (location.search.indexOf('tid=') !== -1 && history.replaceState) history.replaceState(null, '', location.pathname);
+    if (!inp) return;
+    inp.addEventListener('input', function () {
+        if (inp.value.trim() !== '') return;
+        var h = document.getElementById('tlHits'); if (h) h.remove();
+        var er = document.querySelector('.tl-err'); if (er) er.remove();
+    });
+})();
+</script>
 <script>
 (function () {
     document.querySelectorAll('[data-track]').forEach(function (b) {
