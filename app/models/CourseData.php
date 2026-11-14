@@ -545,7 +545,10 @@ trait CourseData
     {
         $this->EnsurePackageTable(); $this->EnsurePaymentTables();
         $n = now();
-        return (int)$this->scalar("SELECT COUNT(*) FROM `UserSubscriptions` s JOIN `PaymentRequests` p ON p.`Id` = s.`PaymentId` JOIN `Packages` k ON k.`Id` = p.`PackageId`
-            WHERE s.`UserId` = :u AND s.`Audience` = 'Teacher' AND s.`StartsAt` <= :n AND s.`EndsAt` > :n2 AND k.`IsLive` = 1", ['u' => $userId, 'n' => $n, 'n2' => $n]) > 0;
+        if ((int)$this->scalar("SELECT COUNT(*) FROM `UserSubscriptions` s JOIN `PaymentRequests` p ON p.`Id` = s.`PaymentId` JOIN `Packages` k ON k.`Id` = p.`PackageId`
+            WHERE s.`UserId` = :u AND s.`Audience` = 'Teacher' AND s.`StartsAt` <= :n AND s.`EndsAt` > :n2 AND k.`IsLive` = 1", ['u' => $userId, 'n' => $n, 'n2' => $n]) > 0) return true;
+        // অ্যাডমিনের দেওয়া Premium (User Role / Package Details থেকে)
+        return (int)$this->scalar("SELECT COUNT(*) FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = 'Teacher' AND `PaymentId` IS NULL AND `PackageName` LIKE :pn AND `StartsAt` <= :n AND `EndsAt` > :n2",
+            ['u' => $userId, 'pn' => 'Premium%', 'n' => $n, 'n2' => $n]) > 0;
     }
 }

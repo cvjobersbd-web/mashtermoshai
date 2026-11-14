@@ -471,10 +471,24 @@ trait PaymentData
      * Super Admin: কারো প্যাকেজের মেয়াদ $days দিন বাড়ানো। চালু প্যাকেজ থাকলে তার শেষ তারিখ থেকে বাড়ে,
      * না থাকলে আজ থেকে $days দিনের নতুন প্যাকেজ (অ্যাডমিনের দেওয়া, ফ্রি)। নতুন শেষ তারিখ ফেরত দেয়।
      */
-    public function ExtendUserPackage(int $userId, string $aud, int $days): string
+    public function ExtendUserPackage(int $userId, string $aud, int $days, bool $premium = false): string
     {
         $this->EnsurePaymentTables();
         $days = max(1, min(3650, $days));
+        // Premium (লাইভ ক্লাস সহ) — অ্যাডমিনের দেওয়া চালু Premium থাকলে সেটাই বাড়ে, না থাকলে আজ থেকে নতুন Premium
+        if ($premium && $aud === 'Teacher') {
+            $r = $this->one("SELECT `Id`, `EndsAt` FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = 'Teacher' AND `PaymentId` IS NULL AND `PackageName` LIKE :pn AND `EndsAt` > :n
+                ORDER BY `EndsAt` DESC LIMIT 1", ['u' => $userId, 'pn' => 'Premium%', 'n' => now()]);
+            if ($r) {
+                $end = date('Y-m-d H:i:s', strtotime((string)$r->EndsAt . " +$days days"));
+                $this->exec('UPDATE `UserSubscriptions` SET `EndsAt` = :e WHERE `Id` = :i', ['e' => $end, 'i' => (int)$r->Id]);
+                return $end;
+            }
+            $end = date('Y-m-d H:i:s', strtotime("+$days days"));
+            $this->insert('INSERT INTO `UserSubscriptions` (`UserId`, `PaymentId`, `PackageName`, `Audience`, `StartsAt`, `EndsAt`, `PostsTotal`, `PostsUsed`, `CreatedAt`)
+                VALUES (:u, NULL, :n, \'Teacher\', :s, :e, 0, 0, :c)', ['u' => $userId, 'n' => 'Premium (লাইভ ক্লাস) · অ্যাডমিনের দেওয়া · ' . $days . ' দিন', 's' => now(), 'e' => $end, 'c' => now()]);
+            return $end;
+        }
         $r = $this->one("SELECT `Id`, `EndsAt` FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = :a AND `EndsAt` IS NOT NULL AND `EndsAt` > :n
             ORDER BY `EndsAt` DESC, `Id` DESC LIMIT 1", ['u' => $userId, 'a' => $aud, 'n' => now()]);
         if ($r) {

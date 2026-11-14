@@ -65,6 +65,43 @@ trait AdminAccessData
         }
     }
 
+    // ============================================================ রোল বদলের ইতিহাস (User Role পেজ)
+    private bool $roleLogReady = false;
+    private function EnsureRoleLogTable(): void
+    {
+        if ($this->roleLogReady) return;
+        $this->roleLogReady = true;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "RoleChanges" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "FromRole" TEXT NULL, "ToRole" TEXT NOT NULL,
+                "Package" TEXT NULL, "PackageEnds" TEXT NULL, "AdminId" INTEGER NULL, "CreatedAt" TEXT NOT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `RoleChanges` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `FromRole` VARCHAR(20) NULL, `ToRole` VARCHAR(20) NOT NULL,
+                `Package` VARCHAR(120) NULL, `PackageEnds` DATETIME NULL, `AdminId` INT NULL, `CreatedAt` DATETIME NOT NULL, PRIMARY KEY (`Id`), KEY `IX_RC_User` (`UserId`))
+                ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+    }
+
+    public function LogRoleChange(int $userId, string $from, string $to, ?string $package, ?string $ends, int $adminId): void
+    {
+        try {
+            $this->EnsureRoleLogTable();
+            $this->exec('INSERT INTO `RoleChanges` (`UserId`, `FromRole`, `ToRole`, `Package`, `PackageEnds`, `AdminId`, `CreatedAt`) VALUES (:u, :f, :t, :p, :e, :a, :c)',
+                ['u' => $userId, 'f' => $from, 't' => $to, 'p' => $package, 'e' => $ends, 'a' => $adminId, 'c' => now()]);
+        } catch (Throwable $e) { error_log('[LogRoleChange] ' . $e->getMessage()); }
+    }
+
+    /** অ্যাডমিন যাদের রোল বদলেছে (নতুন আগে) — ইউজারের নাম / ছবি আর কোন অ্যাডমিন করেছে সহ */
+    public function GetRoleChanges(int $limit = 100): array
+    {
+        try {
+            $this->EnsureRoleLogTable();
+            $rows = $this->all('SELECT r.*, u.`FullName`, u.`UserName`, u.`ProfileImageLink`, u.`Role` AS NowRole, a.`FullName` AS AdminName, a.`UserName` AS AdminUser
+                FROM `RoleChanges` r LEFT JOIN `Users` u ON u.`Id` = r.`UserId` LEFT JOIN `Users` a ON a.`Id` = r.`AdminId` ORDER BY r.`Id` DESC LIMIT ' . max(1, min(500, $limit)));
+            foreach ($rows as $r) { $r->UserId = (int)$r->UserId; $r->Name = !is_blank($r->FullName) ? (string)$r->FullName : ((string)$r->UserName ?: 'Deleted user'); }
+            return $rows;
+        } catch (Throwable $e) { error_log('[GetRoleChanges] ' . $e->getMessage()); return []; }
+    }
+
     /** User Role পেজ: নাম / ইউজারনেম / ইমেইল / মোবাইল / ID দিয়ে খোঁজা */
     public function SearchUsersForRole(string $q, int $limit = 30): array
     {

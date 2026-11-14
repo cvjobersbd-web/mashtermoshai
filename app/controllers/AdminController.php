@@ -1925,21 +1925,38 @@ class AdminController extends Controller
         if (!in_array($role, ['User', 'Student', 'Teacher', 'Admin', 'Instructor'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
         $cur = $u->Role === 'User' ? (is_instructor($id) ? 'Instructor' : (role_label('User', $id) === 'Student' ? 'Student' : 'User')) : (string)$u->Role;
         $bn = ['User' => 'ইউজার', 'Student' => 'স্টুডেন্ট', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
-        if ($role === $cur) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '।']);
-        // স্টুডেন্ট = সাধারণ ইউজার + Approved Student Verification; ইউজার করলে স্টুডেন্ট অবস্থা তুলে নেওয়া হয়
-        $this->db->SetUserRoleBySuper($id, $role === 'Student' ? 'User' : $role);
-        if ($role === 'Student') {
-            // এক অ্যাকাউন্ট = এক রোল: স্টুডেন্ট করলে চালু টিচার আবেদন (Become a Tutor) বাতিল, না হলে অ্যাকাউন্ট "টিচার" ধরা হয় আর Student Verification লুকানো থাকে
-            try {
-                $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Rejected' WHERE `UserId` = :u AND `Status` IN ('Pending', 'AwaitingPayment', 'Expired')", ['u' => $id]);
-                $tk = $this->db->GetKyc($id, 'teacher');
-                if ($tk && $tk->Status === 'Pending') $this->db->SetKycStatus($tk->Id, 'Rejected', 'অ্যাডমিন অ্যাকাউন্টটি স্টুডেন্ট করেছেন', (int)current_user_id());
-            } catch (Throwable $e) { error_log('[ChangeUserRole student] ' . $e->getMessage()); }
-            $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+        // রোলের সাথে প্যাকেজ (টিচার / স্টুডেন্ট হলে) — days = 0 মানে প্যাকেজ না; premium = টিচারের লাইভ ক্লাস সহ Premium
+        $days = (int)input_int('days', 0);
+        $premium = $role === 'Teacher' && input_bool('premium');
+        $givePkg = $days > 0 && in_array($role, ['Teacher', 'Student'], true);
+        if ($days < 0 || $days > 3650) json_response(['success' => false, 'message' => 'প্যাকেজের মেয়াদ ১ — ৩৬৫০ দিনের মধ্যে দিন।']);
+        if ($role === $cur && !$givePkg) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '। শুধু প্যাকেজ দিতে চাইলে প্যাকেজের মেয়াদ বাছাই করুন।']);
+        if ($role !== $cur) {
+            // স্টুডেন্ট = সাধারণ ইউজার + Approved Student Verification; ইউজার করলে স্টুডেন্ট অবস্থা তুলে নেওয়া হয়
+            $this->db->SetUserRoleBySuper($id, $role === 'Student' ? 'User' : $role);
+            if ($role === 'Student') {
+                // এক অ্যাকাউন্ট = এক রোল: স্টুডেন্ট করলে চালু টিচার আবেদন (Become a Tutor) বাতিল, না হলে অ্যাকাউন্ট "টিচার" ধরা হয় আর Student Verification লুকানো থাকে
+                try {
+                    $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Rejected' WHERE `UserId` = :u AND `Status` IN ('Pending', 'AwaitingPayment', 'Expired')", ['u' => $id]);
+                    $tk = $this->db->GetKyc($id, 'teacher');
+                    if ($tk && $tk->Status === 'Pending') $this->db->SetKycStatus($tk->Id, 'Rejected', 'অ্যাডমিন অ্যাকাউন্টটি স্টুডেন্ট করেছেন', (int)current_user_id());
+                } catch (Throwable $e) { error_log('[ChangeUserRole student] ' . $e->getMessage()); }
+                $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+            }
+            elseif ($role === 'User') $this->db->SetStudentByAdmin($id, false, (int)current_user_id());
         }
-        elseif ($role === 'User') $this->db->SetStudentByAdmin($id, false, (int)current_user_id());
-        try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : '')), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
-        json_response(['success' => true, 'message' => "রোল বদলে $bn করা হয়েছে।" . ($role === 'Admin' ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
+        $pkgTxt = null; $end = null;
+        if ($givePkg) {
+            $end = $this->db->ExtendUserPackage($id, $role === 'Teacher' ? 'Teacher' : 'Student', $days, $premium);
+            $pkgTxt = ($role === 'Teacher' ? ($premium ? 'টিচার Premium (লাইভ ক্লাস সহ)' : 'টিচার প্যাকেজ') : 'শিক্ষার্থী প্যাকেজ') . ' · ' . $days . ' দিন';
+        }
+        $this->db->LogRoleChange($id, $cur, $role, $pkgTxt, $end, (int)current_user_id());
+        $endBn = $end ? date('d M Y', strtotime($end)) : '';
+        $msgUser = ($role !== $cur ? "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" : '') . ($pkgTxt ? " আপনাকে $pkgTxt দেওয়া হয়েছে — $endBn পর্যন্ত চালু।" : '')
+            . ($role === 'Admin' && $role !== $cur ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' && $role !== $cur ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : ''));
+        try { $this->db->CreateNotification($id, $role !== $cur ? 'আপনার অ্যাকাউন্টের রোল বদলেছে' : '🎁 প্যাকেজ দেওয়া হয়েছে', trim($msgUser), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => ($role !== $cur ? "রোল বদলে $bn করা হয়েছে।" : '') . ($pkgTxt ? " $pkgTxt দেওয়া হয়েছে — $endBn পর্যন্ত।" : '')
+            . ($role === 'Admin' && $role !== $cur ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
     }
 
     /** GET /Admin/PackageDetails — কে কোন প্যাকেজ কিনেছে (টিচার / শিক্ষার্থী) + মেয়াদ বাড়ানো (aud=all|Teacher|Student, st=all|active|expiring|expired, q=) */
@@ -1969,7 +1986,7 @@ class AdminController extends Controller
     {
         $this->requireAdminPage();
         $q = trim((string)input_str('q', ''));
-        $this->view(null, $q !== '' ? $this->db->SearchUsersForRole($q) : [], ['Q' => $q, 'Instructors' => $this->db->GetUsersByIds(array_keys(instructor_ids()))]);
+        $this->view(null, $q !== '' ? $this->db->SearchUsersForRole($q) : [], ['Q' => $q, 'Instructors' => $this->db->GetUsersByIds(array_keys(instructor_ids())), 'Changes' => $this->db->GetRoleChanges(200)]);
     }
 
     /** POST /Admin/RoleUserSearch — q (Package Details থেকে কাউকে নতুন প্যাকেজ দেওয়ার জন্য) */

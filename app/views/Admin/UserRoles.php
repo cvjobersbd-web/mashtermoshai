@@ -4,7 +4,8 @@
  */
 $ViewData['Title'] = 'User Role';
 $list = is_array($Model) ? $Model : [];
-$q = (string)$ViewBag->Q; $inst = (array)$ViewBag->Instructors;
+$q = (string)$ViewBag->Q; $inst = (array)$ViewBag->Instructors; $changes = (array)($ViewBag->Changes ?? []);
+$roleBn = ['User' => 'ইউজার', 'Student' => 'স্টুডেন্ট', 'Teacher' => 'টিচার', 'Instructor' => 'Instructor', 'Admin' => 'অ্যাডমিন'];
 $roles = ['User' => 'ইউজার', 'Student' => 'স্টুডেন্ট', 'Teacher' => 'টিচার', 'Instructor' => 'Instructor', 'Admin' => 'অ্যাডমিন'];
 $tagCls = ['Teacher' => 't', 'Admin' => 'a', 'Instructor' => 'i', 'Student' => 's', 'User' => 'u'];
 $me = (int)current_user_id();
@@ -17,7 +18,12 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
         <td><span class="ur-tag <?= $tagCls[$u->RoleLabel] ?? 'u' ?>"><?= e($u->IsSuper ? 'Super Admin' : $u->RoleLabel) ?></span></td>
         <td><?php if ($lock): ?><small style="color:#94A3B8;"><?= $lock ?></small><?php else: ?>
             <div class="ur-ch" data-uid="<?= $u->Id ?>">
-                <select><?php foreach ($roles as $k => $l): ?><option value="<?= $k ?>"<?= $u->RoleKey === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?></select>
+                <select data-k="role"><?php foreach ($roles as $k => $l): ?><option value="<?= $k ?>"<?= $u->RoleKey === $k ? ' selected' : '' ?>><?= $l ?></option><?php endforeach; ?></select>
+                <span class="ur-pkg" data-pkg>
+                    <select data-k="days" title="রোলের সাথে প্যাকেজ (টিচার / স্টুডেন্ট)"><option value="0">প্যাকেজ ছাড়া</option><option value="7">প্যাকেজ: ৭ দিন</option><option value="30">প্যাকেজ: ১ মাস</option><option value="90">প্যাকেজ: ৩ মাস</option><option value="180">প্যাকেজ: ৬ মাস</option><option value="365">প্যাকেজ: ১ বছর</option><option value="-1">প্যাকেজ: নিজে লিখুন</option></select>
+                    <input type="number" data-k="custom" min="1" max="3650" placeholder="দিন" hidden />
+                    <label class="ur-prem" data-prem><input type="checkbox" data-k="premium" /> Premium (লাইভ ক্লাস)</label>
+                </span>
                 <button type="button" data-save><i class="fas fa-check"></i> বদলান</button>
                 <div class="ur-msg"></div>
             </div><?php endif; ?></td>
@@ -50,6 +56,12 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
     .ur-ch select { height: 36px; border: 1.5px solid #DCE7F0; border-radius: 9px; padding: 0 8px; font-family: inherit; font-size: 13.5px; background: #fff; }
     .ur-ch button { height: 36px; padding: 0 14px; border: none; border-radius: 9px; background: #7C3AED; color: #fff; font-weight: 700; cursor: pointer; font-family: inherit; }
     .ur-msg { flex-basis: 100%; font-size: 12px; font-weight: 700; }
+    .ur-pkg { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .ur-pkg[hidden], .ur-prem[hidden] { display: none !important; }
+    .ur-pkg input[type=number] { width: 76px; height: 36px; border: 1.5px solid #DCE7F0; border-radius: 9px; padding: 0 8px; font-family: inherit; }
+    .ur-prem { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px; font-weight: 700; color: #6D28D9; background: #F5F3FF; border-radius: 8px; padding: 6px 9px; cursor: pointer; margin: 0; }
+    .ur-log td small { color: #64748B; }
+    .ur-arrow { color: #94A3B8; margin: 0 4px; }
     .ur-empty { text-align: center; color: #94A3B8; padding: 22px 0; }
     @media (max-width: 992px) { .admin-main-content { margin-left: 0; padding: 14px; } }
 </style>
@@ -57,7 +69,7 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
 <div class="admin-main-content ur">
     <?= csrf_field() ?>
     <h2><i class="fas fa-user-gear" style="color:#7C3AED;"></i> User Role</h2>
-    <p class="sub">নাম, ইউজারনেম, ইমেইল, মোবাইল বা ID লিখে খুঁজুন, তারপর রোল বাছাই করে "বদলান" চাপুন। ইউজার নোটিফিকেশন পাবে।</p>
+    <p class="sub">নাম, ইউজারনেম, ইমেইল, মোবাইল বা ID লিখে খুঁজুন, তারপর রোল বাছাই করে "বদলান" চাপুন। টিচার / স্টুডেন্ট করলে সাথে প্যাকেজও (মেয়াদ সহ) দিতে পারবেন। ইউজার নোটিফিকেশন পাবে, আর নিচের তালিকায় থাকবে।</p>
 
     <div class="ur-card">
         <form class="ur-search" method="get" action="/Admin/UserRoles">
@@ -85,6 +97,24 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
     <?php endif; ?>
 
     <div class="ur-card">
+        <h3><i class="fas fa-clock-rotate-left" style="color:#7C3AED;"></i> অ্যাডমিন যাদের রোল বদলেছে (<?= count($changes) ?>)</h3>
+        <?php if (!$changes): ?><div class="ur-empty">এখনো কারো রোল বদলানো হয়নি।</div><?php else: ?>
+        <div style="overflow-x:auto;"><table class="ur-tbl ur-log"><tr><th>ইউজার</th><th>রোল</th><th>প্যাকেজ</th><th>কে করেছেন</th><th>কবে</th></tr>
+            <?php foreach ($changes as $c): $from = (string)$c->FromRole; $to = (string)$c->ToRole; ?>
+                <tr>
+                    <td><div class="ur-u"><span class="ur-av"><?= e(initials($c->Name, 'U')) ?><?php if (!is_blank($c->ProfileImageLink)): ?><img src="<?= e($c->ProfileImageLink) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                        <div><a href="/Profile/Show/<?= (int)$c->UserId ?>" target="_blank"><?= e($c->Name) ?></a><small>@<?= e((string)$c->UserName) ?></small></div></div></td>
+                    <td style="white-space:nowrap;"><?php if ($from !== $to): ?><span class="ur-tag <?= $tagCls[$from] ?? 'u' ?>"><?= e($roleBn[$from] ?? $from) ?></span><i class="fas fa-arrow-right ur-arrow"></i><?php endif; ?><span class="ur-tag <?= $tagCls[$to] ?? 'u' ?>"><?= e($roleBn[$to] ?? $to) ?></span><?= $from === $to ? ' <small>(শুধু প্যাকেজ)</small>' : '' ?></td>
+                    <td><?= !is_blank($c->Package) ? e((string)$c->Package) . ($c->PackageEnds ? '<br><small>' . e(date('d M Y', strtotime((string)$c->PackageEnds))) . ' পর্যন্ত</small>' : '') : '<small>—</small>' ?></td>
+                    <td><small><?= e((string)($c->AdminName ?: $c->AdminUser ?: '—')) ?></small></td>
+                    <td style="white-space:nowrap;"><small><?= e(date('d M Y, h:i A', strtotime((string)$c->CreatedAt))) ?></small></td>
+                </tr>
+            <?php endforeach; ?>
+        </table></div>
+        <?php endif; ?>
+    </div>
+
+    <div class="ur-card">
         <h3><i class="fas fa-person-chalkboard" style="color:#9333EA;"></i> Instructor তালিকা (<?= count($inst) ?>)</h3>
         <?php if (!$inst): ?><div class="ur-empty">এখনো কাউকে Instructor করা হয়নি।</div><?php else: ?>
         <div style="overflow-x:auto;"><table class="ur-tbl"><tr><th>ইউজার</th><th>এখনকার রোল</th><th>রোল বদলান</th></tr>
@@ -95,18 +125,34 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
 </div>
 <?php section_start('Scripts'); ?>
 <script>
-document.addEventListener('click', async function (e) {
-    var b = e.target.closest('[data-save]'); if (!b) return;
-    var box = b.closest('.ur-ch'), sel = box.querySelector('select'), msg = box.querySelector('.ur-msg'), lb = sel.options[sel.selectedIndex].text;
-    if (!confirm('এই ইউজারের রোল "' + lb + '" করবেন?' + (sel.value === 'Admin' ? '\n\nঅ্যাডমিন বানালে সে অ্যাডমিন প্যানেলে ঢুকতে পারবে (কোন পেজ দেখবে Admins পেজ থেকে ঠিক করবেন)।' : ''))) return;
-    var fd = new FormData(); fd.append('userId', box.dataset.uid); fd.append('role', sel.value);
-    fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-    b.disabled = true; msg.style.color = '#64748B'; msg.textContent = '...';
-    try {
-        var r = await (await fetch('/Admin/ChangeUserRole', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
-        msg.style.color = r.success ? '#15803D' : '#DC2626'; msg.textContent = r.message || '';
-        if (r.success) setTimeout(function () { location.reload(); }, 1300); else b.disabled = false;
-    } catch (x) { msg.style.color = '#DC2626'; msg.textContent = 'সমস্যা হয়েছে, আবার চেষ্টা করুন।'; b.disabled = false; }
-});
+(function () {
+    // টিচার / স্টুডেন্ট বাছাই করলে প্যাকেজের ঘর; টিচার হলে Premium টিক
+    function sync(box) {
+        var role = box.querySelector('[data-k="role"]').value, pk = box.querySelector('[data-pkg]');
+        pk.hidden = role !== 'Teacher' && role !== 'Student';
+        box.querySelector('[data-prem]').hidden = role !== 'Teacher';
+        box.querySelector('[data-k="custom"]').hidden = box.querySelector('[data-k="days"]').value !== '-1';
+    }
+    document.querySelectorAll('.ur-ch').forEach(sync);
+    document.addEventListener('change', function (e) { var box = e.target.closest('.ur-ch'); if (box) sync(box); });
+    document.addEventListener('click', async function (e) {
+        var b = e.target.closest('[data-save]'); if (!b) return;
+        var box = b.closest('.ur-ch'), sel = box.querySelector('[data-k="role"]'), msg = box.querySelector('.ur-msg'), lb = sel.options[sel.selectedIndex].text;
+        var pkOn = !box.querySelector('[data-pkg]').hidden, dv = box.querySelector('[data-k="days"]').value;
+        var days = !pkOn ? 0 : (dv === '-1' ? parseInt(box.querySelector('[data-k="custom"]').value || '0', 10) : parseInt(dv, 10));
+        var prem = sel.value === 'Teacher' && box.querySelector('[data-k="premium"]').checked;
+        if (pkOn && dv === '-1' && !(days > 0)) { msg.style.color = '#DC2626'; msg.textContent = 'কত দিনের প্যাকেজ — সংখ্যা লিখুন।'; return; }
+        var pkTxt = days > 0 ? '\nসাথে ' + (sel.value === 'Teacher' ? (prem ? 'টিচার Premium (লাইভ ক্লাস সহ)' : 'টিচার প্যাকেজ') : 'শিক্ষার্থী প্যাকেজ') + ' — ' + days + ' দিন।' : '';
+        if (!confirm('এই ইউজারের রোল "' + lb + '" করবেন?' + pkTxt + (sel.value === 'Admin' ? '\n\nঅ্যাডমিন বানালে সে অ্যাডমিন প্যানেলে ঢুকতে পারবে (কোন পেজ দেখবে Admins পেজ থেকে ঠিক করবেন)।' : ''))) return;
+        var fd = new FormData(); fd.append('userId', box.dataset.uid); fd.append('role', sel.value); fd.append('days', String(days)); fd.append('premium', prem ? 'true' : 'false');
+        fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        b.disabled = true; msg.style.color = '#64748B'; msg.textContent = '...';
+        try {
+            var r = await (await fetch('/Admin/ChangeUserRole', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+            msg.style.color = r.success ? '#15803D' : '#DC2626'; msg.textContent = r.message || '';
+            if (r.success) setTimeout(function () { location.reload(); }, 1500); else b.disabled = false;
+        } catch (x) { msg.style.color = '#DC2626'; msg.textContent = 'সমস্যা হয়েছে, আবার চেষ্টা করুন।'; b.disabled = false; }
+    });
+})();
 </script>
 <?php section_end(); ?>
