@@ -525,6 +525,8 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                             <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
                         <?php elseif ($fp->YouTube !== ''): ?>
                             <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                        <?php elseif (($fp->Facebook ?? '') !== ''): ?>
+                            <div class="hf-media" style="background:linear-gradient(135deg,#1877F2,#0B4FB3);display:flex;align-items:center;justify-content:center;"><i class="fab fa-facebook" style="font-size:54px;color:rgba(255,255,255,.9);"></i><span class="play"><i class="fas fa-play"></i></span></div>
                         <?php elseif ($fp->Video !== ''): ?>
                             <div class="hf-media"><video src="<?= e($fp->Video) ?>#t=0.5" preload="metadata" muted playsinline></video><span class="play"><i class="fas fa-play"></i></span></div>
                         <?php else: ?>
@@ -537,7 +539,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                                     <small><?= e(time_ago($fp->ApprovedAt ?? $fp->CreatedAt)) ?></small></div>
                             </div>
                             <?php if ($fp->Subject !== ''): ?><span class="hf-subj"><i class="fas fa-book-open"></i><?= e($fp->Subject) ?></span><?php endif; ?>
-                            <?php if ($txt !== '' && ($fp->Images || $fp->YouTube !== '' || $fp->Video !== '')): ?><p class="hf-text"><?= e($txt) ?></p><?php endif; ?>
+                            <?php if ($txt !== '' && ($fp->Images || $fp->YouTube !== '' || ($fp->Facebook ?? '') !== '' || $fp->Video !== '')): ?><p class="hf-text"><?= e($txt) ?></p><?php endif; ?>
                             <div class="hf-meta"><span><span><i class="far fa-thumbs-up"></i><?= (int)$fp->LikeCount ?></span><span><i class="far fa-comment"></i><?= (int)$fp->CommentCount ?></span></span><b>Read more <i class="fas fa-arrow-right" style="color:inherit;margin:0 0 0 2px;"></i></b></div>
                         </div>
                     </a>

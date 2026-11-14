@@ -134,14 +134,21 @@ class FeedController extends Controller
             $yt = self::youtubeId($ytRaw);
             if ($yt === '') $this->fail('YouTube লিংকটি সঠিক নয় (যেমন: https://youtu.be/xxxxxxxxxxx)।');
         }
+        // ----- Facebook ভিডিওর লিংক -----
+        $fb = '';
+        $fbRaw = trim((string)input_str('facebook', ''));
+        if ($fbRaw !== '') {
+            $fb = self::facebookVideoUrl($fbRaw);
+            if ($fb === '') $this->fail('Facebook ভিডিওর লিংকটি সঠিক নয় (যেমন: https://www.facebook.com/.../videos/... বা https://fb.watch/...)।');
+        }
 
         // ----- ফাইলগুলো আগে যাচাই, তারপর সেভ -----
         $imgs = $this->collectFiles('images');
         $video = upload_file('video');
         // ভিডিও আর YouTube শুধু অ্যাডমিন অ্যাকাউন্ট থেকে — সাধারণ ইউজার/টিচার শুধু ছবি আর লেখা
-        if (!$isAdmin && ($video || $yt !== '' || $ytRaw !== '')) $this->fail('ভিডিও শুধু অ্যাডমিন পোস্ট করতে পারেন — আপনি ছবি আর লেখা দিয়ে পোস্ট করুন।');
+        if (!$isAdmin && ($video || $yt !== '' || $ytRaw !== '' || $fbRaw !== '')) $this->fail('ভিডিও শুধু অ্যাডমিন পোস্ট করতে পারেন — আপনি ছবি আর লেখা দিয়ে পোস্ট করুন।');
         if (count($imgs) > self::MAX_IMAGES) $this->fail('সর্বোচ্চ ' . self::MAX_IMAGES . 'টা ছবি দেওয়া যাবে।');
-        if (($imgs ? 1 : 0) + ($video ? 1 : 0) + ($yt !== '' ? 1 : 0) > 1) $this->fail('একটা পোস্টে ছবি, ভিডিও অথবা YouTube লিংক — যেকোনো একটা দিন।');
+        if (($imgs ? 1 : 0) + ($video ? 1 : 0) + ($yt !== '' ? 1 : 0) + ($fb !== '' ? 1 : 0) > 1) $this->fail('একটা পোস্টে ছবি, ভিডিও, YouTube অথবা Facebook লিংক — যেকোনো একটা দিন।');
         foreach ($imgs as $f) {
             $ext = strtolower('.' . pathinfo((string)$f['name'], PATHINFO_EXTENSION));
             if (!in_array($ext, self::IMAGE_EXTS, true)) $this->fail('শুধু JPG, PNG, GIF বা WEBP ছবি দেওয়া যাবে।');
@@ -160,7 +167,7 @@ class FeedController extends Controller
             if ($vExt === '.m4v' || $vExt === '.mov') $vExt = $isWebm ? '.webm' : '.mp4';
             if ($isWebm) $vExt = '.webm';
         }
-        if ($content === '' && !$imgs && !$video && $yt === '') $this->fail('কিছু লিখুন অথবা ছবি/ভিডিও দিন।');
+        if ($content === '' && !$imgs && !$video && $yt === '' && $fb === '') $this->fail('কিছু লিখুন অথবা ছবি/ভিডিও দিন।');
 
         $media = [];
         $saved = [];
@@ -176,6 +183,7 @@ class FeedController extends Controller
             $this->fail('ফাইল সেভ করা যায়নি। আবার চেষ্টা করুন।');
         }
         if ($yt !== '') $media['youtube'] = $yt;
+        if ($fb !== '') $media['facebook'] = $fb;
 
         $status = $isAdmin || $isInstructor ? 'Approved' : 'Pending';
         $id = $this->db->CreateEduPost($me, $content, $subject, $media, $status);
@@ -208,6 +216,21 @@ class FeedController extends Controller
             $out[] = $f;
         }
         return $out;
+    }
+
+    /** Facebook ভিডিও / Reel / fb.watch লিংক → পরিষ্কার https লিংক ('' = ভুল লিংক) */
+    public static function facebookVideoUrl(string $url): string
+    {
+        $url = trim($url);
+        if (!preg_match('~^https?://(?:(?:www|m|web|mbasic)\.)?(facebook\.com|fb\.watch|fb\.com)(/[^\s"\'<>]*)$~i', $url, $m)) return '';
+        $host = strtolower($m[1]); $path = $m[2];
+        if ($host === 'fb.watch') return preg_match('~^/[A-Za-z0-9_-]{4,}/?$~', $path) ? 'https://fb.watch' . rtrim($path, '/') . '/' : '';
+        $q = parse_url($path, PHP_URL_QUERY) ?: ''; $p = (string)parse_url($path, PHP_URL_PATH);
+        // watch?v=123 / video.php?v=123
+        if (preg_match('~^/(?:watch/?|video\.php)$~i', $p) && preg_match('~(?:^|&)v=(\d{5,})~', $q, $v)) return 'https://www.facebook.com/watch/?v=' . $v[1];
+        // /{page}/videos/{...}/123 · /reel/123 · /share/v/xxx · /share/r/xxx
+        if (preg_match('~^/(?:[A-Za-z0-9.\-_]+/videos/(?:[^/]+/)?\d{5,}|reel/\d{5,}|share/[vr]/[A-Za-z0-9_-]{4,})/?$~i', $p)) return 'https://www.facebook.com' . rtrim($p, '/') . '/';
+        return '';
     }
 
     /** YouTube লিংক → ১১ অক্ষরের ভিডিও id ('' = ভুল লিংক) */

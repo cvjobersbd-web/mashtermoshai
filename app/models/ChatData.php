@@ -173,6 +173,16 @@ trait ChatData
     }
 
     /** TutorRequests এ কোন স্টুডেন্ট (অ্যাকাউন্ট) পাঠিয়েছে আর কোন টিচারের কাছে গেছে — চ্যাটের জন্য দরকার */
+    /** অ্যাডমিন Student Overview: এই শিক্ষার্থী যেসব টিচারকে রিকোয়েস্ট দিয়েছে (নতুনটা আগে) */
+    public function GetStudentTutorRequests(int $studentId): array
+    {
+        try {
+            $this->EnsureTutorRequestUserColumns();
+            return $this->all('SELECT r.`Id`, r.`TutorName`, r.`TeacherUserId`, r.`RequiredSubject`, r.`StudentClass`, r.`Status`, r.`CreatedAt`, u.`FullName` AS TeacherFullName
+                FROM `TutorRequests` r LEFT JOIN `Users` u ON u.`Id` = r.`TeacherUserId` WHERE r.`StudentUserId` = :s ORDER BY r.`Id` DESC LIMIT 200', ['s' => $studentId]);
+        } catch (Throwable $e) { return []; }
+    }
+
     private bool $trColsReady = false;
     public function EnsureTutorRequestUserColumns(): void
     {

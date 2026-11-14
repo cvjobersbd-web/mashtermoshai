@@ -60,6 +60,9 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
         <div class="ef-video"><video src="<?= e($p->Video) ?>" controls preload="metadata" playsinline></video></div>
     <?php elseif ($p->YouTube !== ''): ?>
         <div class="ef-yt"><button type="button" data-ef="yt" data-yt="<?= e($p->YouTube) ?>" style="background-image:url('https://i.ytimg.com/vi/<?= e($p->YouTube) ?>/hqdefault.jpg')" aria-label="YouTube ভিডিও চালান"></button></div>
+    <?php elseif (($p->Facebook ?? '') !== ''): $fbReel = (bool)preg_match('~/(reel|share/r)/~', $p->Facebook); ?>
+        <div class="ef-fb<?= $fbReel ? ' reel' : '' ?>"><iframe src="https://www.facebook.com/plugins/video.php?href=<?= e(rawurlencode($p->Facebook)) ?>&show_text=false&width=<?= $fbReel ? 360 : 640 ?>" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen title="Facebook video"></iframe></div>
+        <a class="ef-fb-link" href="<?= e($p->Facebook) ?>" target="_blank" rel="noopener nofollow"><i class="fab fa-facebook"></i> ভিডিও না চললে Facebook এ দেখুন</a>
     <?php endif; ?>
 
     <?php if ($approved && !$admin): ?>

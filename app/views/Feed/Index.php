@@ -141,7 +141,7 @@ $baseQs = function (array $over) use ($subject, $q, $tab) {
                 <div class="efs">
                     <h3><i class="fas fa-circle-info" style="color:#F5A623;"></i> কীভাবে কাজ করে</h3>
                     <ol>
-                        <li><?= $isAdmin ? 'লেখা, ছবি, ভিডিও বা YouTube লিংক দিয়ে পোস্ট করুন।' : 'লেখা আর ছবি দিয়ে পোস্ট করুন।' ?></li>
+                        <li><?= $isAdmin ? 'লেখা, ছবি, ভিডিও, YouTube বা Facebook ভিডিওর লিংক দিয়ে পোস্ট করুন।' : 'লেখা আর ছবি দিয়ে পোস্ট করুন।' ?></li>
                         <li>অ্যাডমিন পোস্টটি রিভিউ করবেন।</li>
                         <li>Approve হলে ফিডে সবাই দেখবে — নোটিফিকেশনও পাবেন।</li>
                     </ol>

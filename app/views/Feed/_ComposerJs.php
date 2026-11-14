@@ -9,6 +9,7 @@
     var imgIn = document.getElementById('efcImg'), vidIn = document.getElementById('efcVid'), ytBtn = document.getElementById('efcYtBtn');
     // ভিডিও/YouTube শুধু অ্যাডমিনের জন্য — সাধারণ ইউজারের পেজে এগুলো থাকে না
     var yt = document.getElementById('efcYt') || { value: '', hidden: true, focus: function () {} };
+    var fb = document.getElementById('efcFb') || { value: '', hidden: true, focus: function () {} }, fbBtn = document.getElementById('efcFbBtn');
     var send = document.getElementById('efcSend'), bar = document.getElementById('efcBar');
     var VIDEO_MAX = <?= (int)$videoLimit ?>, IMG_MAX = 5 * 1024 * 1024, MAX_IMGS = 6, TAB = <?= js($tab) ?>;
     var images = [], video = null, urls = [];
@@ -32,6 +33,7 @@
         if (kind !== 'img' && images.length) { images = []; }
         if (kind !== 'vid') video = null;
         if (kind !== 'yt') { yt.value = ''; yt.hidden = true; }
+        if (kind !== 'fb') { fb.value = ''; fb.hidden = true; }
     }
     prev.addEventListener('click', function (e) {
         var b = e.target.closest('[data-rm]'); if (!b) return;
@@ -56,13 +58,14 @@
         expand(); only('vid'); video = f; draw();
     });
     if (ytBtn) ytBtn.addEventListener('click', function () { expand(); only('yt'); yt.hidden = false; draw(); yt.focus(); });
+    if (fbBtn) fbBtn.addEventListener('click', function () { expand(); only('fb'); fb.hidden = false; draw(); fb.focus(); });
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         var text = ta.value.trim();
-        if (!text && !images.length && !video && !yt.value.trim()) { ta.focus(); EF.toast('কিছু লিখুন অথবা ছবি/ভিডিও দিন।', true); return; }
+        if (!text && !images.length && !video && !yt.value.trim() && !fb.value.trim()) { ta.focus(); EF.toast('কিছু লিখুন অথবা ছবি/ভিডিও দিন।', true); return; }
         var fd = new FormData();
-        fd.append('content', text); fd.append('subject', form.subject.value.trim()); fd.append('youtube', yt.hidden ? '' : yt.value.trim());
+        fd.append('content', text); fd.append('subject', form.subject.value.trim()); fd.append('youtube', yt.hidden ? '' : yt.value.trim()); fd.append('facebook', fb.hidden ? '' : fb.value.trim());
         images.forEach(function (f) { fd.append('images[]', f, f.name); });
         if (video) fd.append('video', video, video.name);
         fd.append('__RequestVerificationToken', EF.token());

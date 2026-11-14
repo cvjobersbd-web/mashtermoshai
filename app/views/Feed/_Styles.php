@@ -60,6 +60,11 @@
     .ef-yt button::after { content: '\f04b'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
         width: 68px; height: 48px; border-radius: 14px; background: #FF0000; color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
     .ef-yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .ef-fb { position: relative; aspect-ratio: 16 / 9; background: #000; }
+    .ef-fb.reel { aspect-ratio: 9 / 16; max-height: 640px; width: auto; margin: 0 auto; max-width: 100%; }
+    .ef-fb iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .ef-fb-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #1877F2; text-decoration: none; padding: 6px 16px 0; }
+    .ef-fb-link:hover { text-decoration: underline; }
 
     .ef-counts { display: flex; justify-content: space-between; padding: 9px 16px; font-size: 13px; color: #64748B; }
     .ef-counts button { border: none; background: none; color: inherit; cursor: pointer; padding: 0; font-family: inherit; font-size: 13px; }

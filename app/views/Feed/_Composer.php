@@ -62,6 +62,7 @@
             </div>
             <?php if ($isAdmin): /* ভিডিও / YouTube শুধু অ্যাডমিন অ্যাকাউন্ট থেকে */ ?>
             <input class="efc-yt" name="youtube" id="efcYt" maxlength="200" placeholder="YouTube ভিডিওর লিংক — https://youtu.be/..." hidden aria-label="YouTube লিংক" />
+            <input class="efc-yt" name="facebook" id="efcFb" maxlength="300" placeholder="Facebook ভিডিওর লিংক — https://www.facebook.com/.../videos/... বা https://fb.watch/..." hidden aria-label="Facebook লিংক" />
             <?php endif; ?>
             <div class="efc-prev" id="efcPrev"></div>
             <div class="efc-bar" id="efcBar" hidden><span></span></div>
@@ -72,6 +73,7 @@
             <?php if ($isAdmin): ?>
             <label title="ভিডিও (MP4/WEBM, সর্বোচ্চ <?= $videoMb ?>MB)"><i class="fas fa-video" style="color:#EF4444;"></i><span class="lbl">Video</span><input type="file" id="efcVid" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" hidden /></label>
             <button type="button" class="t" id="efcYtBtn" title="YouTube লিংক"><i class="fab fa-youtube" style="color:#FF0000;"></i><span class="lbl">YouTube</span></button>
+            <button type="button" class="t" id="efcFbBtn" title="Facebook ভিডিওর লিংক"><i class="fab fa-facebook" style="color:#1877F2;"></i><span class="lbl">Facebook</span></button>
             <?php endif; ?>
             <span class="sp"></span>
             <button type="submit" class="efc-send" id="efcSend"><i class="fas fa-paper-plane"></i> <?= $isAdmin ? 'Post' : 'Submit' ?></button>

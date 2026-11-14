@@ -1,5 +1,7 @@
 <?php
-$ViewData['Title'] = 'User Overview';
+$isStu = ($ViewBag->Mode ?? '') === 'student';
+$ViewData['Title'] = $isStu ? 'Student Overview' : 'User Overview';
+$ovBase = $isStu ? '/Admin/StudentOverview' : '/Admin/UserOverview';
 
 $allUsers = $ViewBag->AllUsers ?? [];
 $selected = $ViewBag->SelectedUser;
@@ -307,10 +309,10 @@ $apps = $ViewBag->UserTuitionApps ?? [];
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 style="color:#08224A; margin:0; font-weight:800;">
-                <i class="fas fa-users-viewfinder me-2"></i>User Overview
+                <i class="fas <?= $isStu ? 'fa-user-graduate' : 'fa-users-viewfinder' ?> me-2"></i><?= $isStu ? 'Student Overview' : 'User Overview' ?>
             </h2>
             <p style="color:#64748B; margin:6px 0 0 0; font-size:14px;">
-                ইউজারদের পোস্ট, টিচার রেসপন্স এবং অ্যাক্টিভিটি ট্র্যাক করুন
+                <?= $isStu ? 'শুধু ভেরিফাইড শিক্ষার্থীরা — প্যাকেজ, টিচারকে রিকোয়েস্ট, কোর্স, পেমেন্ট আর পোস্টের অ্যাক্টিভিটি' : 'ইউজারদের পোস্ট, টিচার রেসপন্স এবং অ্যাক্টিভিটি ট্র্যাক করুন' ?>
             </p>
         </div>
     </div>
@@ -321,7 +323,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
         <div class="col-lg-3">
             <div class="user-list-card">
                 <div style="padding: 16px 20px; background: #02B8F5; color: white; font-weight: 700; border-radius: 14px 14px 0 0; position: sticky; top: 0; z-index: 10;">
-                    All Users (<?= e(count($allUsers)) ?>)
+                    <?= $isStu ? 'All Students' : 'All Users' ?> (<?= e(count($allUsers)) ?>)
                 </div>
                 <div style="padding:10px 12px 4px;"><?php partial('Admin/_ListSearch', ['items' => '.user-item', 'ph' => 'নাম, ইউজারনেম বা ইমেইল', 'margin' => '0']); ?></div>
 
@@ -336,7 +338,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                         $roleClass = $u->Role === 'Teacher' ? 'teacher' : 'user';
                         ?>
 
-                        <a href="/Admin/UserOverview?id=<?= e($u->Id) ?>" class="user-item <?= $isActive ? 'active' : '' ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$u->FullName, (string)$u->UserName, '@' . $u->UserName, (string)$u->Email, (string)($u->MobileNumber ?? '')]))) ?>">
+                        <a href="<?= $ovBase ?>?id=<?= e($u->Id) ?>" class="user-item <?= $isActive ? 'active' : '' ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$u->FullName, (string)$u->UserName, '@' . $u->UserName, (string)$u->Email, (string)($u->MobileNumber ?? '')]))) ?>">
                             <div class="u-avatar">
                                 <?php if (!is_blank($u->ProfileImageLink)): ?>
                                     <img src="<?= e($u->ProfileImageLink) ?>" alt="<?= e($u->FullName) ?>" />
@@ -350,7 +352,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                                 <div class="u-email">
                                     <i class="fas fa-envelope me-1" style="font-size:10px;"></i><?= e($u->Email) ?>
                                 </div>
-                                <span class="u-role-badge <?= e($roleClass) ?>"><?= e($u->Role) ?></span>
+                                <span class="u-role-badge <?= e($roleClass) ?>"><?= e($isStu ? "Student" : $u->Role) ?></span>
                             </div>
                         </a>
                     <?php endforeach; ?>
@@ -363,8 +365,8 @@ $apps = $ViewBag->UserTuitionApps ?? [];
             <?php if ($selected === null): ?>
                 <div class="empty-placeholder">
                     <i class="fas fa-hand-pointer"></i>
-                    <h4 style="color:#08224A; font-weight:700;">Select a User</h4>
-                    <p style="font-size: 15px;">বাম দিকের তালিকা থেকে যেকোনো একজন ইউজার সিলেক্ট করুন তার অ্যাক্টিভিটি দেখতে।</p>
+                    <h4 style="color:#08224A; font-weight:700;"><?= $isStu ? 'Select a Student' : 'Select a User' ?></h4>
+                    <p style="font-size: 15px;">বাম দিকের তালিকা থেকে যেকোনো একজন <?= $isStu ? 'শিক্ষার্থী' : 'ইউজার' ?> সিলেক্ট করুন তার অ্যাক্টিভিটি দেখতে।</p>
                 </div>
             <?php else: ?>
                 <!-- ১. ইউজার প্রোফাইল হেডার -->
@@ -380,7 +382,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                         </div>
                         <div class="mt-2"><?= joined_via_full((int)$selected->Id) ?></div>
                         <div class="mt-2">
-                            <span class="badge bg-success" style="font-size: 11px; padding: 5px 12px;"><?= e($selected->Role) ?></span>
+                            <span class="badge bg-success" style="font-size: 11px; padding: 5px 12px;"><?= e(role_label($selected->Role, $selected->Id)) ?></span>
                             <?php if ($selected->IsActive): ?>
                                 <span class="badge bg-primary" style="font-size: 11px; padding: 5px 12px;">Active</span>
                             <?php else: ?>
@@ -409,6 +411,58 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                         <div class="lbl"><i class="fas fa-chalkboard-teacher text-success"></i> Teachers Responded</div>
                     </div>
                 </div>
+
+                <?php if ($isStu): $sp = $ViewBag->StuPackage ?? null; $sReq = $ViewBag->StuRequests ?? []; $sCo = $ViewBag->StuCourses ?? []; $sPay = $ViewBag->StuPayments ?? [];
+                    $rqLbl = ['Pending' => ['#FEF3C7', '#92400E', 'অপেক্ষায়'], 'Accepted' => ['#DCFCE7', '#166534', 'গ্রহণ করেছে'], 'Approved' => ['#DCFCE7', '#166534', 'গ্রহণ করেছে'], 'Rejected' => ['#FEE2E2', '#991B1B', 'বাতিল'], 'Declined' => ['#FEE2E2', '#991B1B', 'বাতিল']];
+                    $pyLbl = ['Approved' => ['#DCFCE7', '#166534', 'Approved'], 'Pending' => ['#FEF3C7', '#92400E', 'অপেক্ষায়'], 'Rejected' => ['#FEE2E2', '#991B1B', 'Rejected']];
+                    $pill = fn($m, $k) => '<span style="display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:' . ($m[$k][0] ?? '#F1F5F9') . ';color:' . ($m[$k][1] ?? '#475569') . ';">' . e($m[$k][2] ?? $k) . '</span>'; ?>
+                <div class="detail-card">
+                    <div class="detail-title"><i class="fas fa-box-open text-primary"></i> প্যাকেজ</div>
+                    <?php if (!$sp): ?><span style="color:#94A3B8;">কোনো প্যাকেজ নেয়নি।</span>
+                    <?php else: ?><b><?= e($sp['name']) ?></b> &nbsp; <?= $sp['active'] ? '<span class="badge bg-success">চালু</span>' : '<span class="badge bg-danger">মেয়াদ শেষ</span>' ?>
+                        <span style="color:#64748B;font-size:13.5px;margin-left:8px;"><?= $sp['ends'] ? 'মেয়াদ: ' . e(fmt_date($sp['ends'], 'd M Y')) . ' পর্যন্ত' : 'মেয়াদ শেষ নেই' ?></span><?php endif; ?>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-title"><i class="fas fa-paper-plane text-success"></i> যেসব টিচারকে রিকোয়েস্ট দিয়েছে (<?= count($sReq) ?>)</div>
+                    <?php if (!$sReq): ?><span style="color:#94A3B8;">এখনো কোনো টিচারকে রিকোয়েস্ট দেয়নি।</span><?php else: ?>
+                    <div style="overflow-x:auto;"><table class="table table-sm align-middle" style="font-size:13.5px;margin:0;">
+                        <thead><tr style="color:#64748B;font-size:12px;"><th>টিচার</th><th>বিষয়</th><th>ক্লাস</th><th>তারিখ</th><th>অবস্থা</th></tr></thead><tbody>
+                        <?php foreach ($sReq as $r): $tn = $r->TeacherFullName ?: $r->TutorName; ?>
+                            <tr><td><?php if ($r->TeacherUserId): ?><a href="/Admin/TeacherOverview?id=<?= (int)$r->TeacherUserId ?>" style="font-weight:700;color:#0F172A;"><?= e($tn) ?></a><?php else: ?><?= e($tn) ?><?php endif; ?></td>
+                                <td><?= e((string)$r->RequiredSubject) ?: '—' ?></td><td><?= e((string)$r->StudentClass) ?: '—' ?></td>
+                                <td style="white-space:nowrap;"><?= e(fmt_date($r->CreatedAt, 'd M Y, h:i A')) ?></td><td><?= $pill($rqLbl, (string)$r->Status) ?></td></tr>
+                        <?php endforeach; ?></tbody></table></div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-title"><i class="fas fa-book-open-reader text-info"></i> কেনা কোর্স (<?= count($sCo) ?>)</div>
+                    <?php if (!$sCo): ?><span style="color:#94A3B8;">কোনো কোর্স কেনেনি।</span><?php else: ?>
+                    <div style="overflow-x:auto;"><table class="table table-sm align-middle" style="font-size:13.5px;margin:0;">
+                        <thead><tr style="color:#64748B;font-size:12px;"><th>কোর্স</th><th>টিচার</th><th>দিয়েছে</th><th>কবে</th><th>অগ্রগতি</th></tr></thead><tbody>
+                        <?php foreach ($sCo as $c): $en = $c->Enrollment ?? null; ?>
+                            <tr><td><a href="/Admin/CourseView/<?= (int)$c->Id ?>" style="font-weight:700;color:#0F172A;"><?= e($c->Title) ?></a></td><td><?= e($c->TeacherName ?: $c->TeacherUser) ?></td>
+                                <td>৳<?= number_format((int)($en->Price ?? 0)) ?></td><td style="white-space:nowrap;"><?= $en ? e(fmt_date($en->CreatedAt, 'd M Y')) : '—' ?></td>
+                                <td><?= (int)($c->Progress['percent'] ?? 0) ?>%</td></tr>
+                        <?php endforeach; ?></tbody></table></div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-title"><i class="fas fa-money-bill-wave text-warning"></i> পেমেন্ট (<?= count($sPay) ?>)</div>
+                    <?php if (!$sPay): ?><span style="color:#94A3B8;">কোনো পেমেন্ট করেনি।</span><?php else: ?>
+                    <div style="overflow-x:auto;"><table class="table table-sm align-middle" style="font-size:13.5px;margin:0;">
+                        <thead><tr style="color:#64748B;font-size:12px;"><th>কী কিনেছে</th><th>টাকা</th><th>মাধ্যম</th><th>কুপন</th><th>তারিখ</th><th>অবস্থা</th></tr></thead><tbody>
+                        <?php foreach ($sPay as $p): ?>
+                            <tr><td><?= e((string)$p->PackageName) ?></td><td><b>৳<?= number_format((int)$p->Amount) ?></b></td>
+                                <td><?= e((string)$p->MethodName) ?><?= $p->TxnId ? '<br><small style="color:#64748B;">' . e($p->TxnId) . '</small>' : '' ?></td>
+                                <td><?= !empty($p->CouponCode) ? '<code>' . e($p->CouponCode) . '</code>' : '—' ?></td>
+                                <td style="white-space:nowrap;"><?= e(fmt_date($p->CreatedAt, 'd M Y, h:i A')) ?></td><td><?= $pill($pyLbl, (string)$p->Status) ?></td></tr>
+                        <?php endforeach; ?></tbody></table></div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
 
                 <div class="row">
                     <!-- ৩. বাম কলাম: Posts -->

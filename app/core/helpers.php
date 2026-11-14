@@ -1730,7 +1730,7 @@ function admin_action_rule(string $action): string
     if ($map === null) {
         $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
         $groups = [
-            'users' => ['TeacherOverview', 'UserOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
+            'users' => ['TeacherOverview', 'UserOverview', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
             'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
             'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],

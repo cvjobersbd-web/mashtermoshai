@@ -131,6 +131,33 @@ class AdminController extends Controller
         $this->view(null, null, $bag);
     }
 
+    /** GET /Admin/StudentOverview/{id?} — শুধু ভেরিফাইড শিক্ষার্থীদের অ্যাক্টিভিটি */
+    public function StudentOverview(): void
+    {
+        $this->requireAdminPage();
+        $all = array_values(array_filter($this->db->GetAllNonAdminUsers(), fn($u) => role_label($u->Role, $u->Id) === 'Student'));
+        $bag = ['AllUsers' => $all, 'Mode' => 'student'];
+        $id = input_int('id', null);
+        if ($id !== null) {
+            foreach ($all as $u) {
+                if ($u->Id === $id) {
+                    $bag['SelectedUser'] = $u;
+                    $bag['RefSource'] = $this->db->GetReferralSource((int)$u->Id);
+                    $bag['UserStats'] = $this->db->GetUserOverviewStats($u->Id);
+                    $bag['UserPostStats'] = $this->db->GetUserPostStats($u->Id);
+                    $bag['TeachersEngaged'] = $this->db->GetTeachersEngagedWithUser($u->Id);
+                    $bag['UserTuitionApps'] = $this->db->GetUserTuitionApplications($u->Id);
+                    $bag['StuPackage'] = $this->db->GetUserPackageState($u->Id)['Student'] ?? null;
+                    $bag['StuRequests'] = $this->db->GetStudentTutorRequests($u->Id);
+                    $bag['StuCourses'] = $this->db->GetMyCourses($u->Id);
+                    $bag['StuPayments'] = $this->db->GetUserPayments($u->Id);
+                    break;
+                }
+            }
+        }
+        $this->view('UserOverview', null, $bag);
+    }
+
     // ============================================================
     // ===== USER MANAGEMENT =====
     // ============================================================

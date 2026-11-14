@@ -317,7 +317,7 @@ try {
 <?php
     $adminPages = [
         'Dashboard' => 'Dashboard', 'Reports' => 'Reports', 'TeacherRequests' => 'Teacher Payment Requests', 'Kyc' => 'Verification', 'Telegram' => 'Telegram নোটিফিকেশন', 'TeacherPayments' => 'Teacher Payment Requests', 'StudentPayments' => 'Student Payment Requests', 'CoursePayments' => 'Course Payment Requests', 'LivePayments' => 'Live Class Payment Requests', 'LiveClasses' => 'Live Classes', 'TeacherOverview' => 'Teacher Overview',
-        'UserOverview' => 'User Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
+        'UserOverview' => 'User Overview', 'StudentOverview' => 'Student Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'CouponUsers' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'CourseView' => 'Course Details', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
@@ -414,6 +414,14 @@ try {
         <li>
             <a href="/Admin/UserOverview" class="<?= $currentAction === 'UserOverview' ? 'active' : '' ?>">
                 <i class="fas fa-users-viewfinder"></i> User Overview
+            </a>
+        </li>
+        <?php endif; ?>
+
+        <?php if (admin_can(admin_action_rule('StudentOverview'))): ?>
+        <li>
+            <a href="/Admin/StudentOverview" class="<?= $currentAction === 'StudentOverview' ? 'active' : '' ?>">
+                <i class="fas fa-user-graduate"></i> Student Overview
             </a>
         </li>
         <?php endif; ?>
