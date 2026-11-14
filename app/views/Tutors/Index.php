@@ -74,11 +74,18 @@ $ViewData['Description'] = 'মাষ্টার মশাই এর অনু�
             </div>
             <form class="tl-find" action="/Tutors" method="get" role="search">
                 <i class="fas fa-magnifying-glass"></i>
-                <input name="tid" value="<?= e($ViewBag->Tid) ?>" maxlength="20" placeholder="Tutor ID দিয়ে খুঁজুন — যেমন TCH-1024" aria-label="Tutor ID" />
+                <input name="tid" value="<?= e($ViewBag->Tid) ?>" maxlength="60" placeholder="Tutor ID বা নাম দিয়ে খুঁজুন — যেমন TCH-1024 বা Rahim" aria-label="Tutor ID বা নাম" />
                 <button type="submit">Search</button>
             </form>
             <?php if ($ViewBag->TidError !== ''): ?><div class="tl-err"><?= e($ViewBag->TidError) ?></div><?php endif; ?>
         </div>
+
+        <?php if (!empty($ViewBag->NameHits)): ?>
+            <section class="tl-sec" id="tlHits">
+                <div class="tl-h"><h2>“<?= e($ViewBag->Tid) ?>” নামে <?= count($ViewBag->NameHits) ?> জন টিউটর</h2><a class="tl-btn" href="/Tutors">সব দেখুন <i class="fas fa-xmark"></i></a></div>
+                <div class="tl-grid"><?php foreach ($ViewBag->NameHits as $t) partial('Tutors/_Card', ['t' => $t]); ?></div>
+            </section>
+        <?php endif; ?>
 
         <?php if (!$sections): ?>
             <div class="tl-sec tl-empty"><i class="fas fa-chalkboard-user"></i>এখনো কোনো অনুমোদিত টিউটর নেই।</div>
