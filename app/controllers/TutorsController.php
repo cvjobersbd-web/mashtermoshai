@@ -59,14 +59,14 @@ class TutorsController extends Controller
             $needle = $norm($raw);
             foreach ($tutors as $t) if ($needle !== '' && str_contains($norm($t->FullName), $needle)) $nameHits[] = $t;
             pixel_track('Search', ['search_string' => $raw, 'content_category' => 'Tutor Name']);
-            if (count($nameHits) === 1) redirect('/Profile/Show/' . $nameHits[0]->UserId);
             if (!$nameHits) $tidError = "“{$raw}” নামে কোনো টিউটর পাওয়া যায়নি।";
         }
         if ($isId) {
             if (preg_match('/^(?:TCH-?)?(\d{1,7})$/', $tid, $m)) {
-                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) { pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']); redirect('/Profile/Show/' . $t->UserId); }
+                // এই পেজেই টিউটরের কার্ড দেখায় (প্রোফাইলে নিয়ে যায় না)
+                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) { $nameHits[] = $t; break; }
             }
-            $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
+            if (!$nameHits) $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
             pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']);
         }
         $male = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Male') === 0));

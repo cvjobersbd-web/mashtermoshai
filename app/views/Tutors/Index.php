@@ -82,7 +82,7 @@ $ViewData['Description'] = 'মাষ্টার মশাই এর অনু�
 
         <?php if (!empty($ViewBag->NameHits)): ?>
             <section class="tl-sec" id="tlHits">
-                <div class="tl-h"><h2>“<?= e($ViewBag->Tid) ?>” নামে <?= count($ViewBag->NameHits) ?> জন টিউটর</h2><a class="tl-btn" href="/Tutors">সব দেখুন <i class="fas fa-xmark"></i></a></div>
+                <div class="tl-h"><h2>সার্চের ফলাফল: “<?= e($ViewBag->Tid) ?>” — <?= count($ViewBag->NameHits) ?> জন টিউটর</h2><a class="tl-btn" href="/Tutors">সার্চ মুছুন <i class="fas fa-xmark"></i></a></div>
                 <div class="tl-grid"><?php foreach ($ViewBag->NameHits as $t) partial('Tutors/_Card', ['t' => $t]); ?></div>
             </section>
         <?php endif; ?>

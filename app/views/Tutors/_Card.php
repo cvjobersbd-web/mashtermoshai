@@ -26,5 +26,5 @@ $inst = $t->Institution !== 'Not specified' ? $t->Institution : (!empty($t->Lock
         <span><?= $t->TotalReviews ? e(number_format((float)$t->Rating, 1)) . ' (' . (int)$t->TotalReviews . ')' : 'Rate' ?></span>
     </a>
     <div class="tl-loc"><i class="fas fa-location-dot"></i> <?= e($city) ?></div>
-    <a class="tl-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">See</a>
+    <a class="tl-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">View</a>
 </div>
