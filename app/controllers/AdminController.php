@@ -2078,6 +2078,15 @@ class AdminController extends Controller
         $this->view(null, $q !== '' ? $this->db->SearchUsersForRole($q) : [], ['Q' => $q, 'Instructors' => $this->db->GetUsersByIds(array_keys(instructor_ids())), 'Changes' => $this->db->GetRoleChanges(200)]);
     }
 
+    /** POST /Admin/ClearRoleHistory (id?) — "অ্যাডমিন যাদের রোল বদলেছে" তালিকা মোছা; রোল / প্যাকেজ বদলায় না */
+    public function ClearRoleHistory_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $this->db->DeleteRoleChanges($id > 0 ? $id : null);
+        json_response(['success' => true, 'message' => $id > 0 ? 'লাইনটি মুছে ফেলা হয়েছে।' : 'সব ইতিহাস মুছে ফেলা হয়েছে।']);
+    }
+
     /** POST /Admin/RoleUserSearch — q (Package Details থেকে কাউকে নতুন প্যাকেজ দেওয়ার জন্য) */
     public function RoleUserSearch_POST(): void
     {

@@ -91,6 +91,14 @@ trait AdminAccessData
     }
 
     /** অ্যাডমিন যাদের রোল বদলেছে (নতুন আগে) — ইউজারের নাম / ছবি আর কোন অ্যাডমিন করেছে সহ */
+    /** রোল বদলের ইতিহাস মোছা — $id দিলে শুধু ওই লাইন, না দিলে সব (রোল / প্যাকেজ যেমন আছে তেমন থাকে) */
+    public function DeleteRoleChanges(?int $id = null): void
+    {
+        $this->EnsureRoleLogTable();
+        if ($id) $this->exec('DELETE FROM `RoleChanges` WHERE `Id` = :i', ['i' => $id]);
+        else $this->exec('DELETE FROM `RoleChanges`');
+    }
+
     public function GetRoleChanges(int $limit = 100): array
     {
         try {

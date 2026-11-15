@@ -97,9 +97,10 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
     <?php endif; ?>
 
     <div class="ur-card">
-        <h3><i class="fas fa-clock-rotate-left" style="color:#7C3AED;"></i> অ্যাডমিন যাদের রোল বদলেছে (<?= count($changes) ?>)</h3>
+        <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span><i class="fas fa-clock-rotate-left" style="color:#7C3AED;"></i> অ্যাডমিন যাদের রোল বদলেছে (<?= count($changes) ?>)</span>
+            <?php if ($changes): ?><button type="button" data-rh-clear style="margin-left:auto;height:32px;padding:0 12px;border:none;border-radius:8px;background:#FEE2E2;color:#B91C1C;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;"><i class="fas fa-trash"></i> সব ইতিহাস মুছুন</button><?php endif; ?></h3>
         <?php if (!$changes): ?><div class="ur-empty">এখনো কারো রোল বদলানো হয়নি।</div><?php else: ?>
-        <div style="overflow-x:auto;"><table class="ur-tbl ur-log"><tr><th>ইউজার</th><th>রোল</th><th>প্যাকেজ</th><th>কে করেছেন</th><th>কবে</th></tr>
+        <div style="overflow-x:auto;"><table class="ur-tbl ur-log"><tr><th>ইউজার</th><th>রোল</th><th>প্যাকেজ</th><th>কে করেছেন</th><th>কবে</th><th></th></tr>
             <?php foreach ($changes as $c): $from = (string)$c->FromRole; $to = (string)$c->ToRole; ?>
                 <tr>
                     <td><div class="ur-u"><span class="ur-av"><?= e(initials($c->Name, 'U')) ?><?php if (!is_blank($c->ProfileImageLink)): ?><img src="<?= e($c->ProfileImageLink) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
@@ -108,6 +109,7 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
                     <td><?= !is_blank($c->Package) ? e((string)$c->Package) . ($c->PackageEnds ? '<br><small>' . e(date('d M Y', strtotime((string)$c->PackageEnds))) . ' পর্যন্ত</small>' : '') : '<small>—</small>' ?></td>
                     <td><small><?= e((string)($c->AdminName ?: $c->AdminUser ?: '—')) ?></small></td>
                     <td style="white-space:nowrap;"><small><?= e(date('d M Y, h:i A', strtotime((string)$c->CreatedAt))) ?></small></td>
+                    <td><button type="button" data-rh-del="<?= (int)$c->Id ?>" title="এই লাইন মুছুন" style="width:32px;height:32px;border:none;border-radius:8px;background:#F1F5F9;color:#B91C1C;cursor:pointer;"><i class="fas fa-trash"></i></button></td>
                 </tr>
             <?php endforeach; ?>
         </table></div>
@@ -134,6 +136,16 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
         box.querySelector('[data-k="custom"]').hidden = box.querySelector('[data-k="days"]').value !== '-1';
     }
     document.querySelectorAll('.ur-ch').forEach(sync);
+    // রোল বদলের ইতিহাস মোছা — শুধু তালিকা মোছে, কারো রোল বা প্যাকেজ বদলায় না
+    document.addEventListener('click', async function (e) {
+        var one = e.target.closest('[data-rh-del]'), all = e.target.closest('[data-rh-clear]'); if (!one && !all) return;
+        if (!confirm(all ? 'পুরো ইতিহাস মুছে ফেলবেন? (কারো রোল বা প্যাকেজ বদলাবে না — শুধু এই তালিকা মুছবে)' : 'এই লাইনটি মুছে ফেলবেন?')) return;
+        var fd = new FormData(); if (one) fd.append('id', one.getAttribute('data-rh-del'));
+        fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        try { var r = await (await fetch('/Admin/ClearRoleHistory', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); } catch (x) { r = { success: false, message: 'সার্ভারে সমস্যা' }; }
+        if (!r.success) { alert(r.message || 'হয়নি'); return; }
+        if (one) { var tr = one.closest('tr'); tr.parentNode.removeChild(tr); } else location.reload();
+    });
     document.addEventListener('change', function (e) { var box = e.target.closest('.ur-ch'); if (box) sync(box); });
     document.addEventListener('click', async function (e) {
         var b = e.target.closest('[data-save]'); if (!b) return;
