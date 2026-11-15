@@ -63,9 +63,13 @@ class HomeController extends Controller
 
     public function Privacy(): void { $this->view(); }
 
-    public function About(): void { $this->view('Privacy'); }
+    /** শর্তাবলি (Terms of Service) */
+    public function Terms(): void { $this->view(); }
 
-    public function Contact(): void { $this->view('Privacy'); }
+    // আগে এই দুইটা Privacy পেজই দেখাত (একই লেখা দুই ঠিকানায় — SEO তে খারাপ) — এখন সঠিক পেজে পাঠায়
+    public function About(): void { header('Location: /', true, 301); exit; }
+
+    public function Contact(): void { header('Location: /Helpdesk/Contact', true, 301); exit; }
 
     public function Error(): void
     {

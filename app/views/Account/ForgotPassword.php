@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = t('পাসওয়ার্ড ভুলে গেছেন', 'Forgot Password');
+$ViewData['Description'] = t('পাসওয়ার্ড ভুলে গেলে ইমেইল বা Username দিয়ে নতুন পাসওয়ার্ড সেট করুন।', 'Forgot your password? Set a new one using your email or username.');
 $value = (string)($ViewBag->Value ?? '');
 ?>
 <?php partial('Account/_AuthStyles'); ?>
@@ -8,7 +9,7 @@ $value = (string)($ViewBag->Value ?? '');
     <div class="auth-card">
         <div class="auth-head">
             <div class="auth-ico"><i class="fas fa-key"></i></div>
-            <h4><?= t('পাসওয়ার্ড ভুলে গেছেন?', 'Forgot your password?') ?></h4>
+            <h1><?= t('পাসওয়ার্ড ভুলে গেছেন?', 'Forgot your password?') ?></h1>
             <p><?= t('রেজিস্টার করা ইমেইল অথবা Username দিন — আমরা ইমেইলে একটা লিংক পাঠাব, সেখান থেকে নতুন পাসওয়ার্ড সেট করবেন।', 'Enter your registered email or username — we will email you a link to set a new password.') ?></p>
         </div>
         <div class="auth-body">

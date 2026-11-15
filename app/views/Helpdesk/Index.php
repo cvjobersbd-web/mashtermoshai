@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = 'Helpdesk';
+$ViewData['Description'] = t('মাষ্টার মশাই হেল্পডেস্ক — টিউশন, প্যাকেজ, পেমেন্ট বা অ্যাকাউন্ট নিয়ে প্রশ্ন করুন, আমাদের টিম উত্তর দেবে।', 'Mashter Moshai Helpdesk — ask about tuitions, packages, payments or your account, and our team will answer.');
 
 $currentFilter = is_string($ViewBag->CurrentFilter) ? $ViewBag->CurrentFilter : 'all';
 $searchQuery = is_string($ViewBag->SearchQuery) ? $ViewBag->SearchQuery : '';

@@ -8,6 +8,7 @@ $type = (string)$ViewBag->Type;
 $sel = is_array($ViewBag->Cities) ? $ViewBag->Cities : [];
 $page = (int)$ViewBag->Page; $pages = (int)$ViewBag->Pages;
 $ViewData['Title'] = (string)$ViewBag->Title;
+$ViewData['Description'] = t('মাষ্টার মশাই এর যাচাই করা টিউটর — ', 'Verified tutors on Mashter Moshai — ') . $ViewBag->Title . t('। জেলা আর প্রতিষ্ঠান দেখে পছন্দের টিউটর বেছে নিন।', '. Choose your tutor by district and institution.');
 $ViewData['FullTitle'] = 'Showing ' . $ViewBag->Title . ($page > 1 ? " — Page $page" : '') . ' | মাষ্টার মশাই';
 $url = function (array $over) use ($type, $sel) {
     $q = array_merge(['type' => $type !== 'all' ? $type : null, 'city' => $sel ?: null], $over);
@@ -50,7 +51,7 @@ else {
 <div class="tl">
     <div class="tl-wrap">
         <div class="tl-h">
-            <h2>Showing <?= e($ViewBag->Title) ?></h2>
+            <h1 class="ta-h1">Showing <?= e($ViewBag->Title) ?></h1>
             <div class="tl-acts">
                 <a class="tl-btn light" href="/Tutors">Go Back</a>
                 <button type="submit" form="tlFilter" class="tl-btn"><i class="fas fa-filter"></i> Filter</button>

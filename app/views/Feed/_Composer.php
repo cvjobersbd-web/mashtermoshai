@@ -52,7 +52,7 @@
 <?php if ($me !== null): ?>
     <form class="efc" id="efc" autocomplete="off" novalidate>
         <div class="efc-top">
-            <span class="ef-av"><?= e(initials($myName, 'U')) ?><?php if ($myPhoto !== ''): ?><img src="<?= e($myPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+            <span class="ef-av"><?= e(initials($myName, 'U')) ?><?php if ($myPhoto !== ''): ?><img src="<?= e($myPhoto) ?>" alt="<?= e($myName) ?>" onerror="this.remove()" /><?php endif; ?></span>
             <textarea name="content" id="efcText" rows="1" maxlength="5000" placeholder="কী শেখাতে বা শেয়ার করতে চান, <?= e(explode(' ', trim($myName))[0] ?: 'বন্ধু') ?>?" aria-label="পোস্ট লিখুন"></textarea>
         </div>
         <div class="efc-more" id="efcMore" hidden>

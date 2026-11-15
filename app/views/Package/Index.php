@@ -4,6 +4,7 @@
  * প্যাকেজগুলো অ্যাডমিন প্যানেল (Admin → Packages) থেকে সাজানো হয়। পেমেন্ট সিস্টেম পরে যুক্ত হবে।
  */
 $ViewData['Title'] = t('প্যাকেজ', 'Packages');
+$ViewData['Description'] = t('মাষ্টার মশাই প্যাকেজ — শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য প্যাকেজ। দাম, মেয়াদ আর সুবিধা দেখুন, bKash / Nagad দিয়ে সহজে কিনুন।', 'Mashter Moshai packages — subscriptions for teachers and packages for students. See prices, duration and benefits, and buy easily with bKash / Nagad.');
 $teacherPkAll = $ViewBag->TeacherPackages ?? [];
 // নরমাল আর Premium (লাইভ ক্লাস সহ) আলাদা দেখানো
 $teacherPk = array_values(array_filter($teacherPkAll, fn($p) => empty($p->IsLive)));

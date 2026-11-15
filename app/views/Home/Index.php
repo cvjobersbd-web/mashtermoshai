@@ -133,17 +133,17 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                 </div>
             <?php elseif ($heroAnimated): ?>
                 <div class="hx-anim" role="img" aria-label="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন">
-                    <img class="base" src="<?= $hxA ?>base.webp" alt="" width="1200" height="858" fetchpriority="high" />
-                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="" /></span>
-                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="" /></span>
+                    <img class="base" src="<?= $hxA ?>base.webp" alt="<?= t('শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন', 'A teacher teaching a student') ?>" width="1200" height="858" fetchpriority="high" />
+                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="plant" /></span>
+                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="vine" /></span>
                     <span class="hx-glow"></span>
-                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="" /></span>
-                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="" />
+                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="teacher" /></span>
+                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="teacher" />
                         <i class="lid" style="left:52.3%;top:55.8%;width:15.5%;height:12%;"></i><i class="lid" style="left:80.3%;top:48.2%;width:14.5%;height:13%;"></i></span>
-                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="" />
+                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="student" />
                         <i class="lid" style="left:11.6%;top:50.9%;width:10%;height:15%;"></i><i class="lid" style="left:30.7%;top:59%;width:12%;height:12.7%;"></i></span>
                     <svg class="hx-ink" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 6 q4 -4 8 0 t8 0 t8 0 t8 0"/><path d="M2 13 q4 -4 8 0 t8 0 t8 0 t8 0 t8 0"/></svg>
-                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="" /></span>
+                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="student" /></span>
                     <span class="hx-spark a"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                     <span class="hx-spark b"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                     <span class="hx-spark c"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
@@ -490,7 +490,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             <div class="hn-grid">
                 <?php foreach ($homeNotices as $n): $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string)$n->Content), ENT_QUOTES, 'UTF-8'))); ?>
                     <a class="hn-card" href="/Notice/Details/<?= (int)$n->Id ?>">
-                        <div class="hn-img"><?php if (!is_blank($n->ImageUrl)): ?><img src="<?= e($n->ImageUrl) ?>" alt="" loading="lazy" onerror="this.insertAdjacentHTML('afterend','<i class=&quot;fas fa-bullhorn&quot;></i>');this.remove()" /><?php else: ?><i class="fas fa-bullhorn"></i><?php endif; ?></div>
+                        <div class="hn-img"><?php if (!is_blank($n->ImageUrl)): ?><img src="<?= e($n->ImageUrl) ?>" alt="<?= e($n->Title) ?>" loading="lazy" onerror="this.insertAdjacentHTML('afterend','<i class=&quot;fas fa-bullhorn&quot;></i>');this.remove()" /><?php else: ?><i class="fas fa-bullhorn"></i><?php endif; ?></div>
                         <div class="hn-body">
                             <div class="hn-meta"><span class="hn-cat<?= $n->IsAnnouncement ? ' ann' : '' ?>"><?= e($n->IsAnnouncement ? 'Announcement' : ($n->Category ?: 'News')) ?></span><span><i class="far fa-calendar"></i> <?= e(fmt_date($n->PublishedDate ?? $n->CreatedAt ?? null, 'd M Y')) ?></span></div>
                             <h3><?= e($n->Title) ?></h3>
@@ -522,9 +522,9 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                     $txt = trim(preg_replace('/\s+/u', ' ', $fp->Content)); ?>
                     <a class="hf-card" href="<?= e($fp->Url) ?>">
                         <?php if ($fp->Images): ?>
-                            <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
+                            <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="<?= e($fp->Subject !== '' ? $fp->Subject : $fp->AuthorName) ?>" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
                         <?php elseif ($fp->YouTube !== ''): ?>
-                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="YouTube video" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
                         <?php elseif (($fp->Facebook ?? '') !== ''): ?>
                             <div class="hf-media" style="background:linear-gradient(135deg,#1877F2,#0B4FB3);display:flex;align-items:center;justify-content:center;"><i class="fab fa-facebook" style="font-size:54px;color:rgba(255,255,255,.9);"></i><span class="play"><i class="fas fa-play"></i></span></div>
                         <?php elseif ($fp->Video !== ''): ?>
@@ -534,7 +534,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                         <?php endif; ?>
                         <div class="hf-body">
                             <div class="hf-who">
-                                <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                                <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="<?= e($fp->AuthorName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                                 <div style="min-width:0;"><b><?= e($fp->AuthorName) ?><span class="hf-role<?= $fp->AuthorRole === 'Teacher' ? ' t' : '' ?>"><?= e(role_label($fp->AuthorRole, $fp->UserId ?? 0)) ?></span></b>
                                     <small><?= e(time_ago($fp->ApprovedAt ?? $fp->CreatedAt)) ?></small></div>
                             </div>

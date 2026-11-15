@@ -32,7 +32,12 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     $__pageTitle = !empty($ViewData['FullTitle']) ? (string)$ViewData['FullTitle'] : ($__isHome
         ? $safeSiteName . ' – Find Home Tutors & Tuitions in Bangladesh'
         : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName);
-    $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : $__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    // ✅ SEO: canonical সবসময় একই মূল ঠিকানায় (https, www ছাড়া, ?query ছাড়া) — www / http / ?ref= দিয়ে এলেও Google একটাই পেজ ধরে
+    $__cPath = (string)(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+    if ($__isHome) $__cPath = '/';
+    $__cPath = preg_replace('#/Index/?$#i', '', $__cPath) ?: '/';   // /FindTutor/Index আর /FindTutor একই পেজ
+    $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : seo_origin() . $__cPath;
+    if (empty($ViewData['Robots']) && seo_private_page((string)($__route['controller'] ?? ''), (string)($__route['action'] ?? ''))) $ViewData['Robots'] = 'noindex, follow';
     $__ogImage = !empty($ViewData['OgImage']) ? (string)$ViewData['OgImage'] : '';
     $__desc = (string)($ViewData['Description'] ?? ($safeSiteName . ' — বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া। অভিজ্ঞ হোম টিউটর খুঁজুন অথবা টিউটর হিসেবে টিউশনে Apply করুন — সহজ, নিরাপদ ও দ্রুত।'));
     $__favicon = $__abs($layoutSettings->GetFaviconUrl());
@@ -41,6 +46,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <title><?= e($__pageTitle) ?></title>
     <meta name="description" content="<?= e($__desc) ?>" />
     <link rel="canonical" href="<?= e($__canonical) ?>" />
+    <?php $__gs = google_seo_settings(); if ($__gs['gsc_verify'] !== ''): ?><meta name="google-site-verification" content="<?= e($__gs['gsc_verify']) ?>" /><?php endif; ?>
+    <?php if ($__gs['ga_id'] !== '' && !is_admin()): /* Google Analytics (GA4) — অ্যাডমিন ট্র্যাক হয় না */ ?>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($__gs['ga_id']) ?>"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', <?= js($__gs['ga_id']) ?>);</script>
+    <?php endif; ?>
     <?php if (!empty($ViewData['Robots'])): ?><meta name="robots" content="<?= e($ViewData['Robots']) ?>" /><?php endif; ?>
 
     <!-- ✅ ট্যাব আইকন + Google সার্চ রেজাল্টের আইকন (অ্যাডমিন সেটিংয়ের Navbar Logo) -->
@@ -1078,7 +1088,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         });
     })();
     </script>
-<?php if ($__pxPv !== ''): ?>    <noscript><img height="1" width="1" style="display:none" alt=""
+<?php if ($__pxPv !== ''): ?>    <noscript><img height="1" width="1" style="display:none" alt="fb pixel"
     src="https://www.facebook.com/tr?id=<?= e($__pxId) ?>&ev=PageView&noscript=1"
     /></noscript>
 <?php endif; ?>
@@ -1227,7 +1237,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         <div class="profile-dropdown dropdown hidden xl:block" id="profileDropdown">
                             <button class="dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                                 <?php $navImg = (string)(session_get('ProfileImageLink') ?? ''); ?>
-                                <img class="nav-av" data-nav-avatar src="<?= e($navImg) ?>" alt=""<?= $navImg === '' ? ' hidden' : '' ?> onerror="this.hidden = true; this.nextElementSibling.hidden = false;" onload="this.nextElementSibling.hidden = true;" />
+                                <img class="nav-av" data-nav-avatar src="<?= e($navImg) ?>" alt="<?= e($userFullName) ?>"<?= $navImg === '' ? ' hidden' : '' ?> onerror="this.hidden = true; this.nextElementSibling.hidden = false;" onload="this.nextElementSibling.hidden = true;" />
                                 <i class="fas fa-user-circle"<?= $navImg !== '' ? ' hidden' : '' ?>></i>
                                 <span title="<?= e($userFullName) ?>"><?= e($userFullName) ?></span>
                                 <span class="caret"><i class="fas fa-chevron-down"></i></span>
@@ -1383,7 +1393,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <?php if ($mLoggedIn): ?>
                 <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="m-user">
                     <span class="m-avatar">
-                        <?php if (!is_blank($mImg)): ?><img src="<?= e($mImg) ?>" alt="" /><?php else: ?><?= e(initials($mName, 'U')) ?><?php endif; ?>
+                        <?php if (!is_blank($mImg)): ?><img src="<?= e($mImg) ?>" alt="<?= e($mName) ?>" /><?php else: ?><?= e(initials($mName, 'U')) ?><?php endif; ?>
                     </span>
                     <span class="m-user-info">
                         <strong><?= e($mName) ?></strong>
@@ -1550,7 +1560,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         t('টিউটর খুঁজুন', 'Find a Tutor') => [[t('টিউটর খুঁজুন', 'Find Tutors'), '/FindTutor'], [t('গণিতের টিউটর', 'Mathematics Tutors'), '/FindTutor?subject=mathematics'], [t('ইংরেজির টিউটর', 'English Tutors'), '/FindTutor?subject=english'],
                                            [t('SSC টিউটর', 'SSC Tutors'), '/FindTutor?class=ssc'], [t('HSC টিউটর', 'HSC Tutors'), '/FindTutor?class=hsc']],
                         t('টিউশন', 'Tuition') => [[t('টিউশন সার্কুলার', 'Tuition Circular'), '/Tuition/Circular'], [t('টিউশন পোস্ট করুন', 'Post Tuition Requirement'), $__postReq], [t('টিউটর হোন', 'Become a Tutor'), '/Teacher/RequestForm'], [t('প্যাকেজ', 'Packages'), '/Package']],
-                        t('সহায়তা', 'Support') => array_values(array_filter([[t('হেল্পডেস্ক', 'Helpdesk'), '/Helpdesk'], [t('যোগাযোগ', 'Contact'), '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? [t('সাধারণ প্রশ্ন', 'FAQ'), '/#faq'] : null, [t('নোটিশ', 'Notice'), '/Notice']])),
+                        t('সহায়তা', 'Support') => array_values(array_filter([[t('হেল্পডেস্ক', 'Helpdesk'), '/Helpdesk'], [t('যোগাযোগ', 'Contact'), '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? [t('সাধারণ প্রশ্ন', 'FAQ'), '/#faq'] : null, [t('নোটিশ', 'Notice'), '/Notice'], [t('গোপনীয়তা নীতি', 'Privacy Policy'), '/Home/Privacy'], [t('শর্তাবলি', 'Terms of Service'), '/Home/Terms']])),
                     ];
                 ?>
                 <nav class="footer-nav" aria-label="Footer">

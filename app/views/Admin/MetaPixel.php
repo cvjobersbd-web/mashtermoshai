@@ -103,6 +103,23 @@ $mode = $ViewBag->HasToken ? 'Browser + Server (CAPI)' : 'Browser only';
         </div>
     </div>
 
+    <?php $__g = google_seo_settings(); ?>
+    <div class="mp-card">
+        <h3>Google Analytics &amp; Search Console <span style="font-weight:500;color:#94A3B8;font-size:13px;">(SEO)</span></h3>
+        <div class="mp-grid">
+            <div class="mp-f">
+                <label for="mpGa">Google Analytics (GA4) Measurement ID</label>
+                <input type="text" id="mpGa" name="gaId" value="<?= e($__g['ga_id']) ?>" placeholder="G-AB12CD34EF" autocomplete="off" />
+                <div class="h">analytics.google.com → Admin → Data streams → Web → <b>Measurement ID</b> (G- দিয়ে শুরু)। খালি রাখলে বন্ধ।</div>
+            </div>
+            <div class="mp-f">
+                <label for="mpGsc">Google Search Console যাচাই কোড</label>
+                <input type="text" id="mpGsc" name="gscVerify" value="<?= e($__g['gsc_verify']) ?>" placeholder="abc123XYZ..." autocomplete="off" />
+                <div class="h">search.google.com/search-console → সাইট যোগ → <b>HTML tag</b> → content="..." এর ভেতরের কোডটা (বা পুরো ট্যাগ) দিন। তারপর সেখানে Sitemap এ <code>sitemap.xml</code> দিন।</div>
+            </div>
+        </div>
+    </div>
+
     <div class="mp-card">
         <h3>Events <span class="mp-links"><button type="button" data-all="1">Select all</button><button type="button" data-all="0">Clear</button></span></h3>
         <?php foreach ($events as $ev => [$desc, $std]): ?>

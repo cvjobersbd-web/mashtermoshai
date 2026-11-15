@@ -98,6 +98,9 @@ if (in_array(strtolower($path), ['favicon.ico', 'apple-touch-icon.png', 'apple-t
     exit;
 }
 
+// ✅ SEO: /robots.txt আর /sitemap.xml (app/controllers/SeoController.php)
+if (in_array(strtolower($path), ['robots.txt', 'sitemap.xml'], true)) $path = strtolower($path) === 'robots.txt' ? 'Seo/Robots' : 'Seo/Sitemap';
+
 $segments = $path === '' ? [] : explode('/', $path);
 $controllerName = $segments[0] ?? 'Home';
 $actionName = $segments[1] ?? 'Index';

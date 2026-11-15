@@ -12,7 +12,7 @@ $inst = $t->Institution !== 'Not specified' ? $t->Institution : (!empty($t->Lock
 <div class="tl-card">
     <a class="tl-pic" href="/Tutors/Profile/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">
         <span><?= e($t->Initials) ?></span>
-        <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+        <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
     </a>
     <div class="tl-badges">
         <?php if ($t->IsPremium): ?><i class="fas fa-crown pr" title="Premium Tutor"></i><?php endif; ?>

@@ -1836,6 +1836,17 @@ function px_settings(bool $fresh = false): array
     return $c;
 }
 
+/** Google Analytics (GA4) Measurement ID আর Search Console এর যাচাই কোড — Admin → Meta Pixel পেজ থেকে */
+function google_seo_settings(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    try { $c = db()->GetSiteContent(['ga_id' => '', 'gsc_verify' => '']); } catch (Throwable $e) { $c = ['ga_id' => '', 'gsc_verify' => '']; }
+    $c['ga_id'] = preg_match('/^G-[A-Z0-9]{4,20}$/', (string)$c['ga_id']) ? (string)$c['ga_id'] : '';
+    $c['gsc_verify'] = preg_match('/^[A-Za-z0-9_\-]{10,100}$/', (string)$c['gsc_verify']) ? (string)$c['gsc_verify'] : '';
+    return $c;
+}
+
 /** Pixel চালু থাকলে তার ID, না হলে '' */
 function meta_pixel_id(): string
 {
@@ -2400,4 +2411,27 @@ function tb(string $bn, string $en): string
 {
     if (strcasecmp((string)($GLOBALS['__route']['controller'] ?? ''), 'Admin') === 0) return $bn;
     return site_lang() === 'en' ? $en : $bn;
+}
+
+// ============================================================
+// ===== SEO =====
+// ============================================================
+/** সাইটের একটাই মূল ঠিকানা — https আর www ছাড়া (canonical, sitemap, robots এ একই) */
+function seo_origin(): string
+{
+    static $o = null;
+    if ($o !== null) return $o;
+    $host = strtolower((string)(parse_url(site_public_url(), PHP_URL_HOST) ?: 'mashtermoshai.com'));
+    $host = preg_replace('/^www\./', '', $host);
+    return $o = 'https://' . $host;
+}
+/** Google এ দেখানোর দরকার নেই এমন পেজ (লগইন, পেমেন্ট, চ্যাট, ড্যাশবোর্ড ...) — noindex */
+function seo_private_page(string $controller, string $action): bool
+{
+    $c = strtolower($controller); $a = strtolower($action);
+    if (in_array($c, ['admin', 'payment', 'chat', 'kyc', 'notification', 'referral', 'saved', 'friends', 'live', 'partner', 'goal', 'user', 'profile', 'post', 'seo'], true)) return true;   // প্রোফাইল পেজ নিজস্ব — টিচারের পাবলিক পেজ /Tutors/Profile
+    if ($c === 'account') return !in_array($a, ['register'], true);   // সাইন আপ পেজ দেখাতে পারে, বাকিগুলো (লগইন, পাসওয়ার্ড রিসেট ...) না
+    if ($c === 'teacher' && $a !== 'index') return true;
+    if ($c === 'course' && in_array($a, ['learn', 'manage', 'build', 'edit', 'students', 'my', 'earnings'], true)) return true;
+    return false;
 }

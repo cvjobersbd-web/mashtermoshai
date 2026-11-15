@@ -1616,6 +1616,13 @@ class AdminController extends Controller
         }
         $evs = (array)($_POST['events'] ?? []);
         foreach (PIXEL_EVENTS as $ev => $_) $save['px_ev_' . $ev] = in_array($ev, $evs, true) ? '1' : '0';
+        // Google Analytics (GA4) আর Search Console — SEO এর জন্য
+        $ga = strtoupper(preg_replace('/\s+/', '', (string)input_str('gaId', '')));
+        if ($ga !== '' && !preg_match('/^G-[A-Z0-9]{4,20}$/', $ga)) json_response(['success' => false, 'message' => 'Google Analytics এর Measurement ID ঠিক নেই — G- দিয়ে শুরু হয় (যেমন G-AB12CD34EF)।']);
+        $gsc = trim((string)input_str('gscVerify', ''));
+        if (preg_match('/content=["\']([^"\']+)["\']/', $gsc, $m)) $gsc = $m[1];   // পুরো <meta ...> ট্যাগ পেস্ট করলেও কাজ করবে
+        if ($gsc !== '' && !preg_match('/^[A-Za-z0-9_\-]{10,100}$/', $gsc)) json_response(['success' => false, 'message' => 'Search Console এর যাচাই কোড ঠিক নেই — HTML tag এর content="..." অংশটা দিন।']);
+        $save['ga_id'] = $ga; $save['gsc_verify'] = $gsc;
         $this->db->SaveSiteContent($save);
         $c = px_settings(true);
         $n = count(array_filter(array_keys(PIXEL_EVENTS), fn($e) => ($c['px_ev_' . $e] ?? '1') !== '0'));

@@ -52,7 +52,7 @@ $authImg = $authT['auth_img'];
     .au-form { transition: opacity .45s ease, transform .55s var(--au-ease), visibility .45s; }
     .au-form.off { position: absolute; left: 48px; right: 48px; top: 40px; opacity: 0; visibility: hidden; pointer-events: none; }
     .au-form.au-login.off { transform: translateX(40px); } .au-form.au-reg.off { transform: translateX(-40px); }
-    .au-card h1 { margin: 0; font-family: var(--font-heading); font-weight: 700; color: var(--au-ink); font-size: clamp(26px, 2.2vw, 34px); letter-spacing: -.3px; }
+    .au-card .au-h { margin: 0; font-family: var(--font-heading); font-weight: 700; color: var(--au-ink); font-size: clamp(26px, 2.2vw, 34px); letter-spacing: -.3px; }
     .au-card .lead { margin: 8px 0 22px; color: #475569; font-size: 15.5px; line-height: 1.5; }
     .au-f { margin-bottom: 16px; }
     .au-f label { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14.5px; color: var(--au-ink); margin-bottom: 7px; }
@@ -106,7 +106,7 @@ $authImg = $authT['auth_img'];
         .au-card { padding: 28px 22px 26px; border-radius: 20px; }
         .au-form.off { left: 22px; right: 22px; top: 28px; }
     }
-    @media (max-width: 480px) { .au-row { grid-template-columns: 1fr; gap: 0; } .au-pic { width: 38%; } .au-copy h2 { font-size: 19px; } .au-card h1 { font-size: 24px; } }
+    @media (max-width: 480px) { .au-row { grid-template-columns: 1fr; gap: 0; } .au-pic { width: 38%; } .au-copy h2 { font-size: 19px; } .au-card .au-h { font-size: 24px; } }
     @media (prefers-reduced-motion: reduce) { .au-art, .au-panel, .au-form, .au-card { transition: none !important; } .au-pic { animation: none; } }
 </style>
 
@@ -115,7 +115,7 @@ $authImg = $authT['auth_img'];
     <div class="au-stage">
         <!-- ===== কার্টুন ছবি ===== -->
         <div class="au-art" aria-hidden="true">
-            <img class="au-pic" src="<?= e($authImg) ?>" alt="" />
+            <img class="au-pic" src="<?= e($authImg) ?>" alt="<?= t('শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন — মাষ্টার মশাই', 'A teacher teaching a student — Mashter Moshai') ?>" />
             <div class="au-copy">
                 <h2 class="rich"><?= $authT['auth_title_html'] /* sanitize_rich_html করা */ ?></h2>
                 <?php if ($authT['auth_desc_html'] !== ''): ?><p><?= $authT['auth_desc_html'] ?></p><?php endif; ?>
@@ -134,7 +134,7 @@ $authImg = $authT['auth_img'];
             <div class="au-card" id="auCard">
                 <!-- লগইন -->
                 <div class="au-form au-login<?= $mode === 'login' ? '' : ' off' ?>" data-form="login"<?= $mode === 'login' ? '' : ' aria-hidden="true"' ?>>
-                    <h1><?= t('আপনার অ্যাকাউন্টে লগইন করুন', 'Login to Your Account') ?></h1>
+                    <<?= $mode === 'login' ? 'h1' : 'h2' ?> class="au-h"><?= t('আপনার অ্যাকাউন্টে লগইন করুন', 'Login to Your Account') ?></<?= $mode === 'login' ? 'h1' : 'h2' ?>>
                     <p class="lead"><?= t('ড্যাশবোর্ড দেখুন, টিউশন সামলান আর আরও অনেক কিছু।', 'Access your dashboard, manage tuitions, and more.') ?></p>
                     <?php if ($susp): ?>
                         <div class="susp-box" role="alert">
@@ -171,7 +171,7 @@ $authImg = $authT['auth_img'];
 
                 <!-- সাইনআপ -->
                 <div class="au-form au-reg<?= $mode === 'register' ? '' : ' off' ?>" data-form="register"<?= $mode === 'register' ? '' : ' aria-hidden="true"' ?>>
-                    <h1><?= t('আপনার অ্যাকাউন্ট খুলুন', 'Create Your Account') ?></h1>
+                    <<?= $mode === 'register' ? 'h1' : 'h2' ?> class="au-h"><?= t('আপনার অ্যাকাউন্ট খুলুন', 'Create Your Account') ?></<?= $mode === 'register' ? 'h1' : 'h2' ?>>
                     <p class="lead"><?= t('মাষ্টার মশাই-এ যোগ দিন — টিউটর খুঁজুন, টিউশন পোস্ট করুন আর শেখার সুযোগ নিন।', 'Join Mashtermoshai to find tutors, post requirements, and access learning opportunities.') ?></p>
                     <?php if ($mode === 'register' && $err !== null): ?><div class="au-alert err"><i class="fas fa-circle-exclamation"></i><span><?= e($err) ?></span></div><?php endif; ?>
                     <form method="post" action="/Account/Register" id="registerForm" novalidate autocomplete="off">

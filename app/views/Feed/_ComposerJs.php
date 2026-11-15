@@ -21,7 +21,7 @@
         clearUrls(); prev.innerHTML = '';
         images.forEach(function (f, i) {
             var u = URL.createObjectURL(f); urls.push(u);
-            prev.insertAdjacentHTML('beforeend', '<div class="it"><img src="' + u + '" alt="" /><button type="button" class="rm" data-rm="img" data-i="' + i + '" aria-label="সরান"><i class="fas fa-xmark"></i></button></div>');
+            prev.insertAdjacentHTML('beforeend', '<div class="it"><img src="' + u + '" alt="preview" /><button type="button" class="rm" data-rm="img" data-i="' + i + '" aria-label="সরান"><i class="fas fa-xmark"></i></button></div>');
         });
         if (video) {
             var vu = URL.createObjectURL(video); urls.push(vu);

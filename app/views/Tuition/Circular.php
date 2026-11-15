@@ -4,6 +4,7 @@
  * উপরে ব্যানার (অ্যাডমিন সেটিংস থেকে বদলানো যায়) · বামে ফিল্টার · মাঝে পোস্ট লেখা + Recent Tuition Posts · ডানে Need a Teacher / How It Works / নিরাপদ প্ল্যাটফর্ম
  */
 $ViewData['Title'] = 'Tuition Circular';
+$ViewData['Description'] = t('সর্বশেষ টিউশন সার্কুলার — ঢাকা সহ সারা বাংলাদেশের হোম টিউশন ও অনলাইন টিউশনের খোঁজ। ক্লাস, বিষয়, এলাকা আর বেতন দেখে টিউশনে Apply করুন।', 'Latest tuition circulars — home and online tuition jobs across Bangladesh. See class, subjects, area and salary, then apply.');
 $isLoggedIn = session_get('UserName') != null;
 $userRole = session_get('UserRole');
 $isTeacher = $userRole == 'Teacher';
@@ -54,7 +55,7 @@ $qs = function (array $over = []) use ($f, $sort): string {
 $activeCount = ($f['location'] !== '') + ($f['class'] !== '') + ($f['subject'] !== '') + count($f['medium']) + count($f['type']);
 $avatar = function (?string $img, ?string $name, string $cls = 'tc-av'): string {
     $ini = e(initials((string)$name, 'U'));
-    return '<span class="' . $cls . '">' . $ini . (!is_blank($img) ? '<img src="' . e($img) . '" alt="" loading="lazy" onerror="this.remove()" />' : '') . '</span>';
+    return '<span class="' . $cls . '">' . $ini . (!is_blank($img) ? '<img src="' . e($img) . '" alt="' . e((string)$name) . '" loading="lazy" onerror="this.remove()" />' : '') . '</span>';
 };
 $CommentIso = fn($dt) => ($d = to_dt($dt)) ? gmdate('Y-m-d\TH:i:s', $d->getTimestamp()) . 'Z' : '';
 $RenderCommentText = function (?string $text): string {
@@ -79,7 +80,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tc-banner { position: relative; margin-bottom: 24px; border-radius: 20px; overflow: hidden; background: linear-gradient(120deg, #EAF4FF, #F6FBFF 55%, #FFF6E5); box-shadow: var(--tc-shadow); }
     .tc-banner img { display: block; width: 100%; height: auto; }
     .tc-banner-text { padding: 34px 40px; }
-    .tc-banner-text h1 { margin: 0; display: flex; align-items: center; gap: 16px; font-size: 44px; font-weight: 800; }
+    .tc-banner-text h1, .tc-banner-text h2.h1 { margin: 0; display: flex; align-items: center; gap: 16px; font-size: 44px; font-weight: 800; }
     .tc-banner-text p { margin: 10px 0 0; font-size: 19px; color: #334155; max-width: 640px; line-height: 1.6; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
@@ -296,7 +297,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
         .tc-filter.open .tc-fbody { display: block; }
         .tc-side { grid-template-columns: minmax(0, 1fr); }
         .tc-banner-text { padding: 24px 22px; }
-        .tc-banner-text h1 { font-size: 30px; }
+        .tc-banner-text h1, .tc-banner-text h2.h1 { font-size: 30px; }
         .tc-banner-text p { font-size: 15.5px; }
     }
     @media (max-width: 640px) {
@@ -681,7 +682,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 <img src="<?= e($banner['tc_banner']) ?>" alt="Tuition Circular — আপনার টিউশনের প্রয়োজন পোস্ট করুন এবং একজন উপযুক্ত শিক্ষক খুঁজে নিন খুব সহজে!"
                      onerror="var fb = this.parentNode.querySelector('.tc-banner-fallback'); if (fb) fb.hidden = false; this.remove();" />
                 <div class="tc-banner-text tc-banner-fallback" hidden>
-                    <h1><i class="fas fa-bullhorn"></i> Tuition Circular</h1>
+                    <h2 class="h1"><i class="fas fa-bullhorn"></i> Tuition Circular</h2>
                     <p>আপনার টিউশনের প্রয়োজন পোস্ট করুন এবং একজন উপযুক্ত শিক্ষক খুঁজে নিন খুব সহজে!</p>
                 </div>
             </div>
@@ -1052,7 +1053,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 <?php endif; ?>
 
 <!-- ছবি বড় করে দেখা -->
-<div class="tcm-ov" id="tcZoom" style="background:rgba(0,0,0,.9);cursor:zoom-out;"><img alt="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;" /></div>
+<div class="tcm-ov" id="tcZoom" style="background:rgba(0,0,0,.9);cursor:zoom-out;"><img alt="tuition photo" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;" /></div>
 
 <!-- ======================= APPLY MODAL (Teacher → Student) ======================= -->
 <?php if ($isLoggedIn && $isTeacher): ?>

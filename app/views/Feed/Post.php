@@ -6,7 +6,7 @@ $title = $p->Content !== '' ? str_preview(preg_replace('/\s+/u', ' ', $p->Conten
 $ViewData['Title'] = 'Educational Feed';
 $ViewData['FullTitle'] = $title . ' — ' . $p->AuthorName . ' | Educational Feed | মাষ্টার মশাই';
 $ViewData['Description'] = str_preview(preg_replace('/\s+/u', ' ', $p->Content), 200, 'Educational post by ' . $p->AuthorName . ' on মাষ্টার মশাই Educational Feed.');
-$ViewData['Canonical'] = 'https://mashtermoshai.com' . $p->Url;
+$ViewData['Canonical'] = seo_origin() . $p->Url;
 if ($p->Images) $ViewData['OgImage'] = $p->Images[0];
 elseif ($p->YouTube !== '') $ViewData['OgImage'] = 'https://i.ytimg.com/vi/' . $p->YouTube . '/hqdefault.jpg';
 if ($p->Status !== 'Approved') $ViewData['Robots'] = 'noindex, nofollow';
