@@ -1746,7 +1746,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 function loadNotifications() {
                     list.innerHTML = '<div class="notif-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>';
 
-                    fetch('/Notification/GetNotifications')
+                    return fetch('/Notification/GetNotifications')
                         .then(r => r.json())
                         .then(data => {
                             if (!data.success || !data.notifications || data.notifications.length === 0) {
@@ -1820,6 +1820,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     }).catch(() => { });
                 }
 
+                // বেল খুললেই সব read — নতুনগুলো এই তালিকায় হাইলাইট থাকে, কিন্তু ব্যাজ চলে যায়
+                function markAllReadSilently() {
+                    badge.classList.remove('show');
+                    fetch('/Notification/MarkAllAsRead', { method: 'POST', body: new FormData(), headers: { 'RequestVerificationToken': getToken() } })
+                        .then(() => loadUnreadCount()).catch(() => { });
+                }
+
                 window.markAllRead = function () {
                     const formData = new FormData();
                     const headers = { 'RequestVerificationToken': getToken() };
@@ -1866,7 +1873,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         wrapper.classList.remove('show');
                     } else {
                         wrapper.classList.add('show');
-                        loadNotifications();
+                        const hadUnread = badge.classList.contains('show');
+                        loadNotifications().then(() => { if (hadUnread) markAllReadSilently(); });
                         document.querySelector('.profile-dropdown')?.classList.remove('show');
                     }
                 });
