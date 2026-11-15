@@ -47,14 +47,26 @@ class TutorsController extends Controller
     public function Index(): void
     {
         $tutors = $this->db->GetTutorDirectory();
-        // Tutor ID দিয়ে খোঁজা (যেমন TCH-1024 বা 1024)
-        $tid = strtoupper(trim((string)input_str('tid', '')));
+        // Tutor ID (যেমন TCH-1024 বা 1024) অথবা নাম দিয়ে খোঁজা
+        $raw = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str('tid', ''))), 0, 60);
+        $tid = strtoupper($raw);
         $tidError = '';
-        if ($tid !== '') {
+        $nameHits = [];
+        $isId = $tid !== '' && preg_match('/^(?:TCH-?)?\d{1,7}$/', $tid);
+        if ($raw !== '' && !$isId) {
+            // নাম দিয়ে — নামের যেকোনো অংশ (বড়/ছোট হাতের অক্ষর, ডট বাদ দিয়ে)
+            $norm = fn($s) => mb_strtolower(preg_replace('/[.\s]+/u', ' ', trim((string)$s)));
+            $needle = $norm($raw);
+            foreach ($tutors as $t) if ($needle !== '' && str_contains($norm($t->FullName), $needle)) $nameHits[] = $t;
+            pixel_track('Search', ['search_string' => $raw, 'content_category' => 'Tutor Name']);
+            if (!$nameHits) $tidError = "“{$raw}” নামে কোনো টিউটর পাওয়া যায়নি।";
+        }
+        if ($isId) {
             if (preg_match('/^(?:TCH-?)?(\d{1,7})$/', $tid, $m)) {
-                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) { pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']); redirect('/Profile/Show/' . $t->UserId); }
+                // এই পেজেই টিউটরের কার্ড দেখায় (প্রোফাইলে নিয়ে যায় না)
+                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) { $nameHits[] = $t; break; }
             }
-            $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
+            if (!$nameHits) $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
             pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']);
         }
         $male = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Male') === 0));
@@ -72,7 +84,7 @@ class TutorsController extends Controller
         }
         $this->view(null, $sections, [
             'Total' => count($tutors), 'Male' => $male, 'Female' => $female, 'Cities' => $cityCounts,
-            'Tid' => $tid, 'TidError' => $tidError,
+            'Tid' => $raw, 'TidError' => $tidError, 'NameHits' => $nameHits,
         ]);
     }
 

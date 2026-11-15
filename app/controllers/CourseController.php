@@ -31,7 +31,13 @@ class CourseController extends Controller
     {
         $c = $this->db->GetCourse($id);
         if (!$this->canManage($c)) { if ($json) $this->fail('কোর্সটি পাওয়া যায়নি বা আপনার অনুমতি নেই।'); not_found('কোর্সটি পাওয়া যায়নি।'); }
+        if ($c->AdminBlocked && !$this->isCourseAdmin()) { $m = $this->blockedMsg($c); if ($json) $this->fail($m); not_found($m); }
         return $c;
+    }
+
+    private function blockedMsg(Obj $c): string
+    {
+        return 'এই ' . $c->KindLabel . 'টি অ্যাডমিন বন্ধ (ব্লক) করেছেন।' . ($c->BlockReason !== '' ? ' কারণ: ' . rtrim($c->BlockReason, '।.') . '।' : '') . ' বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।';
     }
 
     /** কোর্সের সব শিক্ষার্থীকে নোটিফিকেশন */
@@ -64,6 +70,7 @@ class CourseController extends Controller
         $c = $this->db->GetCourse((int)input_int('id', 0));
         $me = current_user_id();
         if (!$c || (!$c->IsLive && !$this->canManage($c) && !($me && $this->db->IsEnrolled($c->Id, $me)))) not_found('কোর্সটি পাওয়া যায়নি।');
+        if ($c->AdminBlocked && !$this->isCourseAdmin()) not_found($this->blockedMsg($c));
         $pending = false;
         if ($me) { try { $pending = (int)$this->db->scalar("SELECT COUNT(*) FROM `PaymentRequests` WHERE `UserId` = :u AND `CourseId` = :c AND `Status` = 'Pending'", ['u' => $me, 'c' => $c->Id]) > 0; } catch (Throwable $e) { } }
         $this->view(null, $c, ['Lessons' => $this->db->GetLessons($c->Id), 'Tasks' => $this->db->GetTasks($c->Id), 'Enrolled' => $me ? $this->db->IsEnrolled($c->Id, $me) : false,
@@ -106,6 +113,7 @@ class CourseController extends Controller
         $me = $this->me();
         $c = $this->db->GetCourse((int)input_int('id', 0));
         if (!$c) not_found('কোর্সটি পাওয়া যায়নি।');
+        if ($c->AdminBlocked && !$this->isCourseAdmin()) not_found($this->blockedMsg($c));
         $manager = $this->canManage($c);
         $enr = $this->db->GetEnrollment($c->Id, $me);
         if (!$enr && !$manager) redirect('/Course/Details/' . $c->Id);
@@ -125,6 +133,7 @@ class CourseController extends Controller
         $me = $this->me(true);
         $c = $this->db->GetCourse($courseId);
         if (!$c || !$this->db->IsEnrolled($c->Id, $me)) $this->fail('এই কোর্সে আপনি ভর্তি নন।');
+        if ($c->AdminBlocked) $this->fail($this->blockedMsg($c));
         return [$me, $c];
     }
 

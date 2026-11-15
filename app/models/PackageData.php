@@ -149,7 +149,7 @@ trait PackageData
             // আলাদা পেইড লাইভ ক্লাস (কোর্সের মতো বিক্রি) বন্ধ — লাইভ ক্লাস এখন শুধু Premium প্যাকেজে।
             if (($this->GetSiteContent(['pkg_v5' => ''])['pkg_v5'] ?? '') === '') {
                 $base = $this->one("SELECT `Features` FROM `Packages` WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 0 AND `IsActive` = 1 AND `Features` IS NOT NULL ORDER BY `DurationMonths`, `Id` LIMIT 1");
-                $feat = "সাইট থেকেই সরাসরি লাইভ ক্লাস নিতে পারবেন — Zoom / Google Meet লাগবে না\nচ্যাট থেকে এক ক্লিকে ক্লাস শুরু — শিক্ষার্থী Join বাটন পাবে\nক্লাসের রেকর্ডিং পরে দেখা যায়\n"
+                $feat = "সাইট থেকেই সরাসরি লাইভ ক্লাস নিতে পারবেন — Zoom / Google Meet লাগবে না\nচ্যাট থেকে এক ক্লিকে ক্লাস শুরু — শিক্ষার্থী Join বাটন পাবে\n"
                     . ($base && !is_blank($base->Features) ? (string)$base->Features : self::TEACHER_FEATURES_V2);
                 $this->exec("UPDATE `Packages` SET `IsActive` = 0, `IsFeatured` = 0 WHERE `Audience` = 'Teacher' AND COALESCE(`IsLive`, 0) = 1");
                 $n = (int)$this->scalar("SELECT COALESCE(MAX(`SortOrder`), 0) FROM `Packages` WHERE `Audience` = 'Teacher'");
@@ -158,6 +158,14 @@ trait PackageData
                         'Description' => 'সব সুবিধা + লাইভ ক্লাস — ' . ($m === 1 ? '১ মাস' : '৩ মাস'), 'Features' => $feat, 'IsFeatured' => $fe, 'IsLive' => 1, 'SortOrder' => $n + $i + 1]);
                 }
                 $this->SaveSiteContent(['pkg_v5' => '1']);
+            }
+            // সংশোধন (একবারই): Premium এর সুবিধার তালিকা থেকে "রেকর্ডিং" এর লাইন সরানো — চ্যাটের লাইভ ক্লাস রেকর্ড হয় না
+            if (($this->GetSiteContent(['pkg_v5b' => ''])['pkg_v5b'] ?? '') === '') {
+                foreach ($this->all("SELECT `Id`, `Features` FROM `Packages` WHERE COALESCE(`IsLive`, 0) = 1 AND `Features` LIKE :q", ['q' => '%রেকর্ডিং%']) as $r) {
+                    $keep = array_filter(preg_split('/\r?\n/', (string)$r->Features), fn($l) => !preg_match('/রেকর্ডিং/u', $l));
+                    $this->exec('UPDATE `Packages` SET `Features` = :f WHERE `Id` = :i', ['f' => implode("\n", $keep) ?: null, 'i' => (int)$r->Id]);
+                }
+                $this->SaveSiteContent(['pkg_v5b' => '1']);
             }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
     }
@@ -179,6 +187,43 @@ trait PackageData
         $this->EnsurePaymentTables();
         try { $this->pdo->query('SELECT `CouponCode` FROM `PaymentRequests` LIMIT 1'); }
         catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `PaymentRequests` ADD COLUMN `CouponCode` ' . ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? 'TEXT' : 'VARCHAR(30)') . ' NULL'); } catch (Throwable $e2) { error_log('[CouponCode col] ' . $e2->getMessage()); } }
+        // কুপনের কার্ডের ছবি (ফ্লায়ার) — অ্যাডমিন Coupons পেজ থেকে বদলাতে পারেন
+        try { $this->pdo->query('SELECT `ImageUrl` FROM `Coupons` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `Coupons` ADD COLUMN `ImageUrl` VARCHAR(300) NULL'); } catch (Throwable $e2) { error_log('[Coupon ImageUrl] ' . $e2->getMessage()); } }
+        // একবারই: ফ্লায়ারের দুইটা কোড চালু, বাকি সব কুপন বন্ধ (মুছে না — আগের ব্যবহারের হিসাব থাকে)
+        try {
+            if (($this->GetSiteContent(['cpn_v2' => ''])['cpn_v2'] ?? '') === '') {
+                $this->exec('UPDATE `Coupons` SET `IsActive` = 0');
+                foreach ([['MM200-6B4D', 'Student', 200, '/uploads/coupons/student.jpg', 'ফ্লায়ার — শিক্ষার্থী ৬ মাস ৳200'],
+                          ['MM500-A7XU', 'Teacher', 500, '/uploads/coupons/teacher.jpg', 'ফ্লায়ার — টিচার ৬ মাস ৳500']] as [$code, $aud, $price, $img, $note]) {
+                    $ex = $this->GetCouponByCode($code);
+                    $id = $this->SaveCoupon($ex ? (int)$ex->Id : null, ['Code' => $code, 'Audience' => $aud, 'DurationMonths' => 6, 'Price' => $price, 'EndsAt' => null, 'MaxUses' => 0, 'IsActive' => 1, 'Note' => $note]);
+                    $this->SetCouponImage($id, $img);
+                }
+                $this->SaveSiteContent(['cpn_v2' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[coupon v2] ' . $e->getMessage()); }
+    }
+
+    public function SetCouponImage(int $id, ?string $url): void
+    {
+        $this->exec('UPDATE `Coupons` SET `ImageUrl` = :u WHERE `Id` = :i', ['u' => $url, 'i' => $id]);
+    }
+
+    public function GetCoupon(int $id): ?Obj
+    {
+        $this->EnsureCouponTable();
+        return $this->one('SELECT * FROM `Coupons` WHERE `Id` = :i', ['i' => $id]);
+    }
+
+    /** এই কোড দিয়ে কে কে প্যাকেজ কিনেছে / কেনার চেষ্টা করেছে — নতুনটা আগে */
+    public function GetCouponUsers(string $code): array
+    {
+        $this->EnsureCouponTable();
+        return $this->all('SELECT p.`Id`, p.`UserId`, p.`PackageName`, p.`Audience`, p.`Amount`, p.`MethodName`, p.`TxnId`, p.`Status`, p.`CreatedAt`, p.`ReviewedAt`,
+                u.`FullName`, u.`UserName`, u.`MobileNumber`, u.`Email`, u.`ProfileImageLink`
+            FROM `PaymentRequests` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`
+            WHERE UPPER(p.`CouponCode`) = :c ORDER BY p.`Id` DESC', ['c' => strtoupper(trim($code))]);
     }
 
     /** @return Obj[] সব কুপন + কতবার ব্যবহার হয়েছে (বাতিল পেমেন্ট বাদে) */

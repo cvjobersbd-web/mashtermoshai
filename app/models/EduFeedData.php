@@ -58,6 +58,7 @@ trait EduFeedData
             $r->Images = is_array($m['images'] ?? null) ? array_values(array_filter($m['images'], 'is_string')) : [];
             $r->Video = is_string($m['video'] ?? null) ? $m['video'] : '';
             $r->YouTube = is_string($m['youtube'] ?? null) ? $m['youtube'] : '';
+            $r->Facebook = is_string($m['facebook'] ?? null) && str_starts_with($m['facebook'], 'https://') ? $m['facebook'] : '';
             $r->Content = (string)($r->Content ?? '');
             $r->Subject = (string)($r->Subject ?? '');
             $r->AuthorName = !is_blank($r->AuthorName ?? null) ? (string)$r->AuthorName : ((string)($r->AuthorUser ?? '') ?: 'Deleted user');

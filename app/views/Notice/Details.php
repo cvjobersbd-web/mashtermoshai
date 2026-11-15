@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = $Model->Title;
+$ViewData['Description'] = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)($Model->Content ?? '')))) ?: (string)$Model->Title, 0, 300);
 $moreNews = is_array($ViewBag->MoreNews) ? $ViewBag->MoreNews : [];
 ?>
 <style>

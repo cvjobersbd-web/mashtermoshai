@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = $Model->Title . ' - Tuition Details';
+$ViewData['Description'] = mb_substr(trim($Model->Title . ' — ' . implode(' · ', array_filter([(string)($Model->StudentClass ?? ''), (string)($Model->Subjects ?? ''), (string)($Model->Area ?? ''), ((string)($Model->Salary ?? '')) !== '' ? '৳' . $Model->Salary : '']))) . ' ' . t('মাষ্টার মশাই-এ টিউশনে Apply করুন।', 'Apply for this tuition on Mashter Moshai.'), 0, 300);
 $isLoggedIn = session_get('UserName') != null;
 $canSave = $isLoggedIn && session_get('UserRole') !== 'Admin';
 $isSv = $canSave && db()->IsSaved((int)current_user_id(), 'tuition', (int)$Model->Id);

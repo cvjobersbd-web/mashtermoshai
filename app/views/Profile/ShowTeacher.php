@@ -293,7 +293,10 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <?php if ($Model->IsSuspended): ?><span class="pf-warn"><i class="fas fa-ban"></i> Suspended</span><?php endif; ?>
                     </h1>
                     <?php if ($headline !== ''): ?><div class="tp-headline" id="tpHeadline"><?= e($headline) ?></div><?php endif; ?>
+                    <?php // Tutor ID (TCH-xxxx) — Tutor List / Find Tutor এ যে আইডি দিয়ে খোঁজা যায়
+                        $tutorCode = ''; try { foreach (db()->GetTutorDirectory() as $__t) if ((int)$__t->UserId === (int)$u->Id) { $tutorCode = (string)$__t->TutorId; break; } } catch (Throwable $e) { } ?>
                     <div class="pf-meta">
+                        <?php if ($tutorCode !== ''): ?><span title="Tutor ID — এই আইডি দিয়ে Tutor List এ খোঁজা যায়" style="font-weight:700;color:#0369A1;"><i class="fas fa-id-badge"></i> Tutor ID: <?= e($tutorCode) ?></span><?php endif; ?>
                         <?php if (!is_blank($u->UserName ?? '')): ?><span title="Username"><i class="fas fa-at"></i> <?= e((string)$u->UserName) ?></span><?php endif; ?>
                         <?php if ($location !== ''): ?><span><i class="fas fa-location-dot"></i> <?= e($location) ?></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></span>

@@ -12,7 +12,7 @@ $inst = $t->Institution !== 'Not specified' ? $t->Institution : (!empty($t->Lock
 <div class="tl-card">
     <a class="tl-pic" href="/Tutors/Profile/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">
         <span><?= e($t->Initials) ?></span>
-        <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+        <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
     </a>
     <div class="tl-badges">
         <?php if ($t->IsPremium): ?><i class="fas fa-crown pr" title="Premium Tutor"></i><?php endif; ?>
@@ -26,5 +26,5 @@ $inst = $t->Institution !== 'Not specified' ? $t->Institution : (!empty($t->Lock
         <span><?= $t->TotalReviews ? e(number_format((float)$t->Rating, 1)) . ' (' . (int)$t->TotalReviews . ')' : 'Rate' ?></span>
     </a>
     <div class="tl-loc"><i class="fas fa-location-dot"></i> <?= e($city) ?></div>
-    <a class="tl-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">See</a>
+    <a class="tl-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">View</a>
 </div>

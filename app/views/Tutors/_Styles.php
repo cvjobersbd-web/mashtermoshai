@@ -18,12 +18,12 @@
     .tl-see { margin-top: 16px; align-self: stretch; margin-left: -14px; margin-right: -14px; display: block; background: #1F2328; color: #fff !important; font-weight: 700; font-size: 14px; padding: 10px 0; text-decoration: none; transition: background .2s; }
     .tl-see:hover { background: #00B5E0; }
     .tl-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
-    .tl-h h2 { margin: 0; font-size: 26px; font-weight: 600; color: #1F2937; font-family: var(--font-heading); }
+    .tl-h h2, .tl-h h1 { margin: 0; font-size: 26px; font-weight: 600; color: #1F2937; font-family: var(--font-heading); }
     .tl-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 6px; background: #00CFFF; color: #fff !important; font-weight: 700; font-size: 13px; text-decoration: none; border: none; cursor: pointer; font-family: inherit; }
     .tl-btn:hover { background: #00B5E0; }
     .tl-btn.light { background: #fff; color: #1F2937 !important; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
     .tl-btn.light:hover { background: #F1F5F9; }
     .tl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
     @media (max-width: 991px) { .tl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
-    @media (max-width: 700px) { .tl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .tl-h h2 { font-size: 21px; } .tl-name { font-size: 14.5px; } .tl-inst { max-width: 120px; } }
+    @media (max-width: 700px) { .tl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .tl-h h2, .tl-h h1 { font-size: 21px; } .tl-name { font-size: 14.5px; } .tl-inst { max-width: 120px; } }
 </style>

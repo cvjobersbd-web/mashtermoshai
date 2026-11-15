@@ -8,9 +8,14 @@ DirectoryIndex index.php
     RewriteEngine On
     RewriteBase /
 
-    # (ঐচ্ছিক) HTTPS এ রিডাইরেক্ট — SSL চালু থাকলে নিচের ২ লাইনের # মুছে দিন
-    # RewriteCond %{HTTPS} off
-    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    # ✅ SEO: একটাই ঠিকানা — www থাকলে www ছাড়া, http থাকলে https (Google একই পেজ দুইবার গোনে না)
+    #    (লোকাল কম্পিউটার / XAMPP এ এগুলো কাজ করবে না — শুধু mashtermoshai.com এ)
+    RewriteCond %{HTTP_HOST} ^www\.(mashtermoshai\.com)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+    RewriteCond %{HTTP_HOST} ^mashtermoshai\.com$ [NC]
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
     # app/ ফোল্ডার, কনফিগ ও SQL ফাইল সরাসরি খোলা যাবে না
     RewriteRule ^(app|tests)(/|$) - [F,L]
@@ -34,3 +39,23 @@ DirectoryIndex index.php
 <FilesMatch "\.(sql|md|log|ini)$">
     Require all denied
 </FilesMatch>
+
+# ✅ SEO / স্পিড: লেখা ফাইল ছোট করে পাঠানো (gzip)
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+# ✅ স্পিড: ছবি / ফন্ট / CSS / JS ব্রাউজারে জমা থাকবে — বারবার নামাতে হবে না
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/gif "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/x-icon "access plus 30 days"
+    ExpiresByType video/mp4 "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+</IfModule>

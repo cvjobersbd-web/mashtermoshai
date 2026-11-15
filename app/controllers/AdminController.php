@@ -131,6 +131,33 @@ class AdminController extends Controller
         $this->view(null, null, $bag);
     }
 
+    /** GET /Admin/StudentOverview/{id?} — শুধু ভেরিফাইড শিক্ষার্থীদের অ্যাক্টিভিটি */
+    public function StudentOverview(): void
+    {
+        $this->requireAdminPage();
+        $all = array_values(array_filter($this->db->GetAllNonAdminUsers(), fn($u) => role_label($u->Role, $u->Id) === 'Student'));
+        $bag = ['AllUsers' => $all, 'Mode' => 'student'];
+        $id = input_int('id', null);
+        if ($id !== null) {
+            foreach ($all as $u) {
+                if ($u->Id === $id) {
+                    $bag['SelectedUser'] = $u;
+                    $bag['RefSource'] = $this->db->GetReferralSource((int)$u->Id);
+                    $bag['UserStats'] = $this->db->GetUserOverviewStats($u->Id);
+                    $bag['UserPostStats'] = $this->db->GetUserPostStats($u->Id);
+                    $bag['TeachersEngaged'] = $this->db->GetTeachersEngagedWithUser($u->Id);
+                    $bag['UserTuitionApps'] = $this->db->GetUserTuitionApplications($u->Id);
+                    $bag['StuPackage'] = $this->db->GetUserPackageState($u->Id)['Student'] ?? null;
+                    $bag['StuRequests'] = $this->db->GetStudentTutorRequests($u->Id);
+                    $bag['StuCourses'] = $this->db->GetMyCourses($u->Id);
+                    $bag['StuPayments'] = $this->db->GetUserPayments($u->Id);
+                    break;
+                }
+            }
+        }
+        $this->view('UserOverview', null, $bag);
+    }
+
     // ============================================================
     // ===== USER MANAGEMENT =====
     // ============================================================
@@ -192,7 +219,7 @@ class AdminController extends Controller
             json_response(['success' => false, 'message' => 'Suspend করা যায়নি।']);
         }
         $when = $permanent ? 'স্থায়ীভাবে' : date('d M Y, h:i A', strtotime($until)) . ' পর্যন্ত';
-        $this->db->CreateNotification($id, 'Account Suspended', "আপনার অ্যাকাউন্ট $when Suspend করা হয়েছে।" . ($reason !== '' ? " কারণ: $reason" : ''), 'danger', null, 'fa-user-slash');
+        $this->db->CreateNotification($id, 'Account Suspended', "আপনার অ্যাকাউন্ট $when Suspend করা হয়েছে।" . ($reason !== '' ? ' কারণ: ' . rtrim($reason, '।.') . '।' : ''), 'danger', null, 'fa-user-slash');
         json_response(['success' => true, 'message' => ($user->FullName ?: $user->UserName) . " — $when Suspend করা হয়েছে।"]);
     }
 
@@ -1017,7 +1044,7 @@ class AdminController extends Controller
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(2000), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers()]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers()]);
     }
 
     /** POST /Admin/RefUserSearch (q) — বোনাস ছাড়া তালিকায় যোগ করার জন্য ইউজার খোঁজা */
@@ -1088,6 +1115,35 @@ class AdminController extends Controller
         $this->db->SaveCoupon($id, ['Code' => $code, 'Audience' => $aud, 'DurationMonths' => $months, 'Price' => $price, 'EndsAt' => $ends !== '' ? $ends . ' 23:59:59' : null,
             'MaxUses' => max(0, (int)input_int('maxUses', 0)), 'IsActive' => input_bool('active') ? 1 : 0, 'Note' => mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 200)]);
         json_response(['success' => true, 'message' => 'কুপন সেভ হয়েছে।']);
+    }
+
+    /** GET /Admin/CouponUsers/{id} — এই কোড দিয়ে কে কে প্যাকেজ কিনেছে */
+    public function CouponUsers(): void
+    {
+        $this->requireAdminPage();
+        $c = $this->db->GetCoupon((int)input_int('id', 0));
+        if (!$c) not_found('কুপনটি পাওয়া যায়নি।');
+        $this->view('CouponUsers', $c, ['Users' => $this->db->GetCouponUsers((string)$c->Code)]);
+    }
+
+    /** POST /Admin/CouponImage (id, image) — কুপনের কার্ডের ছবি বদলানো */
+    public function CouponImage_POST(): void
+    {
+        $this->requireAdminJson();
+        $c = $this->db->GetCoupon((int)input_int('id', 0));
+        if (!$c) json_response(['success' => false, 'message' => 'কুপনটি পাওয়া যায়নি।']);
+        $f = upload_file('image');
+        if (!$f) json_response(['success' => false, 'message' => 'একটা ছবি বাছাই করুন।']);
+        $ext = strtolower('.' . pathinfo((string)$f['name'], PATHINFO_EXTENSION));
+        if ($ext === '.jpeg') $ext = '.jpg';
+        if (!in_array($ext, ['.jpg', '.png', '.webp'], true)) json_response(['success' => false, 'message' => 'JPG, PNG বা WEBP ছবি দিন।']);
+        if ((int)$f['size'] > 5 * 1024 * 1024) json_response(['success' => false, 'message' => 'ছবি ৫ MB এর কম হতে হবে।']);
+        if (@getimagesize($f['tmp_name']) === false) json_response(['success' => false, 'message' => 'ছবিটি সঠিক নয়।']);
+        $url = save_upload($f, 'coupons', 'c' . (int)$c->Id . '_' . bin2hex(random_bytes(4)), $ext);
+        $old = (string)($c->ImageUrl ?? '');
+        $this->db->SetCouponImage((int)$c->Id, $url);
+        if ($old !== '' && str_starts_with($old, '/uploads/coupons/c')) delete_upload($old);
+        json_response(['success' => true, 'message' => 'ছবি বদলানো হয়েছে।', 'url' => $url]);
     }
 
     /** POST /Admin/DeleteCoupon (id) */
@@ -1311,6 +1367,39 @@ class AdminController extends Controller
         json_response(['success' => true, 'message' => $h ? 'কোর্স লুকানো হয়েছে — Course পেজে দেখাবে না (কেনা শিক্ষার্থীরা ক্লাস করতে পারবে)।' : 'কোর্স আবার দেখাচ্ছে।']);
     }
 
+    /** GET /Admin/CourseView/{id} — একটা কোর্সের সব কিছু: টিচার, দাম, ক্লাস, অ্যাসাইনমেন্ট, কুইজ, কে কে কিনেছে */
+    public function CourseView(): void
+    {
+        $this->requireAdminPage();
+        $c = $this->db->GetCourse((int)input_int('id', 0));
+        if (!$c) not_found('কোর্সটি পাওয়া যায়নি।');
+        $pend = [];
+        try { $pend = $this->db->all("SELECT p.*, u.`FullName`, u.`UserName`, u.`MobileNumber` FROM `PaymentRequests` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId` WHERE p.`CourseId` = :c AND p.`Audience` = 'Course' AND p.`Status` = 'Pending' ORDER BY p.`Id` DESC", ['c' => $c->Id]); } catch (Throwable $e) { }
+        $this->view('CourseView', $c, ['Lessons' => $this->db->GetLessons($c->Id), 'Tasks' => $this->db->GetTasks($c->Id), 'Students' => $this->db->GetCourseStudentsAdmin($c->Id), 'Pending' => $pend]);
+    }
+
+    /** POST /Admin/BlockCourse (id, blocked, reason) — কোর্স পুরো বন্ধ: কেউ কিনতে / দেখতে পারবে না, টিচার এডিট করতে পারবে না */
+    public function BlockCourse_POST(): void
+    {
+        $this->requireAdminJson();
+        $c = $this->db->GetCourse((int)input_int('id', 0));
+        if (!$c) json_response(['success' => false, 'message' => 'কোর্সটি পাওয়া যায়নি।']);
+        $b = input_bool('blocked');
+        $reason = mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('reason', '')))), 0, 300);
+        $this->db->SetCourseBlocked($c->Id, $b, $reason);
+        $kl = $c->KindLabel;
+        try {
+            if ($b) {
+                $this->db->CreateNotification((int)$c->TeacherId, $kl . ' ব্লক করা হয়েছে', "অ্যাডমিন আপনার “{$c->Title}” {$kl}টি ব্লক করেছেন।" . ($reason !== '' ? " কারণ: $reason" : '') . ' বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।', 'warning', '/Course/Manage', 'fa-ban');
+                foreach ($this->db->GetEnrolledUserIds($c->Id) as $uid) $this->db->CreateNotification($uid, $kl . ' সাময়িক বন্ধ', "“{$c->Title}” {$kl}টি অ্যাডমিন সাময়িকভাবে বন্ধ করেছেন। বিস্তারিত জানতে Helpdesk এ যোগাযোগ করুন।", 'warning', '/Course/My', 'fa-ban');
+            } else {
+                $this->db->CreateNotification((int)$c->TeacherId, $kl . ' আবার চালু', "আপনার “{$c->Title}” {$kl}টি অ্যাডমিন আবার চালু করেছেন।", 'success', '/Course/Manage', 'fa-circle-check');
+                foreach ($this->db->GetEnrolledUserIds($c->Id) as $uid) $this->db->CreateNotification($uid, $kl . ' আবার চালু', "“{$c->Title}” {$kl}টি আবার চালু হয়েছে — ক্লাস করতে পারবেন।", 'success', '/Course/Learn/' . $c->Id, 'fa-circle-check');
+            }
+        } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => $b ? $kl . ' ব্লক হয়েছে — কেউ কিনতে বা দেখতে পারবে না, টিচার এডিট করতে পারবে না।' : $kl . ' আবার চালু হয়েছে।']);
+    }
+
     /** POST /Admin/AddCoursePayout (teacherId, amount, method, note) — টিচারকে তার ভাগের টাকা পাঠানোর রেকর্ড */
     public function AddCoursePayout_POST(): void
     {
@@ -1527,6 +1616,13 @@ class AdminController extends Controller
         }
         $evs = (array)($_POST['events'] ?? []);
         foreach (PIXEL_EVENTS as $ev => $_) $save['px_ev_' . $ev] = in_array($ev, $evs, true) ? '1' : '0';
+        // Google Analytics (GA4) আর Search Console — SEO এর জন্য
+        $ga = strtoupper(preg_replace('/\s+/', '', (string)input_str('gaId', '')));
+        if ($ga !== '' && !preg_match('/^G-[A-Z0-9]{4,20}$/', $ga)) json_response(['success' => false, 'message' => 'Google Analytics এর Measurement ID ঠিক নেই — G- দিয়ে শুরু হয় (যেমন G-AB12CD34EF)।']);
+        $gsc = trim((string)input_str('gscVerify', ''));
+        if (preg_match('/content=["\']([^"\']+)["\']/', $gsc, $m)) $gsc = $m[1];   // পুরো <meta ...> ট্যাগ পেস্ট করলেও কাজ করবে
+        if ($gsc !== '' && !preg_match('/^[A-Za-z0-9_\-]{10,100}$/', $gsc)) json_response(['success' => false, 'message' => 'Search Console এর যাচাই কোড ঠিক নেই — HTML tag এর content="..." অংশটা দিন।']);
+        $save['ga_id'] = $ga; $save['gsc_verify'] = $gsc;
         $this->db->SaveSiteContent($save);
         $c = px_settings(true);
         $n = count(array_filter(array_keys(PIXEL_EVENTS), fn($e) => ($c['px_ev_' . $e] ?? '1') !== '0'));
@@ -1925,21 +2021,38 @@ class AdminController extends Controller
         if (!in_array($role, ['User', 'Student', 'Teacher', 'Admin', 'Instructor'], true)) json_response(['success' => false, 'message' => 'রোল বাছাই করুন।']);
         $cur = $u->Role === 'User' ? (is_instructor($id) ? 'Instructor' : (role_label('User', $id) === 'Student' ? 'Student' : 'User')) : (string)$u->Role;
         $bn = ['User' => 'ইউজার', 'Student' => 'স্টুডেন্ট', 'Teacher' => 'টিচার', 'Admin' => 'অ্যাডমিন', 'Instructor' => 'Instructor'][$role];
-        if ($role === $cur) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '।']);
-        // স্টুডেন্ট = সাধারণ ইউজার + Approved Student Verification; ইউজার করলে স্টুডেন্ট অবস্থা তুলে নেওয়া হয়
-        $this->db->SetUserRoleBySuper($id, $role === 'Student' ? 'User' : $role);
-        if ($role === 'Student') {
-            // এক অ্যাকাউন্ট = এক রোল: স্টুডেন্ট করলে চালু টিচার আবেদন (Become a Tutor) বাতিল, না হলে অ্যাকাউন্ট "টিচার" ধরা হয় আর Student Verification লুকানো থাকে
-            try {
-                $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Rejected' WHERE `UserId` = :u AND `Status` IN ('Pending', 'AwaitingPayment', 'Expired')", ['u' => $id]);
-                $tk = $this->db->GetKyc($id, 'teacher');
-                if ($tk && $tk->Status === 'Pending') $this->db->SetKycStatus($tk->Id, 'Rejected', 'অ্যাডমিন অ্যাকাউন্টটি স্টুডেন্ট করেছেন', (int)current_user_id());
-            } catch (Throwable $e) { error_log('[ChangeUserRole student] ' . $e->getMessage()); }
-            $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+        // রোলের সাথে প্যাকেজ (টিচার / স্টুডেন্ট হলে) — days = 0 মানে প্যাকেজ না; premium = টিচারের লাইভ ক্লাস সহ Premium
+        $days = (int)input_int('days', 0);
+        $premium = $role === 'Teacher' && input_bool('premium');
+        $givePkg = $days > 0 && in_array($role, ['Teacher', 'Student'], true);
+        if ($days < 0 || $days > 3650) json_response(['success' => false, 'message' => 'প্যাকেজের মেয়াদ ১ — ৩৬৫০ দিনের মধ্যে দিন।']);
+        if ($role === $cur && !$givePkg) json_response(['success' => false, 'message' => 'এই ইউজার আগে থেকেই ' . $bn . '। শুধু প্যাকেজ দিতে চাইলে প্যাকেজের মেয়াদ বাছাই করুন।']);
+        if ($role !== $cur) {
+            // স্টুডেন্ট = সাধারণ ইউজার + Approved Student Verification; ইউজার করলে স্টুডেন্ট অবস্থা তুলে নেওয়া হয়
+            $this->db->SetUserRoleBySuper($id, $role === 'Student' ? 'User' : $role);
+            if ($role === 'Student') {
+                // এক অ্যাকাউন্ট = এক রোল: স্টুডেন্ট করলে চালু টিচার আবেদন (Become a Tutor) বাতিল, না হলে অ্যাকাউন্ট "টিচার" ধরা হয় আর Student Verification লুকানো থাকে
+                try {
+                    $this->db->exec("UPDATE `TeacherRequests` SET `Status` = 'Rejected' WHERE `UserId` = :u AND `Status` IN ('Pending', 'AwaitingPayment', 'Expired')", ['u' => $id]);
+                    $tk = $this->db->GetKyc($id, 'teacher');
+                    if ($tk && $tk->Status === 'Pending') $this->db->SetKycStatus($tk->Id, 'Rejected', 'অ্যাডমিন অ্যাকাউন্টটি স্টুডেন্ট করেছেন', (int)current_user_id());
+                } catch (Throwable $e) { error_log('[ChangeUserRole student] ' . $e->getMessage()); }
+                $this->db->SetStudentByAdmin($id, true, (int)current_user_id());
+            }
+            elseif ($role === 'User') $this->db->SetStudentByAdmin($id, false, (int)current_user_id());
         }
-        elseif ($role === 'User') $this->db->SetStudentByAdmin($id, false, (int)current_user_id());
-        try { $this->db->CreateNotification($id, 'আপনার অ্যাকাউন্টের রোল বদলেছে', "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" . ($role === 'Admin' ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : '')), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
-        json_response(['success' => true, 'message' => "রোল বদলে $bn করা হয়েছে।" . ($role === 'Admin' ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
+        $pkgTxt = null; $end = null;
+        if ($givePkg) {
+            $end = $this->db->ExtendUserPackage($id, $role === 'Teacher' ? 'Teacher' : 'Student', $days, $premium);
+            $pkgTxt = ($role === 'Teacher' ? ($premium ? 'টিচার Premium (লাইভ ক্লাস সহ)' : 'টিচার প্যাকেজ') : 'শিক্ষার্থী প্যাকেজ') . ' · ' . $days . ' দিন';
+        }
+        $this->db->LogRoleChange($id, $cur, $role, $pkgTxt, $end, (int)current_user_id());
+        $endBn = $end ? date('d M Y', strtotime($end)) : '';
+        $msgUser = ($role !== $cur ? "অ্যাডমিন আপনার অ্যাকাউন্ট এখন $bn করেছেন।" : '') . ($pkgTxt ? " আপনাকে $pkgTxt দেওয়া হয়েছে — $endBn পর্যন্ত চালু।" : '')
+            . ($role === 'Admin' && $role !== $cur ? ' আবার লগইন করলে অ্যাডমিন প্যানেল পাবেন।' : ($role === 'Instructor' && $role !== $cur ? ' এখন আপনার Edu Feed পোস্ট Approve ছাড়াই সাথে সাথে প্রকাশ হবে।' : ''));
+        try { $this->db->CreateNotification($id, $role !== $cur ? 'আপনার অ্যাকাউন্টের রোল বদলেছে' : '🎁 প্যাকেজ দেওয়া হয়েছে', trim($msgUser), 'info', $role === 'Teacher' ? '/Teacher/TeacherDashboard' : '/Profile', 'fa-user-gear'); } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => ($role !== $cur ? "রোল বদলে $bn করা হয়েছে।" : '') . ($pkgTxt ? " $pkgTxt দেওয়া হয়েছে — $endBn পর্যন্ত।" : '')
+            . ($role === 'Admin' && $role !== $cur ? ' Admins পেজ থেকে কোন কোন পেজের অনুমতি পাবে ঠিক করে দিন।' : '')]);
     }
 
     /** GET /Admin/PackageDetails — কে কোন প্যাকেজ কিনেছে (টিচার / শিক্ষার্থী) + মেয়াদ বাড়ানো (aud=all|Teacher|Student, st=all|active|expiring|expired, q=) */
@@ -1969,7 +2082,16 @@ class AdminController extends Controller
     {
         $this->requireAdminPage();
         $q = trim((string)input_str('q', ''));
-        $this->view(null, $q !== '' ? $this->db->SearchUsersForRole($q) : [], ['Q' => $q, 'Instructors' => $this->db->GetUsersByIds(array_keys(instructor_ids()))]);
+        $this->view(null, $q !== '' ? $this->db->SearchUsersForRole($q) : [], ['Q' => $q, 'Instructors' => $this->db->GetUsersByIds(array_keys(instructor_ids())), 'Changes' => $this->db->GetRoleChanges(200)]);
+    }
+
+    /** POST /Admin/ClearRoleHistory (id?) — "অ্যাডমিন যাদের রোল বদলেছে" তালিকা মোছা; রোল / প্যাকেজ বদলায় না */
+    public function ClearRoleHistory_POST(): void
+    {
+        $this->requireAdminJson();
+        $id = (int)input_int('id', 0);
+        $this->db->DeleteRoleChanges($id > 0 ? $id : null);
+        json_response(['success' => true, 'message' => $id > 0 ? 'লাইনটি মুছে ফেলা হয়েছে।' : 'সব ইতিহাস মুছে ফেলা হয়েছে।']);
     }
 
     /** POST /Admin/RoleUserSearch — q (Package Details থেকে কাউকে নতুন প্যাকেজ দেওয়ার জন্য) */

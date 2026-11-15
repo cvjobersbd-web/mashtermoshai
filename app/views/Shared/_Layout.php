@@ -17,7 +17,7 @@ $safeLogoSize = min($layoutSettings->GetSafeLogoSize(), 50);
 $logoRadius = $layoutSettings->GetLogoBorderRadius();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= site_lang() ?>">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -32,7 +32,12 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     $__pageTitle = !empty($ViewData['FullTitle']) ? (string)$ViewData['FullTitle'] : ($__isHome
         ? $safeSiteName . ' – Find Home Tutors & Tuitions in Bangladesh'
         : ($ViewData['Title'] ?? '') . ' - ' . $safeSiteName);
-    $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : $__origin . strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    // ✅ SEO: canonical সবসময় একই মূল ঠিকানায় (https, www ছাড়া, ?query ছাড়া) — www / http / ?ref= দিয়ে এলেও Google একটাই পেজ ধরে
+    $__cPath = (string)(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+    if ($__isHome) $__cPath = '/';
+    $__cPath = preg_replace('#/Index/?$#i', '', $__cPath) ?: '/';   // /FindTutor/Index আর /FindTutor একই পেজ
+    $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : seo_origin() . $__cPath;
+    if (empty($ViewData['Robots']) && seo_private_page((string)($__route['controller'] ?? ''), (string)($__route['action'] ?? ''))) $ViewData['Robots'] = 'noindex, follow';
     $__ogImage = !empty($ViewData['OgImage']) ? (string)$ViewData['OgImage'] : '';
     $__desc = (string)($ViewData['Description'] ?? ($safeSiteName . ' — বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া। অভিজ্ঞ হোম টিউটর খুঁজুন অথবা টিউটর হিসেবে টিউশনে Apply করুন — সহজ, নিরাপদ ও দ্রুত।'));
     $__favicon = $__abs($layoutSettings->GetFaviconUrl());
@@ -41,6 +46,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <title><?= e($__pageTitle) ?></title>
     <meta name="description" content="<?= e($__desc) ?>" />
     <link rel="canonical" href="<?= e($__canonical) ?>" />
+    <?php $__gs = google_seo_settings(); if ($__gs['gsc_verify'] !== ''): ?><meta name="google-site-verification" content="<?= e($__gs['gsc_verify']) ?>" /><?php endif; ?>
+    <?php if ($__gs['ga_id'] !== '' && !is_admin()): /* Google Analytics (GA4) — অ্যাডমিন ট্র্যাক হয় না */ ?>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($__gs['ga_id']) ?>"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', <?= js($__gs['ga_id']) ?>);</script>
+    <?php endif; ?>
     <?php if (!empty($ViewData['Robots'])): ?><meta name="robots" content="<?= e($ViewData['Robots']) ?>" /><?php endif; ?>
 
     <!-- ✅ ট্যাব আইকন + Google সার্চ রেজাল্টের আইকন (অ্যাডমিন সেটিংয়ের Navbar Logo) -->
@@ -1078,12 +1088,20 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         });
     })();
     </script>
-<?php if ($__pxPv !== ''): ?>    <noscript><img height="1" width="1" style="display:none" alt=""
+<?php if ($__pxPv !== ''): ?>    <noscript><img height="1" width="1" style="display:none" alt="fb pixel"
     src="https://www.facebook.com/tr?id=<?= e($__pxId) ?>&ev=PageView&noscript=1"
     /></noscript>
 <?php endif; ?>
     <!-- End Meta Pixel Code -->
 <?php endif; ?>
+    <style>
+        .lang-sw { display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 4px 0 8px; border-radius: 999px; border: 1.5px solid #DCE7F0; background: #fff; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 800; color: #64748B; margin-right: 6px; flex-shrink: 0; }
+        .lang-sw > i { color: #0EA5E9; font-size: 14px; margin-right: 3px; }
+        .lang-sw span { padding: 3px 7px; border-radius: 999px; line-height: 1.2; }
+        .lang-sw span.on { background: #08224A; color: #fff; }
+        .lang-sw:hover { border-color: #02B8F5; }
+        @media (max-width: 420px) { .lang-sw > i { display: none; } .lang-sw { padding: 0 2px; margin-right: 0; height: 30px; font-size: 11px; } .lang-sw span { padding: 3px 5px; } }
+    </style>
 </head>
 <body>
     <?php if (session_get('UserName') === null): ?><?= csrf_field() ?><?php endif; ?>
@@ -1121,40 +1139,45 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <div class="hidden xl:flex items-center gap-1 2xl:gap-3" id="navLinks">
                     <span class="nav-ink" aria-hidden="true"></span>
                     <a href="/" class="nav-desktop-link<?= $navOn('/') ? ' active' : '' ?>"<?= $navOn('/') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-house"></i>Home
+                        <i class="fas fa-house"></i><?= t('হোম', 'Home') ?>
                     </a>
                     <a href="/Feed" class="nav-desktop-link<?= $navOn('/Feed') ? ' active' : '' ?>"<?= $navOn('/Feed') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-graduation-cap"></i>Edu Feed
+                        <i class="fas fa-graduation-cap"></i><?= t('এডু ফিড', 'Edu Feed') ?>
                     </a>
                     <?php $ftOn = $navOn('/FindTutor') || $navOn('/Tutors'); ?>
                     <div class="nav-dd" id="navFt">
                         <a href="/Tutors" class="nav-desktop-link<?= $ftOn ? ' active' : '' ?>" aria-haspopup="true"<?= $ftOn ? ' aria-current="page"' : '' ?>>
-                            <i class="fas fa-chalkboard-user"></i>Find Tutor<i class="fas fa-chevron-down nav-dd-caret"></i>
+                            <i class="fas fa-chalkboard-user"></i><?= t('টিউটর খুঁজুন', 'Find Tutor') ?><i class="fas fa-chevron-down nav-dd-caret"></i>
                         </a>
                         <div class="nav-dd-menu" role="menu">
-                            <a href="/Tutors" role="menuitem" class="<?= $navOn('/Tutors') ? 'on' : '' ?>"><i class="fas fa-users"></i><span><b>Tutor List</b><small>সব যাচাই করা টিউটর আর তাদের প্রোফাইল</small></span></a>
-                            <a href="/FindTutor" role="menuitem" class="<?= $navOn('/FindTutor') ? 'on' : '' ?>"><i class="fas fa-pen-to-square"></i><span><b>পড়াতে চাই</b><small>টিচারদের "পড়াতে চাই" পোস্ট</small></span></a>
+                            <a href="/Tutors" role="menuitem" class="<?= $navOn('/Tutors') ? 'on' : '' ?>"><i class="fas fa-users"></i><span><b><?= t('টিউটর তালিকা', 'Tutor List') ?></b><small><?= t('সব যাচাই করা টিউটর আর তাদের প্রোফাইল', 'All verified tutors and their profiles') ?></small></span></a>
+                            <a href="/FindTutor" role="menuitem" class="<?= $navOn('/FindTutor') ? 'on' : '' ?>"><i class="fas fa-pen-to-square"></i><span><b><?= t('পড়াতে চাই', 'Want to Teach') ?></b><small><?= t('টিচারদের "পড়াতে চাই" পোস্ট', 'Teachers\' "Want to Teach" posts') ?></small></span></a>
                         </div>
                     </div>
                     <a href="/Categories" class="nav-desktop-link<?= $navOn('/Categories') ? ' active' : '' ?>"<?= $navOn('/Categories') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-layer-group"></i>Categories
+                        <i class="fas fa-layer-group"></i><?= t('ক্যাটাগরি', 'Categories') ?>
                     </a>
                     <a href="/Tuition/Circular" class="nav-desktop-link<?= $navOn('/Tuition') ? ' active' : '' ?>"<?= $navOn('/Tuition') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-clipboard-list"></i>Tuition Circular
+                        <i class="fas fa-clipboard-list"></i><?= t('টিউশন সার্কুলার', 'Tuition Circular') ?>
                     </a>
                     <a href="/Course" class="nav-desktop-link<?= $navOn('/Course') ? ' active' : '' ?>"<?= $navOn('/Course') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-book-open-reader"></i>Course
+                        <i class="fas fa-book-open-reader"></i><?= t('কোর্স', 'Course') ?>
                     </a>
                     <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-headset"></i>Helpdesk
+                        <i class="fas fa-headset"></i><?= t('হেল্পডেস্ক', 'Helpdesk') ?>
                     </a>
                     <a href="/Package" class="nav-desktop-link<?= $navOn('/Package') || $navOn('/Payment') ? ' active' : '' ?>"<?= $navOn('/Package') ? ' aria-current="page"' : '' ?>>
-                        <i class="fas fa-tags"></i>Package
+                        <i class="fas fa-tags"></i><?= t('প্যাকেজ', 'Package') ?>
                     </a>
                 </div>
 
                 <!-- Right Side (বেল সব স্ক্রিনে, প্রোফাইল/লগইন শুধু ডেস্কটপে, ☰ শুধু মোবাইলে) -->
                 <div class="flex items-center gap-2 xl:gap-0 flex-shrink-0">
+                    <?php if (!$isAdminPage): /* ভাষা বদল — বাংলা (ডিফল্ট) / English; অ্যাডমিন প্যানেলে নেই */ ?>
+                    <button type="button" class="lang-sw" id="langSw" data-to="<?= site_lang() === 'en' ? 'bn' : 'en' ?>" title="<?= t('Switch to English', 'বাংলায় দেখুন') ?>" aria-label="<?= t('Switch to English', 'বাংলায় দেখুন') ?>">
+                        <i class="fas fa-language"></i><span class="<?= site_lang() === 'bn' ? 'on' : '' ?>">বাং</span><span class="<?= site_lang() === 'en' ? 'on' : '' ?>">EN</span>
+                    </button>
+                    <?php endif; ?>
                     <?php if (session_get('UserName') !== null):
                         $userRole = session_get('UserRole');
                         $isTeacher = $userRole === 'Teacher';
@@ -1189,10 +1212,10 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                             </button>
                             <div class="notif-dropdown" id="notifDropdown">
                                 <div class="notif-header">
-                                    <h6><i class="fas fa-bell me-1"></i>Notifications</h6>
+                                    <h6><i class="fas fa-bell me-1"></i><?= t('নোটিফিকেশন', 'Notifications') ?></h6>
                                     <div class="notif-header-actions">
-                                        <button onclick="markAllRead()" title="Mark all as read">
-                                            <i class="fas fa-check-double"></i> Mark all read
+                                        <button onclick="markAllRead()" title="<?= t('সব পড়া হয়েছে', 'Mark all as read') ?>">
+                                            <i class="fas fa-check-double"></i> <?= t('সব পড়া', 'Mark all read') ?>
                                         </button>
                                         <button onclick="clearAllNotifications()" title="Clear all">
                                             <i class="fas fa-trash"></i>
@@ -1202,11 +1225,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <div class="notif-list" id="notifList">
                                     <div class="notif-empty">
                                         <i class="fas fa-spinner fa-spin"></i>
-                                        <p>Loading...</p>
+                                        <p><?= t('লোড হচ্ছে...', 'Loading...') ?></p>
                                     </div>
                                 </div>
                                 <div class="notif-footer">
-                                    <a href="/Notification/All">View All Notifications</a>
+                                    <a href="/Notification/All"><?= t('সব নোটিফিকেশন দেখুন', 'View All Notifications') ?></a>
                                 </div>
                             </div>
                         </div>
@@ -1214,7 +1237,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         <div class="profile-dropdown dropdown hidden xl:block" id="profileDropdown">
                             <button class="dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                                 <?php $navImg = (string)(session_get('ProfileImageLink') ?? ''); ?>
-                                <img class="nav-av" data-nav-avatar src="<?= e($navImg) ?>" alt=""<?= $navImg === '' ? ' hidden' : '' ?> onerror="this.hidden = true; this.nextElementSibling.hidden = false;" onload="this.nextElementSibling.hidden = true;" />
+                                <img class="nav-av" data-nav-avatar src="<?= e($navImg) ?>" alt="<?= e($userFullName) ?>"<?= $navImg === '' ? ' hidden' : '' ?> onerror="this.hidden = true; this.nextElementSibling.hidden = false;" onload="this.nextElementSibling.hidden = true;" />
                                 <i class="fas fa-user-circle"<?= $navImg !== '' ? ' hidden' : '' ?>></i>
                                 <span title="<?= e($userFullName) ?>"><?= e($userFullName) ?></span>
                                 <span class="caret"><i class="fas fa-chevron-down"></i></span>
@@ -1228,23 +1251,23 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <?php if (!$isAdmin): /* অ্যাডমিনের জন্য শুধু Admin Panel */ ?>
                                     <li>
                                         <a class="dropdown-item" href="/Profile/Show">
-                                            <i class="fas fa-id-card"></i> My Profile
+                                            <i class="fas fa-id-card"></i> <?= t('আমার প্রোফাইল', 'My Profile') ?>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" href="/Payment/My">
-                                            <i class="fas fa-receipt"></i> আমার পেমেন্ট
+                                            <i class="fas fa-receipt"></i> <?= t('আমার পেমেন্ট', 'My Payments') ?>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" href="/Referral">
-                                            <i class="fas fa-gift"></i> My Referral Bonus
+                                            <i class="fas fa-gift"></i> <?= t('আমার রেফারেল বোনাস', 'My Referral Bonus') ?>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" href="/Profile/Views">
-                                            <i class="fas fa-eye"></i> Profile Views
-                                            <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> new</span><?php endif; ?>
+                                            <i class="fas fa-eye"></i> <?= t('প্রোফাইল ভিউ', 'Profile Views') ?>
+                                            <?php if (!empty($frReq)): ?><span class="badge-role" style="background:#FFB300; color:#08224A;"><?= (int)$frReq ?> <?= t('নতুন', 'new') ?></span><?php endif; ?>
                                         </a>
                                     </li>
                                 <?php endif; ?>
@@ -1252,21 +1275,21 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <?php if ($userRole !== 'Admin'): ?>
                                 <li>
                                     <a class="dropdown-item" href="/Course/My">
-                                        <i class="fas fa-bookmark"></i> আমার কোর্স
+                                        <i class="fas fa-bookmark"></i> <?= t('আমার কোর্স', 'My Courses') ?>
                                     </a>
                                 </li>
                                 <?php if ($userRole === 'User'): $accTrack = account_track((int)current_user_id()); ?>
                                 <?php if ($accTrack !== 'teacher'): ?>
                                 <li>
                                     <a class="dropdown-item" href="/Kyc/Student">
-                                        <i class="fas fa-id-card"></i> Student Verification
+                                        <i class="fas fa-id-card"></i> <?= t('স্টুডেন্ট ভেরিফিকেশন', 'Student Verification') ?>
                                     </a>
                                 </li>
                                 <?php endif; ?>
                                 <?php if ($accTrack !== 'student'): ?>
                                 <li>
                                     <a class="dropdown-item" href="/Profile/Show?tab=profile#ab-tutor">
-                                        <i class="fas fa-chalkboard-user"></i> Become a Tutor
+                                        <i class="fas fa-chalkboard-user"></i> <?= t('টিউটর হোন', 'Become a Tutor') ?>
                                     </a>
                                 </li>
                                 <?php endif; ?>
@@ -1274,14 +1297,14 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <?php endif; ?>
                                 <li>
                                     <a class="dropdown-item" href="/Notice">
-                                        <i class="fas fa-bullhorn"></i> Notice
+                                        <i class="fas fa-bullhorn"></i> <?= t('নোটিশ', 'Notice') ?>
                                     </a>
                                 </li>
 
                                 <?php if ($userRole === 'User' && role_label('User', current_user_id()) === 'Student'): ?>
                                     <li>
                                         <a class="dropdown-item" href="/User/Dashboard">
-                                            <i class="fas fa-chart-pie"></i> Student Dashboard
+                                            <i class="fas fa-chart-pie"></i> <?= t('স্টুডেন্ট ড্যাশবোর্ড', 'Student Dashboard') ?>
                                             <span class="badge-role" style="background:#e3f2fd; color:#1565c0;">Student</span>
                                         </a>
                                     </li>
@@ -1290,7 +1313,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                 <?php if ($isTeacher): ?>
                                     <li>
                                         <a class="dropdown-item" href="/Teacher/TeacherDashboard">
-                                            <i class="fas fa-chalkboard-teacher"></i> Teacher Dashboard
+                                            <i class="fas fa-chalkboard-teacher"></i> <?= t('টিচার ড্যাশবোর্ড', 'Teacher Dashboard') ?>
                                             <span class="badge-role teacher">Teacher</span>
                                         </a>
                                     </li>
@@ -1313,7 +1336,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                                     <form method="post" action="/Account/Logout" id="logoutFormDesktop">
                                         <?= csrf_field() ?>
                                         <a class="dropdown-item text-danger" href="#" onclick="document.getElementById('logoutFormDesktop').submit(); return false;">
-                                            <i class="fas fa-sign-out-alt"></i> Logout
+                                            <i class="fas fa-sign-out-alt"></i> <?= t('লগআউট', 'Logout') ?>
                                         </a>
                                     </form>
                                 </li>
@@ -1322,7 +1345,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <?php else: ?>
                         <div class="hidden xl:flex items-center gap-2">
                             <a href="/Account/Login" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-semibold text-white text-sm transition hover:opacity-90" style="background-color:var(--primary-color);">
-                                <i class="fas fa-sign-in-alt"></i> Login
+                                <i class="fas fa-sign-in-alt"></i> <?= t('লগইন', 'Login') ?>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0-4 4m4-4H3" />
                                 </svg>
@@ -1370,7 +1393,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <?php if ($mLoggedIn): ?>
                 <a href="<?= $mRole === 'Admin' ? '/Profile' : '/Profile/Show' ?>" class="m-user">
                     <span class="m-avatar">
-                        <?php if (!is_blank($mImg)): ?><img src="<?= e($mImg) ?>" alt="" /><?php else: ?><?= e(initials($mName, 'U')) ?><?php endif; ?>
+                        <?php if (!is_blank($mImg)): ?><img src="<?= e($mImg) ?>" alt="<?= e($mName) ?>" /><?php else: ?><?= e(initials($mName, 'U')) ?><?php endif; ?>
                     </span>
                     <span class="m-user-info">
                         <strong><?= e($mName) ?></strong>
@@ -1379,38 +1402,38 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 </a>
             <?php endif; ?>
 
-            <div class="m-label">Menu</div>
+            <div class="m-label"><?= t('মেনু', 'Menu') ?></div>
             <nav class="m-nav">
-                <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span>Home</span></a>
-                <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span>Edu Feed</span></a>
-                <a href="/Tutors" class="<?= $mActive('/Tutors') ?>"><i class="fas fa-chalkboard-user"></i><span>Find Tutor — Tutor List</span></a>
-                <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span>Find Tutor — পড়াতে চাই</span></a>
-                <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span>Categories</span></a>
-                <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span>Tuition Circular</span></a>
-                <?php if (!$mLoggedIn): ?><a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a><?php endif; ?>
-                <a href="/Course" class="<?= $mActive('/Course') ?>"><i class="fas fa-book-open-reader"></i><span>Course</span></a>
-                <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span>Helpdesk</span></a>
-                <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span>Package</span></a>
+                <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span><?= t('হোম', 'Home') ?></span></a>
+                <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span><?= t('এডু ফিড', 'Edu Feed') ?></span></a>
+                <a href="/Tutors" class="<?= $mActive('/Tutors') ?>"><i class="fas fa-chalkboard-user"></i><span><?= t('টিউটর খুঁজুন — টিউটর তালিকা', 'Find Tutor — Tutor List') ?></span></a>
+                <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span><?= t('টিউটর খুঁজুন — পড়াতে চাই', 'Find Tutor — Want to Teach') ?></span></a>
+                <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span><?= t('ক্যাটাগরি', 'Categories') ?></span></a>
+                <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span><?= t('টিউশন সার্কুলার', 'Tuition Circular') ?></span></a>
+                <?php if (!$mLoggedIn): ?><a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span><?= t('নোটিশ', 'Notice') ?></span></a><?php endif; ?>
+                <a href="/Course" class="<?= $mActive('/Course') ?>"><i class="fas fa-book-open-reader"></i><span><?= t('কোর্স', 'Course') ?></span></a>
+                <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span><?= t('হেল্পডেস্ক', 'Helpdesk') ?></span></a>
+                <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span><?= t('প্যাকেজ', 'Package') ?></span></a>
             </nav>
 
             <?php if ($mLoggedIn && $mRole !== 'Admin'): ?>
-                <div class="m-label">My Account</div>
+                <div class="m-label"><?= t('আমার অ্যাকাউন্ট', 'My Account') ?></div>
                 <nav class="m-nav">
-                    <a href="/Profile/Show" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span>My Profile</span></a>
-                    <a href="/Referral" class="<?= $mActive('/Referral') ?>"><i class="fas fa-gift"></i><span>My Referral Bonus</span></a>
-                    <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span>Messages</span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
-                    <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span>Profile Views</span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
-                    <a href="/Course/My" class="<?= $mActive('/Course/My') ?>"><i class="fas fa-bookmark"></i><span>আমার কোর্স</span></a>
+                    <a href="/Profile/Show" class="<?= $mActive('/Profile') ?>"><i class="fas fa-id-card"></i><span><?= t('আমার প্রোফাইল', 'My Profile') ?></span></a>
+                    <a href="/Referral" class="<?= $mActive('/Referral') ?>"><i class="fas fa-gift"></i><span><?= t('আমার রেফারেল বোনাস', 'My Referral Bonus') ?></span></a>
+                    <a href="/Chat" class="<?= $mActive('/Chat') ?>"><i class="fas fa-comment-dots"></i><span><?= t('মেসেজ', 'Messages') ?></span><?php if (!empty($chatUnread)): ?><em class="m-fr-badge"><?= (int)$chatUnread ?></em><?php endif; ?></a>
+                    <a href="/Profile/Views" class="<?= $mActive('/Profile/Views') ?>"><i class="fas fa-eye"></i><span><?= t('প্রোফাইল ভিউ', 'Profile Views') ?></span><?php if (!empty($frReq)): ?><em class="m-fr-badge"><?= (int)$frReq ?></em><?php endif; ?></a>
+                    <a href="/Course/My" class="<?= $mActive('/Course/My') ?>"><i class="fas fa-bookmark"></i><span><?= t('আমার কোর্স', 'My Courses') ?></span></a>
                     <?php if ($mRole === 'User'): $mTrack = account_track((int)current_user_id()); ?>
-                    <?php if ($mTrack !== 'teacher'): ?><a href="/Kyc/Student" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span>Student Verification</span></a><?php endif; ?>
-                    <?php if ($mTrack !== 'student'): ?><a href="/Profile/Show?tab=profile#ab-tutor"><i class="fas fa-chalkboard-user"></i><span>Become a Tutor</span></a><?php endif; ?>
+                    <?php if ($mTrack !== 'teacher'): ?><a href="/Kyc/Student" class="<?= $mActive('/Kyc') ?>"><i class="fas fa-id-card"></i><span><?= t('স্টুডেন্ট ভেরিফিকেশন', 'Student Verification') ?></span></a><?php endif; ?>
+                    <?php if ($mTrack !== 'student'): ?><a href="/Profile/Show?tab=profile#ab-tutor"><i class="fas fa-chalkboard-user"></i><span><?= t('টিউটর হোন', 'Become a Tutor') ?></span></a><?php endif; ?>
                     <?php endif; ?>
-                    <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span>Notice</span></a>
+                    <a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span><?= t('নোটিশ', 'Notice') ?></span></a>
                     <?php if ($mRole === 'User' && role_label('User', current_user_id()) === 'Student'): ?>
-                        <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span>Student Dashboard</span></a>
+                        <a href="/User/Dashboard" class="<?= $mActive('/User') ?>"><i class="fas fa-chart-pie"></i><span><?= t('স্টুডেন্ট ড্যাশবোর্ড', 'Student Dashboard') ?></span></a>
                     <?php endif; ?>
                     <?php if ($mRole === 'Teacher'): ?>
-                        <a href="/Teacher/TeacherDashboard" class="<?= $mActive('/Teacher') ?>"><i class="fas fa-chalkboard-teacher"></i><span>Teacher Dashboard</span></a>
+                        <a href="/Teacher/TeacherDashboard" class="<?= $mActive('/Teacher') ?>"><i class="fas fa-chalkboard-teacher"></i><span><?= t('টিচার ড্যাশবোর্ড', 'Teacher Dashboard') ?></span></a>
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
@@ -1427,11 +1450,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <?php if ($mLoggedIn): ?>
                 <form method="post" action="/Account/Logout">
                     <?= csrf_field() ?>
-                    <button type="submit" class="m-logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    <button type="submit" class="m-logout"><i class="fas fa-sign-out-alt"></i> <?= t('লগআউট', 'Logout') ?></button>
                 </form>
             <?php else: ?>
-                <a href="/Account/Login" class="m-cta"><i class="fas fa-sign-in-alt"></i> Login</a>
-                <a href="/Account/Register" class="m-cta ghost"><i class="fas fa-user-plus"></i> Create Account</a>
+                <a href="/Account/Login" class="m-cta"><i class="fas fa-sign-in-alt"></i> <?= t('লগইন', 'Login') ?></a>
+                <a href="/Account/Register" class="m-cta ghost"><i class="fas fa-user-plus"></i> <?= t('অ্যাকাউন্ট খুলুন', 'Create Account') ?></a>
             <?php endif; ?>
         </div>
     </aside>
@@ -1446,8 +1469,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     ?>
     <div class="exp-bar" id="expBar" data-key="<?= e($expKey) ?>">
         <i class="fas fa-clock"></i>
-        <span>আপনার <b><?= e($expSub->PackageName) ?></b> প্যাকেজের মেয়াদ <b><?= $expLeft <= 1 ? 'আজ / কাল' : $expLeft . ' দিন পর' ?></b> (<?= e(date('d M Y', strtotime((string)$expSub->EndsAt))) ?>) শেষ হবে<?= $expSub->Audience === 'Teacher' ? ' — রিনিউ না করলে টিচার অ্যাকাউন্টটি সাধারণ ইউজার অ্যাকাউন্টে বদলে যাবে' : '' ?>।</span>
-        <a href="/Package?for=<?= $expSub->Audience === 'Teacher' ? 'teacher' : 'student' ?>">এখনই রিনিউ করুন</a>
+        <span><?php if (site_lang() === 'en'): ?>Your <b><?= e($expSub->PackageName) ?></b> package expires <b><?= $expLeft <= 1 ? 'today / tomorrow' : 'in ' . $expLeft . ' days' ?></b> (<?= e(date('d M Y', strtotime((string)$expSub->EndsAt))) ?>)<?= $expSub->Audience === 'Teacher' ? ' — if not renewed, the teacher account will change to a normal user account' : '' ?>.<?php else: ?>আপনার <b><?= e($expSub->PackageName) ?></b> প্যাকেজের মেয়াদ <b><?= $expLeft <= 1 ? 'আজ / কাল' : $expLeft . ' দিন পর' ?></b> (<?= e(date('d M Y', strtotime((string)$expSub->EndsAt))) ?>) শেষ হবে<?= $expSub->Audience === 'Teacher' ? ' — রিনিউ না করলে টিচার অ্যাকাউন্টটি সাধারণ ইউজার অ্যাকাউন্টে বদলে যাবে' : '' ?>।<?php endif; ?></span>
+        <a href="/Package?for=<?= $expSub->Audience === 'Teacher' ? 'teacher' : 'student' ?>"><?= t('এখনই রিনিউ করুন', 'Renew now') ?></a>
         <button type="button" aria-label="বন্ধ করুন" onclick="try{sessionStorage.setItem(this.parentNode.dataset.key,'1')}catch(e){} this.parentNode.remove()"><i class="fas fa-xmark"></i></button>
     </div>
     <style>
@@ -1471,14 +1494,14 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 $ks = db()->KycStatus($kUid, 'student');
                 $trs = db()->GetUserTeacherRequestStatus($kUid);
                 if (($ks === 'None' || $ks === 'Rejected') && !in_array($trs, ['Pending', 'AwaitingPayment'], true))
-                    $kycBar = ['/Kyc/Student', $ks === 'Rejected' ? 'আপনার Student Verification ফর্ম গ্রহণ করা হয়নি — তথ্য ঠিক করে আবার জমা দিন।' : 'প্যাকেজ কেনা আর টিউশন পোস্টের জন্য Student Verification ফর্ম (বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।'];
+                    $kycBar = ['/Kyc/Student', $ks === 'Rejected' ? t('আপনার Student Verification ফর্ম গ্রহণ করা হয়নি — তথ্য ঠিক করে আবার জমা দিন।', 'Your Student Verification form was not accepted — please correct the information and submit again.') : t('প্যাকেজ কেনা আর টিউশন পোস্টের জন্য Student Verification ফর্ম (বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।', 'Fill in the Student Verification form (parents, address, class, ID card) to buy packages and post tuitions.')];
             }
         } catch (Throwable $e) { $kycBar = null; }
     }
     if ($kycBar): ?>
     <div class="exp-bar kyc-bar" id="kycBar" data-key="mmKycBar">
         <i class="fas fa-id-card"></i><span><?= e($kycBar[1]) ?></span>
-        <a href="<?= e($kycBar[0]) ?>">Student Verification ফর্ম পূরণ করুন</a>
+        <a href="<?= e($kycBar[0]) ?>"><?= t('Student Verification ফর্ম পূরণ করুন', 'Fill Student Verification form') ?></a>
         <button type="button" aria-label="বন্ধ করুন" onclick="try{sessionStorage.setItem('mmKycBar','1')}catch(e){} this.parentNode.remove()"><i class="fas fa-xmark"></i></button>
     </div>
     <style>
@@ -1517,7 +1540,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <?php $__social = social_links(); $__pl = social_platforms(); ?>
                     <?php if ($__social): ?>
                     <div class="footer-social">
-                        <span class="text-sm" style="color:var(--footer-muted);">Follow us</span>
+                        <span class="text-sm" style="color:var(--footer-muted);"><?= t('আমাদের ফলো করুন', 'Follow us') ?></span>
                         <div class="footer-social-icons">
                             <?php foreach ($__social as $__s): $__d = $__pl[$__s['p']]; $__ext = str_starts_with($__s['url'], 'http'); ?>
                                 <a href="<?= e($__s['url']) ?>" aria-label="<?= e($__d[0]) ?>" title="<?= e($__d[0]) ?>" class="footer-social-link"
@@ -1534,10 +1557,10 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     // ✅ ফুটারের দরকারি লিংক (শুধু যে পেজগুলো আসলেই আছে)
                     $__postReq = session_get('UserName') !== null ? '/Tuition/Circular?post=1' : '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular?post=1');
                     $__footNav = [
-                        'Find a Tutor' => [['Find Tutors', '/FindTutor'], ['Mathematics Tutors', '/FindTutor?subject=mathematics'], ['English Tutors', '/FindTutor?subject=english'],
-                                           ['SSC Tutors', '/FindTutor?class=ssc'], ['HSC Tutors', '/FindTutor?class=hsc']],
-                        'Tuition' => [['Tuition Circular', '/Tuition/Circular'], ['Post Tuition Requirement', $__postReq], ['Become a Tutor', '/Teacher/RequestForm'], ['Packages', '/Package']],
-                        'Support' => array_values(array_filter([['Helpdesk', '/Helpdesk'], ['Contact', '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? ['FAQ', '/#faq'] : null, ['Notice', '/Notice']])),
+                        t('টিউটর খুঁজুন', 'Find a Tutor') => [[t('টিউটর খুঁজুন', 'Find Tutors'), '/FindTutor'], [t('গণিতের টিউটর', 'Mathematics Tutors'), '/FindTutor?subject=mathematics'], [t('ইংরেজির টিউটর', 'English Tutors'), '/FindTutor?subject=english'],
+                                           [t('SSC টিউটর', 'SSC Tutors'), '/FindTutor?class=ssc'], [t('HSC টিউটর', 'HSC Tutors'), '/FindTutor?class=hsc']],
+                        t('টিউশন', 'Tuition') => [[t('টিউশন সার্কুলার', 'Tuition Circular'), '/Tuition/Circular'], [t('টিউশন পোস্ট করুন', 'Post Tuition Requirement'), $__postReq], [t('টিউটর হোন', 'Become a Tutor'), '/Teacher/RequestForm'], [t('প্যাকেজ', 'Packages'), '/Package']],
+                        t('সহায়তা', 'Support') => array_values(array_filter([[t('হেল্পডেস্ক', 'Helpdesk'), '/Helpdesk'], [t('যোগাযোগ', 'Contact'), '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? [t('সাধারণ প্রশ্ন', 'FAQ'), '/#faq'] : null, [t('নোটিশ', 'Notice'), '/Notice'], [t('গোপনীয়তা নীতি', 'Privacy Policy'), '/Home/Privacy'], [t('শর্তাবলি', 'Terms of Service'), '/Home/Terms']])),
                     ];
                 ?>
                 <nav class="footer-nav" aria-label="Footer">
@@ -1555,7 +1578,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
 
                 <div class="border-t border-white/15 mt-8 pt-6 text-center">
                     <p class="text-xs sm:text-sm" style="color:var(--footer-muted);">
-                        &copy; <?= date('Y') ?> <?= e($safeSiteName) ?>. All Rights Reserved.
+                        &copy; <?= date('Y') ?> <?= e($safeSiteName) ?>. <?= t('সর্বস্বত্ব সংরক্ষিত।', 'All Rights Reserved.') ?>
                     </p>
                 </div>
             </div>
@@ -1715,6 +1738,15 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 });
             });
 
+            // ===== ভাষা বদল (বাংলা ⇄ English) — কুকিতে ১ বছর মনে থাকে =====
+            (function () {
+                var b = document.getElementById('langSw'); if (!b) return;
+                b.addEventListener('click', function () {
+                    document.cookie = 'site_lang=' + b.getAttribute('data-to') + '; path=/; max-age=31536000; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+                    location.reload();
+                });
+            })();
+
             // ===== NOTIFICATION SYSTEM =====
             (function () {
                 const wrapper = document.getElementById('notifWrapper');
@@ -1744,16 +1776,16 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 }
 
                 function loadNotifications() {
-                    list.innerHTML = '<div class="notif-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>';
+                    list.innerHTML = '<div class="notif-empty"><i class="fas fa-spinner fa-spin"></i><p><?= t('লোড হচ্ছে...', 'Loading...') ?></p></div>';
 
-                    fetch('/Notification/GetNotifications')
+                    return fetch('/Notification/GetNotifications')
                         .then(r => r.json())
                         .then(data => {
                             if (!data.success || !data.notifications || data.notifications.length === 0) {
                                 list.innerHTML = `
                                                 <div class="notif-empty">
                                                     <i class="fas fa-bell-slash"></i>
-                                                    <p>No notifications yet</p>
+                                                    <p><?= t('এখনো কোনো নোটিফিকেশন নেই', 'No notifications yet') ?></p>
                                                 </div>`;
                                 return;
                             }
@@ -1792,7 +1824,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                             });
                         })
                         .catch(() => {
-                            list.innerHTML = '<div class="notif-empty"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div>';
+                            list.innerHTML = '<div class="notif-empty"><i class="fas fa-exclamation-circle"></i><p><?= t('লোড করা যায়নি', 'Failed to load') ?></p></div>';
                         });
                 }
 
@@ -1818,6 +1850,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     }).then(() => {
                         loadUnreadCount();
                     }).catch(() => { });
+                }
+
+                // বেল খুললেই সব read — নতুনগুলো এই তালিকায় হাইলাইট থাকে, কিন্তু ব্যাজ চলে যায়
+                function markAllReadSilently() {
+                    badge.classList.remove('show');
+                    fetch('/Notification/MarkAllAsRead', { method: 'POST', body: new FormData(), headers: { 'RequestVerificationToken': getToken() } })
+                        .then(() => loadUnreadCount()).catch(() => { });
                 }
 
                 window.markAllRead = function () {
@@ -1866,7 +1905,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         wrapper.classList.remove('show');
                     } else {
                         wrapper.classList.add('show');
-                        loadNotifications();
+                        const hadUnread = badge.classList.contains('show');
+                        loadNotifications().then(() => { if (hadUnread) markAllReadSilently(); });
                         document.querySelector('.profile-dropdown')?.classList.remove('show');
                     }
                 });

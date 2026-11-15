@@ -126,24 +126,24 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         <div class="hx-art<?= $heroSlider ? ' slider' : '' ?>">
             <?php if ($heroSlider): ?>
                 <?php foreach ($heroImages as $idx => $img): ?>
-                    <img src="<?= e($img) ?>" alt="<?= $idx === 0 ? 'শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন' : '' ?>" class="hero-slide" style="opacity:<?= $idx === 0 ? '1' : '0' ?>;" data-index="<?= (int)$idx ?>"<?= $idx === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?> />
+                    <img src="<?= e($img) ?>" alt="<?= $idx === 0 ? t('শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন', 'A teacher teaching a student') : '' ?>" class="hero-slide" style="opacity:<?= $idx === 0 ? '1' : '0' ?>;" data-index="<?= (int)$idx ?>"<?= $idx === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?> />
                 <?php endforeach; ?>
                 <div class="hx-dotsnav">
                     <?php foreach ($heroImages as $idx => $img): ?><button type="button" class="slider-dot<?= $idx === 0 ? ' on' : '' ?>" data-index="<?= (int)$idx ?>" aria-label="ছবি <?= $idx + 1 ?>"></button><?php endforeach; ?>
                 </div>
             <?php elseif ($heroAnimated): ?>
                 <div class="hx-anim" role="img" aria-label="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন">
-                    <img class="base" src="<?= $hxA ?>base.webp" alt="" width="1200" height="858" fetchpriority="high" />
-                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="" /></span>
-                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="" /></span>
+                    <img class="base" src="<?= $hxA ?>base.webp" alt="<?= t('শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন', 'A teacher teaching a student') ?>" width="1200" height="858" fetchpriority="high" />
+                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="plant" /></span>
+                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="vine" /></span>
                     <span class="hx-glow"></span>
-                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="" /></span>
-                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="" />
+                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="teacher" /></span>
+                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="teacher" />
                         <i class="lid" style="left:52.3%;top:55.8%;width:15.5%;height:12%;"></i><i class="lid" style="left:80.3%;top:48.2%;width:14.5%;height:13%;"></i></span>
-                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="" />
+                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="student" />
                         <i class="lid" style="left:11.6%;top:50.9%;width:10%;height:15%;"></i><i class="lid" style="left:30.7%;top:59%;width:12%;height:12.7%;"></i></span>
                     <svg class="hx-ink" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 6 q4 -4 8 0 t8 0 t8 0 t8 0"/><path d="M2 13 q4 -4 8 0 t8 0 t8 0 t8 0 t8 0"/></svg>
-                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="" /></span>
+                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="student" /></span>
                     <span class="hx-spark a"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                     <span class="hx-spark b"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                     <span class="hx-spark c"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
@@ -178,13 +178,13 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <?php
     $hwLoggedIn = session_get('UserName') !== null;
     $hwSteps = [
-        ['fa-user-plus',   'Create Account',        'Sign up for free and complete your profile in a minute.',
+        ['fa-user-plus',   t('অ্যাকাউন্ট খুলুন', 'Create Account'), t('ফ্রিতে সাইন আপ করুন আর এক মিনিটে প্রোফাইল পূরণ করুন।', 'Sign up for free and complete your profile in a minute.'),
             $hwLoggedIn ? '/Profile' : '/Account/Register'],
-        ['fa-file-pen',    'Post Your Requirement', 'Post class, subjects, area & budget on the Tuition Circular.',
+        ['fa-file-pen',    t('আপনার চাহিদা পোস্ট করুন', 'Post Your Requirement'), t('Tuition Circular এ ক্লাস, বিষয়, এলাকা আর বাজেট লিখে পোস্ট করুন।', 'Post class, subjects, area & budget on the Tuition Circular.'),
             '/Tuition/Circular'],
-        ['fa-id-card',     'Get Tutor Applications','Verified tutors apply — see their profile, education & contact.',
+        ['fa-id-card',     t('টিউটরদের আবেদন পান', 'Get Tutor Applications'), t('যাচাই করা টিউটররা আবেদন করবেন — তাদের প্রোফাইল, শিক্ষাগত যোগ্যতা দেখুন।', 'Verified tutors apply — see their profile, education & contact.'),
             $hwLoggedIn ? '/User/Dashboard?section=applications' : '/Account/Login?returnUrl=' . rawurlencode('/User/Dashboard?section=applications')],
-        ['fa-circle-check','Select Your Tutor',     'Call or WhatsApp, accept your favourite one & start learning.',
+        ['fa-circle-check',t('আপনার টিউটর বেছে নিন', 'Select Your Tutor'), t('পছন্দের টিউটরকে গ্রহণ করুন আর পড়াশোনা শুরু করুন।', 'Call or WhatsApp, accept your favourite one & start learning.'),
             '/FindTutor'],
     ];
 ?>
@@ -268,8 +268,8 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 
 <section id="how-it-works" class="hw-section" style="background-color:<?= e($settings->SecondaryColor) ?>;">
     <div class="hw-wrap">
-        <h2 class="hw-title">The ways <span class="hl">Parents / Students</span> find a tutor.</h2>
-        <p class="hw-sub">মাত্র ৪টি সহজ ধাপে আপনার পছন্দের টিউটর খুঁজে নিন</p>
+        <h2 class="hw-title"><?php if (site_lang() === 'en'): ?>The ways <span class="hl">Parents / Students</span> find a tutor.<?php else: ?><span class="hl">অভিভাবক / শিক্ষার্থীরা</span> যেভাবে টিউটর খুঁজে পান<?php endif; ?></h2>
+        <p class="hw-sub"><?= t('মাত্র ৪টি সহজ ধাপে আপনার পছন্দের টিউটর খুঁজে নিন', 'Find your preferred tutor in just 4 easy steps') ?></p>
 
         <div class="hw-steps" id="hwSteps">
             <svg class="hw-lines" id="hwLines" aria-hidden="true">
@@ -283,7 +283,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                     </div>
                     <h3><?= e($title) ?></h3>
                     <p><?= e($desc) ?></p>
-                    <span class="hw-go">শুরু করুন <i class="fas fa-arrow-right"></i></span>
+                    <span class="hw-go"><?= t('শুরু করুন', 'Get started') ?> <i class="fas fa-arrow-right"></i></span>
                 </a>
             <?php endforeach; ?>
         </div>
@@ -346,11 +346,11 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <?php partial('Categories/_CardStyles'); ?>
 <section class="hs-sec hs-cats" id="home-categories" style="background:#fff;" aria-label="Categories">
     <div class="hs-wrap">
-        <?php partial('Home/_SectionHead', ['title' => 'Explore', 'hl' => 'Categories', 'sub' => 'Play থেকে HSC, IELTS থেকে Guitar — যে বিষয়ে শিখতে চান, সেই ক্যাটাগরির অভিজ্ঞ টিউটর খুঁজুন।', 'href' => '/Categories', 'btn' => 'View More']); ?>
+        <?php partial('Home/_SectionHead', ['title' => t('', 'Explore'), 'hl' => t('ক্যাটাগরি দেখুন', 'Categories'), 'sub' => t('Play থেকে HSC, IELTS থেকে Guitar — যে বিষয়ে শিখতে চান, সেই ক্যাটাগরির অভিজ্ঞ টিউটর খুঁজুন।', 'From Play to HSC, IELTS to Guitar — find experienced tutors in the category you want to learn.'), 'href' => '/Categories', 'btn' => t('আরও দেখুন', 'View More')]); ?>
         <div class="cc-grid">
             <?php foreach ($homeCats as $c) partial('Categories/_Card', ['c' => $c]); ?>
         </div>
-        <div class="hs-foot"><a class="hs-more" href="/Categories">View More Categories <i class="fas fa-arrow-right"></i></a></div>
+        <div class="hs-foot"><a class="hs-more" href="/Categories"><?= t('আরও ক্যাটাগরি দেখুন', 'View More Categories') ?> <i class="fas fa-arrow-right"></i></a></div>
     </div>
 </section>
 <?php endif; ?>
@@ -365,15 +365,15 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             <div class="flex justify-between items-end mb-6 sm:mb-8">
                 <div>
                     <h2 class="font-serif text-3xl sm:text-4xl md:text-5xl" style="color:#08224A;">
-                        Latest Tuition Circulars
+                        <?= t('সর্বশেষ টিউশন সার্কুলার', 'Latest Tuition Circulars') ?>
                     </h2>
                     <p class="mt-3 text-base sm:text-lg" style="color:<?= e($settings->TextColor) ?>;">
-                        Explore the most recent tuition opportunities curated for you.
+                        <?= t('আপনার জন্য বাছাই করা নতুন টিউশনের সুযোগগুলো দেখুন।', 'Explore the most recent tuition opportunities curated for you.') ?>
                     </p>
                 </div>
                 <!-- ✅ View More Button -->
                 <a href="/Tuition/Circular" class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-white transition hover:opacity-90 text-sm shadow-md" style="background-color:<?= e($settings->PrimaryColor) ?>;">
-                    View More Tuitions
+                    <?= t('আরও টিউশন দেখুন', 'View More Tuitions') ?>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0-4 4m4-4H3" />
                     </svg>
@@ -388,7 +388,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                         <div class="flex justify-between items-start mb-4 gap-2">
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-[#FFEBB8] text-[#8a5a00]">
                                 <i class="fas fa-user-tie"></i> 
-                                <?= e((string)$post->TutorGenderPreference === '' ? "Any Gender" : $post->TutorGenderPreference) ?>
+                                <?= e((string)$post->TutorGenderPreference === '' ? t('যেকোনো', 'Any Gender') : $post->TutorGenderPreference) ?>
                             </span>
                             <?php if ((string)$post->TuitionCode !== ''): ?>
                                 <span class="bg-[#08224A] text-[#FFB300] px-3 py-1 rounded-full text-[11px] font-bold font-mono tracking-wider">
@@ -407,19 +407,19 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                             <?php if ((string)$post->StudentClass !== ''): ?>
                                 <div class="flex items-start gap-1.5">
                                     <i class="fas fa-graduation-cap mt-1 text-xs" style="color:#028EA5;"></i>
-                                    <span class="line-clamp-1"><strong>Class:</strong> <?= e($post->StudentClass) ?></span>
+                                    <span class="line-clamp-1"><strong><?= t('ক্লাস:', 'Class:') ?></strong> <?= e($post->StudentClass) ?></span>
                                 </div>
                             <?php endif; ?>
                             <?php if ((string)$post->Subjects !== ''): ?>
                                 <div class="flex items-start gap-1.5">
                                     <i class="fas fa-book mt-1 text-xs" style="color:#028EA5;"></i>
-                                    <span class="line-clamp-1"><strong>Subjects:</strong> <?= e($post->Subjects) ?></span>
+                                    <span class="line-clamp-1"><strong><?= t('বিষয়:', 'Subjects:') ?></strong> <?= e($post->Subjects) ?></span>
                                 </div>
                             <?php endif; ?>
                             <?php if ((string)$post->Area !== ''): ?>
                                 <div class="col-span-2 flex items-start gap-1.5">
                                     <i class="fas fa-map-marker-alt mt-1 text-xs" style="color:#028EA5;"></i>
-                                    <span class="line-clamp-1"><strong>Area:</strong> <?= e($post->Area) ?></span>
+                                    <span class="line-clamp-1"><strong><?= t('এলাকা:', 'Area:') ?></strong> <?= e($post->Area) ?></span>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -427,13 +427,13 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                         <!-- Salary -->
                         <?php if ((string)$post->Salary !== ''): ?>
                             <div class="mt-auto mb-4 inline-flex items-center gap-2 bg-[#d4edda] text-[#155724] px-4 py-2 rounded-lg font-bold text-sm w-fit">
-                                <i class="fas fa-money-bill-wave"></i> ৳<?= e($post->Salary) ?> /month
+                                <i class="fas fa-money-bill-wave"></i> ৳<?= e($post->Salary) ?> <?= t('/মাস', '/month') ?>
                             </div>
                         <?php endif; ?>
 
                         <!-- View Details Button -->
                         <a href="/Tuition/Details/<?= e($post->Id) ?>" class="mt-auto block text-center w-full py-2.5 rounded-xl font-bold text-sm text-white transition hover:opacity-90" style="background-color:<?= e($settings->PrimaryColor) ?>;">
-                            View Details
+                            <?= t('বিস্তারিত দেখুন', 'View Details') ?>
                         </a>
                     </div>
                 <?php endforeach; ?>
@@ -442,7 +442,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             <!-- Mobile View More Button -->
             <div class="mt-8 text-center sm:hidden">
                 <a href="/Tuition/Circular" class="inline-flex items-center justify-center gap-2 px-6 py-3 w-full rounded-full font-semibold text-white transition hover:opacity-90 text-sm shadow-md" style="background-color:<?= e($settings->PrimaryColor) ?>;">
-                    View More Tuitions
+                    <?= t('আরও টিউশন দেখুন', 'View More Tuitions') ?>
                 </a>
             </div>
 
@@ -483,25 +483,25 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <section class="hn" id="notice">
     <div class="hn-in">
         <div class="hn-head">
-            <div><h2><i class="fas fa-bullhorn"></i> Notice</h2><p>মাষ্টার মশাই এর সর্বশেষ নোটিশ, খবর আর ঘোষণা।</p></div>
+            <div><h2><i class="fas fa-bullhorn"></i> <?= t('নোটিশ', 'Notice') ?></h2><p><?= t('মাষ্টার মশাই এর সর্বশেষ নোটিশ, খবর আর ঘোষণা।', 'The latest notices, news and announcements from Mashter Moshai.') ?></p></div>
             <a class="hn-all" href="/Notice">সব নোটিশ দেখুন <i class="fas fa-arrow-right"></i></a>
         </div>
         <?php if ($homeNotices): ?>
             <div class="hn-grid">
                 <?php foreach ($homeNotices as $n): $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string)$n->Content), ENT_QUOTES, 'UTF-8'))); ?>
                     <a class="hn-card" href="/Notice/Details/<?= (int)$n->Id ?>">
-                        <div class="hn-img"><?php if (!is_blank($n->ImageUrl)): ?><img src="<?= e($n->ImageUrl) ?>" alt="" loading="lazy" onerror="this.insertAdjacentHTML('afterend','<i class=&quot;fas fa-bullhorn&quot;></i>');this.remove()" /><?php else: ?><i class="fas fa-bullhorn"></i><?php endif; ?></div>
+                        <div class="hn-img"><?php if (!is_blank($n->ImageUrl)): ?><img src="<?= e($n->ImageUrl) ?>" alt="<?= e($n->Title) ?>" loading="lazy" onerror="this.insertAdjacentHTML('afterend','<i class=&quot;fas fa-bullhorn&quot;></i>');this.remove()" /><?php else: ?><i class="fas fa-bullhorn"></i><?php endif; ?></div>
                         <div class="hn-body">
                             <div class="hn-meta"><span class="hn-cat<?= $n->IsAnnouncement ? ' ann' : '' ?>"><?= e($n->IsAnnouncement ? 'Announcement' : ($n->Category ?: 'News')) ?></span><span><i class="far fa-calendar"></i> <?= e(fmt_date($n->PublishedDate ?? $n->CreatedAt ?? null, 'd M Y')) ?></span></div>
                             <h3><?= e($n->Title) ?></h3>
                             <?php if ($plain !== ''): ?><p><?= e(mb_substr($plain, 0, 160)) ?></p><?php endif; ?>
-                            <span class="hn-more">বিস্তারিত পড়ুন <i class="fas fa-arrow-right"></i></span>
+                            <span class="hn-more"><?= t('বিস্তারিত পড়ুন', 'Read more') ?> <i class="fas fa-arrow-right"></i></span>
                         </div>
                     </a>
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <a class="hn-empty" href="/Notice"><i class="fas fa-bullhorn"></i><span><b>নোটিশ বোর্ড</b>নতুন নোটিশ, খবর আর ঘোষণা এখানে আসবে — দেখতে ক্লিক করুন।</span><b style="color:#0369A1;">Notice পেজে যান <i class="fas fa-arrow-right"></i></b></a>
+            <a class="hn-empty" href="/Notice"><i class="fas fa-bullhorn"></i><span><b><?= t('নোটিশ বোর্ড', 'Notice Board') ?></b><?= t('নতুন নোটিশ, খবর আর ঘোষণা এখানে আসবে — দেখতে ক্লিক করুন।', 'New notices, news and announcements will appear here — click to see.') ?></span><b style="color:#0369A1;"><?= t('Notice পেজে যান', 'Go to Notice page') ?> <i class="fas fa-arrow-right"></i></b></a>
         <?php endif; ?>
         <div class="hn-mob"><a class="hn-all" href="/Notice">সব নোটিশ দেখুন <i class="fas fa-arrow-right"></i></a></div>
     </div>
@@ -515,16 +515,18 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 <?php $homeFeed = is_array($ViewBag->HomeFeed) ? $ViewBag->HomeFeed : []; ?>
 <section class="hs-sec" id="home-feed" style="background:#fff;" aria-label="Educational Feed">
     <div class="hs-wrap">
-        <?php partial('Home/_SectionHead', ['title' => 'Educational', 'hl' => 'Feed', 'sub' => 'শিক্ষক আর শিক্ষার্থীদের শেয়ার করা নোট, ছবি, ভিডিও আর পড়াশোনার টিপস।', 'href' => '/Feed', 'btn' => 'View More']); ?>
+        <?php partial('Home/_SectionHead', ['title' => t('এডুকেশনাল', 'Educational'), 'hl' => t('ফিড', 'Feed'), 'sub' => t('শিক্ষক আর শিক্ষার্থীদের শেয়ার করা নোট, ছবি, ভিডিও আর পড়াশোনার টিপস।', 'Notes, photos, videos and study tips shared by teachers and students.'), 'href' => '/Feed', 'btn' => t('আরও দেখুন', 'View More')]); ?>
         <?php if ($homeFeed): ?>
             <div class="hf-grid">
                 <?php foreach ($homeFeed as $fp):
                     $txt = trim(preg_replace('/\s+/u', ' ', $fp->Content)); ?>
                     <a class="hf-card" href="<?= e($fp->Url) ?>">
                         <?php if ($fp->Images): ?>
-                            <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
+                            <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="<?= e($fp->Subject !== '' ? $fp->Subject : $fp->AuthorName) ?>" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
                         <?php elseif ($fp->YouTube !== ''): ?>
-                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="YouTube video" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                        <?php elseif (($fp->Facebook ?? '') !== ''): ?>
+                            <div class="hf-media" style="background:linear-gradient(135deg,#1877F2,#0B4FB3);display:flex;align-items:center;justify-content:center;"><i class="fab fa-facebook" style="font-size:54px;color:rgba(255,255,255,.9);"></i><span class="play"><i class="fas fa-play"></i></span></div>
                         <?php elseif ($fp->Video !== ''): ?>
                             <div class="hf-media"><video src="<?= e($fp->Video) ?>#t=0.5" preload="metadata" muted playsinline></video><span class="play"><i class="fas fa-play"></i></span></div>
                         <?php else: ?>
@@ -532,13 +534,13 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                         <?php endif; ?>
                         <div class="hf-body">
                             <div class="hf-who">
-                                <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                                <span class="hf-av"><?= e($fp->Initials) ?><?php if ($fp->AuthorPhoto !== ''): ?><img src="<?= e($fp->AuthorPhoto) ?>" alt="<?= e($fp->AuthorName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                                 <div style="min-width:0;"><b><?= e($fp->AuthorName) ?><span class="hf-role<?= $fp->AuthorRole === 'Teacher' ? ' t' : '' ?>"><?= e(role_label($fp->AuthorRole, $fp->UserId ?? 0)) ?></span></b>
                                     <small><?= e(time_ago($fp->ApprovedAt ?? $fp->CreatedAt)) ?></small></div>
                             </div>
                             <?php if ($fp->Subject !== ''): ?><span class="hf-subj"><i class="fas fa-book-open"></i><?= e($fp->Subject) ?></span><?php endif; ?>
-                            <?php if ($txt !== '' && ($fp->Images || $fp->YouTube !== '' || $fp->Video !== '')): ?><p class="hf-text"><?= e($txt) ?></p><?php endif; ?>
-                            <div class="hf-meta"><span><span><i class="far fa-thumbs-up"></i><?= (int)$fp->LikeCount ?></span><span><i class="far fa-comment"></i><?= (int)$fp->CommentCount ?></span></span><b>Read more <i class="fas fa-arrow-right" style="color:inherit;margin:0 0 0 2px;"></i></b></div>
+                            <?php if ($txt !== '' && ($fp->Images || $fp->YouTube !== '' || ($fp->Facebook ?? '') !== '' || $fp->Video !== '')): ?><p class="hf-text"><?= e($txt) ?></p><?php endif; ?>
+                            <div class="hf-meta"><span><span><i class="far fa-thumbs-up"></i><?= (int)$fp->LikeCount ?></span><span><i class="far fa-comment"></i><?= (int)$fp->CommentCount ?></span></span><b><?= t('আরও পড়ুন', 'Read more') ?> <i class="fas fa-arrow-right" style="color:inherit;margin:0 0 0 2px;"></i></b></div>
                         </div>
                     </a>
                 <?php endforeach; ?>
@@ -546,11 +548,11 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
         <?php else: ?>
             <div class="hf-empty">
                 <span class="ic"><i class="fas fa-graduation-cap"></i></span>
-                <div><h3>আপনার জ্ঞান শেয়ার করুন</h3><p>নোট, প্রশ্নের সমাধান, শিক্ষামূলক ভিডিও বা পড়াশোনার টিপস পোস্ট করুন — অ্যাডমিন রিভিউ করার পর সবাই দেখতে পাবে।</p></div>
-                <a class="hs-more" href="/Feed">Educational Feed <i class="fas fa-arrow-right"></i></a>
+                <div><h3><?= t('আপনার জ্ঞান শেয়ার করুন', 'Share your knowledge') ?></h3><p><?= t('নোট, প্রশ্নের সমাধান, শিক্ষামূলক ভিডিও বা পড়াশোনার টিপস পোস্ট করুন — অ্যাডমিন রিভিউ করার পর সবাই দেখতে পাবে।', 'Post notes, solutions, educational videos or study tips — everyone can see them after the admin reviews.') ?></p></div>
+                <a class="hs-more" href="/Feed"><?= t('এডুকেশনাল ফিড', 'Educational Feed') ?> <i class="fas fa-arrow-right"></i></a>
             </div>
         <?php endif; ?>
-        <div class="hs-foot"><a class="hs-more" href="/Feed">View More Posts <i class="fas fa-arrow-right"></i></a></div>
+        <div class="hs-foot"><a class="hs-more" href="/Feed"><?= t('আরও পোস্ট দেখুন', 'View More Posts') ?> <i class="fas fa-arrow-right"></i></a></div>
     </div>
 </section>
 <?php endif; /* home_section: feed */ ?>
@@ -569,16 +571,16 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
     }
     if (!$btLoggedIn) {
         $btHref = '/Account/Login?returnUrl=' . rawurlencode('/Teacher/RequestForm');
-        $btLabel = 'Apply Now'; $btIcon = 'fa-paper-plane'; $btNote = 'নতুন? <a href="/Account/Register">ফ্রি অ্যাকাউন্ট খুলুন</a>';
+        $btLabel = t('এখনই আবেদন করুন', 'Apply Now'); $btIcon = 'fa-paper-plane'; $btNote = t('নতুন? <a href="/Account/Register">ফ্রি অ্যাকাউন্ট খুলুন</a>', 'New here? <a href="/Account/Register">Create a free account</a>');
     } elseif ($btRole === 'Teacher' || $btStatus === 'Approved') {
         $btHref = '/Teacher/TeacherDashboard';
-        $btLabel = 'Teacher Dashboard'; $btIcon = 'fa-chalkboard-teacher'; $btNote = 'আপনি ইতিমধ্যে একজন টিউটর 🎉';
+        $btLabel = t('টিচার ড্যাশবোর্ড', 'Teacher Dashboard'); $btIcon = 'fa-chalkboard-teacher'; $btNote = t('আপনি ইতিমধ্যে একজন টিউটর 🎉', 'You are already a tutor 🎉');
     } elseif ($btStatus === 'Pending') {
         $btHref = '/Profile?section=become-tutor';
-        $btLabel = 'আবেদন রিভিউ চলছে'; $btIcon = 'fa-hourglass-half'; $btNote = 'অ্যাডমিন অনুমোদন দিলে নোটিফিকেশন পাবেন';
+        $btLabel = t('আবেদন রিভিউ চলছে', 'Application under review'); $btIcon = 'fa-hourglass-half'; $btNote = t('অ্যাডমিন অনুমোদন দিলে নোটিফিকেশন পাবেন', 'You will get a notification when the admin approves');
     } else {
         $btHref = '/Teacher/RequestForm';
-        $btLabel = 'Apply Now'; $btIcon = 'fa-paper-plane'; $btNote = 'মাত্র ২ মিনিটে আবেদন করুন';
+        $btLabel = t('এখনই আবেদন করুন', 'Apply Now'); $btIcon = 'fa-paper-plane'; $btNote = t('মাত্র ২ মিনিটে আবেদন করুন', 'Apply in just 2 minutes');
     }
 ?>
 <style>
@@ -698,10 +700,10 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
 
         <div class="text-center">
             <h2 class="font-serif text-3xl sm:text-4xl md:text-5xl" style="color:#08224A;">
-                Key Features
+                <?= t('মূল সুবিধাগুলো', 'Key Features') ?>
             </h2>
             <p class="mt-3 text-base sm:text-lg" style="color:<?= e($settings->TextColor) ?>;">
-                Everything you need to find the right tutor — safely, all in one place
+                <?= t('সঠিক টিউটর খুঁজতে যা যা লাগে — নিরাপদে, এক জায়গায়', 'Everything you need to find the right tutor — safely, all in one place') ?>
             </p>
         </div>
 
@@ -757,19 +759,19 @@ if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $
 <?php partial('Package/_CardStyles'); ?>
 <section class="hs-sec" id="home-packages" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Packages">
     <div class="hs-wrap">
-        <?php partial('Home/_SectionHead', ['title' => 'Our', 'hl' => 'Packages', 'sub' => 'শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'href' => '/Package?for=' . strtolower($hpTab), 'btn' => 'View More']); ?>
+        <?php partial('Home/_SectionHead', ['title' => t('আমাদের', 'Our'), 'hl' => t('প্যাকেজ', 'Packages'), 'sub' => t('শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য Tuition Post প্যাকেজ — আপনার প্রয়োজন মতো বেছে নিন।', 'Subscriptions for teachers and Tuition Post packages for students — choose what you need.'), 'href' => '/Package?for=' . strtolower($hpTab), 'btn' => t('আরও দেখুন', 'View More')]); ?>
         <?php if ($homePk['Teacher'] && $homePk['Student']): ?>
             <div style="text-align:center;"><div class="hp-tabs" role="tablist">
-                <button type="button" role="tab" data-hp="Teacher" class="<?= $hpTab === 'Teacher' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Teacher' ? 'true' : 'false' ?>"><i class="fas fa-chalkboard-user"></i> শিক্ষকদের জন্য</button>
-                <button type="button" role="tab" data-hp="Student" class="<?= $hpTab === 'Student' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Student' ? 'true' : 'false' ?>"><i class="fas fa-user-graduate"></i> শিক্ষার্থীদের জন্য</button>
+                <button type="button" role="tab" data-hp="Teacher" class="<?= $hpTab === 'Teacher' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Teacher' ? 'true' : 'false' ?>"><i class="fas fa-chalkboard-user"></i> <?= t('শিক্ষকদের জন্য', 'For Teachers') ?></button>
+                <button type="button" role="tab" data-hp="Student" class="<?= $hpTab === 'Student' ? 'on' : '' ?>" aria-selected="<?= $hpTab === 'Student' ? 'true' : 'false' ?>"><i class="fas fa-user-graduate"></i> <?= t('শিক্ষার্থীদের জন্য', 'For Students') ?></button>
             </div></div>
         <?php endif; ?>
         <?php foreach (['Teacher', 'Student'] as $aud): if (!$homePk[$aud]) continue; ?>
             <div class="pk-grid<?= count($homePk[$aud]) < 3 ? ' few' : '' ?>" data-hp-grid="<?= $aud ?>"<?= $aud === $hpTab ? '' : ' hidden' ?>>
-                <?php foreach (array_slice($homePk[$aud], 0, 4) as $p) partial('Package/_Card', ['p' => $p, 'cta' => $aud === 'Teacher' ? 'Subscribe করুন' : 'পোস্ট প্যাকেজ নিন', 'studentFree' => $hpFree]); ?>
+                <?php foreach (array_slice($homePk[$aud], 0, 4) as $p) partial('Package/_Card', ['p' => $p, 'cta' => $aud === 'Teacher' ? t('Subscribe করুন', 'Subscribe') : t('পোস্ট প্যাকেজ নিন', 'Get post package'), 'studentFree' => $hpFree]); ?>
             </div>
         <?php endforeach; ?>
-        <div class="hs-foot"><a class="hs-more" href="/Package?for=<?= strtolower($hpTab) ?>">View All Packages <i class="fas fa-arrow-right"></i></a></div>
+        <div class="hs-foot"><a class="hs-more" href="/Package?for=<?= strtolower($hpTab) ?>"><?= t('সব প্যাকেজ দেখুন', 'View All Packages') ?> <i class="fas fa-arrow-right"></i></a></div>
     </div>
 </section>
 <script>
@@ -835,16 +837,16 @@ if (!$homePk[$hpTab] && $homePk[$hpTab === 'Teacher' ? 'Student' : 'Teacher']) $
 <!-- ========================================= -->
 <?php
 $why = [
-    ['fa-user-shield', '#E3F6FD', '#028EA5', 'Verified Tutor Profiles', 'Explore tutor profiles with relevant education, experience and subject information.', '/FindTutor'],
-    ['fa-clipboard-list', '#FFF4D6', '#B7791F', 'Tuition Opportunities', 'Browse tuition requirements and discover opportunities that match your subject and location.', '/Tuition/Circular'],
-    ['fa-magnifying-glass-location', '#E7F8EF', '#157347', 'Easy Tutor Search', 'Find suitable tutors based on subject, class, curriculum and location.', '/FindTutor#ftFilters'],
-    ['fa-headset', '#F1EAFE', '#6D28D9', 'Student & Parent Support', 'Get help when you need assistance finding a suitable teacher.', '/Helpdesk'],
+    ['fa-user-shield', '#E3F6FD', '#028EA5', t('যাচাই করা টিউটর প্রোফাইল', 'Verified Tutor Profiles'), t('টিউটরদের শিক্ষাগত যোগ্যতা, অভিজ্ঞতা আর বিষয়ের তথ্যসহ প্রোফাইল দেখুন।', 'Explore tutor profiles with relevant education, experience and subject information.'), '/FindTutor'],
+    ['fa-clipboard-list', '#FFF4D6', '#B7791F', t('টিউশনের সুযোগ', 'Tuition Opportunities'), t('টিউশনের চাহিদাগুলো দেখুন আর আপনার বিষয় ও এলাকার সাথে মেলে এমন সুযোগ খুঁজুন।', 'Browse tuition requirements and discover opportunities that match your subject and location.'), '/Tuition/Circular'],
+    ['fa-magnifying-glass-location', '#E7F8EF', '#157347', t('সহজে টিউটর খোঁজা', 'Easy Tutor Search'), t('বিষয়, ক্লাস, কারিকুলাম আর এলাকা দেখে মানানসই টিউটর খুঁজুন।', 'Find suitable tutors based on subject, class, curriculum and location.'), '/FindTutor#ftFilters'],
+    ['fa-headset', '#F1EAFE', '#6D28D9', t('শিক্ষার্থী ও অভিভাবকদের সহায়তা', 'Student & Parent Support'), t('মানানসই শিক্ষক খুঁজতে সাহায্য লাগলে আমরা পাশে আছি।', 'Get help when you need assistance finding a suitable teacher.'), '/Helpdesk'],
 ];
 ?>
 <section id="why-choose-us" class="hm-sec" style="background:#fff;">
     <div class="hm-wrap">
-        <h2 class="hm-h2">Why Choose <span class="hl">মাষ্টার মশাই</span> for Tuition?</h2>
-        <p class="hm-sub">Everything you need to find the right tutor or the right tuition — in one place.</p>
+        <h2 class="hm-h2"><?php if (site_lang() === 'en'): ?>Why Choose <span class="hl">মাষ্টার মশাই</span> for Tuition?<?php else: ?>টিউশনের জন্য কেন <span class="hl">মাষ্টার মশাই</span>?<?php endif; ?></h2>
+        <p class="hm-sub"><?= t('সঠিক টিউটর বা সঠিক টিউশন খুঁজতে যা যা লাগে — সব এক জায়গায়।', 'Everything you need to find the right tutor or the right tuition — in one place.') ?></p>
         <div class="hm-why">
             <?php foreach ($why as [$icon, $bg, $fg, $title, $desc, $href]): ?>
                 <a href="<?= e($href) ?>">
@@ -933,8 +935,8 @@ $why = [
 
 <section class="ts-section" id="reviews" style="background-color:<?= e($settings->SecondaryColor) ?>;" aria-label="Reviews">
     <div class="ts-head">
-        <h2 class="ts-title">Stakeholders' <span class="hl">Statements</span> About Us</h2>
-        <p class="ts-sub">আমাদের স্টুডেন্ট, অভিভাবক ও টিউটররা মাষ্টারমশাই নিয়ে যা বলছেন</p>
+        <h2 class="ts-title"><?php if (site_lang() === 'en'): ?>Stakeholders' <span class="hl">Statements</span> About Us<?php else: ?>আমাদের নিয়ে <span class="hl">সবার কথা</span><?php endif; ?></h2>
+        <p class="ts-sub"><?= t('আমাদের স্টুডেন্ট, অভিভাবক ও টিউটররা মাষ্টারমশাই নিয়ে যা বলছেন', 'What our students, parents and tutors say about Mashter Moshai') ?></p>
     </div>
     <div class="ts-viewport">
         <div class="ts-track" id="tsTrack">
@@ -1042,8 +1044,8 @@ $why = [
 <?php if ($faqs): ?>
 <section id="faq" class="hm-sec" style="background-color:<?= e($settings->SecondaryColor) ?>;">
     <div class="hm-wrap">
-        <h2 class="hm-h2">Frequently Asked Questions About Tutors &amp; Tuition</h2>
-        <p class="hm-sub">Quick answers for students, parents and tutors.</p>
+        <h2 class="hm-h2"><?= t('টিউটর ও টিউশন নিয়ে সাধারণ প্রশ্ন', 'Frequently Asked Questions About Tutors &amp; Tuition') ?></h2>
+        <p class="hm-sub"><?= t('শিক্ষার্থী, অভিভাবক আর টিউটরদের জন্য দ্রুত উত্তর।', 'Quick answers for students, parents and tutors.') ?></p>
         <div class="hm-faq">
             <?php foreach ($faqs as $i => [$q, $a]): ?>
                 <details>

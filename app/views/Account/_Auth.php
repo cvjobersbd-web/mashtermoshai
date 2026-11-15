@@ -52,7 +52,7 @@ $authImg = $authT['auth_img'];
     .au-form { transition: opacity .45s ease, transform .55s var(--au-ease), visibility .45s; }
     .au-form.off { position: absolute; left: 48px; right: 48px; top: 40px; opacity: 0; visibility: hidden; pointer-events: none; }
     .au-form.au-login.off { transform: translateX(40px); } .au-form.au-reg.off { transform: translateX(-40px); }
-    .au-card h1 { margin: 0; font-family: var(--font-heading); font-weight: 700; color: var(--au-ink); font-size: clamp(26px, 2.2vw, 34px); letter-spacing: -.3px; }
+    .au-card .au-h { margin: 0; font-family: var(--font-heading); font-weight: 700; color: var(--au-ink); font-size: clamp(26px, 2.2vw, 34px); letter-spacing: -.3px; }
     .au-card .lead { margin: 8px 0 22px; color: #475569; font-size: 15.5px; line-height: 1.5; }
     .au-f { margin-bottom: 16px; }
     .au-f label { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14.5px; color: var(--au-ink); margin-bottom: 7px; }
@@ -106,7 +106,7 @@ $authImg = $authT['auth_img'];
         .au-card { padding: 28px 22px 26px; border-radius: 20px; }
         .au-form.off { left: 22px; right: 22px; top: 28px; }
     }
-    @media (max-width: 480px) { .au-row { grid-template-columns: 1fr; gap: 0; } .au-pic { width: 38%; } .au-copy h2 { font-size: 19px; } .au-card h1 { font-size: 24px; } }
+    @media (max-width: 480px) { .au-row { grid-template-columns: 1fr; gap: 0; } .au-pic { width: 38%; } .au-copy h2 { font-size: 19px; } .au-card .au-h { font-size: 24px; } }
     @media (prefers-reduced-motion: reduce) { .au-art, .au-panel, .au-form, .au-card { transition: none !important; } .au-pic { animation: none; } }
 </style>
 
@@ -115,15 +115,15 @@ $authImg = $authT['auth_img'];
     <div class="au-stage">
         <!-- ===== কার্টুন ছবি ===== -->
         <div class="au-art" aria-hidden="true">
-            <img class="au-pic" src="<?= e($authImg) ?>" alt="" />
+            <img class="au-pic" src="<?= e($authImg) ?>" alt="<?= t('শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন — মাষ্টার মশাই', 'A teacher teaching a student — Mashter Moshai') ?>" />
             <div class="au-copy">
                 <h2 class="rich"><?= $authT['auth_title_html'] /* sanitize_rich_html করা */ ?></h2>
                 <?php if ($authT['auth_desc_html'] !== ''): ?><p><?= $authT['auth_desc_html'] ?></p><?php endif; ?>
                 <?php if ($authT['auth_feats'] !== '0'): ?>
                 <div class="au-feats">
-                    <span class="au-feat"><i class="fas fa-magnifying-glass"></i>Find Tutor</span>
-                    <span class="au-feat"><i class="far fa-calendar-check"></i>Post Requirement</span>
-                    <span class="au-feat"><i class="fas fa-graduation-cap"></i>Tuition Circular</span>
+                    <span class="au-feat"><i class="fas fa-magnifying-glass"></i><?= t('টিউটর খুঁজুন', 'Find Tutor') ?></span>
+                    <span class="au-feat"><i class="far fa-calendar-check"></i><?= t('টিউশন পোস্ট', 'Post Requirement') ?></span>
+                    <span class="au-feat"><i class="fas fa-graduation-cap"></i><?= t('টিউশন সার্কুলার', 'Tuition Circular') ?></span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -134,45 +134,45 @@ $authImg = $authT['auth_img'];
             <div class="au-card" id="auCard">
                 <!-- লগইন -->
                 <div class="au-form au-login<?= $mode === 'login' ? '' : ' off' ?>" data-form="login"<?= $mode === 'login' ? '' : ' aria-hidden="true"' ?>>
-                    <h1>Login to Your Account</h1>
-                    <p class="lead">Access your dashboard, manage tuitions, and more.</p>
+                    <<?= $mode === 'login' ? 'h1' : 'h2' ?> class="au-h"><?= t('আপনার অ্যাকাউন্টে লগইন করুন', 'Login to Your Account') ?></<?= $mode === 'login' ? 'h1' : 'h2' ?>>
+                    <p class="lead"><?= t('ড্যাশবোর্ড দেখুন, টিউশন সামলান আর আরও অনেক কিছু।', 'Access your dashboard, manage tuitions, and more.') ?></p>
                     <?php if ($susp): ?>
                         <div class="susp-box" role="alert">
-                            <div class="susp-head"><span class="susp-ic"><i class="fas fa-user-slash"></i></span><div><strong>আপনার অ্যাকাউন্ট Suspend করা হয়েছে</strong><small><?= $susp['permanent'] ? 'স্থায়ীভাবে' : 'সাময়িকভাবে' ?> — এই সময়ে লগইন করা যাবে না</small></div></div>
-                            <div class="susp-row"><span><i class="far fa-clock"></i> সময়সীমা</span><b><?= $susp['permanent'] ? 'পারমানেন্ট (স্থায়ী)' : e($susp['untilText']) . ' পর্যন্ত' ?></b></div>
-                            <?php if (!$susp['permanent'] && $susp['untilIso']): ?><div class="susp-row"><span><i class="fas fa-hourglass-half"></i> বাকি আছে</span><b id="suspLeft" data-until="<?= e($susp['untilIso']) ?>">—</b></div><?php endif; ?>
-                            <?php if (!empty($susp['since'])): ?><div class="susp-row"><span><i class="far fa-calendar"></i> Suspend হয়েছে</span><b><?= e($susp['since']) ?></b></div><?php endif; ?>
-                            <div class="susp-reason"><span><i class="fas fa-comment-dots"></i> কারণ</span><p><?= $susp['reason'] !== '' ? e($susp['reason']) : 'অ্যাডমিন কোনো কারণ উল্লেখ করেননি।' ?></p></div>
-                            <p class="susp-help">ভুল মনে হলে সাইটের অ্যাডমিনের সাথে যোগাযোগ করুন।</p>
+                            <div class="susp-head"><span class="susp-ic"><i class="fas fa-user-slash"></i></span><div><strong><?= t('আপনার অ্যাকাউন্ট Suspend করা হয়েছে', 'Your account has been suspended') ?></strong><small><?= $susp['permanent'] ? t('স্থায়ীভাবে', 'Permanently') : t('সাময়িকভাবে', 'Temporarily') ?> — <?= t('এই সময়ে লগইন করা যাবে না', 'you cannot log in during this time') ?></small></div></div>
+                            <div class="susp-row"><span><i class="far fa-clock"></i> <?= t('সময়সীমা', 'Duration') ?></span><b><?= $susp['permanent'] ? t('পারমানেন্ট (স্থায়ী)', 'Permanent') : t('', 'Until ') . e($susp['untilText']) . t(' পর্যন্ত', '') ?></b></div>
+                            <?php if (!$susp['permanent'] && $susp['untilIso']): ?><div class="susp-row"><span><i class="fas fa-hourglass-half"></i> <?= t('বাকি আছে', 'Time left') ?></span><b id="suspLeft" data-until="<?= e($susp['untilIso']) ?>">—</b></div><?php endif; ?>
+                            <?php if (!empty($susp['since'])): ?><div class="susp-row"><span><i class="far fa-calendar"></i> <?= t('Suspend হয়েছে', 'Suspended on') ?></span><b><?= e($susp['since']) ?></b></div><?php endif; ?>
+                            <div class="susp-reason"><span><i class="fas fa-comment-dots"></i> <?= t('কারণ', 'Reason') ?></span><p><?= $susp['reason'] !== '' ? e($susp['reason']) : t('অ্যাডমিন কোনো কারণ উল্লেখ করেননি।', 'The admin did not mention a reason.') ?></p></div>
+                            <p class="susp-help"><?= t('ভুল মনে হলে সাইটের অ্যাডমিনের সাথে যোগাযোগ করুন।', 'If you think this is a mistake, please contact the site admin.') ?></p>
                         </div>
                     <?php endif; ?>
                     <?php if ($mode === 'login' && $err !== null): ?><div class="au-alert err"><i class="fas fa-circle-exclamation"></i><span><?= e($err) ?></span></div><?php endif; ?>
                     <?php if ($TempData['Success'] !== null): ?><div class="au-alert ok"><i class="fas fa-circle-check"></i><span><?= e($TempData['Success']) ?></span></div><?php endif; ?>
                     <?php if ($TempData['Error'] !== null): ?><div class="au-alert err"><i class="fas fa-circle-exclamation"></i><span><?= e($TempData['Error']) ?></span></div><?php endif; ?>
-                    <?php if ($returnUrl !== ''): ?><div class="au-alert info"><i class="fas fa-circle-info"></i><span>চালিয়ে যেতে লগইন করুন — লগইনের পর আগের পেজে ফিরে যাবেন।</span></div><?php endif; ?>
+                    <?php if ($returnUrl !== ''): ?><div class="au-alert info"><i class="fas fa-circle-info"></i><span><?= t('চালিয়ে যেতে লগইন করুন — লগইনের পর আগের পেজে ফিরে যাবেন।', 'Please log in to continue — you will return to the previous page after logging in.') ?></span></div><?php endif; ?>
 
                     <form method="post" action="/Account/Login" id="loginForm" novalidate>
                         <?= csrf_field() ?>
                         <input type="hidden" name="returnUrl" value="<?= e($returnUrl) ?>" />
                         <div class="au-f">
-                            <label for="loginUsername">Username / Email</label>
-                            <div class="au-in"><i class="far fa-envelope"></i><input name="username" id="loginUsername" type="text" autocomplete="username" placeholder="Enter your username or email" required /></div>
-                            <div class="au-fb">Username অথবা Email দিন।</div>
+                            <label for="loginUsername"><?= t('ইউজারনেম / ইমেইল', 'Username / Email') ?></label>
+                            <div class="au-in"><i class="far fa-envelope"></i><input name="username" id="loginUsername" type="text" autocomplete="username" placeholder="<?= t('আপনার ইউজারনেম বা ইমেইল লিখুন', 'Enter your username or email') ?>" required /></div>
+                            <div class="au-fb"><?= t('ইউজারনেম অথবা ইমেইল দিন।', 'Enter your username or email.') ?></div>
                         </div>
                         <div class="au-f">
-                            <label for="loginPassword">Password <a href="/Account/ForgotPassword">Forgot password?</a></label>
-                            <div class="au-in"><i class="fas fa-lock"></i><input name="password" id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password" required /><button type="button" class="au-eye" data-eye aria-label="পাসওয়ার্ড দেখান"><i class="far fa-eye"></i></button></div>
-                            <div class="au-fb">Password দিন।</div>
+                            <label for="loginPassword"><?= t('পাসওয়ার্ড', 'Password') ?> <a href="/Account/ForgotPassword"><?= t('পাসওয়ার্ড ভুলে গেছেন?', 'Forgot password?') ?></a></label>
+                            <div class="au-in"><i class="fas fa-lock"></i><input name="password" id="loginPassword" type="password" autocomplete="current-password" placeholder="<?= t('আপনার পাসওয়ার্ড লিখুন', 'Enter your password') ?>" required /><button type="button" class="au-eye" data-eye aria-label="<?= t('পাসওয়ার্ড দেখান', 'Show password') ?>"><i class="far fa-eye"></i></button></div>
+                            <div class="au-fb"><?= t('পাসওয়ার্ড দিন।', 'Enter your password.') ?></div>
                         </div>
-                        <button type="submit" class="au-btn"><i class="fas fa-right-to-bracket"></i> Login</button>
+                        <button type="submit" class="au-btn"><i class="fas fa-right-to-bracket"></i> <?= t('লগইন', 'Login') ?></button>
                     </form>
-                    <p class="au-switch">Don't have an account?<a href="/Account/Register" data-go="register">Create New Account</a></p>
+                    <p class="au-switch"><?= t('অ্যাকাউন্ট নেই?', 'Don\'t have an account?') ?><a href="/Account/Register" data-go="register"><?= t('নতুন অ্যাকাউন্ট খুলুন', 'Create New Account') ?></a></p>
                 </div>
 
                 <!-- সাইনআপ -->
                 <div class="au-form au-reg<?= $mode === 'register' ? '' : ' off' ?>" data-form="register"<?= $mode === 'register' ? '' : ' aria-hidden="true"' ?>>
-                    <h1>Create Your Account</h1>
-                    <p class="lead">Join Mashtermoshai to find tutors, post requirements, and access learning opportunities.</p>
+                    <<?= $mode === 'register' ? 'h1' : 'h2' ?> class="au-h"><?= t('আপনার অ্যাকাউন্ট খুলুন', 'Create Your Account') ?></<?= $mode === 'register' ? 'h1' : 'h2' ?>>
+                    <p class="lead"><?= t('মাষ্টার মশাই-এ যোগ দিন — টিউটর খুঁজুন, টিউশন পোস্ট করুন আর শেখার সুযোগ নিন।', 'Join Mashtermoshai to find tutors, post requirements, and access learning opportunities.') ?></p>
                     <?php if ($mode === 'register' && $err !== null): ?><div class="au-alert err"><i class="fas fa-circle-exclamation"></i><span><?= e($err) ?></span></div><?php endif; ?>
                     <form method="post" action="/Account/Register" id="registerForm" novalidate autocomplete="off">
                         <?= csrf_field() ?>
@@ -180,33 +180,33 @@ $authImg = $authT['auth_img'];
                         <input type="text" name="fakeUsernameRemembered" autocomplete="off" style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;" tabindex="-1" aria-hidden="true" />
                         <input type="password" name="fakePasswordRemembered" autocomplete="new-password" style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;" tabindex="-1" aria-hidden="true" />
                         <div class="au-f">
-                            <label for="fullName">Full Name</label>
-                            <div class="au-in"><i class="far fa-user"></i><input name="fullName" id="fullName" type="text" placeholder="Enter your full name" autocomplete="off" required /></div>
-                            <div class="au-fb">Please enter your real full name (first and last name).</div>
+                            <label for="fullName"><?= t('পুরো নাম', 'Full Name') ?></label>
+                            <div class="au-in"><i class="far fa-user"></i><input name="fullName" id="fullName" type="text" placeholder="<?= t('আপনার পুরো নাম লিখুন', 'Enter your full name') ?>" autocomplete="off" required /></div>
+                            <div class="au-fb"><?= t('আপনার আসল পুরো নাম দিন (নামের প্রথম ও শেষ অংশ)।', 'Please enter your real full name (first and last name).') ?></div>
                         </div>
                         <div class="au-f">
-                            <label for="username">Username</label>
-                            <div class="au-in"><i class="fas fa-at"></i><input name="username" id="username" type="text" placeholder="Choose a username (e.g. rahim_23)" autocomplete="off" required /></div>
-                            <div class="au-fb">Username must be 3–20 characters (letters, numbers, underscore).</div>
+                            <label for="username"><?= t('ইউজারনেম', 'Username') ?></label>
+                            <div class="au-in"><i class="fas fa-at"></i><input name="username" id="username" type="text" placeholder="<?= t('একটা ইউজারনেম দিন (যেমন rahim_23)', 'Choose a username (e.g. rahim_23)') ?>" autocomplete="off" required /></div>
+                            <div class="au-fb"><?= t('ইউজারনেম ৩–২০ অক্ষরের হতে হবে (ইংরেজি অক্ষর, সংখ্যা, আন্ডারস্কোর)।', 'Username must be 3–20 characters (letters, numbers, underscore).') ?></div>
                         </div>
                         <div class="au-f">
-                            <label for="email">Email</label>
-                            <div class="au-in"><i class="far fa-envelope"></i><input name="email" id="email" type="email" placeholder="Enter your email address" autocomplete="off" required /></div>
-                            <div class="au-fb">Only a valid Gmail address is allowed (e.g. yourname@gmail.com).</div>
+                            <label for="email"><?= t('ইমেইল', 'Email') ?></label>
+                            <div class="au-in"><i class="far fa-envelope"></i><input name="email" id="email" type="email" placeholder="<?= t('আপনার ইমেইল লিখুন', 'Enter your email address') ?>" autocomplete="off" required /></div>
+                            <div class="au-fb"><?= t('শুধু সঠিক Gmail দেওয়া যাবে (যেমন yourname@gmail.com)।', 'Only a valid Gmail address is allowed (e.g. yourname@gmail.com).') ?></div>
                         </div>
                         <div class="au-row">
                             <div class="au-f">
-                                <label for="password">Password</label>
-                                <div class="au-in"><i class="fas fa-lock"></i><input name="password" id="password" type="password" placeholder="Enter password" autocomplete="new-password" required /><button type="button" class="au-eye" data-eye aria-label="পাসওয়ার্ড দেখান"><i class="far fa-eye"></i></button></div>
-                                <div class="au-fb">Password must be at least 6 characters.</div>
+                                <label for="password"><?= t('পাসওয়ার্ড', 'Password') ?></label>
+                                <div class="au-in"><i class="fas fa-lock"></i><input name="password" id="password" type="password" placeholder="<?= t('পাসওয়ার্ড দিন', 'Enter password') ?>" autocomplete="new-password" required /><button type="button" class="au-eye" data-eye aria-label="<?= t('পাসওয়ার্ড দেখান', 'Show password') ?>"><i class="far fa-eye"></i></button></div>
+                                <div class="au-fb"><?= t('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।', 'Password must be at least 6 characters.') ?></div>
                             </div>
                             <div class="au-f">
-                                <label for="confirmPassword">Confirm Password</label>
-                                <div class="au-in"><i class="fas fa-lock"></i><input name="confirmPassword" id="confirmPassword" type="password" placeholder="Confirm password" autocomplete="new-password" required /><button type="button" class="au-eye" data-eye aria-label="পাসওয়ার্ড দেখান"><i class="far fa-eye"></i></button></div>
-                                <div class="au-fb">Passwords do not match.</div>
+                                <label for="confirmPassword"><?= t('আবার পাসওয়ার্ড', 'Confirm Password') ?></label>
+                                <div class="au-in"><i class="fas fa-lock"></i><input name="confirmPassword" id="confirmPassword" type="password" placeholder="<?= t('আবার পাসওয়ার্ড দিন', 'Confirm password') ?>" autocomplete="new-password" required /><button type="button" class="au-eye" data-eye aria-label="<?= t('পাসওয়ার্ড দেখান', 'Show password') ?>"><i class="far fa-eye"></i></button></div>
+                                <div class="au-fb"><?= t('দুইটা পাসওয়ার্ড মেলেনি।', 'Passwords do not match.') ?></div>
                             </div>
                         </div>
-                        <p class="au-hint">Minimum 6 characters.</p>
+                        <p class="au-hint"><?= t('কমপক্ষে ৬ অক্ষর।', 'Minimum 6 characters.') ?></p>
                         <?php $pfRef = ''; if (function_exists('partner_pending') && ($pp = partner_pending())) $pfRef = $pp[0];
                             elseif (preg_match('/^MM[A-Z0-9]{6}$/', (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? '')))) $pfRef = (string)($_SESSION['ref_code'] ?? $_COOKIE['mm_ref']);
                             $pfRef = (string)(input_str('refCode', '') ?: $pfRef); ?>
@@ -215,22 +215,22 @@ $authImg = $authT['auth_img'];
                             if (!isset($refOpts[$hhSel])) $hhSel = ''; ?>
                         <?php if ($refOpts): ?>
                         <div class="au-f" id="hhBox">
-                            <label for="howHeard">কোথা থেকে জেনে এসেছেন? <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
+                            <label for="howHeard"><?= t('কোথা থেকে জেনে এসেছেন?', 'How did you hear about us?') ?> <span style="font-weight:500;color:#94A3B8;"><?= t('(ঐচ্ছিক)', '(optional)') ?></span></label>
                             <div class="au-in"><i class="fas fa-bullhorn"></i><select name="howHeard" id="howHeard">
-                                <option value="">— বাছাই করুন (ঐচ্ছিক) —</option>
+                                <option value=""><?= t('— বাছাই করুন (ঐচ্ছিক) —', '— Select (optional) —') ?></option>
                                 <?php foreach ($refOpts as $k => $o): ?><option value="<?= e($k) ?>"<?= $hhSel === $k ? ' selected' : '' ?>><?= e($o['label']) ?></option><?php endforeach; ?>
                             </select></div>
-                            <div class="au-fb">কোথা থেকে জেনেছেন সেটা বাছাই করুন।</div>
+                            <div class="au-fb"><?= t('কোথা থেকে জেনেছেন সেটা বাছাই করুন।', 'Please select where you heard about us.') ?></div>
                         </div>
                         <?php endif; ?>
                         <div class="au-f">
-                            <label for="refCode">রেফারেন্স কোড <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
-                            <div class="au-in"><i class="fas fa-ticket"></i><input name="refCode" id="refCode" type="text" maxlength="20" placeholder="কোড থাকলে লিখুন" autocomplete="off" value="<?= e($pfRef) ?>" style="text-transform:uppercase;" /></div>
+                            <label for="refCode"><?= t('রেফারেন্স কোড', 'Reference Code') ?> <span style="font-weight:500;color:#94A3B8;"><?= t('(ঐচ্ছিক)', '(optional)') ?></span></label>
+                            <div class="au-in"><i class="fas fa-ticket"></i><input name="refCode" id="refCode" type="text" maxlength="20" placeholder="<?= t('কোড থাকলে লিখুন', 'Enter code if you have one') ?>" autocomplete="off" value="<?= e($pfRef) ?>" style="text-transform:uppercase;" /></div>
                         </div>
                         <div id="formError" class="au-alert err" style="display:none;"></div>
-                        <button type="submit" class="au-btn"><i class="fas fa-user-plus"></i> Create Account</button>
+                        <button type="submit" class="au-btn"><i class="fas fa-user-plus"></i> <?= t('অ্যাকাউন্ট খুলুন', 'Create Account') ?></button>
                     </form>
-                    <p class="au-switch">Already have an account?<a href="/Account/Login<?= $returnUrl !== '' ? '?returnUrl=' . rawurlencode($returnUrl) : '' ?>" data-go="login">Login Here</a></p>
+                    <p class="au-switch"><?= t('আগেই অ্যাকাউন্ট আছে?', 'Already have an account?') ?><a href="/Account/Login<?= $returnUrl !== '' ? '?returnUrl=' . rawurlencode($returnUrl) : '' ?>" data-go="login"><?= t('এখানে লগইন করুন', 'Login Here') ?></a></p>
                 </div>
             </div>
         </div>
@@ -294,16 +294,16 @@ $authImg = $authT['auth_img'];
     });
     rf.addEventListener('submit', function (e) {
         var ok = [vName(), vUser(), vEmail(), vPass(), vConf()].every(Boolean);
-        if (!ok) { e.preventDefault(); formError.innerHTML = '<i class="fas fa-circle-exclamation"></i><span>Please fix the highlighted fields before creating an account.</span>'; formError.style.display = 'flex'; fit(); }
+        if (!ok) { e.preventDefault(); formError.innerHTML = '<i class="fas fa-circle-exclamation"></i><span><?= t('অ্যাকাউন্ট খোলার আগে লাল দাগ দেওয়া ঘরগুলো ঠিক করুন।', 'Please fix the highlighted fields before creating an account.') ?></span>'; formError.style.display = 'flex'; fit(); }
     });
 
     // Suspend এর বাকি সময়
     var sl = document.getElementById('suspLeft');
     if (sl) (function tick() {
         var ms = new Date(sl.getAttribute('data-until')).getTime() - Date.now();
-        if (ms <= 0) { sl.textContent = 'শেষ — এখন লগইন করতে পারবেন'; sl.style.color = '#155724'; return; }
+        if (ms <= 0) { sl.textContent = <?= js(t('শেষ — এখন লগইন করতে পারবেন', 'Over — you can log in now')) ?>; sl.style.color = '#155724'; return; }
         var s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
-        sl.textContent = (d ? d + ' দিন ' : '') + (d || h ? h + ' ঘণ্টা ' : '') + m + ' মিনিট ' + (s % 60) + ' সেকেন্ড'; setTimeout(tick, 1000);
+        var U = <?= js(site_lang() === 'en' ? ['d ', 'h ', 'm ', 's'] : [' দিন ', ' ঘণ্টা ', ' মিনিট ', ' সেকেন্ড']) ?>; sl.textContent = (d ? d + U[0] : '') + (d || h ? h + U[1] : '') + m + U[2] + (s % 60) + U[3]; setTimeout(tick, 1000);
     })();
 })();
 </script>

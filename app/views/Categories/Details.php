@@ -15,7 +15,7 @@ $label = $kind === 'school' ? trim($c->GroupName . ' ' . $c->Name) : $c->Name;
 $ViewData['Title'] = $c->Name;
 $ViewData['FullTitle'] = $label . ' Tutor in Bangladesh | ' . $brand;
 $ViewData['Description'] = mb_substr('Find experienced ' . $label . ' tutors in Bangladesh with ' . $brand . '. ' . implode(' ', $tx['Highlights']), 0, 300);
-$ViewData['Canonical'] = 'https://mashtermoshai.com' . $c->Url;
+$ViewData['Canonical'] = seo_origin() . $c->Url;
 if ($c->ImageUrl !== '') $ViewData['OgImage'] = $c->ImageUrl;
 
 $isLoggedIn = session_get('UserName') !== null;
@@ -151,7 +151,7 @@ $seeAll = '/FindTutor?cat=' . rawurlencode($c->Slug);
             </div>
             <?php if ($c->BannerUrl === ''): ?>
                 <div class="cd-hero-art" aria-hidden="true">
-                    <?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="" />
+                    <?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="<?= e($c->Name) ?> tutor" />
                     <?php else: ?><span class="ic" style="background:<?= $tintBg ?>;color:<?= $tintFg ?>;"><i class="fas <?= e($c->Icon) ?>"></i></span><?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -191,7 +191,7 @@ $seeAll = '/FindTutor?cat=' . rawurlencode($c->Slug);
                                 <?php if ($t->TotalReviews): ?><span class="stars"><i class="fas fa-star"></i> <?= e(number_format($t->Rating, 1)) ?> (<?= (int)$t->TotalReviews ?>)</span><?php endif; ?>
                                 <span class="loc"><i class="fas fa-location-dot"></i><?= e($t->City !== '' ? $t->City : $t->Location) ?></span>
                             </div>
-                            <a class="cd-see" href="/Profile/Show/<?= (int)$t->UserId ?>">See</a>
+                            <a class="cd-see" href="/Tutors/Profile/<?= (int)$t->UserId ?>">View</a>
                         </div>
                     <?php endforeach; ?>
                 </div>

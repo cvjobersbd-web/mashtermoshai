@@ -5,7 +5,7 @@
     .auth-head { text-align: center; padding: 30px 26px 8px; }
     .auth-ico { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; background: #CFF2FC; color: #028EA5; display: flex; align-items: center; justify-content: center; font-size: 26px; }
     .auth-ico.bad { background: #FDECEA; color: #c0392b; }
-    .auth-head h4 { margin: 0 0 8px; color: #08224A; font-weight: 800; font-size: 21px; }
+    .auth-head h4, .auth-head h1 { margin: 0 0 8px; color: #08224A; font-weight: 800; font-size: 21px; }
     .auth-head p { margin: 0; color: #64748B; font-size: 14px; line-height: 1.6; }
     .auth-body { padding: 20px 26px 28px; }
     .auth-label { display: block; font-weight: 700; font-size: 13.5px; color: #08224A; margin: 10px 0 6px; }

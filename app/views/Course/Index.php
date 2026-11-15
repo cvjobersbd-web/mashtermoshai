@@ -75,7 +75,7 @@ $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?
                         <?php if (!is_blank($c->Category)): ?><span class="cx-pill blue" style="align-self:flex-start;"><?= e($c->Category) ?></span><?php endif; ?>
                         <h3><?= e($c->Title) ?></h3>
                         <?php if (!is_blank($c->Subtitle)): ?><div class="st"><?= e($c->Subtitle) ?></div><?php endif; ?>
-                        <div class="ci-t"><span class="av"><?= e(initials($tn)) ?><?php if (!is_blank($c->TeacherPhoto) && viewer_sees_teacher_photos()): ?><img src="<?= e($c->TeacherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span><?= e($tn) ?></div>
+                        <div class="ci-t"><span class="av"><?= e(initials($tn)) ?><?php if (!is_blank($c->TeacherPhoto) && viewer_sees_teacher_photos()): ?><img src="<?= e($c->TeacherPhoto) ?>" alt="<?= e($tn) ?>" onerror="this.remove()" /><?php endif; ?></span><?= e($tn) ?></div>
                         <div class="ci-m"><span><i class="fas fa-circle-play"></i> <?= (int)$c->LessonCount ?>টা ক্লাস</span><span><i class="fas fa-user-graduate"></i> <?= (int)$c->StudentCount ?> জন</span><?php if (!is_blank($c->Level)): ?><span><i class="fas fa-signal"></i> <?= e($c->Level) ?></span><?php endif; ?></div>
                         <div class="ci-f"><?= course_price_html($c) ?><span class="cx-btn sm pri">বিস্তারিত <i class="fas fa-arrow-right"></i></span></div>
                     </div>

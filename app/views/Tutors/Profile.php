@@ -337,7 +337,7 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
                 <div class="tp-rlist">
                     <?php foreach ($ViewBag->Reviews as $r): ?>
                         <div class="tp-r">
-                            <span class="av"><?= e($r->Initials) ?><?php if ($r->Image): ?><img src="<?= e($r->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                            <span class="av"><?= e($r->Initials) ?><?php if ($r->Image): ?><img src="<?= e($r->Image) ?>" alt="<?= e($r->Name ?? '') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                             <div>
                                 <b><?= e($r->Name) ?></b><small><?= e($r->TimeAgo) ?></small>
                                 <div class="tp-stars"><?php for ($i = 1; $i <= 5; $i++): ?><i class="fas fa-star<?= $i <= $r->Rating ? '' : ' off' ?>"></i><?php endfor; ?></div>

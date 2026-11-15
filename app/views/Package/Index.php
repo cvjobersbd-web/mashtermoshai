@@ -3,7 +3,8 @@
  * প্যাকেজ / Pricing — শিক্ষকের Subscription আর শিক্ষার্থীর Tuition Post প্যাকেজ।
  * প্যাকেজগুলো অ্যাডমিন প্যানেল (Admin → Packages) থেকে সাজানো হয়। পেমেন্ট সিস্টেম পরে যুক্ত হবে।
  */
-$ViewData['Title'] = 'Packages';
+$ViewData['Title'] = t('প্যাকেজ', 'Packages');
+$ViewData['Description'] = t('মাষ্টার মশাই প্যাকেজ — শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য প্যাকেজ। দাম, মেয়াদ আর সুবিধা দেখুন, bKash / Nagad দিয়ে সহজে কিনুন।', 'Mashter Moshai packages — subscriptions for teachers and packages for students. See prices, duration and benefits, and buy easily with bKash / Nagad.');
 $teacherPkAll = $ViewBag->TeacherPackages ?? [];
 // নরমাল আর Premium (লাইভ ক্লাস সহ) আলাদা দেখানো
 $teacherPk = array_values(array_filter($teacherPkAll, fn($p) => empty($p->IsLive)));
@@ -29,14 +30,14 @@ if ($bannerImg !== '' && !preg_match('#^(https?://|/uploads/)[^\s"\'<>()]+$#i', 
 // ছবির ভিতরেই লেখা থাকলে (ডিফল্ট) ছবিটা পুরোটা দেখাই, উপরে লেখা বসাই না; অ্যাডমিন চাইলে লেখা বসানো চালু করতে পারে
 $imgOnly = $bannerImg !== '' && ($pb['pk_banner_text'] ?? '0') !== '1';
 $tabsHtml = '<div class="pk-tabs-in" role="tablist">'
-    . '<button type="button" class="pk-tab' . ($tab === 'teacher' ? ' on' : '') . '" data-pk-tab="teacher" role="tab" aria-selected="' . ($tab === 'teacher' ? 'true' : 'false') . '"><i class="fas fa-graduation-cap"></i> শিক্ষকদের জন্য</button>'
-    . '<button type="button" class="pk-tab' . ($tab === 'student' ? ' on' : '') . '" data-pk-tab="student" role="tab" aria-selected="' . ($tab === 'student' ? 'true' : 'false') . '"><i class="fas fa-user-group"></i> শিক্ষার্থীদের জন্য</button>'
+    . '<button type="button" class="pk-tab' . ($tab === 'teacher' ? ' on' : '') . '" data-pk-tab="teacher" role="tab" aria-selected="' . ($tab === 'teacher' ? 'true' : 'false') . '"><i class="fas fa-graduation-cap"></i> ' . t('শিক্ষকদের জন্য', 'For Teachers') . '</button>'
+    . '<button type="button" class="pk-tab' . ($tab === 'student' ? ' on' : '') . '" data-pk-tab="student" role="tab" aria-selected="' . ($tab === 'student' ? 'true' : 'false') . '"><i class="fas fa-user-group"></i> ' . t('শিক্ষার্থীদের জন্য', 'For Students') . '</button>'
     . '</div>';
 $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
     <div class="pk-ben-h"><h3><?= e($title) ?></h3></div>
     <div class="pk-ben">
         <?php foreach ($list as $b): ?>
-            <div class="pk-ben-i"><span class="ic"><?php if (($b['i'] ?? '') === 'fa-certificate'): ?><?= blue_tick_html('নীল টিক') ?><?php else: ?><i class="fas <?= e(in_array($b['i'] ?? '', package_benefit_icons(), true) ? $b['i'] : 'fa-check') ?>"></i><?php endif; ?></span>
+            <div class="pk-ben-i"><span class="ic"><?php if (($b['i'] ?? '') === 'fa-certificate'): ?><?= blue_tick_html(t('নীল টিক', 'Blue tick')) ?><?php else: ?><i class="fas <?= e(in_array($b['i'] ?? '', package_benefit_icons(), true) ? $b['i'] : 'fa-check') ?>"></i><?php endif; ?></span>
                 <div><b><?= e($b['t']) ?></b><?php if (($b['d'] ?? '') !== ''): ?><p><?= e($b['d']) ?></p><?php endif; ?></div></div>
         <?php endforeach; ?>
     </div>
@@ -51,7 +52,7 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
 <?php
 $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student';
     $cpo = $free ? null : db()->CouponOfferFor($p);
-    $badge = $cpo ? 'Special Package' : (string)$p->Badge; // কুপন অফার থাকলে "জনপ্রিয়"-এর বদলে Special Package ?>
+    $badge = $cpo ? t('স্পেশাল প্যাকেজ', 'Special Package') : (string)$p->Badge; // কুপন অফার থাকলে "জনপ্রিয়"-এর বদলে Special Package ?>
     <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?><?= !empty($p->IsLive) ? ' pk-prem' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
             <div class="pk-name"><?= e($p->Name) ?></div>
@@ -59,17 +60,17 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
         </div>
         <?php if (trim($p->Name) !== $p->DurationLabel): ?><div class="pk-dur"><?= e($p->DurationLabel) ?></div><?php endif; ?>
         <div class="pk-price">
-            <?php if ($free): ?><b style="color:#15803D;">ফ্রি</b><s><?= e(taka($p->Price)) ?></s>
+            <?php if ($free): ?><b style="color:#15803D;"><?= t('ফ্রি', 'Free') ?></b><s><?= e(taka($p->Price)) ?></s>
             <?php else: ?><b><?= e(taka($p->Price)) ?></b>
             <?php if ($p->RegularPrice): ?><s><?= e(taka($p->RegularPrice)) ?></s><?php endif; ?><?php endif; ?>
         </div>
-        <?php if ($free): ?><span class="pk-pill green"><i class="fas fa-gift" style="margin-right:6px;"></i> এখন সম্পূর্ণ ফ্রি</span>
-        <?php elseif ($p->PerMonth): ?><span class="pk-pill">প্রতি মাসে মাত্র <?= e(taka($p->PerMonth)) ?></span>
-        <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green">মাত্র <?= e(taka($p->Price)) ?></span>
-        <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill">প্রতি পোস্ট মাত্র <?= e(taka((int)round($p->Price / $p->PostLimit))) ?></span>
+        <?php if ($free): ?><span class="pk-pill green"><i class="fas fa-gift" style="margin-right:6px;"></i> <?= t('এখন সম্পূর্ণ ফ্রি', 'Completely free now') ?></span>
+        <?php elseif ($p->PerMonth): ?><span class="pk-pill"><?= t('প্রতি মাসে মাত্র', 'Only') ?> <?= e(taka($p->PerMonth)) ?><?= t('', ' per month') ?></span>
+        <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green"><?= t('মাত্র', 'Only') ?> <?= e(taka($p->Price)) ?></span>
+        <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill"><?= t('প্রতি পোস্ট মাত্র', 'Only') ?> <?= e(taka((int)round($p->Price / $p->PostLimit))) ?><?= t('', ' per post') ?></span>
         <?php else: ?><span class="pk-pill green"><?= e($p->DurationLabel) ?></span><?php endif; ?>
         <?php if ($cpo): ?>
-            <div class="pk-offer"><i class="fas fa-ticket"></i><div><b>স্পেশাল অফার · সীমিত সময়</b>কুপন কোড দিলে মাত্র <b class="p"><?= e(taka((int)$cpo->Price)) ?></b><?= $cpo->EndsAt ? ' — ' . e(date('d M Y', strtotime((string)$cpo->EndsAt))) . ' পর্যন্ত' : '' ?></div></div>
+            <div class="pk-offer"><i class="fas fa-ticket"></i><div><b><?= t('স্পেশাল অফার · সীমিত সময়', 'Special offer · limited time') ?></b><?= t('কুপন কোড দিলে মাত্র', 'With a coupon code, only') ?> <b class="p"><?= e(taka((int)$cpo->Price)) ?></b><?= $cpo->EndsAt ? ' — ' . t('', 'until ') . e(date('d M Y', strtotime((string)$cpo->EndsAt))) . t(' পর্যন্ত', '') : '' ?></div></div>
         <?php endif; ?>
         <?php if ($p->FeatureList): ?>
             <ul class="pk-feat">
@@ -205,37 +206,37 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
         <div style="max-width:1100px; margin:18px auto 0; padding:0 16px;">
             <div style="background:#E6F9FF; border:1.5px solid #00CFFF; border-radius:14px; padding:14px 18px; display:flex; gap:12px; align-items:flex-start; color:#0F172A;">
                 <i class="fas fa-circle-check" style="color:#00B5E0; font-size:22px; margin-top:2px;"></i>
-                <div><b style="font-size:15.5px;"><?= e($TempData['Success'] ?? $TempData['Info'] ?? 'ধাপ ২: টিচার প্যাকেজ বেছে নিন') ?></b>
-                    <div style="font-size:13.5px; color:#334155; margin-top:3px;">১) ফর্ম পূরণ ✅ → ২) অ্যাডমিন Verification Approve করলে আপনি টিচার (Tutor List এ আসবেন) → <b>৩) নিচ থেকে "শিক্ষকদের জন্য" প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</b></div></div>
+                <div><b style="font-size:15.5px;"><?= e($TempData['Success'] ?? $TempData['Info'] ?? t('ধাপ ২: টিচার প্যাকেজ বেছে নিন', 'Step 2: Choose a teacher package')) ?></b>
+                    <div style="font-size:13.5px; color:#334155; margin-top:3px;"><?php if (site_lang() === 'en'): ?>1) Form filled ✅ → 2) When the admin approves your verification you become a teacher (you appear in the Tutor List) → <b>3) Buy a "For Teachers" package below to unlock your photo, full information and student contact.</b><?php else: ?>১) ফর্ম পূরণ ✅ → ২) অ্যাডমিন Verification Approve করলে আপনি টিচার (Tutor List এ আসবেন) → <b>৩) নিচ থেকে "শিক্ষকদের জন্য" প্যাকেজ কিনলে আপনার ছবি, সম্পূর্ণ তথ্য আর শিক্ষার্থীদের যোগাযোগের সুযোগ খুলবে।</b><?php endif; ?></div></div>
             </div>
         </div>
     <?php endif; ?>
     <?php if ($imgOnly): ?>
-    <h1 class="pk-sr">মাষ্টার মশাই প্যাকেজ</h1>
-    <section class="pk-banner"><img src="<?= e($bannerImg) ?>" alt="মাষ্টার মশাই প্যাকেজ — শিক্ষক ও শিক্ষার্থীদের জন্য আলাদা সুবিধা" /></section>
+    <h1 class="pk-sr"><?= t('মাষ্টার মশাই প্যাকেজ', 'Mashter Moshai Packages') ?></h1>
+    <section class="pk-banner"><img src="<?= e($bannerImg) ?>" alt="<?= t('মাষ্টার মশাই প্যাকেজ — শিক্ষক ও শিক্ষার্থীদের জন্য আলাদা সুবিধা', 'Mashter Moshai packages — separate benefits for teachers and students') ?>" /></section>
     <div class="pk-tabbar"><?= $tabsHtml ?></div>
     <?php else: ?>
     <section class="pk-hero<?= $bannerImg === '' ? ' noimg' : '' ?>"<?= $bannerImg !== '' ? ' style="--pk-img:url(\'' . e($bannerImg) . '\')"' : '' ?>>
         <div class="pk-hero-in">
             <div class="pk-hero-txt">
-                <small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small>
-                <h1>মাষ্টার মশাই প্যাকেজ</h1>
-                <p>শিক্ষক ও শিক্ষার্থীদের জন্য আলাদা সুবিধা — নিরাপদ ও সহজভাবে টিউশন শিখে-শিখাতে যুক্ত হোন মাষ্টার মশাইয়ের সাথে।</p>
+                <small><i class="fas fa-graduation-cap"></i> <?= t('টিউটর ও শিক্ষার্থী সেবা', 'Tutor &amp; Student Service') ?></small>
+                <h1><?= t('মাষ্টার মশাই প্যাকেজ', 'Mashter Moshai Packages') ?></h1>
+                <p><?= t('শিক্ষক ও শিক্ষার্থীদের জন্য আলাদা সুবিধা — নিরাপদ ও সহজভাবে টিউশন শিখে-শিখাতে যুক্ত হোন মাষ্টার মশাইয়ের সাথে।', 'Separate benefits for teachers and students — join Mashter Moshai to learn and teach safely and easily.') ?></p>
                 <?= $tabsHtml ?>
             </div>
             <?php if ($bannerImg === ''): ?>
             <div class="pk-hero-art" aria-hidden="true">
-                <div class="pk-bubble" data-art="teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>>আপনার জ্ঞান পৌঁছে যাক<br>আরও শিক্ষার্থীদের কাছে</div>
+                <div class="pk-bubble" data-art="teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>><?= t('আপনার জ্ঞান পৌঁছে যাক<br>আরও শিক্ষার্থীদের কাছে', 'Let your knowledge reach<br>more students') ?></div>
                 <ul class="pk-checks" data-art="teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>>
-                    <li><i class="fas fa-check"></i> বেশি শিক্ষার্থী পান</li>
-                    <li><i class="fas fa-check"></i> আপনার প্রোফাইল জনপ্রিয় করুন</li>
-                    <li><i class="fas fa-check"></i> টিউশন সুযোগ বাড়ান</li>
+                    <li><i class="fas fa-check"></i> <?= t('বেশি শিক্ষার্থী পান', 'Get more students') ?></li>
+                    <li><i class="fas fa-check"></i> <?= t('আপনার প্রোফাইল জনপ্রিয় করুন', 'Make your profile popular') ?></li>
+                    <li><i class="fas fa-check"></i> <?= t('টিউশন সুযোগ বাড়ান', 'Increase tuition opportunities') ?></li>
                 </ul>
-                <div class="pk-bubble" data-art="student"<?= $tab === 'student' ? '' : ' hidden' ?>>সঠিক শিক্ষক খুঁজে নিন<br>সহজে ও নিরাপদে</div>
+                <div class="pk-bubble" data-art="student"<?= $tab === 'student' ? '' : ' hidden' ?>><?= t('সঠিক শিক্ষক খুঁজে নিন<br>সহজে ও নিরাপদে', 'Find the right teacher<br>easily and safely') ?></div>
                 <ul class="pk-checks" data-art="student"<?= $tab === 'student' ? '' : ' hidden' ?>>
-                    <li><i class="fas fa-check"></i> যাচাইকৃত শিক্ষক</li>
-                    <li><i class="fas fa-check"></i> সরাসরি যোগাযোগ</li>
-                    <li><i class="fas fa-check"></i> পছন্দমতো বাজেট</li>
+                    <li><i class="fas fa-check"></i> <?= t('যাচাইকৃত শিক্ষক', 'Verified teachers') ?></li>
+                    <li><i class="fas fa-check"></i> <?= t('সরাসরি যোগাযোগ', 'Direct contact') ?></li>
+                    <li><i class="fas fa-check"></i> <?= t('পছন্দমতো বাজেট', 'Budget of your choice') ?></li>
                 </ul>
                 <i class="fas fa-graduation-cap pk-art-cap"></i><i class="fas fa-lightbulb pk-art-bulb"></i><i class="fas fa-book-open pk-art-book"></i>
             </div>
@@ -250,91 +251,91 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             <i class="fas fa-user-check"></i>
             <div>
                 <?php if ($me['role'] === 'Teacher'): ?>
-                    <b>আপনার Subscription:</b> <?= $me['sub'] ? 'চালু — ' . e(date('d M Y', strtotime($me['sub']->EndsAt))) . ' পর্যন্ত' : 'চালু নেই' ?>
+                    <b><?= t('আপনার Subscription:', 'Your subscription:') ?></b> <?= $me['sub'] ? t('চালু — ', 'Active — until ') . e(date('d M Y', strtotime($me['sub']->EndsAt))) . t(' পর্যন্ত', '') : t('চালু নেই', 'Not active') ?>
                 <?php else: ?>
-                    <?php if ($studentFree): ?><b>শিক্ষার্থী প্যাকেজ:</b> এখন সম্পূর্ণ ফ্রি 🎉<?php else: $pkEnd = db()->GetStudentPackageEnd((int)current_user_id()); ?><b>আপনার প্যাকেজ:</b> <?= $me['credits'] === 0 ? 'চালু নেই' : ($pkEnd ? 'চালু — ' . e(date('d M Y', strtotime($pkEnd))) . ' পর্যন্ত' : ($me['credits'] === -1 ? 'চালু' : 'চালু — ' . e(bn_num($me['credits'])) . 'টি পোস্ট বাকি')) ?><?php endif; ?>
+                    <?php if ($studentFree): ?><b><?= t('শিক্ষার্থী প্যাকেজ:', 'Student package:') ?></b> <?= t('এখন সম্পূর্ণ ফ্রি 🎉', 'Completely free now 🎉') ?><?php else: $pkEnd = db()->GetStudentPackageEnd((int)current_user_id()); ?><b><?= t('আপনার প্যাকেজ:', 'Your package:') ?></b> <?= $me['credits'] === 0 ? t('চালু নেই', 'Not active') : ($pkEnd ? t('চালু — ', 'Active — until ') . e(date('d M Y', strtotime($pkEnd))) . t(' পর্যন্ত', '') : ($me['credits'] === -1 ? t('চালু', 'Active') : t('চালু — ', 'Active — ') . e(t(bn_num($me['credits']), (string)$me['credits'])) . t('টি পোস্ট বাকি', ' posts left'))) ?><?php endif; ?>
                 <?php endif; ?>
-                <?php if ($me['pending'] > 0): ?><span class="pk-me-p"><i class="fas fa-hourglass-half"></i> <?= e(bn_num($me['pending'])) ?>টি পেমেন্ট যাচাই হচ্ছে</span><?php endif; ?>
+                <?php if ($me['pending'] > 0): ?><span class="pk-me-p"><i class="fas fa-hourglass-half"></i> <?= e(t(bn_num($me['pending']), (string)$me['pending'])) ?><?= t('টি পেমেন্ট যাচাই হচ্ছে', ' payment(s) being verified') ?></span><?php endif; ?>
             </div>
-            <a href="/Payment/My">আমার পেমেন্ট <i class="fas fa-arrow-right"></i></a>
+            <a href="/Payment/My"><?= t('আমার পেমেন্ট', 'My Payments') ?> <i class="fas fa-arrow-right"></i></a>
         </div>
     <?php endif; ?>
 
     <!-- ===== শিক্ষক ===== -->
     <section class="pk-sec" id="pk-teacher"<?= $tab === 'teacher' ? '' : ' hidden' ?>>
         <div class="pk-sec-h">
-            <h2>শিক্ষকদের জন্য Subscription</h2>
-            <p>আপনার প্রোফাইল সক্রিয় করুন এবং শিক্ষার্থীদের সাথে সহজেই যুক্ত হোন</p>
+            <h2><?= t('শিক্ষকদের জন্য Subscription', 'Subscription for Teachers') ?></h2>
+            <p><?= t('আপনার প্রোফাইল সক্রিয় করুন এবং শিক্ষার্থীদের সাথে সহজেই যুক্ত হোন', 'Activate your profile and connect with students easily') ?></p>
         </div>
         <div class="pk-grid<?= count($teacherCards) + 1 < 3 ? ' few' : '' ?>">
             <div class="pk-card pk-free">
-                <div class="pk-top"><div class="pk-name">Free Teacher</div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;">সবসময় ফ্রি</span></div>
+                <div class="pk-top"><div class="pk-name"><?= t('ফ্রি টিচার', 'Free Teacher') ?></div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;"><?= t('সবসময় ফ্রি', 'Always free') ?></span></div>
                 <div class="pk-price"><b>৳0</b></div>
-                <span class="pk-pill green">কোনো খরচ নেই · আজীবন</span>
+                <span class="pk-pill green"><?= t('কোনো খরচ নেই · আজীবন', 'No cost · lifetime') ?></span>
                 <ul class="pk-feat">
-                    <li><i class="fas fa-check"></i><span>বিনামূল্যে Become a Tutor ফর্ম পূরণ করুন</span></li>
-                    <li><i class="fas fa-check"></i><span>Verification Approve হলে টিচার — নীল টিক ও Teacher Dashboard</span></li>
-                    <li><i class="fas fa-check"></i><span>Tutor List এ আপনার নাম ও বেসিক তথ্য</span></li>
-                    <li><i class="fas fa-check"></i><span>Edu Feed দেখুন, পোস্ট ও লাইক করুন</span></li>
-                    <li><i class="fas fa-check"></i><span>Notice, Helpdesk ব্যবহার করুন</span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('বিনামূল্যে Become a Tutor ফর্ম পূরণ করুন', 'Fill the Become a Tutor form for free') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Verification Approve হলে টিচার — নীল টিক ও Teacher Dashboard', 'Become a teacher once verified — blue tick and Teacher Dashboard') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Tutor List এ আপনার নাম ও বেসিক তথ্য', 'Your name and basic info in the Tutor List') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Edu Feed দেখুন, পোস্ট ও লাইক করুন', 'View, post and like on the Edu Feed') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Notice, Helpdesk ব্যবহার করুন', 'Use Notice and Helpdesk') ?></span></li>
                 </ul>
                 <?php if (($me['role'] ?? '') === 'Teacher'): ?>
-                    <a class="pk-btn" href="/Teacher/TeacherDashboard">Teacher Dashboard <i class="fas fa-arrow-right"></i></a>
+                    <a class="pk-btn" href="/Teacher/TeacherDashboard"><?= t('টিচার ড্যাশবোর্ড', 'Teacher Dashboard') ?> <i class="fas fa-arrow-right"></i></a>
                 <?php elseif ($isLoggedIn): ?>
-                    <a class="pk-btn" href="/Teacher/RequestForm">Become a Tutor <i class="fas fa-arrow-right"></i></a>
+                    <a class="pk-btn" href="/Teacher/RequestForm"><?= t('টিউটর হোন', 'Become a Tutor') ?> <i class="fas fa-arrow-right"></i></a>
                 <?php else: ?>
-                    <a class="pk-btn" href="/Account/Register">ফ্রি Account খুলুন <i class="fas fa-arrow-right"></i></a>
+                    <a class="pk-btn" href="/Account/Register"><?= t('ফ্রি Account খুলুন', 'Create a free account') ?> <i class="fas fa-arrow-right"></i></a>
                 <?php endif; ?>
             </div>
-            <?php foreach ($teacherCards as $p) $card($p, !empty($p->IsLive) ? 'Premium নিন' : 'Subscribe করুন'); ?>
+            <?php foreach ($teacherCards as $p) $card($p, !empty($p->IsLive) ? t('Premium নিন', 'Get Premium') : t('Subscribe করুন', 'Subscribe')); ?>
         </div>
         
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
                 <span class="av"><?= e(initials($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'Your Name')) ?></span>
-                <div><b><?= e($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : 'আপনার নাম') ?><?= blue_tick_html() ?></b><small>Verified Teacher · ফর্ম Approve হয়েছে</small></div>
+                <div><b><?= e($myName !== '' && ($me['role'] ?? '') === 'Teacher' ? $myName : t('আপনার নাম', 'Your Name')) ?><?= blue_tick_html() ?></b><small><?= t('Verified Teacher · ফর্ম Approve হয়েছে', 'Verified Teacher · form approved') ?></small></div>
             </div>
-            <p><b>নীল টিক কীভাবে পাবেন?</b> Become a Tutor ফর্ম (Academic ID Card সহ) পূরণ করে অ্যাডমিন যাচাই করে Approve করলে প্রোফাইল আর Find Tutor কার্ডে নামের পাশে নীল টিক দেখাবে। শুধু প্যাকেজ কিনলে নীল টিক আসে না।</p>
+            <p><b><?= t('নীল টিক কীভাবে পাবেন?', 'How to get the blue tick?') ?></b> <?= t('Become a Tutor ফর্ম (Academic ID Card সহ) পূরণ করে অ্যাডমিন যাচাই করে Approve করলে প্রোফাইল আর Find Tutor কার্ডে নামের পাশে নীল টিক দেখাবে। শুধু প্যাকেজ কিনলে নীল টিক আসে না।', 'Fill the Become a Tutor form (with Academic ID Card); once the admin verifies and approves it, a blue tick appears next to your name on your profile and Find Tutor card. Buying a package alone does not give a blue tick.') ?></p>
         </div>
-        <?php $benefitGrid($benefits['Teacher'], 'Subscription নিলে যা যা পাবেন'); ?>
+        <?php $benefitGrid($benefits['Teacher'], t('Subscription নিলে যা যা পাবেন', 'What you get with a subscription')); ?>
     </section>
 
     <!-- ===== শিক্ষার্থী ===== -->
     <section class="pk-sec" id="pk-student"<?= $tab === 'student' ? '' : ' hidden' ?>>
         <div class="pk-sec-h">
-            <h2>শিক্ষার্থীদের জন্য</h2>
-            <p>Account খোলা, Edu Feed দেখা আর টিচারদের প্রোফাইল দেখা ফ্রি। টিচারের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ পোস্ট করতে প্যাকেজ নিন — <?= e(package_price_hint('Student')) ?>।</p>
+            <h2><?= t('শিক্ষার্থীদের জন্য', 'For Students') ?></h2>
+            <p><?= t('Account খোলা, Edu Feed দেখা আর টিচারদের প্রোফাইল দেখা ফ্রি। টিচারের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ পোস্ট করতে প্যাকেজ নিন —', 'Creating an account, viewing the Edu Feed and teacher profiles is free. Get a package to see teachers\' photos and contact info, send Direct Requests and post on the Tuition Circular —') ?> <?= e(package_price_hint('Student')) ?><?= t('।', '.') ?></p>
         </div>
         <?php if ($studentFree): ?>
-            <div class="pk-free-note"><i class="fas fa-gift"></i><div><b>সুখবর! এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি।</b><br>কোনো প্যাকেজ বা পেমেন্ট লাগবে না — সরাসরি পোস্ট করুন।</div><a href="/Tuition/Circular">পোস্ট করুন</a></div>
+            <div class="pk-free-note"><i class="fas fa-gift"></i><div><b><?= t('সুখবর! এখন Tuition পোস্ট করা সম্পূর্ণ ফ্রি।', 'Good news! Posting tuitions is now completely free.') ?></b><br><?= t('কোনো প্যাকেজ বা পেমেন্ট লাগবে না — সরাসরি পোস্ট করুন।', 'No package or payment needed — post directly.') ?></div><a href="/Tuition/Circular"><?= t('পোস্ট করুন', 'Post now') ?></a></div>
         <?php endif; ?>
         <div class="pk-grid<?= count($studentPk) + 1 < 3 ? ' few' : '' ?>">
             <div class="pk-card pk-free">
-                <div class="pk-top"><div class="pk-name">Free Account</div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;">সবসময় ফ্রি</span></div>
+                <div class="pk-top"><div class="pk-name"><?= t('ফ্রি অ্যাকাউন্ট', 'Free Account') ?></div><span class="pk-badge" style="background:#DDF6E6;color:#12733B;"><?= t('সবসময় ফ্রি', 'Always free') ?></span></div>
                 <div class="pk-price"><b>৳0</b></div>
-                <span class="pk-pill green">কোনো খরচ নেই · আজীবন</span>
+                <span class="pk-pill green"><?= t('কোনো খরচ নেই · আজীবন', 'No cost · lifetime') ?></span>
                 <ul class="pk-feat">
-                    <li><i class="fas fa-check"></i><span>বিনামূল্যে Account খুলুন</span></li>
-                    <li><i class="fas fa-check"></i><span>Edu Feed দেখুন, পোস্ট ও লাইক করুন</span></li>
-                    <li><i class="fas fa-check"></i><span>টিচারদের তথ্য, প্রোফাইল ও রিভিউ দেখুন</span></li>
-                    <li><i class="fas fa-check"></i><span>Notice, Helpdesk ব্যবহার করুন</span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('বিনামূল্যে Account খুলুন', 'Create an account for free') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Edu Feed দেখুন, পোস্ট ও লাইক করুন', 'View, post and like on the Edu Feed') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('টিচারদের তথ্য, প্রোফাইল ও রিভিউ দেখুন', 'See teachers\' info, profiles and reviews') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Notice, Helpdesk ব্যবহার করুন', 'Use Notice and Helpdesk') ?></span></li>
                 </ul>
                 <?php if ($isLoggedIn): ?>
-                    <a class="pk-btn" href="/FindTutor">টিউটর খুঁজুন <i class="fas fa-arrow-right"></i></a>
+                    <a class="pk-btn" href="/FindTutor"><?= t('টিউটর খুঁজুন', 'Find a Tutor') ?> <i class="fas fa-arrow-right"></i></a>
                 <?php else: ?>
-                    <a class="pk-btn" href="/Account/Register">ফ্রি Account খুলুন <i class="fas fa-arrow-right"></i></a>
+                    <a class="pk-btn" href="/Account/Register"><?= t('ফ্রি Account খুলুন', 'Create a free account') ?> <i class="fas fa-arrow-right"></i></a>
                 <?php endif; ?>
             </div>
-            <?php foreach ($studentPk as $p) $card($p, 'প্যাকেজ নিন'); ?>
+            <?php foreach ($studentPk as $p) $card($p, t('প্যাকেজ নিন', 'Get package')); ?>
         </div>
         <div class="pk-note"><i class="fas fa-info-circle" style="margin-top:3px;"></i>
-            <span>পেমেন্ট অ্যাডমিন Accept করলেই প্যাকেজ চালু হবে — মেয়াদের মধ্যে টিচারদের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ যত খুশি পোস্ট করতে পারবেন।</span></div>
-        <?php $benefitGrid($benefits['Student'], 'প্যাকেজ নিলে যা যা পাবেন'); ?>
+            <span><?= t('পেমেন্ট অ্যাডমিন Accept করলেই প্যাকেজ চালু হবে — মেয়াদের মধ্যে টিচারদের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ যত খুশি পোস্ট করতে পারবেন।', 'The package starts as soon as the admin accepts your payment — during the package period you can see teachers\' photos and contact info, send Direct Requests and post on the Tuition Circular as much as you like.') ?></span></div>
+        <?php $benefitGrid($benefits['Student'], t('প্যাকেজ নিলে যা যা পাবেন', 'What you get with a package')); ?>
     </section>
 
     <section class="pk-goal">
-        <div><i class="fas fa-search big"></i><div><h3>শিক্ষার্থীর জন্য</h3><p>সহজে প্রয়োজনীয় শিক্ষক খুঁজে পাওয়া — বিষয়, ক্লাস, এলাকা আর বাজেট মিলিয়ে।</p></div></div>
-        <div><i class="fas fa-handshake big" style="background:#E8F8EF;color:#157347;"></i><div><h3>শিক্ষকের জন্য</h3><p>নিজের যোগ্যতা অনুযায়ী উপযুক্ত শিক্ষার্থীর কাছে পৌঁছানো এবং নিয়মিত টিউশন পাওয়া।</p></div></div>
+        <div><i class="fas fa-search big"></i><div><h3><?= t('শিক্ষার্থীর জন্য', 'For students') ?></h3><p><?= t('সহজে প্রয়োজনীয় শিক্ষক খুঁজে পাওয়া — বিষয়, ক্লাস, এলাকা আর বাজেট মিলিয়ে।', 'Easily find the teacher you need — matching subject, class, area and budget.') ?></p></div></div>
+        <div><i class="fas fa-handshake big" style="background:#E8F8EF;color:#157347;"></i><div><h3><?= t('শিক্ষকের জন্য', 'For teachers') ?></h3><p><?= t('নিজের যোগ্যতা অনুযায়ী উপযুক্ত শিক্ষার্থীর কাছে পৌঁছানো এবং নিয়মিত টিউশন পাওয়া।', 'Reach the right students for your skills and get regular tuitions.') ?></p></div></div>
     </section>
 </div>
 </div>

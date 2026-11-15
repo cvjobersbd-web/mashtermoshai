@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = 'Find Tutor';
+$ViewData['Description'] = t('মাষ্টার মশাই-এ টিচারদের "পড়াতে চাই" পোস্ট — বিষয়, ক্লাস, এলাকা আর বেতন দেখে পছন্দের হোম টিউটর বা অনলাইন টিউটর খুঁজে নিন।', 'Teachers\' "Want to Teach" posts on Mashter Moshai — find a home or online tutor by subject, class, area and salary.');
 
 $isLoggedIn = session_get('UserName') !== null;
 $userRole = session_get('UserRole');
@@ -1857,7 +1858,7 @@ $CommentIso = function ($dt): string {
     .ft2-banner img { display: block; width: 100%; height: auto; }
     .ft2-banner-text { padding: 36px 48px; }
     .ft2-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 16px; background: #DCEBFF; color: #1E3A8A; font-weight: 700; font-size: 14px; }
-    .ft2-banner-text h1 { margin: 14px 0 0; font-size: 46px; font-weight: 800; letter-spacing: -.5px; }
+    .ft2-banner-text h1, .ft2-banner-text h2.h1 { margin: 14px 0 0; font-size: 46px; font-weight: 800; letter-spacing: -.5px; }
     .ft2-banner-text p { margin: 8px 0 0; font-size: 19px; color: #334155; max-width: 560px; }
 
     .ft2-grid { display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 24px; align-items: start; }
@@ -1986,7 +1987,7 @@ $CommentIso = function ($dt): string {
         .ft2-side { position: static; display: grid; grid-template-columns: 1fr 1fr; }
         .ft2-fjump { display: inline-flex !important; }
         .ft2-why, .ft2-tid { display: none; }
-        .ft2-banner-text h1 { font-size: 32px; }
+        .ft2-banner-text h1, .ft2-banner-text h2.h1 { font-size: 32px; }
     }
     @media (max-width: 640px) {
         .ft2 { padding-top: 12px; }
@@ -2030,7 +2031,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
             <?php endif; ?>
             <div class="ft2-banner-text"<?= $ftBanner['ft_banner_enabled'] !== '0' && !is_blank($ftBanner['ft_banner']) ? ' hidden' : '' ?>>
                 <span class="ft2-pill"><i class="fas fa-shield-halved"></i> Find Tutor</span>
-                <h1>Find Your Perfect Tutor</h1>
+                <?= $ftBanner['ft_banner_enabled'] !== '0' && !is_blank($ftBanner['ft_banner']) ? '<h2 class="h1">Find Your Perfect Tutor</h2>' : '<h1>Find Your Perfect Tutor</h1>' ?>
                 <p>আপনার শেখার লক্ষ্যে পৌঁছাতে, সঠিক শিক্ষক খুঁজে নিন মাষ্টারমশাইয়ের সাথে।</p>
             </div>
         </div>
@@ -2044,7 +2045,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                         <button type="button" class="ft2-rules-btn" data-bs-toggle="modal" data-bs-target="#postRulesModal"><i class="far fa-clock"></i> পোস্ট করার নিয়ম</button>
                     </div>
                     <div class="ft2-compose-top">
-                        <span class="ft2-av lg"><?= e($isLoggedIn ? $firstUpper($userFullName, 'T') : 'M') ?><?php if ($isLoggedIn && !is_blank($userProfileImg)): ?><img src="<?= e($userProfileImg) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                        <span class="ft2-av lg"><?= e($isLoggedIn ? $firstUpper($userFullName, 'T') : 'M') ?><?php if ($isLoggedIn && !is_blank($userProfileImg)): ?><img src="<?= e($userProfileImg) ?>" alt="<?= e($userFullName) ?>" onerror="this.remove()" /><?php endif; ?></span>
                         <button type="button" class="ft2-compose-in" data-ft-compose="text"><?= $isTeacher || !$isLoggedIn ? 'আপনার টিউশনের প্রয়োজনের বিস্তারিত লিখুন...' : 'শুধু টিচাররা এখানে পোস্ট করতে পারবেন' ?></button>
                     </div>
                     <div class="ft2-compose-row">

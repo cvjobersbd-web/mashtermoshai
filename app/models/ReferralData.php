@@ -332,12 +332,12 @@ trait ReferralData
             'balance' => max(0, $earned - $paid - $pending - $dUsed - $dHold), 'count' => $count];
     }
 
-    /** আমার রেফার করা ইউজাররা (নতুন আগে) */
-    public function GetMyReferrals(int $userId, int $limit = 2000): array
+    /** আমার রেফার করা ইউজাররা (নতুন আগে) — কোনো সীমা নেই, সবাই দেখায় */
+    public function GetMyReferrals(int $userId): array
     {
         $this->EnsureReferralTables();
         return $this->all('SELECT r.*, u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink` FROM `Referrals` r LEFT JOIN `Users` u ON u.`Id` = r.`ReferredUserId`
-            WHERE r.`ReferrerId` = :u ORDER BY r.`Id` DESC LIMIT ' . max(1, min(5000, $limit)), ['u' => $userId]);
+            WHERE r.`ReferrerId` = :u ORDER BY r.`Id` DESC', ['u' => $userId]);
     }
 
     public function GetMyWithdrawals(int $userId): array
@@ -374,13 +374,14 @@ trait ReferralData
             ['s' => $status, 't' => $txn !== '' ? $txn : null, 'n' => $note !== '' ? $note : null, 'a' => $adminId, 'p' => now(), 'i' => $id]);
     }
 
-    public function GetReferralsAdmin(int $limit = 200): array
+    /** $limit = 0 → সবাই (কোনো সীমা নেই) */
+    public function GetReferralsAdmin(int $limit = 0): array
     {
         $this->EnsureReferralTables();
         return $this->all('SELECT r.*, a.`FullName` AS ReferrerName, a.`UserName` AS ReferrerUser, a.`Role` AS ReferrerRole, a.`ProfileImageLink` AS ReferrerPhoto,
             (SELECT k.`Code` FROM `ReferralCodes` k WHERE k.`UserId` = r.`ReferrerId` LIMIT 1) AS RefCode,
             b.`FullName` AS ReferredName, b.`UserName` AS ReferredUser, b.`Email` AS ReferredEmail, b.`Role` AS ReferredRole
-            FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId` LEFT JOIN `Users` b ON b.`Id` = r.`ReferredUserId` ORDER BY r.`Id` DESC LIMIT ' . max(1, min(2000, $limit)));
+            FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId` LEFT JOIN `Users` b ON b.`Id` = r.`ReferredUserId` ORDER BY r.`Id` DESC' . ($limit > 0 ? ' LIMIT ' . (int)$limit : ''));
     }
 
     /**

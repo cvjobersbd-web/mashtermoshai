@@ -12,20 +12,20 @@ $free = !empty($studentFree) && $p->Audience === 'Student';
         </div>
         <?php if (trim($p->Name) !== $p->DurationLabel): ?><div class="pk-dur"><?= e($p->DurationLabel) ?></div><?php endif; ?>
         <div class="pk-price">
-            <?php if ($free): ?><b style="color:#15803D;">ফ্রি</b><s><?= e(taka($p->Price)) ?></s>
+            <?php if ($free): ?><b style="color:#15803D;"><?= t('ফ্রি', 'Free') ?></b><s><?= e(taka($p->Price)) ?></s>
             <?php else: ?><b><?= e(taka($p->Price)) ?></b>
             <?php if ($p->RegularPrice): ?><s><?= e(taka($p->RegularPrice)) ?></s><?php endif; ?><?php endif; ?>
         </div>
-        <?php if ($free): ?><span class="pk-pill green"><i class="fas fa-gift" style="margin-right:6px;"></i> এখন সম্পূর্ণ ফ্রি</span>
-        <?php elseif ($p->PerMonth): ?><span class="pk-pill">প্রতি মাসে মাত্র <?= e(taka($p->PerMonth)) ?></span>
-        <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green">মাত্র <?= e(taka($p->Price)) ?></span>
-        <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill">প্রতি পোস্ট মাত্র <?= e(taka((int)round($p->Price / $p->PostLimit))) ?></span>
+        <?php if ($free): ?><span class="pk-pill green"><i class="fas fa-gift" style="margin-right:6px;"></i> <?= t('এখন সম্পূর্ণ ফ্রি', 'Completely free now') ?></span>
+        <?php elseif ($p->PerMonth): ?><span class="pk-pill"><?= t('প্রতি মাসে মাত্র', 'Only') ?> <?= e(taka($p->PerMonth)) ?><?= t('', ' per month') ?></span>
+        <?php elseif ($p->Audience === 'Teacher'): ?><span class="pk-pill green"><?= t('মাত্র', 'Only') ?> <?= e(taka($p->Price)) ?></span>
+        <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill"><?= t('প্রতি পোস্ট মাত্র', 'Only') ?> <?= e(taka((int)round($p->Price / $p->PostLimit))) ?><?= t('', ' per post') ?></span>
         <?php else: ?><span class="pk-pill green"><?= e($p->DurationLabel) ?></span><?php endif; ?>
         <?php if ($p->FeatureList): ?>
             <ul class="pk-feat">
                 <?php foreach ($p->FeatureList as $f): ?><li><i class="fas fa-check"></i><span><?= e($f) ?></span></li><?php endforeach; ?>
             </ul>
         <?php endif; ?>
-        <?php if ($free): ?><a class="pk-btn" href="/Tuition/Circular">ফ্রিতে পোস্ট করুন <i class="fas fa-arrow-right"></i></a>
+        <?php if ($free): ?><a class="pk-btn" href="/Tuition/Circular"><?= t('ফ্রিতে পোস্ট করুন', 'Post for free') ?> <i class="fas fa-arrow-right"></i></a>
         <?php else: ?><a class="pk-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>"><?= e($cta) ?> <i class="fas fa-arrow-right"></i></a><?php endif; ?>
     </div>

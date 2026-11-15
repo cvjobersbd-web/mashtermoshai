@@ -18,7 +18,7 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
 ?>
 <article class="ef-post" data-post="<?= (int)$p->Id ?>" data-status="<?= e($p->Status) ?>">
     <header class="ef-ph">
-        <a class="ef-av" href="/Profile/Show/<?= (int)$p->UserId ?>" aria-hidden="true" tabindex="-1"><?= e($p->Initials) ?><?php if ($p->AuthorPhoto !== ''): ?><img src="<?= e($p->AuthorPhoto) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+        <a class="ef-av" href="/Profile/Show/<?= (int)$p->UserId ?>" aria-hidden="true" tabindex="-1"><?= e($p->Initials) ?><?php if ($p->AuthorPhoto !== ''): ?><img src="<?= e($p->AuthorPhoto) ?>" alt="<?= e($p->AuthorName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
         <div class="ef-who">
             <a class="n" href="/Profile/Show/<?= (int)$p->UserId ?>"><?= e($p->AuthorName) ?></a><?php if ($p->AuthorRole === 'Admin'): ?> <i class="fas fa-circle-check" style="color:#00CFFF;font-size:13px;" title="অফিসিয়াল"></i><?php else: ?><span class="ef-role<?= $roleLbl === 'Teacher' ? ' t' : '' ?>"><?= $roleLbl ?></span><?php endif; ?>
             <div class="ef-meta">
@@ -53,13 +53,16 @@ $long = mb_strlen($p->Content) > 420 || substr_count($p->Content, "\n") > 6;
     <?php if ($n): ?>
         <div class="ef-imgs n<?= min($n, 4) ?>" data-imgs="<?= e(js($p->Images)) ?>">
             <?php foreach (array_slice($p->Images, 0, 4) as $i => $src): ?>
-                <button type="button" data-ef="img" data-i="<?= $i ?>" aria-label="ছবি <?= $i + 1 ?> বড় করে দেখুন"><img src="<?= e($src) ?>" alt="" loading="lazy" /><?php if ($i === 3 && $n > 4): ?><span class="plus">+<?= $n - 4 ?></span><?php endif; ?></button>
+                <button type="button" data-ef="img" data-i="<?= $i ?>" aria-label="ছবি <?= $i + 1 ?> বড় করে দেখুন"><img src="<?= e($src) ?>" alt="<?= e(($p->Subject !== '' ? $p->Subject . ' — ' : '') . $p->AuthorName) ?>" loading="lazy" /><?php if ($i === 3 && $n > 4): ?><span class="plus">+<?= $n - 4 ?></span><?php endif; ?></button>
             <?php endforeach; ?>
         </div>
     <?php elseif ($p->Video !== ''): ?>
         <div class="ef-video"><video src="<?= e($p->Video) ?>" controls preload="metadata" playsinline></video></div>
     <?php elseif ($p->YouTube !== ''): ?>
         <div class="ef-yt"><button type="button" data-ef="yt" data-yt="<?= e($p->YouTube) ?>" style="background-image:url('https://i.ytimg.com/vi/<?= e($p->YouTube) ?>/hqdefault.jpg')" aria-label="YouTube ভিডিও চালান"></button></div>
+    <?php elseif (($p->Facebook ?? '') !== ''): $fbReel = (bool)preg_match('~/(reel|share/r)/~', $p->Facebook); ?>
+        <div class="ef-fb<?= $fbReel ? ' reel' : '' ?>"><iframe src="https://www.facebook.com/plugins/video.php?href=<?= e(rawurlencode($p->Facebook)) ?>&show_text=false&width=<?= $fbReel ? 360 : 640 ?>" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen title="Facebook video"></iframe></div>
+        <a class="ef-fb-link" href="<?= e($p->Facebook) ?>" target="_blank" rel="noopener nofollow"><i class="fab fa-facebook"></i> ভিডিও না চললে Facebook এ দেখুন</a>
     <?php endif; ?>
 
     <?php if ($approved && !$admin): ?>

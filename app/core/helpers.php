@@ -817,6 +817,18 @@ function key_features_defaults(): array
         6 => ['Secure Communication & Support', 'Learn and teach with confidence.', 'Get platform support throughout the matching and communication process.', 'fa-shield-halved', 'https://i.ibb.co.com/pB4DZS31/Progress-Tracking.png'],
     ];
 }
+/** Key Features এর বাংলা লেখা (সাইটের ডিফল্ট ভাষা বাংলা) */
+function key_features_bn(): array
+{
+    return [
+        1 => ['যাচাই করা টিউটর', 'বিশ্বাসযোগ্য, যাচাই করা টিউটরের সাথে যুক্ত হোন।', 'টিউটরদের প্রোফাইল যাচাই করা হয়, যাতে শিক্ষার্থীরা নির্ভরযোগ্য শিক্ষক খুঁজে পায়।'],
+        2 => ['স্মার্ট টিউটর খোঁজা', 'আপনার প্রয়োজন মতো টিউটর খুঁজুন।', 'বিষয়, ক্লাস, কারিকুলাম, এলাকা, সময় আর বাজেট দিয়ে খুঁজুন।'],
+        3 => ['টিউশন সার্কুলার', 'চলতি টিউশনের সুযোগগুলো দেখুন।', 'টিউশন পোস্টগুলো দেখুন আর আপনার চাহিদার সাথে মেলে এমন সুযোগ খুঁজুন।'],
+        4 => ['টিউশনের চাহিদা পোস্ট করুন', 'আপনার কী দরকার জানান।', 'টিউশনের চাহিদা পোস্ট করুন — মানানসই টিউটররা আপনার পোস্ট খুঁজে পাবেন।'],
+        5 => ['দুই পক্ষের সম্মতি', 'দুই পক্ষ রাজি হলেই যোগাযোগ।', 'শিক্ষার্থী আর টিউটর আগ্রহ দেখাতে পারেন — দুজনেই রাজি হলে তবেই যোগাযোগ খোলে।'],
+        6 => ['নিরাপদ যোগাযোগ ও সহায়তা', 'নিশ্চিন্তে শিখুন আর শেখান।', 'টিউটর খোঁজা থেকে যোগাযোগ পর্যন্ত পুরো সময় সাইটের সহায়তা পাবেন।'],
+    ];
+}
 /** @return array<int, array{title:string, tagline:string, desc:string, icon:string, image:string, defaultImage:string}> */
 function key_features(): array
 {
@@ -827,7 +839,8 @@ function key_features(): array
     try { $saved = db()->GetSiteContent($keys); } catch (Throwable $e) { $saved = $keys; }
     $c = [];
     foreach ($def as $i => $d) {
-        $c[$i] = ['title' => $d[0], 'tagline' => $d[1], 'desc' => $d[2], 'icon' => $d[3], 'image' => trim((string)($saved['kf_img_' . $i] ?? $d[4])), 'defaultImage' => $d[4]];
+        $b = site_lang() === 'bn' ? (key_features_bn()[$i] ?? null) : null;   // বাংলা সাইটে বাংলা লেখা
+        $c[$i] = ['title' => $b[0] ?? $d[0], 'tagline' => $b[1] ?? $d[1], 'desc' => $b[2] ?? $d[2], 'icon' => $d[3], 'image' => trim((string)($saved['kf_img_' . $i] ?? $d[4])), 'defaultImage' => $d[4]];
     }
     return $c;
 }
@@ -1198,12 +1211,14 @@ function package_price_hint(string $audience, bool $live = false, int $max = 4):
 function package_duration_label($p): string
 {
     $m = (int)($p->DurationMonths ?? 0); $l = (int)($p->PostLimit ?? 0);
+    $en = tb('bn', 'en') === 'en';   // সাইটে English বাছলে ইংরেজি (অ্যাডমিন প্যানেলে আগের মতো বাংলা)
+    $mo = fn(int $n) => $en ? $n . ($n === 1 ? ' month' : ' months') : bn_num($n) . ' মাস';
     if (($p->Audience ?? '') === 'Student') {
-        if ($l === 0 && $m > 0) return bn_num($m) . ' মাস মেয়াদ';
-        $t = $l > 0 ? bn_num($l) . 'টি পোস্ট' : 'আনলিমিটেড পোস্ট';
-        return $m > 0 ? $t . ' · ' . bn_num($m) . ' মাস মেয়াদ' : $t;
+        if ($l === 0 && $m > 0) return $mo($m) . ($en ? ' validity' : ' মেয়াদ');
+        $t = $l > 0 ? ($en ? $l . ' posts' : bn_num($l) . 'টি পোস্ট') : ($en ? 'Unlimited posts' : 'আনলিমিটেড পোস্ট');
+        return $m > 0 ? $t . ' · ' . $mo($m) . ($en ? ' validity' : ' মেয়াদ') : $t;
     }
-    return $m > 0 ? bn_num($m) . ' মাস' : 'আজীবন';
+    return $m > 0 ? $mo($m) : ($en ? 'Lifetime' : 'আজীবন');
 }
 
 // ============================================================
@@ -1730,14 +1745,14 @@ function admin_action_rule(string $action): string
     if ($map === null) {
         $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
         $groups = [
-            'users' => ['TeacherOverview', 'UserOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
+            'users' => ['TeacherOverview', 'UserOverview', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
             'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
             'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus', 'ProfilePosts', 'DeleteProfilePost'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
-            'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'ReferralUser', 'RefUserSearch', 'SetRefNoBonus', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'LiveClasses', 'LivePayments', 'ToggleCourse', 'AddCoursePayout', 'SaveCourseSettings', 'SavePublishFee', 'ProcessWithdrawal', 'SetReferralStatus',
+            'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'ReferralUser', 'RefUserSearch', 'SetRefNoBonus', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'LiveClasses', 'LivePayments', 'ToggleCourse', 'CourseView', 'BlockCourse', 'AddCoursePayout', 'SaveCourseSettings', 'SavePublishFee', 'ProcessWithdrawal', 'SetReferralStatus',
                 'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
@@ -1818,6 +1833,17 @@ function px_settings(bool $fresh = false): array
     try { $c = db()->GetSiteContent($def); } catch (Throwable $e) { $c = $def; }
     if (!preg_match('/^\d{6,20}$/', trim((string)$c['meta_pixel_id']))) $c['meta_pixel_id'] = '';
     $c['meta_pixel_id'] = trim((string)$c['meta_pixel_id']);
+    return $c;
+}
+
+/** Google Analytics (GA4) Measurement ID আর Search Console এর যাচাই কোড — Admin → Meta Pixel পেজ থেকে */
+function google_seo_settings(): array
+{
+    static $c = null;
+    if ($c !== null) return $c;
+    try { $c = db()->GetSiteContent(['ga_id' => '', 'gsc_verify' => '']); } catch (Throwable $e) { $c = ['ga_id' => '', 'gsc_verify' => '']; }
+    $c['ga_id'] = preg_match('/^G-[A-Z0-9]{4,20}$/', (string)$c['ga_id']) ? (string)$c['ga_id'] : '';
+    $c['gsc_verify'] = preg_match('/^[A-Za-z0-9_\-]{10,100}$/', (string)$c['gsc_verify']) ? (string)$c['gsc_verify'] : '';
     return $c;
 }
 
@@ -2363,3 +2389,49 @@ function device_lock_applies(?string $role): bool
 // লাইভ ক্লাস (BigBlueButton) — আলাদা ফাইলে
 require_once __DIR__ . '/bbb.php';
 require_once __DIR__ . '/telegram.php';
+
+// ============================================================
+// ===== সাইটের ভাষা (বাংলা ডিফল্ট / English) — শুধু সাইটের জন্য, অ্যাডমিন প্যানেল যেমন আছে তেমন =====
+// ============================================================
+/** এখনকার ভাষা: 'bn' (ডিফল্ট) বা 'en' — ইউজার নেভবারের বাটন দিয়ে বদলায় (কুকি `site_lang`, ১ বছর) */
+function site_lang(): string
+{
+    static $l = null;
+    if ($l === null) {
+        // অ্যাডমিন প্যানেলের পেজে নেভবার আগের মতোই (ইংরেজি) থাকে
+        if (strcasecmp((string)($GLOBALS['__route']['controller'] ?? ''), 'Admin') === 0) return 'en';
+        $l = (($_COOKIE['site_lang'] ?? '') === 'en') ? 'en' : 'bn';
+    }
+    return $l;
+}
+/** দুই ভাষার লেখা থেকে এখনকার ভাষারটা — t('হোম', 'Home') (অ্যাডমিন প্যানেলে ইংরেজি — আগের নেভবারের মতো) */
+function t(string $bn, string $en): string { return site_lang() === 'en' ? $en : $bn; }
+/** যে লেখা আগে থেকেই বাংলা আর অ্যাডমিন প্যানেলেও দেখায় — অ্যাডমিন প্যানেলে বাংলাই থাকে, সাইটে English বাছলে ইংরেজি */
+function tb(string $bn, string $en): string
+{
+    if (strcasecmp((string)($GLOBALS['__route']['controller'] ?? ''), 'Admin') === 0) return $bn;
+    return site_lang() === 'en' ? $en : $bn;
+}
+
+// ============================================================
+// ===== SEO =====
+// ============================================================
+/** সাইটের একটাই মূল ঠিকানা — https আর www ছাড়া (canonical, sitemap, robots এ একই) */
+function seo_origin(): string
+{
+    static $o = null;
+    if ($o !== null) return $o;
+    $host = strtolower((string)(parse_url(site_public_url(), PHP_URL_HOST) ?: 'mashtermoshai.com'));
+    $host = preg_replace('/^www\./', '', $host);
+    return $o = 'https://' . $host;
+}
+/** Google এ দেখানোর দরকার নেই এমন পেজ (লগইন, পেমেন্ট, চ্যাট, ড্যাশবোর্ড ...) — noindex */
+function seo_private_page(string $controller, string $action): bool
+{
+    $c = strtolower($controller); $a = strtolower($action);
+    if (in_array($c, ['admin', 'payment', 'chat', 'kyc', 'notification', 'referral', 'saved', 'friends', 'live', 'partner', 'goal', 'user', 'profile', 'post', 'seo'], true)) return true;   // প্রোফাইল পেজ নিজস্ব — টিচারের পাবলিক পেজ /Tutors/Profile
+    if ($c === 'account') return !in_array($a, ['register'], true);   // সাইন আপ পেজ দেখাতে পারে, বাকিগুলো (লগইন, পাসওয়ার্ড রিসেট ...) না
+    if ($c === 'teacher' && $a !== 'index') return true;
+    if ($c === 'course' && in_array($a, ['learn', 'manage', 'build', 'edit', 'students', 'my', 'earnings'], true)) return true;
+    return false;
+}

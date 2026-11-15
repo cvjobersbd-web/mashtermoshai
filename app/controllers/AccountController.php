@@ -27,8 +27,8 @@ class AccountController extends Controller
             // ✅ পাসওয়ার্ড ঠিক, কিন্তু ইমেইল ভেরিফাই হয়নি — নতুন কোড পাঠিয়ে ভেরিফাই পেজে
             session_set('verify_uid', (int)$user->Id);
             $err = null;
-            if ($this->sendOtp((int)$user->Id, $err)) tempdata_set('Success', 'লগইনের আগে ইমেইল ভেরিফাই করুন — আপনার ইমেইলে নতুন কোড পাঠানো হয়েছে।');
-            else tempdata_set('Error', 'লগইনের আগে ইমেইল ভেরিফাই করুন। ' . $err);
+            if ($this->sendOtp((int)$user->Id, $err)) tempdata_set('Success', t('লগইনের আগে ইমেইল ভেরিফাই করুন — আপনার ইমেইলে নতুন কোড পাঠানো হয়েছে।', 'Please verify your email before logging in — a new code has been sent to your email.'));
+            else tempdata_set('Error', t('লগইনের আগে ইমেইল ভেরিফাই করুন। ', 'Please verify your email before logging in. ') . $err);
             $this->redirectToAction('VerifyEmail');
         }
         if ($user && device_lock_applies($user->Role)) {
@@ -51,7 +51,7 @@ class AccountController extends Controller
             $this->redirectToAction('Index', 'Home');
         }
 
-        $this->view('Login', null, ['Error' => 'Username/Email অথবা পাসওয়ার্ড ভুল।', 'ReturnUrl' => $returnUrl]);
+        $this->view('Login', null, ['Error' => t('Username/Email অথবা পাসওয়ার্ড ভুল।', 'Wrong username/email or password.'), 'ReturnUrl' => $returnUrl]);
     }
 
     /** GET /Account/Register */
@@ -72,15 +72,15 @@ class AccountController extends Controller
 
         $fail = fn(string $msg) => $this->view('Register', null, ['Error' => $msg]);
 
-        if ($username === '' || $fullName === '') $fail('All fields are required.');
-        if ($password !== $confirm) $fail('Passwords do not match');
-        if (strlen($password) < 6) $fail('Password must be at least 6 characters');
-        if (trim($email) === '') $fail('Email is required.');
+        if ($username === '' || $fullName === '') $fail(t('সব ঘর পূরণ করুন।', 'All fields are required.'));
+        if ($password !== $confirm) $fail(t('দুইটা পাসওয়ার্ড মেলেনি।', 'Passwords do not match'));
+        if (strlen($password) < 6) $fail(t('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।', 'Password must be at least 6 characters'));
+        if (trim($email) === '') $fail(t('ইমেইল দিন।', 'Email is required.'));
         $email = trim($email);
-        if (!str_ends_with($email, '@gmail.com')) $fail('Email must end with @gmail.com (all lowercase).');
-        if (!preg_match('/^[A-Za-z0-9._%+-]+@gmail\.com$/', $email)) $fail('Please enter a valid Gmail address (e.g. yourname@gmail.com).');
-        if ($this->db->UsernameExists($username)) $fail('Username already exists');
-        if ($this->db->EmailExists($email)) $fail('Email already registered');
+        if (!str_ends_with($email, '@gmail.com')) $fail(t('ইমেইলের শেষে @gmail.com থাকতে হবে (ছোট হাতের অক্ষরে)।', 'Email must end with @gmail.com (all lowercase).'));
+        if (!preg_match('/^[A-Za-z0-9._%+-]+@gmail\.com$/', $email)) $fail(t('সঠিক Gmail দিন (যেমন yourname@gmail.com)।', 'Please enter a valid Gmail address (e.g. yourname@gmail.com).'));
+        if ($this->db->UsernameExists($username)) $fail(t('এই ইউজারনেম আগেই আছে — অন্য একটা দিন।', 'Username already exists'));
+        if ($this->db->EmailExists($email)) $fail(t('এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট খোলা আছে।', 'Email already registered'));
 
         // কোথা থেকে জেনেছেন (Facebook, YouTube ...) — ঐচ্ছিক, শুধু তালিকা থেকে
         $how = null;
@@ -98,7 +98,7 @@ class AccountController extends Controller
             } elseif (preg_match('/^MM[A-Z0-9]{6}$/', $typed) && $this->db->GetUserIdByReferralCode($typed)) {
                 $userRef = $typed;
             } else {
-                $fail('রেফারেন্স কোডটি সঠিক নয় — আবার দেখে লিখুন, অথবা ঘরটি খালি রাখুন।');
+                $fail(t('রেফারেন্স কোডটি সঠিক নয় — আবার দেখে লিখুন, অথবা ঘরটি খালি রাখুন।', 'The reference code is not correct — check it again or leave it empty.'));
             }
         } elseif ($pend && ($partner = $this->db->GetPartnerByCode($pend[0])) !== null) {
             $pSrc = $pend[1];
@@ -125,13 +125,13 @@ class AccountController extends Controller
                     $this->db->MarkEmailUnverified($newId);
                     session_set('verify_uid', $newId);
                     $err = null;
-                    if ($this->sendOtp($newId, $err)) tempdata_set('Success', 'আপনার ইমেইলে ৬ ডিজিটের একটা কোড পাঠানো হয়েছে।');
+                    if ($this->sendOtp($newId, $err)) tempdata_set('Success', t('আপনার ইমেইলে ৬ ডিজিটের একটা কোড পাঠানো হয়েছে।', 'A 6-digit code has been sent to your email.'));
                     else tempdata_set('Error', $err);
                     $this->redirectToAction('VerifyEmail');
                 }
                 // (নতুন আইডি পাওয়া না গেলে — হওয়ার কথা না)
                 pixel_track('CompleteRegistration', ['status' => true, 'content_name' => 'Signup']);
-                tempdata_set('Success', 'Registration successful! Please login.');
+                tempdata_set('Success', t('রেজিস্ট্রেশন সফল হয়েছে! এখন লগইন করুন।', 'Registration successful! Please login.'));
                 $this->redirectToAction('Login');
             }
         } catch (Throwable $e) {
@@ -170,11 +170,11 @@ class AccountController extends Controller
     public function ForgotPassword_POST(): void
     {
         $v = trim((string)input_str('email', ''));
-        if ($v === '' || mb_strlen($v) > 200) $this->view('ForgotPassword', null, ['Error' => 'আপনার ইমেইল অথবা Username দিন।', 'Value' => $v]);
+        if ($v === '' || mb_strlen($v) > 200) $this->view('ForgotPassword', null, ['Error' => t('আপনার ইমেইল অথবা Username দিন।', 'Enter your email or username.'), 'Value' => $v]);
 
         $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
         if ($this->db->CountRecentResets(null, $ip, 60) >= 10) {
-            $this->view('ForgotPassword', null, ['Error' => 'অনেকবার চেষ্টা করা হয়েছে। ১ ঘণ্টা পর আবার চেষ্টা করুন।', 'Value' => $v]);
+            $this->view('ForgotPassword', null, ['Error' => t('অনেকবার চেষ্টা করা হয়েছে। ১ ঘণ্টা পর আবার চেষ্টা করুন।', 'Too many attempts. Please try again after 1 hour.'), 'Value' => $v]);
         }
 
         $mailer = Mailer::fromSettings();
@@ -198,9 +198,9 @@ class AccountController extends Controller
         }
         if ($failed !== null) {
             // ইমেইল পাঠানো যায়নি (SMTP সেট করা নেই/ভুল) — ইউজারকে সাধারণ বার্তা, আসল কারণ লগে
-            $this->view('ForgotPassword', null, ['Error' => 'এই মুহূর্তে ইমেইল পাঠানো যাচ্ছে না। কিছুক্ষণ পর চেষ্টা করুন অথবা Helpdesk এ যোগাযোগ করুন।', 'Value' => $v]);
+            $this->view('ForgotPassword', null, ['Error' => t('এই মুহূর্তে ইমেইল পাঠানো যাচ্ছে না। কিছুক্ষণ পর চেষ্টা করুন অথবা Helpdesk এ যোগাযোগ করুন।', 'Email cannot be sent right now. Please try again later or contact the Helpdesk.'), 'Value' => $v]);
         }
-        tempdata_set('Success', self::RESET_SENT_MSG);
+        tempdata_set('Success', t(self::RESET_SENT_MSG, 'If an account exists with this information, a password reset link has been sent to its registered email. Check your inbox — the link works for 30 minutes.'));
         $this->redirectToAction('ForgotPassword');
     }
 
@@ -232,7 +232,7 @@ class AccountController extends Controller
             if ($ref !== '') $this->creditReferral($ref, (int)$r->UserId, (string)($r->FullName ?: $r->UserName));
         }
         try { $this->db->CreateNotification((int)$r->UserId, 'Password Changed 🔒', 'আপনার পাসওয়ার্ড ইমেইল লিংকের মাধ্যমে পরিবর্তন করা হয়েছে। আপনি না করে থাকলে এখনই Helpdesk এ জানান।', 'warning', '/Helpdesk', 'fa-key'); } catch (Throwable $e) { }
-        tempdata_set('Success', 'পাসওয়ার্ড পরিবর্তন হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।');
+        tempdata_set('Success', t('পাসওয়ার্ড পরিবর্তন হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।', 'Password changed! Now log in with your new password.'));
         $this->redirectToAction('Login');
     }
 
@@ -327,7 +327,7 @@ class AccountController extends Controller
         if ($ref !== '') $this->creditReferral($ref, (int)$u->Id, (string)($u->FullName ?: $u->UserName));
         unset($_SESSION['verify_uid']);
         pixel_track('CompleteRegistration', ['status' => true, 'content_name' => 'Email Verified Signup']);
-        tempdata_set('Success', 'ইমেইল ভেরিফাই হয়েছে! এখন আপনার Username/Email আর পাসওয়ার্ড দিয়ে লগইন করুন।');
+        tempdata_set('Success', t('ইমেইল ভেরিফাই হয়েছে! এখন আপনার Username/Email আর পাসওয়ার্ড দিয়ে লগইন করুন।', 'Email verified! Now log in with your username/email and password.'));
         $this->redirectToAction('Login');
     }
 

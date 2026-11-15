@@ -118,7 +118,7 @@ $me = current_user_id();
                     </div>
                 </div>
                 <div class="cx-card"><h3><i class="fas fa-chalkboard-user"></i> শিক্ষক</h3>
-                    <div class="cd-teach"><span class="av"><?= e(initials($tn)) ?><?php if (!is_blank($c->TeacherPhoto)): ?><img src="<?= e($c->TeacherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                    <div class="cd-teach"><span class="av"><?= e(initials($tn)) ?><?php if (!is_blank($c->TeacherPhoto)): ?><img src="<?= e($c->TeacherPhoto) ?>" alt="<?= e($tn) ?>" onerror="this.remove()" /><?php endif; ?></span>
                         <div><b><?= e($tn) ?></b><?php if (($c->TeacherRole ?? '') === 'Teacher'): ?><a href="/Tutors/Profile/<?= (int)$c->TeacherId ?>">প্রোফাইল দেখুন →</a><?php endif; ?></div></div>
                 </div>
             </div>

@@ -34,10 +34,11 @@ $ViewData['Robots'] = 'noindex, nofollow';
                         <small><i class="fas fa-chalkboard-user"></i> <?= e($c->TeacherName ?: $c->TeacherUser) ?></small>
                         <div class="cx-bar"><div style="width:<?= (int)$p['percent'] ?>%;"></div></div>
                         <div class="cm-r"><span><?= (int)$p['percent'] ?>% সম্পন্ন</span><span>ক্লাস <?= $p['lessons'][0] ?>/<?= $p['lessons'][1] ?> · কাজ <?= $p['assignments'][0] + $p['quizzes'][0] ?>/<?= $p['assignments'][1] + $p['quizzes'][1] ?></span></div>
+                        <?php if ($c->AdminBlocked): ?><div style="margin-top:8px;font-size:12.5px;font-weight:700;color:#B91C1C;background:#FEE2E2;border-radius:8px;padding:6px 10px;"><i class="fas fa-ban"></i> অ্যাডমিন এই কোর্সটি বন্ধ করেছেন</div><?php else: ?>
                         <div class="cm-a">
                             <a class="cx-btn pri sm" href="/Course/Learn/<?= (int)$c->Id ?>"><i class="fas fa-circle-play"></i> <?= $p['percent'] > 0 ? 'চালিয়ে যান' : 'শুরু করুন' ?></a>
                             <?php if ($cert !== ''): ?><a class="cx-btn warn sm" href="/Course/Certificate/<?= e($cert) ?>" target="_blank" rel="noopener"><i class="fas fa-award"></i> সার্টিফিকেট</a><?php endif; ?>
-                        </div>
+                        </div><?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
