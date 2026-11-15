@@ -817,6 +817,18 @@ function key_features_defaults(): array
         6 => ['Secure Communication & Support', 'Learn and teach with confidence.', 'Get platform support throughout the matching and communication process.', 'fa-shield-halved', 'https://i.ibb.co.com/pB4DZS31/Progress-Tracking.png'],
     ];
 }
+/** Key Features এর বাংলা লেখা (সাইটের ডিফল্ট ভাষা বাংলা) */
+function key_features_bn(): array
+{
+    return [
+        1 => ['যাচাই করা টিউটর', 'বিশ্বাসযোগ্য, যাচাই করা টিউটরের সাথে যুক্ত হোন।', 'টিউটরদের প্রোফাইল যাচাই করা হয়, যাতে শিক্ষার্থীরা নির্ভরযোগ্য শিক্ষক খুঁজে পায়।'],
+        2 => ['স্মার্ট টিউটর খোঁজা', 'আপনার প্রয়োজন মতো টিউটর খুঁজুন।', 'বিষয়, ক্লাস, কারিকুলাম, এলাকা, সময় আর বাজেট দিয়ে খুঁজুন।'],
+        3 => ['টিউশন সার্কুলার', 'চলতি টিউশনের সুযোগগুলো দেখুন।', 'টিউশন পোস্টগুলো দেখুন আর আপনার চাহিদার সাথে মেলে এমন সুযোগ খুঁজুন।'],
+        4 => ['টিউশনের চাহিদা পোস্ট করুন', 'আপনার কী দরকার জানান।', 'টিউশনের চাহিদা পোস্ট করুন — মানানসই টিউটররা আপনার পোস্ট খুঁজে পাবেন।'],
+        5 => ['দুই পক্ষের সম্মতি', 'দুই পক্ষ রাজি হলেই যোগাযোগ।', 'শিক্ষার্থী আর টিউটর আগ্রহ দেখাতে পারেন — দুজনেই রাজি হলে তবেই যোগাযোগ খোলে।'],
+        6 => ['নিরাপদ যোগাযোগ ও সহায়তা', 'নিশ্চিন্তে শিখুন আর শেখান।', 'টিউটর খোঁজা থেকে যোগাযোগ পর্যন্ত পুরো সময় সাইটের সহায়তা পাবেন।'],
+    ];
+}
 /** @return array<int, array{title:string, tagline:string, desc:string, icon:string, image:string, defaultImage:string}> */
 function key_features(): array
 {
@@ -827,7 +839,8 @@ function key_features(): array
     try { $saved = db()->GetSiteContent($keys); } catch (Throwable $e) { $saved = $keys; }
     $c = [];
     foreach ($def as $i => $d) {
-        $c[$i] = ['title' => $d[0], 'tagline' => $d[1], 'desc' => $d[2], 'icon' => $d[3], 'image' => trim((string)($saved['kf_img_' . $i] ?? $d[4])), 'defaultImage' => $d[4]];
+        $b = site_lang() === 'bn' ? (key_features_bn()[$i] ?? null) : null;   // বাংলা সাইটে বাংলা লেখা
+        $c[$i] = ['title' => $b[0] ?? $d[0], 'tagline' => $b[1] ?? $d[1], 'desc' => $b[2] ?? $d[2], 'icon' => $d[3], 'image' => trim((string)($saved['kf_img_' . $i] ?? $d[4])), 'defaultImage' => $d[4]];
     }
     return $c;
 }
@@ -1198,12 +1211,14 @@ function package_price_hint(string $audience, bool $live = false, int $max = 4):
 function package_duration_label($p): string
 {
     $m = (int)($p->DurationMonths ?? 0); $l = (int)($p->PostLimit ?? 0);
+    $en = tb('bn', 'en') === 'en';   // সাইটে English বাছলে ইংরেজি (অ্যাডমিন প্যানেলে আগের মতো বাংলা)
+    $mo = fn(int $n) => $en ? $n . ($n === 1 ? ' month' : ' months') : bn_num($n) . ' মাস';
     if (($p->Audience ?? '') === 'Student') {
-        if ($l === 0 && $m > 0) return bn_num($m) . ' মাস মেয়াদ';
-        $t = $l > 0 ? bn_num($l) . 'টি পোস্ট' : 'আনলিমিটেড পোস্ট';
-        return $m > 0 ? $t . ' · ' . bn_num($m) . ' মাস মেয়াদ' : $t;
+        if ($l === 0 && $m > 0) return $mo($m) . ($en ? ' validity' : ' মেয়াদ');
+        $t = $l > 0 ? ($en ? $l . ' posts' : bn_num($l) . 'টি পোস্ট') : ($en ? 'Unlimited posts' : 'আনলিমিটেড পোস্ট');
+        return $m > 0 ? $t . ' · ' . $mo($m) . ($en ? ' validity' : ' মেয়াদ') : $t;
     }
-    return $m > 0 ? bn_num($m) . ' মাস' : 'আজীবন';
+    return $m > 0 ? $mo($m) : ($en ? 'Lifetime' : 'আজীবন');
 }
 
 // ============================================================
@@ -2363,3 +2378,26 @@ function device_lock_applies(?string $role): bool
 // লাইভ ক্লাস (BigBlueButton) — আলাদা ফাইলে
 require_once __DIR__ . '/bbb.php';
 require_once __DIR__ . '/telegram.php';
+
+// ============================================================
+// ===== সাইটের ভাষা (বাংলা ডিফল্ট / English) — শুধু সাইটের জন্য, অ্যাডমিন প্যানেল যেমন আছে তেমন =====
+// ============================================================
+/** এখনকার ভাষা: 'bn' (ডিফল্ট) বা 'en' — ইউজার নেভবারের বাটন দিয়ে বদলায় (কুকি `site_lang`, ১ বছর) */
+function site_lang(): string
+{
+    static $l = null;
+    if ($l === null) {
+        // অ্যাডমিন প্যানেলের পেজে নেভবার আগের মতোই (ইংরেজি) থাকে
+        if (strcasecmp((string)($GLOBALS['__route']['controller'] ?? ''), 'Admin') === 0) return 'en';
+        $l = (($_COOKIE['site_lang'] ?? '') === 'en') ? 'en' : 'bn';
+    }
+    return $l;
+}
+/** দুই ভাষার লেখা থেকে এখনকার ভাষারটা — t('হোম', 'Home') (অ্যাডমিন প্যানেলে ইংরেজি — আগের নেভবারের মতো) */
+function t(string $bn, string $en): string { return site_lang() === 'en' ? $en : $bn; }
+/** যে লেখা আগে থেকেই বাংলা আর অ্যাডমিন প্যানেলেও দেখায় — অ্যাডমিন প্যানেলে বাংলাই থাকে, সাইটে English বাছলে ইংরেজি */
+function tb(string $bn, string $en): string
+{
+    if (strcasecmp((string)($GLOBALS['__route']['controller'] ?? ''), 'Admin') === 0) return $bn;
+    return site_lang() === 'en' ? $en : $bn;
+}
