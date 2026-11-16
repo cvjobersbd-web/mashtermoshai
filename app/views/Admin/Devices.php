@@ -2,7 +2,7 @@
 /** Admin → Devices: নতুন ডিভাইসে লগইনের অনুরোধ (Accept / বাতিল) আর চালু ডিভাইস লগআউট */
 $ViewData['Title'] = 'Devices';
 $list = is_array($Model) ? $Model : [];
-$st = (string)$ViewBag->St; $q = (string)$ViewBag->Q; $on = (bool)$ViewBag->On; $auto = (bool)$ViewBag->Auto; $autoLog = $ViewBag->AutoLog ?? [];
+$st = (string)$ViewBag->St; $q = (string)$ViewBag->Q; $on = (bool)$ViewBag->On; $auto = (bool)$ViewBag->Auto; $two = (int)($ViewBag->Max ?? 1) === 2; $autoLog = $ViewBag->AutoLog ?? [];
 $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn'], 'Active' => ['চালু', 'ok'], 'Revoked' => ['লগআউট করা', 'gray'], 'Rejected' => ['বাতিল', 'no']];
 ?>
 <style>
@@ -52,7 +52,12 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
     </div>
 
     <div class="dv-card dv-rule">
-        <div><b>অটো Approve</b><small>চালু থাকলে কেউ নতুন ডিভাইস থেকে অনুরোধ দিলেই সেটা নিজে থেকে Approve হয়ে যাবে — অ্যাডমিনের Accept লাগবে না। নতুন ডিভাইস চালু হবে আর আগের ডিভাইস থেকে লগআউট হয়ে যাবে। কয়টা অটো Approve হয়েছে নিচের <strong>অটো Approve</strong> ট্যাবে দেখবেন।</small> <span id="dvAutoMsg" role="status"></span></div>
+        <div><b>২টা ডিভাইসে লগইন</b><small>চালু থাকলে শিক্ষার্থী আর টিচার অ্যাডমিনের অনুমতি ছাড়াই একসাথে ২টা ডিভাইসে লগইন থাকতে পারবেন — মোবাইল, পিসি, ল্যাপটপ যেকোনো। ২টার বেশি একদম না — ৩য় ডিভাইসে লগইন করা যাবে না, অনুরোধও পাঠানো যাবে না (অটো Approve এই নিয়মে কাজ করে না)। কারো ডিভাইস হারালে নিচের <strong>চালু ডিভাইস</strong> ট্যাব থেকে পুরোনোটা Logout করে দিন। বন্ধ থাকলে ১টা ডিভাইস।</small> <span id="dvMaxMsg" role="status"></span></div>
+        <label class="dv-sw"><input type="checkbox" id="dvMax"<?= $two ? ' checked' : '' ?> /><span></span></label>
+    </div>
+
+    <div class="dv-card dv-rule">
+        <div><b>অটো Approve</b><small>চালু থাকলে কেউ নতুন ডিভাইস থেকে অনুরোধ দিলেই সেটা নিজে থেকে Approve হয়ে যাবে — অ্যাডমিনের Accept লাগবে না। নতুন ডিভাইস চালু হবে আর আগের ডিভাইস থেকে লগআউট হয়ে যাবে। (শুধু ১ ডিভাইসের নিয়মে কাজ করে) কয়টা অটো Approve হয়েছে নিচের <strong>অটো Approve</strong> ট্যাবে দেখবেন।</small> <span id="dvAutoMsg" role="status"></span></div>
         <label class="dv-sw"><input type="checkbox" id="dvAuto"<?= $auto ? ' checked' : '' ?> /><span></span></label>
     </div>
 
@@ -125,6 +130,11 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
         b.disabled = true;
         try { var r = await post('/Admin/' + act, { id: b.getAttribute('data-id') }); alert((r.success ? '✅ ' : '❌ ') + (r.message || '')); if (r.success) location.reload(); else b.disabled = false; }
         catch (x) { b.disabled = false; alert('নেটওয়ার্ক সমস্যা।'); }
+    });
+    var mx = document.getElementById('dvMax'), mm = document.getElementById('dvMaxMsg');
+    mx.addEventListener('change', async function () {
+        try { var r = await post('/Admin/SaveDeviceMax', { on: mx.checked ? 'true' : 'false' }); mm.style.cssText = 'font-size:13.5px;font-weight:600;margin-left:4px;color:' + (r.success ? '#15803D' : '#B91C1C'); mm.textContent = r.message || ''; }
+        catch (x) { mm.style.color = '#B91C1C'; mm.textContent = 'সেভ করা যায়নি।'; }
     });
     var au = document.getElementById('dvAuto'), am = document.getElementById('dvAutoMsg');
     au.addEventListener('change', async function () {

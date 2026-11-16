@@ -35,6 +35,31 @@ trait DeviceData
         $this->devReady = true;
     }
 
+    /** একসাথে কয়টা ডিভাইসে লগইন থাকা যাবে — ১ (ডিফল্ট) বা ২ (Admin → Devices এর "২টা ডিভাইসে লগইন" সুইচ) */
+    public function DeviceMax(): int
+    {
+        return ($this->GetSiteContent(['dev_max' => '1'])['dev_max'] ?? '1') === '2' ? 2 : 1;
+    }
+
+    /** এই ইউজারের চালু ডিভাইসগুলো (শেষ ব্যবহার অনুযায়ী — পুরোনোটা আগে) */
+    public function GetActiveDevices(int $userId): array
+    {
+        $this->EnsureDeviceTable();
+        return $this->all("SELECT * FROM `UserDevices` WHERE `UserId` = :u AND `Status` = 'Active' ORDER BY COALESCE(`LastSeenAt`, `CreatedAt`) ASC, `Id` ASC", ['u' => $userId]);
+    }
+
+    /** নতুন ডিভাইস চালুর জন্য জায়গা খালি করা — সীমা ভরা থাকলে সবচেয়ে কম ব্যবহার হওয়া (পুরোনো) ডিভাইস লগআউট; লগআউট হওয়া ডিভাইসগুলো ফেরত */
+    private function makeRoomForDevice(int $userId, int $adminId, int $exceptId = 0): array
+    {
+        $act = array_values(array_filter($this->GetActiveDevices($userId), fn($x) => (int)$x->Id !== $exceptId));
+        $out = [];
+        while (count($act) >= $this->DeviceMax()) {
+            $old = array_shift($act); $out[] = $old;
+            $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = :a, `DecidedAt` = :t WHERE `Id` = :i", ['a' => $adminId, 't' => now(), 'i' => (int)$old->Id]);
+        }
+        return $out;
+    }
+
     /** অটো Approve চালু কিনা (Admin → Devices, ডিফল্ট বন্ধ) — চালু থাকলে অনুরোধ দিলেই নতুন ডিভাইস চালু, আগেরটা লগআউট */
     public function DeviceAutoOn(): bool
     {
@@ -47,10 +72,11 @@ trait DeviceData
         $this->EnsureDeviceTable();
         $d = $this->one('SELECT * FROM `UserDevices` WHERE `Id` = :i', ['i' => $requestId]);
         if (!$d || $d->Status !== 'Pending') return null;
-        $old = $this->GetActiveDevice((int)$d->UserId);
-        $this->ApproveDevice($requestId, 0);   // DecidedBy 0 = সিস্টেম (অটো)
+        $d = $this->ApproveDevice($requestId, 0);   // DecidedBy 0 = সিস্টেম (অটো)
+        if (!$d) return null;
+        $olds = array_filter(array_map(fn($x) => (string)$x->Label, $d->Revoked ?? []));
         $this->insert('INSERT INTO `DeviceAutoLog` (`UserId`, `NewLabel`, `OldLabel`, `Ip`, `CreatedAt`) VALUES (:u, :n, :o, :ip, :t)',
-            ['u' => (int)$d->UserId, 'n' => $d->Label, 'o' => $old ? $old->Label : null, 'ip' => $d->Ip, 't' => now()]);
+            ['u' => (int)$d->UserId, 'n' => $d->Label, 'o' => $olds ? implode(', ', $olds) : null, 'ip' => $d->Ip, 't' => now()]);
         return $d;
     }
 
@@ -101,13 +127,15 @@ trait DeviceData
             $this->exec('UPDATE `UserDevices` SET `LastSeenAt` = :t, `Ip` = :ip, `Label` = :l WHERE `Id` = :i', ['t' => now(), 'ip' => $ip, 'l' => $label, 'i' => (int)$mine->Id]);
             return 'ok';
         }
-        if (!$this->GetActiveDevice($userId)) {
-            // প্রথম ডিভাইস (বা অ্যাডমিন আগেরটা লগআউট করেছেন) — এটাই এখন চালু ডিভাইস
+        if (count($this->GetActiveDevices($userId)) < $this->DeviceMax()) {
+            // প্রথম ডিভাইস / সীমার মধ্যে (২টা ডিভাইস চালু থাকলে ২য়টা) / অ্যাডমিন আগেরটা লগআউট করেছেন — এটাও চালু ডিভাইস
             if ($mine) $this->exec("UPDATE `UserDevices` SET `Status` = 'Active', `LastSeenAt` = :t, `Ip` = :ip, `Label` = :l WHERE `Id` = :i", ['t' => now(), 'ip' => $ip, 'l' => $label, 'i' => (int)$mine->Id]);
             else $this->insert("INSERT INTO `UserDevices` (`UserId`, `DeviceHash`, `Label`, `Ip`, `Status`, `CreatedAt`, `LastSeenAt`) VALUES (:u, :h, :l, :ip, 'Active', :t, :t2)",
                 ['u' => $userId, 'h' => $hash, 'l' => $label, 'ip' => $ip, 't' => now(), 't2' => now()]);
             return 'ok';
         }
+        // ২টা ডিভাইসের নিয়মে ৩য় ডিভাইস একদম বন্ধ — অনুরোধও পাঠানো যায় না
+        if ($this->DeviceMax() > 1) return 'full';
         if ($mine && $mine->Status === 'Pending') return 'pending';
         if ($mine && $mine->Status === 'Rejected' && strtotime((string)$mine->DecidedAt) > time() - 86400) return 'rejected';
         return 'blocked';
@@ -137,7 +165,7 @@ trait DeviceData
             return true;
         }
         // এই নিয়ম চালুর আগে থেকে লগইন থাকা (কোনো ডিভাইস রেকর্ড নেই) — এই ডিভাইসটাকেই চালু ধরা হয়
-        if (!$mine && !$this->GetActiveDevice($userId)) { $this->CheckLoginDevice($userId, $hash, $label, $ip); return true; }
+        if (!$mine && count($this->GetActiveDevices($userId)) < $this->DeviceMax()) { $this->CheckLoginDevice($userId, $hash, $label, $ip); return true; }
         return false;   // লগআউট করা / অনুরোধ অপেক্ষায় / অন্য ডিভাইস চালু
     }
 
@@ -147,7 +175,8 @@ trait DeviceData
         $this->EnsureDeviceTable();
         $d = $this->one('SELECT * FROM `UserDevices` WHERE `Id` = :i', ['i' => $id]);
         if (!$d || $d->Status !== 'Pending') return null;
-        $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = :a, `DecidedAt` = :t WHERE `UserId` = :u AND `Status` = 'Active'", ['a' => $adminId, 't' => now(), 'u' => (int)$d->UserId]);
+        // সীমা (১ বা ২) ভরা থাকলে সবচেয়ে পুরোনো চালু ডিভাইস লগআউট — বাকিটা চালু থাকে
+        $d->Revoked = $this->makeRoomForDevice((int)$d->UserId, $adminId, $id);
         $this->exec("UPDATE `UserDevices` SET `Status` = 'Active', `DecidedBy` = :a, `DecidedAt` = :t WHERE `Id` = :i", ['a' => $adminId, 't' => now(), 'i' => $id]);
         return $d;
     }
@@ -185,7 +214,7 @@ trait DeviceData
         else $w[] = "d.`Status` IN ('Active', 'Pending', 'Revoked', 'Rejected')";
         if ($q !== '') { $w[] = '(u.`FullName` LIKE :q OR u.`UserName` LIKE :q2 OR u.`Email` LIKE :q3 OR u.`MobileNumber` LIKE :q4)'; $a += ['q' => "%$q%", 'q2' => "%$q%", 'q3' => "%$q%", 'q4' => "%$q%"]; }
         $rows = $this->all('SELECT d.*, u.`FullName`, u.`UserName`, u.`Role`, u.`Email`, u.`MobileNumber`,
-                (SELECT x.`Label` FROM `UserDevices` x WHERE x.`UserId` = d.`UserId` AND x.`Status` = \'Active\' AND x.`Id` <> d.`Id` ORDER BY x.`Id` DESC LIMIT 1) AS CurrentLabel,
+                (SELECT GROUP_CONCAT(x.`Label`) FROM `UserDevices` x WHERE x.`UserId` = d.`UserId` AND x.`Status` = \'Active\' AND x.`Id` <> d.`Id`) AS CurrentLabel,
                 (SELECT x.`LastSeenAt` FROM `UserDevices` x WHERE x.`UserId` = d.`UserId` AND x.`Status` = \'Active\' AND x.`Id` <> d.`Id` ORDER BY x.`Id` DESC LIMIT 1) AS CurrentSeen
             FROM `UserDevices` d INNER JOIN `Users` u ON u.`Id` = d.`UserId` WHERE ' . implode(' AND ', $w) . '
             ORDER BY CASE d.`Status` WHEN \'Pending\' THEN 0 WHEN \'Active\' THEN 1 ELSE 2 END, COALESCE(d.`LastSeenAt`, d.`CreatedAt`) DESC LIMIT ' . max(1, min(1000, $limit)), $a);

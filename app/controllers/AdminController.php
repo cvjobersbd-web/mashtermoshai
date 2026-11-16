@@ -2540,7 +2540,7 @@ class AdminController extends Controller
         $st = (string)input_str('st', 'Pending'); if (!in_array($st, ['Pending', 'Active', 'all', 'auto'], true)) $st = 'Pending';
         $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
         $this->view(null, $st === 'auto' ? [] : $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'On' => $this->db->DeviceLockOn(), 'Pending' => $this->db->CountPendingDevices(),
-            'Auto' => $this->db->DeviceAutoOn(), 'AutoCount' => $this->db->CountDeviceAutoLog(), 'AutoLog' => $st === 'auto' ? $this->db->GetDeviceAutoLog($q) : []]);
+            'Auto' => $this->db->DeviceAutoOn(), 'Max' => $this->db->DeviceMax(), 'AutoCount' => $this->db->CountDeviceAutoLog(), 'AutoLog' => $st === 'auto' ? $this->db->GetDeviceAutoLog($q) : []]);
     }
 
     /** POST /Admin/ApproveDevice (id) — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট */
@@ -2549,8 +2549,9 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $d = $this->db->ApproveDevice(input_int('id', 0), (int)current_user_id());
         if (!$d) json_response(['success' => false, 'message' => 'অনুরোধটি পাওয়া যায়নি বা আগেই সিদ্ধান্ত হয়েছে।']);
-        $this->db->CreateNotification((int)$d->UserId, 'নতুন ডিভাইস চালু হয়েছে', "আপনার অনুরোধ Accept হয়েছে — এখন {$d->Label} থেকে লগইন করতে পারবেন। আগের ডিভাইস থেকে লগআউট করা হয়েছে।", 'success', '/Account/Login', 'fa-mobile-screen');
-        json_response(['success' => true, 'message' => 'Accept হয়েছে — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট হয়ে গেছে।']);
+        $out = implode(', ', array_map(fn($x) => (string)$x->Label, $d->Revoked ?? []));
+        $this->db->CreateNotification((int)$d->UserId, 'নতুন ডিভাইস চালু হয়েছে', "আপনার অনুরোধ Accept হয়েছে — এখন {$d->Label} থেকে লগইন করতে পারবেন।" . ($out !== '' ? " $out থেকে লগআউট করা হয়েছে।" : ''), 'success', '/Account/Login', 'fa-mobile-screen');
+        json_response(['success' => true, 'message' => 'Accept হয়েছে — নতুন ডিভাইস চালু' . ($out !== '' ? ", লগআউট হয়েছে: $out" : '') . '।']);
     }
 
     /** POST /Admin/RejectDevice (id) */
@@ -2578,6 +2579,15 @@ class AdminController extends Controller
         $on = input_bool('on');
         $this->db->SaveSiteContent(['dev_lock' => $on ? '1' : '0']);
         json_response(['success' => true, 'message' => $on ? 'চালু — শিক্ষার্থী আর টিচার একবারে একটা ডিভাইসেই লগইন থাকতে পারবেন।' : 'বন্ধ — যেকোনো ডিভাইসে লগইন করা যাবে।']);
+    }
+
+    /** POST /Admin/SaveDeviceMax (on) — চালু = শিক্ষার্থী / টিচার একসাথে ২টা ডিভাইসে লগইন (অনুমতি ছাড়া), বন্ধ = ১টা */
+    public function SaveDeviceMax_POST(): void
+    {
+        $this->requireAdminJson();
+        $on = input_bool('on');
+        $this->db->SaveSiteContent(['dev_max' => $on ? '2' : '1']);
+        json_response(['success' => true, 'message' => $on ? 'চালু — অনুমতি ছাড়াই ২টা ডিভাইসে লগইন করা যাবে (মোবাইল, পিসি, ল্যাপটপ যেকোনো)। ৩য় ডিভাইসে লগইন বা অনুরোধ — কোনোটাই করা যাবে না।' : 'বন্ধ — আগের মতো ১টা ডিভাইসে লগইন। (এখন যাদের ২টা চালু আছে, তারা অনুমতি ছাড়া নতুন ডিভাইস যোগ করতে পারবে না)']);
     }
 
     /** POST /Admin/SaveDeviceAuto (on) — নতুন ডিভাইসের অনুরোধ অটো Approve চালু / বন্ধ */

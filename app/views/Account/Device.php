@@ -19,9 +19,9 @@ $st = (string)$ViewBag->State;
 <div class="auth-wrap">
     <div class="auth-card">
         <div class="auth-head">
-            <div class="auth-ico<?= $st === 'rejected' ? ' bad' : '' ?>"><i class="fas fa-<?= $st === 'pending' ? 'hourglass-half' : ($st === 'rejected' ? 'ban' : 'mobile-screen') ?>"></i></div>
-            <h4><?= $st === 'pending' ? 'অনুরোধ অপেক্ষায় আছে' : ($st === 'rejected' ? 'অনুরোধ বাতিল হয়েছে' : 'অ্যাকাউন্টটি অন্য ডিভাইসে চালু আছে') ?></h4>
-            <p>হ্যালো <b><?= e($ViewBag->Name) ?></b> — নিরাপত্তার জন্য একটা অ্যাকাউন্ট একবারে শুধু একটা ডিভাইসে চালু থাকে।</p>
+            <div class="auth-ico<?= $st === 'rejected' || $st === 'full' ? ' bad' : '' ?>"><i class="fas fa-<?= $st === 'pending' ? 'hourglass-half' : ($st === 'rejected' || $st === 'full' ? 'ban' : 'mobile-screen') ?>"></i></div>
+            <h4><?= $st === 'full' ? 'এই ডিভাইসে লগইন করা যাবে না' : ($st === 'pending' ? 'অনুরোধ অপেক্ষায় আছে' : ($st === 'rejected' ? 'অনুরোধ বাতিল হয়েছে' : ((int)($ViewBag->Max ?? 1) === 2 ? 'অ্যাকাউন্টটি আরও ২টা ডিভাইসে চালু আছে' : 'অ্যাকাউন্টটি অন্য ডিভাইসে চালু আছে'))) ?></h4>
+            <p>হ্যালো <b><?= e($ViewBag->Name) ?></b> — নিরাপত্তার জন্য একটা অ্যাকাউন্ট একবারে শুধু <?= (int)($ViewBag->Max ?? 1) === 2 ? '২টা ডিভাইসে' : 'একটা ডিভাইসে' ?> চালু থাকে।</p>
         </div>
         <div class="auth-body">
             <?php if ($TempData['Success'] !== null): ?><div class="auth-alert ok"><i class="fas fa-paper-plane"></i><div><?= e($TempData['Success']) ?></div></div><?php endif; ?>
@@ -32,7 +32,10 @@ $st = (string)$ViewBag->State;
                 <div class="dv-d new"><i class="fas fa-mobile-screen-button"></i><div><small>এই ডিভাইস</small><b><?= e($ViewBag->This) ?></b></div></div>
             </div>
 
-            <?php if ($st === 'pending'): ?>
+            <?php if ($st === 'full'): ?>
+                <div class="auth-alert err"><i class="fas fa-ban"></i><div>আপনার অ্যাকাউন্ট ইতিমধ্যে <b>২টা ডিভাইসে</b> চালু আছে। একসাথে ২টার বেশি ডিভাইসে লগইন করা যায় না — এই ডিভাইসে লগইন করা যাবে না।</div></div>
+                <p style="font-size:13px;color:#64748B;margin:10px 0 0;text-align:center;">আগের কোনো ডিভাইস হারিয়ে গেলে বা নষ্ট হলে <a href="/Helpdesk/Contact">যোগাযোগ করুন</a>।</p>
+            <?php elseif ($st === 'pending'): ?>
                 <div class="dv-wait"><i class="fas fa-clock"></i>অ্যাডমিন আপনার অনুরোধ দেখছেন। Accept হলে এই পেজ রিফ্রেশ করুন বা আবার লগইন করুন — তখন আগের ডিভাইস থেকে নিজে থেকেই লগআউট হয়ে যাবে।</div>
                 <a class="auth-btn" href="/Account/Device" style="text-decoration:none;"><i class="fas fa-rotate"></i> আবার দেখুন</a>
             <?php else: ?>

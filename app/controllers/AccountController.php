@@ -366,9 +366,9 @@ class AccountController extends Controller
             tempdata_set('Success', 'এই ডিভাইস চালু করা হয়েছে — এখন লগইন করুন।');
             $this->redirectToAction('Login');
         }
-        $act = $this->db->GetActiveDevice((int)$u->Id);
-        $this->view(null, null, ['State' => $st, 'Name' => (string)($u->FullName ?: $u->UserName), 'This' => device_label(), 'Auto' => $auto,
-            'Other' => $act ? (string)$act->Label : '', 'OtherSeen' => $act ? (string)($act->LastSeenAt ?: $act->CreatedAt) : '']);
+        $acts = $this->db->GetActiveDevices((int)$u->Id); $act = $acts ? end($acts) : null;
+        $this->view(null, null, ['State' => $st, 'Name' => (string)($u->FullName ?: $u->UserName), 'This' => device_label(), 'Auto' => $auto, 'Max' => $this->db->DeviceMax(),
+            'Other' => implode(' ও ', array_map(fn($x) => (string)$x->Label, $acts)), 'OtherSeen' => $act ? (string)($act->LastSeenAt ?: $act->CreatedAt) : '']);
     }
 
     /** এই ডিভাইসের অপেক্ষায় থাকা অনুরোধ অটো Approve — আগের ডিভাইস লগআউট */
@@ -382,12 +382,13 @@ class AccountController extends Controller
     public function Device_POST(): void
     {
         $u = $this->deviceUser();
+        if ($this->db->DeviceMax() > 1) $this->redirectToAction('Device');   // ২টা ডিভাইসের নিয়মে ৩য় ডিভাইসের অনুরোধ নেই
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
         $reqId = $this->db->RequestDevice((int)$u->Id, device_hash(), device_label(), client_ip(), $note);
         // ✅ অটো Approve চালু — অ্যাডমিনের অপেক্ষা ছাড়াই এই ডিভাইস চালু, আগের ডিভাইস লগআউট
         if ($this->db->DeviceAutoOn() && $this->db->AutoApproveDevice($reqId)) {
             unset($_SESSION['dev_uid']);
-            tempdata_set('Success', 'এই ডিভাইস চালু হয়েছে — আগের ডিভাইস থেকে লগআউট করা হয়েছে। এখন লগইন করুন।');
+            tempdata_set('Success', $this->db->DeviceMax() > 1 ? 'এই ডিভাইস চালু হয়েছে — সবচেয়ে পুরোনো ডিভাইস থেকে লগআউট করা হয়েছে। এখন লগইন করুন।' : 'এই ডিভাইস চালু হয়েছে — আগের ডিভাইস থেকে লগআউট করা হয়েছে। এখন লগইন করুন।');
             $this->redirectToAction('Login');
         }
         $name = (string)($u->FullName ?: $u->UserName);
