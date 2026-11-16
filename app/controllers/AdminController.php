@@ -329,7 +329,8 @@ class AdminController extends Controller
         $counts = $this->db->KycCounts();
         if (input_str('k', '') === '' && $counts['teacher']['Pending'] === 0 && $counts['student']['Pending'] > 0) $k = 'student';
         $s = (string)input_str('s', 'Pending'); if (!in_array($s, ['Pending', 'Approved', 'Rejected', 'all'], true)) $s = 'Pending';
-        $list = $this->db->GetKycList($k, $s);
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
+        $list = $this->db->GetKycList($k, $s, $q);
         // টিচার: আবেদনের ফর্ম + পেমেন্টের অবস্থা
         $apps = [];
         if ($k === 'teacher') {
@@ -347,7 +348,7 @@ class AdminController extends Controller
         if ($k === 'student') foreach ($list as $x) {
             try { $p = $this->db->one("SELECT `Id`, `PackageName`, `Amount`, `Status`, `MethodName`, `CreatedAt` FROM `PaymentRequests` WHERE `UserId` = :u AND `Audience` = 'Student' ORDER BY `Id` DESC LIMIT 1", ['u' => $x->UserId]); if ($p) $pays[$x->Id] = $p; } catch (Throwable $e) { }
         }
-        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Counts' => $counts, 'Apps' => $apps, 'StuPays' => $pays]);
+        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Q' => $q, 'Counts' => $counts, 'Apps' => $apps, 'StuPays' => $pays]);
     }
 
     /** POST /Admin/KycDecide (id, action = Approve|Reject, note) */

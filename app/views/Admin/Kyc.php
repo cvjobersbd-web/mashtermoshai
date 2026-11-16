@@ -2,7 +2,7 @@
 /** Admin → Verification: টিচার আর শিক্ষার্থীর পরিচয় যাচাই — আলাদা সেকশন; পুরো তথ্য + NID / ID কার্ডের ছবি দেখে Approve / Reject */
 $ViewData['Title'] = 'Verification';
 $list = is_array($Model) ? $Model : [];
-$kind = (string)$ViewBag->Kind; $S = (string)$ViewBag->S; $C = $ViewBag->Counts; $apps = $ViewBag->Apps ?? [];
+$kind = (string)$ViewBag->Kind; $S = (string)$ViewBag->S; $Q = (string)($ViewBag->Q ?? ''); $C = $ViewBag->Counts; $apps = $ViewBag->Apps ?? [];
 $classes = Db::KYC_CLASSES;
 $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 $exTxt = function ($x, $EX) { if (!is_array($x) || !$x) return null; return ($x['status'] ?? '') === 'running' ? "$EX — Running (এখন পড়ছে)" : "$EX {$x['year']} · GPA {$x['gpa']}" . (!empty($x['board']) ? " · {$x['board']}" : ''); };
@@ -22,6 +22,14 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
     .kc-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
     .kc-tabs a { padding: 8px 15px; border-radius: 999px; background: #fff; color: #334155; font-weight: 700; font-size: 13.5px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
     .kc-tabs a.on { background: #08224A; color: #fff; }
+    .kc-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .kc-bar .kc-tabs { margin-bottom: 0; }
+    .kc-q { display: flex; gap: 6px; flex: 0 1 380px; min-width: 240px; }
+    .kc-q input { flex: 1; min-width: 0; height: 40px; border: 1.5px solid #DCE7F0; border-radius: 10px; padding: 0 12px; font-size: 14px; font-family: inherit; background: #fff; outline: none; }
+    .kc-q input:focus { border-color: #02B8F5; }
+    .kc-q button, .kc-q a { height: 40px; padding: 0 14px; border-radius: 10px; border: none; background: #08224A; color: #fff; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 13.5px; }
+    .kc-q a { background: #F1F5F9; color: #334155; }
+    .kc-found { font-size: 13.5px; color: #475569; margin: -4px 0 12px; }
     .kc-c { background: #fff; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.05); padding: 18px; margin-bottom: 14px; border-left: 5px solid var(--c, #F59E0B); }
     .kc-c.Approved { --c: #16A34A; } .kc-c.Rejected { --c: #DC2626; }
     .kc-top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -69,11 +77,21 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
             <a class="kc-kind <?= $cls ?><?= $kind === $kk ? ' on' : '' ?>" href="/Admin/Kyc?k=<?= $kk ?>"><span class="ic"><i class="fas <?= $ic ?>"></i></span><span><b><?= $lbl ?></b><small><?= $hint ?> · মোট <?= array_sum($C[$kk]) ?></small></span><?php if ($pc): ?><span class="pend"><?= $pc ?> যাচাই বাকি</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
-    <div class="kc-tabs">
-        <?php foreach (['Pending' => 'যাচাই বাকি', 'Approved' => 'Approved', 'Rejected' => 'Rejected', 'all' => 'সব'] as $sk => $sl): ?>
-            <a class="<?= $S === $sk ? 'on' : '' ?>" href="/Admin/Kyc?k=<?= $kind ?>&amp;s=<?= $sk ?>"><?= $sl ?> <?= $sk !== 'all' ? '(' . (int)$C[$kind][$sk] . ')' : '' ?></a>
-        <?php endforeach; ?>
+    <div class="kc-bar">
+        <div class="kc-tabs">
+            <?php foreach (['Pending' => 'যাচাই বাকি', 'Approved' => 'Approved', 'Rejected' => 'Rejected', 'all' => 'সব'] as $sk => $sl): ?>
+                <a class="<?= $S === $sk ? 'on' : '' ?>" href="/Admin/Kyc?k=<?= $kind ?>&amp;s=<?= $sk ?><?= $Q !== '' ? '&amp;q=' . e(rawurlencode($Q)) : '' ?>"><?= $sl ?> <?= $sk !== 'all' ? '(' . (int)$C[$kind][$sk] . ')' : '' ?></a>
+            <?php endforeach; ?>
+        </div>
+        <form class="kc-q" method="get" action="/Admin/Kyc" role="search">
+            <input type="hidden" name="k" value="<?= e($kind) ?>" />
+            <input type="hidden" name="s" value="<?= $Q === '' ? 'all' : e($S) ?>" />
+            <input type="search" name="q" value="<?= e($Q) ?>" maxlength="60" placeholder="নাম, ইউজারনেম, ইমেইল বা মোবাইল" aria-label="খুঁজুন" />
+            <button type="submit"><i class="fas fa-magnifying-glass"></i></button>
+            <?php if ($Q !== ''): ?><a href="/Admin/Kyc?k=<?= $kind ?>&amp;s=<?= e($S) ?>" title="খোঁজা মুছুন"><i class="fas fa-xmark"></i></a><?php endif; ?>
+        </form>
     </div>
+    <?php if ($Q !== ''): ?><div class="kc-found">"<b><?= e($Q) ?></b>" — <?= count($list) ?> জন পাওয়া গেছে<?= $S !== 'all' ? ' (' . e(['Pending' => 'যাচাই বাকি', 'Approved' => 'Approved', 'Rejected' => 'Rejected'][$S] ?? $S) . ' এর মধ্যে — সবার মধ্যে খুঁজতে "সব" চাপুন)' : '' ?></div><?php endif; ?>
 
     <?php if (!$list): ?><div class="kc-empty"><i class="fas fa-id-card"></i>এখানে কিছু নেই।</div><?php endif; ?>
 

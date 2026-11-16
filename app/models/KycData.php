@@ -133,12 +133,18 @@ trait KycData
     }
 
     /** অ্যাডমিন KYC পেজ — প্রতিটা ইউজারের সর্বশেষ জমাটাই (kind = student / teacher, status = Pending / Approved / Rejected / all) */
-    public function GetKycList(string $kind, string $status = 'Pending'): array
+    /** $q = নাম / ইউজারনেম / ইমেইল / মোবাইল দিয়ে খোঁজা (ফর্মে দেওয়া নাম আর WhatsApp ও) */
+    public function GetKycList(string $kind, string $status = 'Pending', string $q = ''): array
     {
         $this->EnsureKycTable();
         $p = ['k' => $kind];
         $w = '';
         if ($status !== 'all') { $w = ' AND k.`Status` = :s'; $p['s'] = $status; }
+        if ($q !== '') {
+            $w .= ' AND (u.`FullName` LIKE :q1 OR u.`UserName` LIKE :q2 OR u.`Email` LIKE :q3 OR u.`MobileNumber` LIKE :q4 OR k.`Data` LIKE :q5)';
+            $l = '%' . ltrim($q, '@') . '%';
+            $p += ['q1' => $l, 'q2' => $l, 'q3' => $l, 'q4' => $l, 'q5' => $l];
+        }
         $rows = $this->all('SELECT k.*, u.`FullName` AS UFullName, u.`UserName` AS UUserName, u.`Email` AS UEmail, u.`Role` AS URole, u.`ProfileImageLink` AS UPhoto, u.`MobileNumber` AS UMobile
             FROM `KycRequests` k LEFT JOIN `Users` u ON u.`Id` = k.`UserId`
             WHERE k.`Kind` = :k AND k.`Id` = (SELECT MAX(x.`Id`) FROM `KycRequests` x WHERE x.`UserId` = k.`UserId` AND x.`Kind` = k.`Kind`)' . $w . ' ORDER BY k.`Id` DESC LIMIT 500', $p);
