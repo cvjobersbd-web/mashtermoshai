@@ -229,7 +229,10 @@ class ProfileController extends Controller
         }
         if ($current === $new) json_response(['success' => false, 'message' => 'নতুন পাসওয়ার্ড আগেরটার মতো হতে পারবে না।']);
         unset($_SESSION['_pw_tries']);
+        $hadRemember = !empty($_COOKIE[REMEMBER_COOKIE]);
         if (!$this->db->UpdatePassword($me, $new)) json_response(['success' => false, 'message' => 'পাসওয়ার্ড বদলানো যায়নি। আবার চেষ্টা করুন।']);
+        // অন্য সব ডিভাইসের "লগইন সেভ" বাতিল হয়েছে — এই ডিভাইসে সেভ করা থাকলে নতুন করে সেভ
+        if ($hadRemember) remember_issue($me);
         $this->db->CreateNotification($me, '🔑 Password Changed', 'আপনার অ্যাকাউন্টের পাসওয়ার্ড বদলানো হয়েছে। আপনি না করে থাকলে সাথে সাথে অ্যাডমিনকে জানান।', 'warning', null, 'fa-key');
         json_response(['success' => true, 'message' => 'পাসওয়ার্ড সফলভাবে বদলানো হয়েছে।']);
     }

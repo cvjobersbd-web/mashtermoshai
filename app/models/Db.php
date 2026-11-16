@@ -327,8 +327,76 @@ class Db
             $this->exec('UPDATE `Users` SET `Password` = :p WHERE `Id` = :u', ['p' => password_hash($newPassword, PASSWORD_DEFAULT), 'u' => $userId]);
             $this->exec('UPDATE `PasswordResets` SET `UsedAt` = :t WHERE `UserId` = :u AND `UsedAt` IS NULL', ['t' => now(), 'u' => $userId]);
             $this->pdo->commit();
+            $this->DeleteRememberTokensOfUser($userId);
             return true;
         } catch (Throwable $e) { $this->pdo->rollBack(); error_log('[CompletePasswordReset] ' . $e->getMessage()); return false; }
+    }
+
+    // ============================================================
+    // ===== "লগইন সেভ রাখুন" (Keep me signed in) — ৩০ দিনের টোকেন =====
+    // কুকিতে থাকে selector:validator, ডাটাবেসে শুধু validator এর hash
+    // ============================================================
+    private bool $rememberReady = false;
+
+    public function EnsureRememberTable(): void
+    {
+        if ($this->rememberReady) return;
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "RememberTokens" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "Selector" TEXT NOT NULL UNIQUE,
+                "TokenHash" TEXT NOT NULL, "ExpiresAt" TEXT NOT NULL, "CreatedAt" TEXT NOT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `RememberTokens` (
+                `Id` INT NOT NULL AUTO_INCREMENT,
+                `UserId` INT NOT NULL,
+                `Selector` CHAR(24) NOT NULL,
+                `TokenHash` CHAR(64) NOT NULL,
+                `ExpiresAt` DATETIME NOT NULL,
+                `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`Id`),
+                UNIQUE KEY `UX_RememberTokens_Selector` (`Selector`),
+                KEY `IX_RememberTokens_User` (`UserId`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
+        $this->rememberReady = true;
+    }
+
+    /** নতুন টোকেন — কুকিতে বসানোর মান ফেরত দেয় (selector:validator) */
+    public function CreateRememberToken(int $userId, int $days): string
+    {
+        $this->EnsureRememberTable();
+        $sel = bin2hex(random_bytes(12)); $val = bin2hex(random_bytes(32));
+        $this->exec('DELETE FROM `RememberTokens` WHERE `ExpiresAt` < :n', ['n' => now()]);
+        $this->insert('INSERT INTO `RememberTokens` (`UserId`, `Selector`, `TokenHash`, `ExpiresAt`, `CreatedAt`) VALUES (:u, :s, :h, :x, :c)', [
+            'u' => $userId, 's' => $sel, 'h' => hash('sha256', $val), 'x' => date('Y-m-d H:i:s', time() + $days * 86400), 'c' => now(),
+        ]);
+        return $sel . ':' . $val;
+    }
+
+    /** কুকির মান ঠিক আর মেয়াদ আছে হলে UserId, নাহলে null (ভুল validator হলে টোকেনটা মুছে দেয়) */
+    public function CheckRememberToken(string $cookie): ?int
+    {
+        if (!preg_match('/^([a-f0-9]{24}):([a-f0-9]{64})$/', $cookie, $m)) return null;
+        $this->EnsureRememberTable();
+        $r = $this->one('SELECT `UserId`, `TokenHash`, `ExpiresAt` FROM `RememberTokens` WHERE `Selector` = :s', ['s' => $m[1]]);
+        if (!$r) return null;
+        if (!hash_equals((string)$r->TokenHash, hash('sha256', $m[2])) || strtotime((string)$r->ExpiresAt) < time()) {
+            $this->exec('DELETE FROM `RememberTokens` WHERE `Selector` = :s', ['s' => $m[1]]);
+            return null;
+        }
+        return (int)$r->UserId;
+    }
+
+    public function DeleteRememberToken(string $cookie): void
+    {
+        if (!preg_match('/^([a-f0-9]{24}):/', $cookie, $m)) return;
+        try { $this->EnsureRememberTable(); $this->exec('DELETE FROM `RememberTokens` WHERE `Selector` = :s', ['s' => $m[1]]); } catch (Throwable $e) { }
+    }
+
+    /** পাসওয়ার্ড বদলালে — সব ডিভাইসের "লগইন সেভ" বাতিল */
+    public function DeleteRememberTokensOfUser(int $userId): void
+    {
+        try { $this->EnsureRememberTable(); $this->exec('DELETE FROM `RememberTokens` WHERE `UserId` = :u', ['u' => $userId]); } catch (Throwable $e) { }
     }
 
     public function UpdateUserProfile(Obj $user): bool
@@ -400,6 +468,7 @@ class Db
     public function UpdatePassword(int $userId, string $newPassword): bool
     {
         $this->exec('UPDATE `Users` SET `Password` = :p WHERE `Id` = :id', ['p' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $userId]);
+        $this->DeleteRememberTokensOfUser($userId);
         return (bool)$this->scalar('SELECT COUNT(*) FROM `Users` WHERE `Id` = :id', ['id' => $userId]);
     }
 

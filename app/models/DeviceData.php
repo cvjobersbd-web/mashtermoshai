@@ -196,6 +196,8 @@ trait DeviceData
         $d = $this->one('SELECT * FROM `UserDevices` WHERE `Id` = :i', ['i' => $id]);
         if (!$d || $d->Status !== 'Active') return null;
         $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = :a, `DecidedAt` = :t WHERE `Id` = :i", ['a' => $adminId, 't' => now(), 'i' => $id]);
+        // অ্যাডমিন লগআউট করলে "লগইন সেভ" ও বাতিল — নাহলে সেই ডিভাইস নিজে থেকে আবার ঢুকে যেত
+        $this->DeleteRememberTokensOfUser((int)$d->UserId);
         return $d;
     }
 

@@ -380,6 +380,70 @@ function session_clear(): void
     session_regenerate_id(true);
     if ($csrf) $_SESSION['_csrf'] = $csrf;
 }
+// ------------------------------------------------------------
+// "লগইন সেভ রাখুন" — ৩০ দিন, ব্রাউজার বন্ধ করলেও লগইন থাকে
+// ------------------------------------------------------------
+const REMEMBER_COOKIE = 'mm_rem';
+const REMEMBER_DAYS = 30;
+
+function remember_cookie_set(string $value, int $expires): void
+{
+    if (headers_sent()) return;
+    setcookie(REMEMBER_COOKIE, $value, ['expires' => $expires, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+}
+
+/** লগইনের সময় টিক দিলে — নতুন টোকেন বানিয়ে কুকিতে বসায় */
+function remember_issue(int $userId): void
+{
+    try { remember_cookie_set(db()->CreateRememberToken($userId, REMEMBER_DAYS), time() + REMEMBER_DAYS * 86400); }
+    catch (Throwable $e) { error_log('[remember] ' . $e->getMessage()); }
+}
+
+/** লগআউট করলে — এই ব্রাউজারের টোকেন মুছে কুকি সরায় */
+function remember_forget(): void
+{
+    $c = $_COOKIE[REMEMBER_COOKIE] ?? '';
+    if (is_string($c) && $c !== '') { try { db()->DeleteRememberToken($c); } catch (Throwable $e) { } }
+    unset($_COOKIE[REMEMBER_COOKIE]);
+    remember_cookie_set('', time() - 3600);
+}
+
+/** লগইন করা ইউজারের তথ্য সেশনে রাখা (লগইন ফর্ম আর "লগইন সেভ" — দুই জায়গাতেই) */
+function login_session_set(Obj $user): void
+{
+    session_regenerate_id(true);
+    session_set('UserId', $user->Id);
+    session_set('UserName', $user->UserName);
+    session_set('UserFullName', $user->FullName);
+    session_set('UserEmail', $user->Email);
+    session_set('UserRole', $user->Role);
+    session_set('ProfileImageLink', $user->ProfileImageLink ?? '');
+}
+
+/**
+ * সেশন শেষ (ব্রাউজার বন্ধ বা ৬০ মিনিট কিছু না করা) কিন্তু "লগইন সেভ" কুকি আছে — আবার লগইন করিয়ে দেয়।
+ * অ্যাকাউন্ট বন্ধ / Suspend / ইমেইল ভেরিফাই না / এই ডিভাইস অ্যাডমিন লগআউট করেছেন — তাহলে হবে না।
+ */
+function remember_restore(): void
+{
+    $c = $_COOKIE[REMEMBER_COOKIE] ?? '';
+    if (!is_string($c) || $c === '' || !empty($_SESSION['UserId'])) return;
+    try {
+        $db = db();
+        $uid = $db->CheckRememberToken($c);
+        $user = $uid ? $db->GetUserById($uid) : null;
+        $ok = $user && (int)$user->IsActive === 1;
+        if ($ok && $user->Role !== 'Admin') {
+            if ($db->GetActiveSuspension((int)$user->Id) || !$db->IsEmailVerified((int)$user->Id)) $ok = false;
+            elseif (device_lock_applies($user->Role) && $db->CheckLoginDevice((int)$user->Id, device_hash(), device_label(), client_ip()) !== 'ok') $ok = false;
+        }
+        if (!$ok) { remember_forget(); return; }
+        $db->UpdateLastLogin($user->UserName);
+        login_session_set($user);
+    } catch (Throwable $e) { error_log('[remember restore] ' . $e->getMessage()); }
+}
+
 function current_user_id(): ?int
 {
     $v = session_get('UserId');

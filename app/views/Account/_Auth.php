@@ -81,6 +81,8 @@ $authImg = $authT['auth_img'];
         display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 24px rgba(22,119,229,.28); transition: transform .15s, box-shadow .2s, background .2s; margin-top: 6px; }
     .au-btn:hover { background: linear-gradient(135deg, #0F63C8, #1677E5); box-shadow: 0 12px 28px rgba(22,119,229,.34); }
     .au-btn:active { transform: translateY(1px); }
+    .au-rem { display: inline-flex; align-items: center; gap: 10px; margin: -4px 0 14px; cursor: pointer; user-select: none; color: #475569; font-size: 15px; font-weight: 600; }
+    .au-rem input { width: 20px; height: 20px; margin: 0; accent-color: var(--au-blue); cursor: pointer; flex-shrink: 0; }
     .au-switch { text-align: center; margin: 22px 0 0; color: #475569; font-size: 15px; }
     .au-switch a { color: var(--au-blue); font-weight: 700; text-decoration: none; margin-left: 4px; }
     .au-switch a:hover { text-decoration: underline; }
@@ -164,6 +166,7 @@ $authImg = $authT['auth_img'];
                             <div class="au-in"><i class="fas fa-lock"></i><input name="password" id="loginPassword" type="password" autocomplete="current-password" placeholder="<?= t('আপনার পাসওয়ার্ড লিখুন', 'Enter your password') ?>" required /><button type="button" class="au-eye" data-eye aria-label="<?= t('পাসওয়ার্ড দেখান', 'Show password') ?>"><i class="far fa-eye"></i></button></div>
                             <div class="au-fb"><?= t('পাসওয়ার্ড দিন।', 'Enter your password.') ?></div>
                         </div>
+                        <label class="au-rem"><input type="checkbox" name="rememberMe" value="1" /><span><?= t('লগইন সেভ রাখুন', 'Keep me signed in') ?></span></label>
                         <button type="submit" class="au-btn"><i class="fas fa-right-to-bracket"></i> <?= t('লগইন', 'Login') ?></button>
                     </form>
                     <p class="au-switch"><?= t('অ্যাকাউন্ট নেই?', 'Don\'t have an account?') ?><a href="/Account/Register" data-go="register"><?= t('নতুন অ্যাকাউন্ট খুলুন', 'Create New Account') ?></a></p>

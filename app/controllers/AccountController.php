@@ -38,13 +38,10 @@ class AccountController extends Controller
         }
         if ($user) {
             $this->db->UpdateLastLogin($user->UserName);
-            session_regenerate_id(true);
-            session_set('UserId', $user->Id);
-            session_set('UserName', $user->UserName);
-            session_set('UserFullName', $user->FullName);
-            session_set('UserEmail', $user->Email);
-            session_set('UserRole', $user->Role);
-            session_set('ProfileImageLink', $user->ProfileImageLink ?? '');
+            login_session_set($user);
+            // "লগইন সেভ রাখুন" টিক দিলে ৩০ দিন লগইন থাকবে, না দিলে আগের মতো (ব্রাউজার বন্ধ করলে লগআউট)
+            remember_forget();
+            if (input_bool('rememberMe')) remember_issue((int)$user->Id);
 
             if (!is_blank($returnUrl) && is_local_url($returnUrl)) redirect($returnUrl);
             if ($user->Role === 'Admin') $this->redirectToAction('Dashboard', 'Admin');
@@ -143,6 +140,7 @@ class AccountController extends Controller
     /** POST /Account/Logout */
     public function Logout_POST(): void
     {
+        remember_forget();
         session_clear();
         $this->redirectToAction('Login');
     }
@@ -150,6 +148,7 @@ class AccountController extends Controller
     /** GET /Account/Logout — লিংক থেকে লগআউট করলেও কাজ করবে */
     public function Logout(): void
     {
+        remember_forget();
         session_clear();
         $this->redirectToAction('Login');
     }

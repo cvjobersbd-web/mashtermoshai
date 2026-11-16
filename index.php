@@ -51,6 +51,9 @@ if (isset($_SESSION['_last']) && time() - $_SESSION['_last'] > $sessionMinutes *
 }
 $_SESSION['_last'] = time();
 
+// ✅ "লগইন সেভ রাখুন" — সেশন শেষ হলেও কুকি থাকলে আবার লগইন (app/core/helpers.php → remember_restore)
+if (empty($_SESSION['UserId']) && !empty($_COOKIE[REMEMBER_COOKIE])) remember_restore();
+
 // TempData লোড (আগের রিকোয়েস্ট থেকে)
 $GLOBALS['__TempData'] = new Bag($_SESSION['_tempdata'] ?? []);
 
