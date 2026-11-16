@@ -63,7 +63,7 @@ trait DeviceData
     /** অটো Approve চালু কিনা (Admin → Devices, ডিফল্ট বন্ধ) — চালু থাকলে অনুরোধ দিলেই নতুন ডিভাইস চালু, আগেরটা লগআউট */
     public function DeviceAutoOn(): bool
     {
-        return ($this->GetSiteContent(['dev_auto' => '0'])['dev_auto'] ?? '0') === '1';
+        return false;   // অটো Approve সরানো হয়েছে
     }
 
     /** অনুরোধ নিজে থেকেই Approve — আগের ডিভাইস লগআউট, ইতিহাসে লেখা থাকে */
@@ -96,12 +96,11 @@ trait DeviceData
         return $rows;
     }
 
-    /** অ্যাডমিন এই নিয়ম চালু রেখেছেন কিনা (Admin → Devices, ডিফল্ট চালু) */
+    /** ডিভাইসের সীমা চালু কিনা — শুধু Admin → Devices এর "২টা ডিভাইসে লগইন" সুইচ (বন্ধ থাকলে কোনো সীমা নেই)।
+     *  আগের "এক ডিভাইসে লগইনের নিয়ম" আর "অটো Approve" অ্যাডমিনের কথায় সরানো হয়েছে। */
     public function DeviceLockOn(): bool
     {
-        static $on = null;
-        if ($on === null) $on = ($this->GetSiteContent(['dev_lock' => '1'])['dev_lock'] ?? '1') !== '0';
-        return $on;
+        return $this->DeviceMax() === 2;
     }
 
     public function GetActiveDevice(int $userId): ?Obj
@@ -202,7 +201,7 @@ trait DeviceData
 
     public function CountPendingDevices(): int
     {
-        try { $this->EnsureDeviceTable(); return (int)$this->scalar("SELECT COUNT(*) FROM `UserDevices` WHERE `Status` = 'Pending'"); } catch (Throwable $e) { return 0; }
+        return 0;   // ২টা ডিভাইসের নিয়মে অনুরোধ নেই — সাইডবারে পুরোনো অনুরোধের সংখ্যা দেখায় না
     }
 
     /** অ্যাডমিন পেজ: $status = Pending|Active|all, $q = নাম / username / ইমেইল / মোবাইল */

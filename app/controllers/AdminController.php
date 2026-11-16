@@ -2537,10 +2537,9 @@ class AdminController extends Controller
     public function Devices(): void
     {
         $this->requireAdminPage();
-        $st = (string)input_str('st', 'Pending'); if (!in_array($st, ['Pending', 'Active', 'all', 'auto'], true)) $st = 'Pending';
+        $st = (string)input_str('st', 'Active'); if (!in_array($st, ['Active', 'all'], true)) $st = 'Active';
         $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
-        $this->view(null, $st === 'auto' ? [] : $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'On' => $this->db->DeviceLockOn(), 'Pending' => $this->db->CountPendingDevices(),
-            'Auto' => $this->db->DeviceAutoOn(), 'Max' => $this->db->DeviceMax(), 'AutoCount' => $this->db->CountDeviceAutoLog(), 'AutoLog' => $st === 'auto' ? $this->db->GetDeviceAutoLog($q) : []]);
+        $this->view(null, $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'Max' => $this->db->DeviceMax()]);
     }
 
     /** POST /Admin/ApproveDevice (id) — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট */
@@ -2587,7 +2586,7 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $on = input_bool('on');
         $this->db->SaveSiteContent(['dev_max' => $on ? '2' : '1']);
-        json_response(['success' => true, 'message' => $on ? 'চালু — অনুমতি ছাড়াই ২টা ডিভাইসে লগইন করা যাবে (মোবাইল, পিসি, ল্যাপটপ যেকোনো)। ৩য় ডিভাইসে লগইন বা অনুরোধ — কোনোটাই করা যাবে না।' : 'বন্ধ — আগের মতো ১টা ডিভাইসে লগইন। (এখন যাদের ২টা চালু আছে, তারা অনুমতি ছাড়া নতুন ডিভাইস যোগ করতে পারবে না)']);
+        json_response(['success' => true, 'message' => $on ? 'চালু — অনুমতি ছাড়াই ২টা ডিভাইসে লগইন করা যাবে (মোবাইল, পিসি, ল্যাপটপ যেকোনো)। ৩য় ডিভাইসে লগইন বা অনুরোধ — কোনোটাই করা যাবে না।' : 'বন্ধ — কোনো সীমা নেই, যত খুশি ডিভাইসে লগইন করা যাবে।']);
     }
 
     /** POST /Admin/SaveDeviceAuto (on) — নতুন ডিভাইসের অনুরোধ অটো Approve চালু / বন্ধ */
