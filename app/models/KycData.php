@@ -141,8 +141,16 @@ trait KycData
         $w = '';
         if ($status !== 'all') { $w = ' AND k.`Status` = :s'; $p['s'] = $status; }
         if ($q !== '') {
-            $w .= ' AND (u.`FullName` LIKE :q1 OR u.`UserName` LIKE :q2 OR u.`Email` LIKE :q3 OR u.`MobileNumber` LIKE :q4 OR k.`Data` LIKE :q5)';
             $l = '%' . ltrim($q, '@') . '%';
+            // যিনি রেফার করেছেন তাঁর নাম / ইউজারনেম / রেফারেল কোড দিয়েও খোঁজা যায় — তাঁর রেফারেন্সে আসা সবাই দেখাবে
+            $byRef = '';
+            try {
+                $this->EnsureReferralTables();
+                $byRef = ' OR k.`UserId` IN (SELECT r.`ReferredUserId` FROM `Referrals` r LEFT JOIN `Users` a ON a.`Id` = r.`ReferrerId`
+                    WHERE a.`FullName` LIKE :q6 OR a.`UserName` LIKE :q7 OR r.`ReferrerId` IN (SELECT c.`UserId` FROM `ReferralCodes` c WHERE c.`Code` LIKE :q8))';
+                $p += ['q6' => $l, 'q7' => $l, 'q8' => $l];
+            } catch (Throwable $e) { $byRef = ''; }
+            $w .= ' AND (u.`FullName` LIKE :q1 OR u.`UserName` LIKE :q2 OR u.`Email` LIKE :q3 OR u.`MobileNumber` LIKE :q4 OR k.`Data` LIKE :q5' . $byRef . ')';
             $p += ['q1' => $l, 'q2' => $l, 'q3' => $l, 'q4' => $l, 'q5' => $l];
         }
         $rows = $this->all('SELECT k.*, u.`FullName` AS UFullName, u.`UserName` AS UUserName, u.`Email` AS UEmail, u.`Role` AS URole, u.`ProfileImageLink` AS UPhoto, u.`MobileNumber` AS UMobile
