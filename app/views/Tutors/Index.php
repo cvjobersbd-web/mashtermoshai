@@ -11,6 +11,7 @@ foreach ($sections as $__s) foreach (($__s['tutors'] ?? []) as $__t) { if (isset
 $ViewData['SchemaType'] = 'CollectionPage';
 seo_schema(seo_item_list(t('যাচাই করা টিউটর', 'Verified tutors'), $__items));
 $cities = is_array($ViewBag->Cities) ? $ViewBag->Cities : [];
+$city = (string)($ViewBag->City ?? '');
 $ViewData['Title'] = 'Tutor List';
 $ViewData['FullTitle'] = t('টিউটর লিস্ট — যাচাই করা হোম টিউটর খুঁজুন', 'Tutor List — Find Verified Home Tutors in BD') . ' | ' . seo_brand();
 $ViewData['Description'] = t('মাষ্টার মশাই এর অনুমোদিত সব টিউটরের তালিকা — জেলা, প্রতিষ্ঠান আর প্রোফাইল দেখে পছন্দের টিউটর বেছে নিন।', 'All approved tutors on Mashter Moshai — choose your tutor by district, institution and profile.');
@@ -31,6 +32,14 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
     .tl-stat i { width: 48px; height: 48px; border-radius: 8px; background: #00CFFF; color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .tl-stat b { display: block; font-size: 24px; color: #1F2937; line-height: 1.1; }
     .tl-stat span { font-size: 12.5px; color: #6B7280; }
+    a.tl-stat { text-decoration: none; color: inherit; border: 2px solid transparent; transition: border-color .15s, transform .15s, box-shadow .15s; }
+    a.tl-stat:hover { border-color: #00CFFF; transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0,207,255,.18); }
+    a.tl-stat > div { flex: 1; min-width: 0; }
+    a.tl-stat em { color: #CBD5E1; font-size: 15px; transition: color .15s, transform .15s; }
+    a.tl-stat:hover em { color: #00B5E0; transform: translateX(3px); }
+    .tl-cities .tl-crow a.on { background: #00CFFF; color: #fff; }
+    .tl-sel { margin-top: 14px; background: #E6F9FF; border: 1px solid #A5E9FA; color: #0F172A; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; }
+    .tl-sel i { color: #00B5E0; } .tl-sel a { color: #0284C7; font-weight: 700; margin-left: 6px; text-decoration: none; white-space: nowrap; }
     .tl-find { margin: 44px auto 10px; max-width: 520px; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 5px 5px 5px 18px; box-shadow: 0 2px 12px rgba(15,27,45,.08); }
     .tl-find i { color: #6B7280; }
     .tl-find input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14px; font-family: inherit; background: transparent; padding: 8px 0; }
@@ -68,15 +77,18 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
                 <div class="tl-cities">
                     <button type="button" class="tl-arrow l" data-scroll="-1" aria-label="আগের"><i class="fas fa-chevron-left"></i></button>
                     <div class="tl-crow" id="tlCities">
-                        <?php foreach ($cities as $c => $n): ?><a href="/Tutors/All?city[]=<?= rawurlencode($c) ?>"><?= e($c) ?> (<?= (int)$n ?>)</a><?php endforeach; ?>
+                        <a class="<?= $city === '' ? 'on' : '' ?>" href="/Tutors#tlStats"><?= t('সব জেলা', 'All Districts') ?></a>
+                        <?php foreach ($cities as $c => $n): ?><a class="<?= $city === $c ? 'on' : '' ?>" href="/Tutors?city=<?= rawurlencode($c) ?>#tlStats"><?= e($c) ?> (<?= (int)$n ?>)</a><?php endforeach; ?>
                     </div>
                     <button type="button" class="tl-arrow r" data-scroll="1" aria-label="পরের"><i class="fas fa-chevron-right"></i></button>
                 </div>
             <?php endif; ?>
-            <div class="tl-stats">
-                <div class="tl-stat"><i class="fas fa-user-group"></i><div><b><?= number_format((int)$ViewBag->Total) ?></b><span>Total Tutors</span></div></div>
-                <div class="tl-stat"><i class="fas fa-person"></i><div><b><?= number_format((int)$ViewBag->Male) ?></b><span>Male Tutors</span></div></div>
-                <div class="tl-stat"><i class="fas fa-person-dress"></i><div><b><?= number_format((int)$ViewBag->Female) ?></b><span>Female Tutors</span></div></div>
+            <?php $cq = $city !== '' ? '&city[]=' . rawurlencode($city) : ''; ?>
+            <?php if ($city !== ''): ?><div class="tl-sel"><i class="fas fa-location-dot"></i> <b><?= e($city) ?></b> <?= t('জেলার টিউটর — নিচে Male / Female চাপলে ওই জেলার ছেলে / মেয়ে টিউটর দেখাবে।', 'tutors — tap Male / Female below to see them.') ?> <a href="/Tutors#tlStats"><?= t('সব জেলা', 'All districts') ?> ✕</a></div><?php endif; ?>
+            <div class="tl-stats" id="tlStats">
+                <a class="tl-stat" href="/Tutors/All<?= $cq !== '' ? '?' . ltrim($cq, '&') : '' ?>"><i class="fas fa-user-group"></i><div><b><?= number_format((int)$ViewBag->Total) ?></b><span>Total Tutors<?= $city !== '' ? ' · ' . e($city) : '' ?></span></div><em class="fas fa-arrow-right"></em></a>
+                <a class="tl-stat" href="/Tutors/All?gender=male<?= $cq ?>"><i class="fas fa-person"></i><div><b><?= number_format((int)$ViewBag->Male) ?></b><span>Male Tutors<?= $city !== '' ? ' · ' . e($city) : '' ?></span></div><em class="fas fa-arrow-right"></em></a>
+                <a class="tl-stat" href="/Tutors/All?gender=female<?= $cq ?>"><i class="fas fa-person-dress"></i><div><b><?= number_format((int)$ViewBag->Female) ?></b><span>Female Tutors<?= $city !== '' ? ' · ' . e($city) : '' ?></span></div><em class="fas fa-arrow-right"></em></a>
             </div>
             <form class="tl-find" action="/Tutors" method="get" role="search">
                 <i class="fas fa-magnifying-glass"></i>
@@ -101,7 +113,7 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
             <section class="tl-sec">
                 <div class="tl-h">
                     <h2><?= e($sec['title']) ?></h2>
-                    <a class="tl-btn" href="/Tutors/All?type=<?= e($key) ?>">See All <i class="fas fa-caret-right"></i></a>
+                    <a class="tl-btn" href="/Tutors/All?type=<?= e($key) ?><?= $city !== '' ? '&amp;city[]=' . rawurlencode($city) : '' ?>">See All <i class="fas fa-caret-right"></i></a>
                 </div>
                 <div class="tl-car">
                     <div class="tl-track" id="tlT-<?= e($key) ?>">
@@ -144,6 +156,8 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
             if (dir > 0 && atEnd) t.scrollTo({ left: 0 }); else if (dir < 0 && t.scrollLeft <= 4) t.scrollTo({ left: t.scrollWidth }); else t.scrollBy({ left: dir * t.clientWidth });
         });
     });
+    // বাছাই করা জেলার চিপটা দেখা যায় এমন জায়গায়
+    (function () { var on = document.querySelector('#tlCities a.on'), r = document.getElementById('tlCities'); if (on && r) r.scrollLeft = on.offsetLeft - r.offsetLeft - 20; })();
     document.querySelectorAll('[data-scroll]').forEach(function (b) {
         b.addEventListener('click', function () { var r = document.getElementById('tlCities'); r.scrollBy({ left: +b.getAttribute('data-scroll') * r.clientWidth * .8 }); });
     });

@@ -2,7 +2,8 @@
 /**
  * Tutor List (Tutor Hub) — অনুমোদিত সব টিচারের তালিকা।
  *  GET /Tutors                        সেকশন আকারে (All / Premium / Top Rated / New) + পরিসংখ্যান + Tutor ID দিয়ে খোঁজা
- *  GET /Tutors/All?type=&city[]=&page= সব টিউটর — জেলা ফিল্টার আর পেজ নম্বর সহ
+ *  GET /Tutors/All?type=&city[]=&gender=&page= সব টিউটর — জেলা, ছেলে / মেয়ে ফিল্টার আর পেজ নম্বর সহ
+ *  GET /Tutors?city=Chittagong          ওই জেলার সংখ্যা ও তালিকা — তারপর Male / Female কার্ডে চাপলে ওই জেলার ছেলে / মেয়ে টিউটর
  * "See" চাপলে টিচারের প্রোফাইল (/Profile/Show/{id}) খোলে।
  * ডাটা: Db::GetTutorDirectory() (Find Tutor পেজের মতো একই নিয়ম — সাসপেন্ড / বন্ধ অ্যাকাউন্ট দেখায় না)
  */
@@ -46,7 +47,11 @@ class TutorsController extends Controller
     /** GET /Tutors */
     public function Index(): void
     {
-        $tutors = $this->db->GetTutorDirectory();
+        $all = $this->db->GetTutorDirectory();
+        // জেলা বাছাই (চিপে চাপলে) — তাহলে নিচের সংখ্যা আর তালিকা শুধু ওই জেলার
+        $city = (string)input_str('city', '');
+        if (!in_array($city, self::CITIES, true)) $city = '';
+        $tutors = $city !== '' ? array_values(array_filter($all, fn($t) => self::cityMatches($t, [$city]))) : $all;
         // Tutor ID (যেমন TCH-1024 বা 1024) অথবা নাম দিয়ে খোঁজা
         $raw = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str('tid', ''))), 0, 60);
         $tid = strtoupper($raw);
@@ -57,14 +62,14 @@ class TutorsController extends Controller
             // নাম দিয়ে — নামের যেকোনো অংশ (বড়/ছোট হাতের অক্ষর, ডট বাদ দিয়ে)
             $norm = fn($s) => mb_strtolower(preg_replace('/[.\s]+/u', ' ', trim((string)$s)));
             $needle = $norm($raw);
-            foreach ($tutors as $t) if ($needle !== '' && str_contains($norm($t->FullName), $needle)) $nameHits[] = $t;
+            foreach ($all as $t) if ($needle !== '' && str_contains($norm($t->FullName), $needle)) $nameHits[] = $t;
             pixel_track('Search', ['search_string' => $raw, 'content_category' => 'Tutor Name']);
             if (!$nameHits) $tidError = "“{$raw}” নামে কোনো টিউটর পাওয়া যায়নি।";
         }
         if ($isId) {
             if (preg_match('/^(?:TCH-?)?(\d{1,7})$/', $tid, $m)) {
                 // এই পেজেই টিউটরের কার্ড দেখায় (প্রোফাইলে নিয়ে যায় না)
-                foreach ($tutors as $t) if ($t->TutorId === 'TCH-' . $m[1]) { $nameHits[] = $t; break; }
+                foreach ($all as $t) if ($t->TutorId === 'TCH-' . $m[1]) { $nameHits[] = $t; break; }
             }
             if (!$nameHits) $tidError = "“{$tid}” আইডির কোনো টিউটর পাওয়া যায়নি।";
             pixel_track('Search', ['search_string' => $tid, 'content_category' => 'Tutor ID']);
@@ -73,7 +78,7 @@ class TutorsController extends Controller
         $female = count(array_filter($tutors, fn($t) => strcasecmp($t->Gender, 'Female') === 0));
         $cityCounts = [];
         foreach (self::CITIES as $c) {
-            $n = count(array_filter($tutors, fn($t) => self::cityMatches($t, [$c])));
+            $n = count(array_filter($all, fn($t) => self::cityMatches($t, [$c])));
             if ($n > 0) $cityCounts[$c] = $n;
         }
         arsort($cityCounts);
@@ -83,7 +88,7 @@ class TutorsController extends Controller
             if ($list) $sections[$k] = ['title' => $label, 'tutors' => $list];
         }
         $this->view(null, $sections, [
-            'Total' => count($tutors), 'Male' => $male, 'Female' => $female, 'Cities' => $cityCounts,
+            'Total' => count($tutors), 'Male' => $male, 'Female' => $female, 'Cities' => $cityCounts, 'City' => $city,
             'Tid' => $raw, 'TidError' => $tidError, 'NameHits' => $nameHits,
         ]);
     }
@@ -96,13 +101,17 @@ class TutorsController extends Controller
         $raw = $_GET['city'] ?? [];
         if (!is_array($raw)) $raw = [$raw];
         $cities = array_values(array_intersect(self::CITIES, array_map(fn($c) => trim((string)$c), $raw)));
-        $tutors = array_values(array_filter($this->ofType($this->db->GetTutorDirectory(), $type), fn($t) => self::cityMatches($t, $cities)));
+        // ছেলে / মেয়ে টিউটর (Male / Female) — জেলার সাথে একসাথেও বাছাই করা যায়
+        $gender = strtolower((string)input_str('gender', ''));
+        if (!in_array($gender, ['male', 'female'], true)) $gender = '';
+        $tutors = array_values(array_filter($this->ofType($this->db->GetTutorDirectory(), $type),
+            fn($t) => self::cityMatches($t, $cities) && ($gender === '' || strcasecmp((string)$t->Gender, $gender) === 0)));
         $total = count($tutors);
         if ($cities && input_int('page', 1) <= 1) pixel_track('Search', ['search_string' => implode(', ', $cities), 'content_category' => self::TYPES[$type]]);
         $pages = max(1, (int)ceil($total / self::PER_PAGE));
         $page = min($pages, max(1, input_int('page', 1)));
         $this->view(null, array_slice($tutors, ($page - 1) * self::PER_PAGE, self::PER_PAGE), [
-            'Type' => $type, 'Title' => self::TYPES[$type], 'Cities' => $cities, 'Page' => $page, 'Pages' => $pages, 'Total' => $total,
+            'Type' => $type, 'Title' => ($gender !== '' && $type === 'all' ? ucfirst($gender) . ' Tutors' : self::TYPES[$type]), 'Gender' => $gender, 'Cities' => $cities, 'Page' => $page, 'Pages' => $pages, 'Total' => $total,
         ]);
     }
 
