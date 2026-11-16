@@ -5,7 +5,7 @@ $ViewData['SchemaType'] = 'CollectionPage';
 seo_schema(seo_item_list(t('অনলাইন কোর্স', 'Online courses'), array_map(fn($c) => ['name' => (string)$c->Title, 'url' => '/Course/Details/' . (int)$c->Id, 'item' => [
     '@type' => 'Course', 'description' => (string)(($c->Subtitle ?? '') ?: $c->Title), 'provider' => ['@type' => 'Organization', 'name' => 'Mashter Moshai', 'sameAs' => seo_origin()]]], $list)));
 $ViewData['Title'] = 'Courses';
-$ViewData['FullTitle'] = t('অনলাইন কোর্স — রেকর্ড ও লাইভ ক্লাস, কুইজ, সার্টিফিকেট', 'Online Courses — Recorded & Live Classes') . ' | ' . seo_brand();
+$ViewData['FullTitle'] = t('অনলাইন কোর্স — রেকর্ড ও লাইভ ক্লাস, কুইজ, সার্টিফিকেট', 'Online Courses — Live and Recorded Video Classes') . ' | ' . seo_brand();
 $ViewData['Description'] = t('মাষ্টার মশাই এর শিক্ষকদের অনলাইন কোর্স — রেকর্ড করা ক্লাস, লাইভ ক্লাস, অ্যাসাইনমেন্ট, কুইজ আর সার্টিফিকেট।', 'Online courses by Mashter Moshai teachers — recorded and live classes, assignments, quizzes and certificates.');
 $q = (string)$ViewBag->Q; $cat = (string)$ViewBag->Cat; $cats = $ViewBag->Cats ?? []; $mine = $ViewBag->Mine ?? [];
 ?>

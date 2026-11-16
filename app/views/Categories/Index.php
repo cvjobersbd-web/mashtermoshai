@@ -5,7 +5,7 @@ $__items = []; foreach ($groups as $__g) foreach ($__g->Categories as $__c) $__i
 $ViewData['SchemaType'] = 'CollectionPage';
 seo_schema(seo_item_list(t('টিউশন ক্যাটাগরি', 'Tuition categories'), $__items));
 $ViewData['Title'] = 'Categories';
-$ViewData['FullTitle'] = t('টিউশন ক্যাটাগরি — ক্লাস ও বিষয় দিয়ে টিউটর খুঁজুন', 'Tuition Categories — Find Tutors by Class & Subject') . ' | ' . seo_brand();
+$ViewData['FullTitle'] = t('টিউশন ক্যাটাগরি — বিষয় দিয়ে টিউটর খুঁজুন', 'Tuition Categories — Find Tutors by Subject') . ' | ' . seo_brand();
 $ViewData['Description'] = t('ক্লাস, বিষয় আর দক্ষতা অনুযায়ী টিউশন ক্যাটাগরি — বাংলা ও ইংলিশ মিডিয়াম, ভর্তি, IELTS সহ আরও অনেক কিছু।', 'Tuition categories by class, subject and skill — Bangla & English Medium, admission help, IELTS and more.');
 $total = array_sum(array_map(fn($g) => count($g->Categories), $groups));
 ?>
