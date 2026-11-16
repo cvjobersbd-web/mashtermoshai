@@ -47,7 +47,7 @@ $names = array_map(fn($r) => explode(' ', trim($r->Name))[0], array_slice($recen
         </div>
         <?php if ($recent): ?>
             <div class="pvc-who">
-                <span class="pvc-faces"><?php foreach (array_slice($recent, 0, 4) as $r): ?><span title="<?= e($r->Name) ?>"><?= e($r->Initials) ?><?php if ($r->Image !== ''): ?><img src="<?= e($r->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span><?php endforeach; ?></span>
+                <span class="pvc-faces"><?php foreach (array_slice($recent, 0, 4) as $r): ?><span title="<?= e($r->Name) ?>"><?= e($r->Initials) ?><?php if ($r->Image !== ''): ?><img src="<?= e($r->Image) ?>" alt="<?= e($r->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span><?php endforeach; ?></span>
                 <p><b><?= e(implode(', ', $names)) ?></b><?= $st['unique90'] > count($names) ? ' এবং আরো ' . ((int)$st['unique90'] - count($names)) . ' জন' : '' ?> আপনার প্রোফাইল দেখেছেন</p>
             </div>
         <?php else: ?>

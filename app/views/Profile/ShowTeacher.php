@@ -251,7 +251,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
         <!-- ======================= HEADER ======================= -->
         <div class="pf-card pf-head">
             <div class="ps-cover<?= $cover ? ' has-img' : '' ?>" id="psCover">
-                <img id="psCoverImg" alt="Cover photo" <?= $cover ? 'src="' . e($cover) . '"' : 'hidden' ?> style="object-position: 50% <?= (int)$coverY ?>%;" draggable="false" />
+                <img id="psCoverImg" alt="<?= e(($ViewData['Title'] ?? 'টিচার') . ' — কভার ছবি') ?>" <?= $cover ? 'src="' . e($cover) . '"' : 'hidden' ?> style="object-position: 50% <?= (int)$coverY ?>%;" draggable="false" />
                 <?php if ($isOwner): ?>
                     <div class="cv-hint" id="cvHint"><i class="fas fa-up-down"></i> উপরে-নিচে টেনে ছবিটা ঠিক জায়গায় বসান</div>
                     <div class="cv-bar" id="cvBar">
@@ -377,7 +377,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                     <div class="st-v"><b><?= (int)$Model->StudentCount ?></b><span><?= (int)$Model->ActiveStudents ?> Active</span></div>
                                     <div class="st-faces">
                                         <?php foreach (array_slice($students, 0, 3) as $s): ?>
-                                            <span class="fc" title="<?= e($s->Name) ?>"><?= e($s->Initials) ?><?php if ($s->Image): ?><img src="<?= e($s->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                                            <span class="fc" title="<?= e($s->Name) ?>"><?= e($s->Initials) ?><?php if ($s->Image): ?><img src="<?= e($s->Image) ?>" alt="<?= e($s->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                                         <?php endforeach; ?>
                                         <?php if (count($students) > 3): ?><span class="plus" style="font-size:11px;font-weight:700;">+<?= count($students) - 3 ?></span>
                                         <?php else: ?><span class="plus" title="স্টুডেন্ট যোগ করুন"><i class="fas fa-plus"></i></span><?php endif; ?>
@@ -531,7 +531,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                                             <?php foreach (array_slice($students, 0, 3) as $s): $wa = $s->Phone !== '' ? $waLink($s->Phone) : null; ?>
                                                 <div class="tu-item">
                                                     <?php if ($s->StudentUserId): ?><a class="tu-av" href="/Profile/Show/<?= $s->StudentUserId ?>"><?php else: ?><span class="tu-av"><?php endif; ?>
-                                                        <?= e($s->Initials) ?><?php if ($s->Image): ?><img src="<?= e($s->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+                                                        <?= e($s->Initials) ?><?php if ($s->Image): ?><img src="<?= e($s->Image) ?>" alt="<?= e(($s->Name ?? 'শিক্ষার্থী') . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
                                                     <?= $s->StudentUserId ? '</a>' : '</span>' ?>
                                                     <div class="tu-who"><?= $s->StudentUserId ? '<a href="/Profile/Show/' . $s->StudentUserId . '">' . e($s->Name) . '</a>' : '<b style="font-size:15px;">' . e($s->Name) . '</b>' ?>
                                                         <small><?= e(implode(' · ', array_filter([$s->ClassLevel, $s->Subject]))) ?: '—' ?></small></div>
@@ -682,7 +682,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                             <?php foreach ($students as $s): $wa = $s->Phone !== '' ? $waLink($s->Phone) : null; ?>
                                 <div class="tp-row" data-status="<?= $s->Status ?>">
                                     <?php if ($s->StudentUserId): ?><a class="tu-av" href="/Profile/Show/<?= $s->StudentUserId ?>"><?php else: ?><span class="tu-av"><?php endif; ?>
-                                        <?= e($s->Initials) ?><?php if ($s->Image): ?><img src="<?= e($s->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+                                        <?= e($s->Initials) ?><?php if ($s->Image): ?><img src="<?= e($s->Image) ?>" alt="<?= e(($s->Name ?? 'শিক্ষার্থী') . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
                                     <?= $s->StudentUserId ? '</a>' : '</span>' ?>
                                     <div class="tu-who">
                                         <b style="font-size:15px;"><?= e($s->Name) ?></b>
@@ -773,7 +773,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <?php foreach ($Model->TeachPosts as $tpst): ?>
                             <div class="pf-card tp-tp">
                                 <p><?= e(str_preview($tpst->Content, 500)) ?></p>
-                                <?php if ($tpst->Image): ?><img src="<?= e($tpst->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+                                <?php if ($tpst->Image): ?><img src="<?= e($tpst->Image) ?>" alt="<?= e('টিচারের পোস্টের ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
                                 <div class="ci-foot">
                                     <span><i class="far fa-clock"></i> <?= e(time_ago($tpst->CreatedAt)) ?></span>
                                     <span><i class="far fa-heart"></i> <?= (int)$tpst->Likes ?></span>
@@ -802,7 +802,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <div class="sv-list" id="svList">
                             <?php foreach ($saved as $s): [$tl, $ti2] = $typeLabel[$s->Type] ?? ['Item', 'fa-bookmark']; ?>
                                 <div class="pf-card sv-item<?= $s->Available ? '' : ' unavail' ?>" data-type="<?= e($s->Type) ?>" data-key="<?= e($s->Type . ':' . $s->ItemId) ?>">
-                                    <a class="sv-thumb" href="<?= e($s->Link) ?>"><?php if ($s->Available && $s->Image): ?><img src="<?= e($s->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php else: ?><i class="fas <?= $ti2 ?>"></i><?php endif; ?></a>
+                                    <a class="sv-thumb" href="<?= e($s->Link) ?>"><?php if ($s->Available && $s->Image): ?><img src="<?= e($s->Image) ?>" alt="<?= e(($s->Title ?? $tl) . ' — ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php else: ?><i class="fas <?= $ti2 ?>"></i><?php endif; ?></a>
                                     <div class="sv-body">
                                         <span class="sv-type"><?= $tl ?></span>
                                         <a class="sv-title" href="<?= e($s->Link) ?>"><?= $s->Available ? e($s->Title) : 'This item is no longer available' ?></a>

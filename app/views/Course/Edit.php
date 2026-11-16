@@ -58,7 +58,7 @@ $pct = course_admin_pct();
     f.elements.price.addEventListener('input', share); share();
     document.getElementById('cThumb').addEventListener('change', function () {
         var fl = this.files[0]; if (!fl) return;
-        document.getElementById('ceThumbPrev').innerHTML = '<div class="cx-thumb"><img src="' + URL.createObjectURL(fl) + '" alt="" /></div>';
+        document.getElementById('ceThumbPrev').innerHTML = '<div class="cx-thumb"><img src="' + URL.createObjectURL(fl) + '" alt="কোর্সের থাম্বনেইল" /></div>';
     });
     f.addEventListener('submit', async function (e) {
         e.preventDefault();

@@ -4,6 +4,9 @@
  * @var Obj[] $Model  এই পেজের টিউটর
  */
 $tutors = is_array($Model) ? $Model : [];
+$ViewData['SchemaType'] = 'CollectionPage';
+$ViewData['Crumbs'] = [[t('টিউটর লিস্ট', 'Tutor List'), '/Tutors']];
+seo_schema(seo_item_list(t('যাচাই করা টিউটর', 'Verified tutors'), array_map(fn($t) => ['name' => (string)$t->FullName, 'url' => '/Tutors/Profile/' . (int)$t->UserId, 'item' => ['@type' => 'Person', 'jobTitle' => 'Tutor']], $tutors)));
 $type = (string)$ViewBag->Type;
 $sel = is_array($ViewBag->Cities) ? $ViewBag->Cities : [];
 $page = (int)$ViewBag->Page; $pages = (int)$ViewBag->Pages;

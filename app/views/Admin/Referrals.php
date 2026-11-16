@@ -208,7 +208,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             var r = await post('/Admin/RefUserSearch', { q: v }); if (nbQ.value.trim() !== v) return;
             nbRes.innerHTML = (r.users || []).length ? r.users.map(function (u) {
                 var av = '<span style="width:42px;height:42px;border-radius:50%;background:#1E3A8A;color:#fff;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;position:relative;">' + escH(u.ini)
-                    + (u.photo ? '<img src="' + escH(u.photo) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()" />' : '') + '</span>';
+                    + (u.photo ? '<img src="' + escH(u.photo) + '" alt="' + escH((u.name || 'ইউজার') + ' এর প্রোফাইল ছবি') + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()" />' : '') + '</span>';
                 return '<div style="display:flex;align-items:center;gap:12px;border:1px solid #E5ECF3;border-radius:10px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap;">' + av
                     + '<div style="flex:1;min-width:200px;"><b>' + escH(u.name) + '</b> <span class="rfg-code" style="font-size:12px;">@' + escH(u.user) + '</span>'
                     + '<br><small style="color:#64748B;">' + escH(u.role) + ' · ' + escH(u.email) + (u.code ? ' · কোড ' + escH(u.code) : '') + (u.joined ? ' · যোগ দিয়েছে ' + escH(u.joined) : '') + '</small></div>'

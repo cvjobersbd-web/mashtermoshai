@@ -62,7 +62,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
         <!-- ======================= HEADER ======================= -->
         <div class="pf-card pf-head">
             <div class="ps-cover<?= $cover ? ' has-img' : '' ?>" id="psCover">
-                <img id="psCoverImg" alt="Cover photo" <?= $cover ? 'src="' . e($cover) . '"' : 'hidden' ?> style="object-position: 50% <?= (int)$coverY ?>%;" draggable="false" />
+                <img id="psCoverImg" alt="<?= e(($ViewData['Title'] ?? 'প্রোফাইল') . ' — কভার ছবি') ?>" <?= $cover ? 'src="' . e($cover) . '"' : 'hidden' ?> style="object-position: 50% <?= (int)$coverY ?>%;" draggable="false" />
                 <?php if ($isOwner): ?>
                     <div class="cv-hint" id="cvHint"><i class="fas fa-up-down"></i> উপরে-নিচে টেনে ছবিটা ঠিক জায়গায় বসান</div>
                     <div class="cv-bar" id="cvBar">
@@ -200,7 +200,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                     <div class="st-v"><b><?= count($connected) ?></b><span>Active</span></div>
                                     <div class="st-faces">
                                         <?php foreach (array_slice($connected, 0, 3) as $c): ?>
-                                            <span class="fc" title="<?= e($c->Name) ?>"><?= e($c->Initials) ?><?php if ($c->Image): ?><img src="<?= e($c->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                                            <span class="fc" title="<?= e($c->Name) ?>"><?= e($c->Initials) ?><?php if ($c->Image): ?><img src="<?= e($c->Image) ?>" alt="<?= e($c->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                                         <?php endforeach; ?>
                                         <span class="plus" title="<?= $isTeacher ? 'Tuition খুঁজুন' : 'Tutor খুঁজুন' ?>"><i class="fas fa-plus"></i></span>
                                     </div>
@@ -214,7 +214,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                     <div class="st-v"><b data-saved-count><?= count($saved) ?></b><span>items</span></div>
                                 </div>
                                 <?php if ($savedThumbs): ?>
-                                    <div class="st-thumbs"><?php foreach ($savedThumbs as $t): ?><span><img src="<?= e($t->Image) ?>" alt="" loading="lazy" onerror="this.parentNode.remove()" /></span><?php endforeach; ?></div>
+                                    <div class="st-thumbs"><?php foreach ($savedThumbs as $t): ?><span><img src="<?= e($t->Image) ?>" alt="সেভ করা জিনিসের ছবি" loading="lazy" onerror="this.parentNode.remove()" /></span><?php endforeach; ?></div>
                                 <?php endif; ?>
                                 <span class="st-arrow"><i class="fas fa-chevron-right"></i></span>
                             </a>
@@ -311,7 +311,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                                         <div class="tu-list">
                                             <?php foreach (array_slice($connected, 0, 3) as $c): ?>
                                                 <div class="tu-item">
-                                                    <a class="tu-av" href="/Profile/Show/<?= $c->Id ?>"><?= e($c->Initials) ?><?php if ($c->Image): ?><img src="<?= e($c->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                                                    <a class="tu-av" href="/Profile/Show/<?= $c->Id ?>"><?= e($c->Initials) ?><?php if ($c->Image): ?><img src="<?= e($c->Image) ?>" alt="<?= e($c->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
                                                     <div class="tu-who"><a href="/Profile/Show/<?= $c->Id ?>"><?= e($c->Name) ?></a><small><?= e($c->Sub) ?></small></div>
                                                     <a class="tu-view" href="/Profile/Show/<?= $c->Id ?>">View</a>
                                                 </div>
@@ -345,7 +345,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                         <div class="pf-card rc"><div class="tu-list">
                             <?php foreach ($connected as $c): ?>
                                 <div class="tu-item">
-                                    <a class="tu-av" href="/Profile/Show/<?= $c->Id ?>"><?= e($c->Initials) ?><?php if ($c->Image): ?><img src="<?= e($c->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                                    <a class="tu-av" href="/Profile/Show/<?= $c->Id ?>"><?= e($c->Initials) ?><?php if ($c->Image): ?><img src="<?= e($c->Image) ?>" alt="<?= e($c->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
                                     <div class="tu-who"><a href="/Profile/Show/<?= $c->Id ?>"><?= e($c->Name) ?></a><small><?= e($c->Sub) ?><?= $c->Institution !== '' ? ' · ' . e($c->Institution) : '' ?></small></div>
                                     <a class="tu-view" href="/Profile/Show/<?= $c->Id ?>">View</a>
                                 </div>
@@ -404,7 +404,7 @@ $fmtMin = function (int $m): string { $h = intdiv($m, 60); $r = $m % 60; return 
                         <div class="sv-list" id="svList">
                             <?php foreach ($saved as $s): [$tl, $ti2] = $typeLabel[$s->Type] ?? ['Item', 'fa-bookmark']; ?>
                                 <div class="pf-card sv-item<?= $s->Available ? '' : ' unavail' ?>" data-type="<?= e($s->Type) ?>" data-key="<?= e($s->Type . ':' . $s->ItemId) ?>">
-                                    <a class="sv-thumb" href="<?= e($s->Link) ?>"><?php if ($s->Available && $s->Image): ?><img src="<?= e($s->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php else: ?><i class="fas <?= $ti2 ?>"></i><?php endif; ?></a>
+                                    <a class="sv-thumb" href="<?= e($s->Link) ?>"><?php if ($s->Available && $s->Image): ?><img src="<?= e($s->Image) ?>" alt="<?= e(($s->Title ?? $tl) . ' — ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php else: ?><i class="fas <?= $ti2 ?>"></i><?php endif; ?></a>
                                     <div class="sv-body">
                                         <span class="sv-type"><?= $tl ?></span>
                                         <a class="sv-title" href="<?= e($s->Link) ?>"><?= $s->Available ? e($s->Title) : 'This item is no longer available' ?></a>

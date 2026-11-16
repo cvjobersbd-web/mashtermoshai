@@ -1,6 +1,7 @@
 <?php
 /** শর্তাবলি (Terms of Service) — সাইটের আসল নিয়মগুলো এক জায়গায় */
 $ViewData['Title'] = t('শর্তাবলি', 'Terms of Service');
+$ViewData['FullTitle'] = t('শর্তাবলি — মাষ্টার মশাই ব্যবহারের নিয়ম ও শর্ত', 'Terms of Service — Rules for Using the Site') . ' | ' . seo_brand();
 $ViewData['Description'] = t('মাষ্টার মশাই ব্যবহারের শর্তাবলি — অ্যাকাউন্ট, যাচাই, প্যাকেজ ও পেমেন্ট, পোস্ট আর কোর্সের নিয়ম।', 'Terms of Service for using Mashter Moshai — accounts, verification, packages and payments, posts and courses.');
 $en = site_lang() === 'en';
 partial('Home/_PolicyStyles');

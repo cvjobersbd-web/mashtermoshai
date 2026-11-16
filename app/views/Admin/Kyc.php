@@ -105,7 +105,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
     <?php foreach ($list as $k): $D = $k->D; $nm = (string)($k->UFullName ?: $k->UUserName ?: 'Deleted user'); [$sl, $sc] = $stBn[$k->Status] ?? [$k->Status, 'g']; ?>
         <div class="kc-c <?= e($k->Status) ?>" id="kyc-<?= (int)$k->Id ?>">
             <div class="kc-top">
-                <span class="kc-ava"><?php if (!is_blank($k->UPhoto)): ?><img src="<?= e($k->UPhoto) ?>" alt="" onerror="this.remove()" /><?php else: ?><?= e(mb_strtoupper(mb_substr($nm, 0, 1))) ?><?php endif; ?></span>
+                <span class="kc-ava"><?php if (!is_blank($k->UPhoto)): ?><img src="<?= e($k->UPhoto) ?>" alt="<?= e($nm . ' এর প্রোফাইল ছবি') ?>" onerror="this.remove()" /><?php else: ?><?= e(mb_strtoupper(mb_substr($nm, 0, 1))) ?><?php endif; ?></span>
                 <div><a class="nm" href="/Profile/Show/<?= (int)$k->UserId ?>" target="_blank"><?= e($kind === 'student' && !empty($D['fullName']) ? $D['fullName'] : $nm) ?></a>
                     <small>@<?= e((string)$k->UUserName) ?> · <?= e((string)$k->UEmail) ?> · জমা: <?= e($fmt($k->CreatedAt)) ?></small></div>
                 <span class="kc-pill g"><?= e(role_label($k->URole, $k->UserId)) ?></span>
@@ -182,7 +182,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                     elseif (!empty($D['uniCard'])) $imgs = ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []);
                     else $imgs = ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে'];
                     foreach ($imgs as $side => $sl2): $u = '/Kyc/File/' . (int)$k->Id . '?side=' . $side; ?>
-                        <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="" loading="lazy" /><span><?= e($sl2) ?></span></a>
+                        <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="<?= e($nm . ' — ' . $sl2) ?>" loading="lazy" /><span><?= e($sl2) ?></span></a>
                     <?php endforeach; ?>
                     <?php if ($kind === 'teacher' && !empty($D['uniCard']) && empty($D['nidFront']) && empty($D['nidBack'])): ?><div style="grid-column:1/-1;font-size:12.5px;color:#94A3B8;"><i class="fas fa-circle-info"></i> NID দেননি (ঐচ্ছিক)</div><?php endif; ?>
                 </div>
@@ -197,7 +197,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
         </div>
     <?php endforeach; ?>
 </div>
-<div class="kc-lb" id="kcLb"><img alt="" /></div>
+<div class="kc-lb" id="kcLb"><img alt="ID কার্ডের বড় ছবি" /></div>
 <script>
 (function () {
     function toast(m) { var t = document.querySelector('.kc-toast'); if (!t) { t = document.createElement('div'); t.className = 'kc-toast'; document.body.appendChild(t); } t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(function () { t.style.display = 'none'; }, 3500); }

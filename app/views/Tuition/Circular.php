@@ -4,7 +4,10 @@
  * উপরে ব্যানার (অ্যাডমিন সেটিংস থেকে বদলানো যায়) · বামে ফিল্টার · মাঝে পোস্ট লেখা + Recent Tuition Posts · ডানে Need a Teacher / How It Works / নিরাপদ প্ল্যাটফর্ম
  */
 $ViewData['Title'] = 'Tuition Circular';
-$ViewData['Description'] = t('সর্বশেষ টিউশন সার্কুলার — ঢাকা সহ সারা বাংলাদেশের হোম টিউশন ও অনলাইন টিউশনের খোঁজ। ক্লাস, বিষয়, এলাকা আর বেতন দেখে টিউশনে Apply করুন।', 'Latest tuition circulars — home and online tuition jobs across Bangladesh. See class, subjects, area and salary, then apply.');
+$ViewData['SchemaType'] = 'CollectionPage';
+seo_schema(seo_item_list(t('টিউশন সার্কুলার', 'Tuition circulars'), array_map(fn($ap) => ['name' => trim((string)(($ap->Title ?? '') ?: (($ap->Subjects ?? '') . ' — ' . ($ap->StudentClass ?? '')))), 'url' => '/Tuition/Details/' . (int)$ap->Id], is_array($Model) ? $Model : [])));
+$ViewData['FullTitle'] = t('টিউশন সার্কুলার — সারা বাংলাদেশের নতুন টিউশন', 'Tuition Circular — Latest Tuition Jobs in BD') . ' | ' . seo_brand();
+$ViewData['Description'] = t('ঢাকা সহ সারা বাংলাদেশের নতুন হোম ও অনলাইন টিউশন — ক্লাস, বিষয়, এলাকা আর বেতন দেখে টিউশনে Apply করুন।', 'New home and online tuition jobs across Bangladesh — see class, subjects, area and salary, then apply.');
 $isLoggedIn = session_get('UserName') != null;
 $userRole = session_get('UserRole');
 $isTeacher = $userRole == 'Teacher';
@@ -796,7 +799,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     ?>
                         <article class="tc-card tc-post" id="circular-post-<?= $pid ?>" data-id="<?= $pid ?>">
                             <div class="tc-post-in">
-                                <a href="/Profile/Show/<?= (int)$post->UserId ?>" class="tc-av" aria-label="<?= e($post->UserFullName) ?>"><?= e(initials((string)$post->UserFullName, 'S')) ?><?php if (!is_blank($post->UserProfileImage)): ?><img src="<?= e($post->UserProfileImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                                <a href="/Profile/Show/<?= (int)$post->UserId ?>" class="tc-av" aria-label="<?= e($post->UserFullName) ?>"><?= e(initials((string)$post->UserFullName, 'S')) ?><?php if (!is_blank($post->UserProfileImage)): ?><img src="<?= e($post->UserProfileImage) ?>" alt="<?= e($post->UserFullName . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
                                 <div class="tc-post-body">
                                     <div class="tc-post-top">
                                         <div class="tc-who">
@@ -831,7 +834,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                     <?php if (!is_blank($post->VideoUrl ?? null)): ?>
                                         <div class="tc-media"><video src="<?= e($post->VideoUrl) ?>" controls preload="metadata" playsinline></video></div>
                                     <?php elseif (!is_blank($post->ImageUrl)): ?>
-                                        <div class="tc-media"><img src="<?= e($post->ImageUrl) ?>" alt="Post photo" loading="lazy" data-tc-zoom /></div>
+                                        <div class="tc-media"><img src="<?= e($post->ImageUrl) ?>" alt="<?= e('টিউশন পোস্টের ছবি — ' . ($post->UserFullName ?? '')) ?>" loading="lazy" data-tc-zoom /></div>
                                     <?php endif; ?>
 
                                     <div class="tc-foot">
@@ -870,7 +873,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                 <div class="fb-comment-list" id="circular-comment-list-<?= $pid ?>">
                                     <?php foreach ($post->Comments ?? [] as $comment): ?>
                                         <div class="fbc" id="cfbc-<?= e($comment->Id) ?>" data-id="<?= e($comment->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($comment->UserFullName) ?>" data-raw="<?= e($comment->Content) ?>">
-                                            <div class="fbc-avatar"><?php if (!is_blank($comment->UserProfileImage)): ?><img src="<?= e($comment->UserProfileImage) ?>" alt="user" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$comment->UserFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
+                                            <div class="fbc-avatar"><?php if (!is_blank($comment->UserProfileImage)): ?><img src="<?= e($comment->UserProfileImage) ?>" alt="<?= e($comment->UserFullName . ' এর প্রোফাইল ছবি') ?>" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$comment->UserFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
                                             <div class="fbc-main">
                                                 <div class="fbc-bubble <?= $comment->LikeCount > 0 ? 'has-likes' : '' ?>">
                                                     <span class="fbc-name"><?= e($comment->UserFullName) ?></span>
@@ -891,7 +894,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                                     <div class="fbc-replies" id="cfbc-replies-<?= e($comment->Id) ?>">
                                                         <?php foreach ($comment->Replies ?? [] as $reply): ?>
                                                             <div class="fbc is-reply" id="cfbc-<?= e($reply->Id) ?>" data-id="<?= e($reply->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($reply->UserFullName) ?>" data-raw="<?= e($reply->Content) ?>">
-                                                                <div class="fbc-avatar"><?php if (!is_blank($reply->UserProfileImage)): ?><img src="<?= e($reply->UserProfileImage) ?>" alt="user" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$reply->UserFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
+                                                                <div class="fbc-avatar"><?php if (!is_blank($reply->UserProfileImage)): ?><img src="<?= e($reply->UserProfileImage) ?>" alt="<?= e($reply->UserFullName . ' এর প্রোফাইল ছবি') ?>" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$reply->UserFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
                                                                 <div class="fbc-main">
                                                                     <div class="fbc-bubble <?= $reply->LikeCount > 0 ? 'has-likes' : '' ?>">
                                                                         <span class="fbc-name"><?= e($reply->UserFullName) ?></span>
@@ -916,7 +919,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                 </div>
                                 <?php if ($isLoggedIn): ?>
                                     <div class="fbc-input-row">
-                                        <div class="fbc-avatar"><?php if (!is_blank($userProfileImg)): ?><img src="<?= e($userProfileImg) ?>" alt="me" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$userFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
+                                        <div class="fbc-avatar"><?php if (!is_blank($userProfileImg)): ?><img src="<?= e($userProfileImg) ?>" alt="<?= e($userFullName . ' এর প্রোফাইল ছবি') ?>" /><?php else: ?><?= e(mb_strtoupper(mb_substr((string)$userFullName, 0, 1)) ?: 'U') ?><?php endif; ?></div>
                                         <div class="fbc-pill">
                                             <input type="text" id="circular-comment-input-<?= $pid ?>" placeholder="Write a comment..." maxlength="2000" onkeydown="handleCircularCommentEnter(event, <?= $pid ?>)" />
                                             <button type="button" class="fbc-send" onclick="submitCircularComment(<?= $pid ?>)" title="Send"><i class="fas fa-paper-plane"></i></button>
@@ -1053,7 +1056,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 <?php endif; ?>
 
 <!-- ছবি বড় করে দেখা -->
-<div class="tcm-ov" id="tcZoom" style="background:rgba(0,0,0,.9);cursor:zoom-out;"><img alt="tuition photo" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;" /></div>
+<div class="tcm-ov" id="tcZoom" style="background:rgba(0,0,0,.9);cursor:zoom-out;"><img alt="টিউশন পোস্টের বড় ছবি" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;" /></div>
 
 <!-- ======================= APPLY MODAL (Teacher → Student) ======================= -->
 <?php if ($isLoggedIn && $isTeacher): ?>
@@ -1104,7 +1107,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
         }
         function cfbcToken() { return document.querySelector('input[name="__RequestVerificationToken"]').value; }
         function cfbcAvatarHtml(img, name) {
-            if (img) return '<img src="' + cfbcEsc(img) + '" alt="user" />';
+            if (img) return '<img src="' + cfbcEsc(img) + '" alt="' + cfbcEsc((name || 'ইউজার') + ' এর প্রোফাইল ছবি') + '" />';
             return cfbcEsc((name || 'U').charAt(0).toUpperCase());
         }
         function cfbcRenderText(content) {
@@ -1443,7 +1446,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
             function showMedia(file, isVideo) {
                 if (objUrl) URL.revokeObjectURL(objUrl);
                 objUrl = URL.createObjectURL(file);
-                prevIn.innerHTML = isVideo ? '<video controls preload="metadata"></video><span class="nm"></span>' : '<img alt="Preview" />';
+                prevIn.innerHTML = isVideo ? '<video controls preload="metadata"></video><span class="nm"></span>' : '<img alt="টিউশন পোস্টের ছবির প্রিভিউ" />';
                 if (isVideo) { $('video', prevIn).src = objUrl; $('.nm', prevIn).textContent = file.name + ' (' + (file.size / 1048576).toFixed(1) + ' MB)'; }
                 else $('img', prevIn).src = objUrl;
                 prev.classList.add('show');

@@ -285,7 +285,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                         <a href="/Admin/TeacherOverview?id=<?= e($t->Id) ?>" class="teacher-item <?= $isActive ? 'active' : '' ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$t->FullName, (string)$t->UserName, '@' . $t->UserName, (string)$t->Email, (string)($t->MobileNumber ?? '')]))) ?>">
                             <div class="t-avatar">
                                 <?php if (!is_blank($t->ProfileImageLink)): ?>
-                                    <img src="<?= e($t->ProfileImageLink) ?>" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />
+                                    <img alt="<?= e(($t->FullName) . ' এর প্রোফাইল ছবি') ?>" src="<?= e($t->ProfileImageLink) ?>" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />
                                 <?php else: ?>
                                     <?= e(mb_strlen((string)$t->FullName) > 0 ? mb_strtoupper(mb_substr((string)$t->FullName, 0, 1)) : 'T') ?>
                                 <?php endif; ?>
@@ -313,7 +313,7 @@ $tuitionApps = $ViewBag->TuitionApps ?? [];
                 <!-- ১. টিচার প্রোফাইল হেডার -->
                 <div class="detail-card d-flex align-items-center gap-4 flex-wrap">
                     <img src="<?= e(is_blank($selectedTeacher->ProfileImageLink) ? 'https://ui-avatars.com/api/?name=' . rawurlencode((string)$selectedTeacher->FullName) . '&background=1F3B2C&color=fff&size=100' : $selectedTeacher->ProfileImageLink) ?>"
-                         style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 4px solid #CFF2FC;" />
+                         alt="<?= e((string)$selectedTeacher->FullName . ' এর প্রোফাইল ছবি') ?>" style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 4px solid #CFF2FC;" />
                     <div style="flex: 1; min-width: 200px;">
                         <h3 style="margin: 0 0 6px; color: #08224A; font-weight: 800;"><a href="/Profile/Show/<?= (int)$selectedTeacher->Id ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;" title="প্রোফাইল দেখুন"><?= e($selectedTeacher->FullName) ?> <i class="fas fa-arrow-up-right-from-square" style="font-size:13px;color:#0EA5E9;"></i></a></h3>
                         <div style="font-size: 13.5px; color: #64748B; display: flex; gap: 15px; flex-wrap: wrap;">

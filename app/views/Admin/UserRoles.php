@@ -13,7 +13,7 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
     $lock = $u->Id === $me ? 'নিজের রোল বদলানো যায় না' : ($u->IsSuper ? 'Super Admin — বদলানো যায় না' : '');
     ob_start(); ?>
     <tr>
-        <td><div class="ur-u"><span class="ur-av"><?= e(initials($u->Name, 'U')) ?><?php if (!is_blank($u->ProfileImageLink)): ?><img src="<?= e($u->ProfileImageLink) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+        <td><div class="ur-u"><span class="ur-av"><?= e(initials($u->Name, 'U')) ?><?php if (!is_blank($u->ProfileImageLink)): ?><img src="<?= e($u->ProfileImageLink) ?>" alt="<?= e($u->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
             <div><a href="/Profile/Show/<?= $u->Id ?>" target="_blank"><?= e($u->Name) ?></a><small>@<?= e($u->UserName) ?> · <?= e((string)$u->Email) ?><?= !is_blank($u->MobileNumber) ? ' · ' . e($u->MobileNumber) : '' ?></small></div></div></td>
         <td><span class="ur-tag <?= $tagCls[$u->RoleLabel] ?? 'u' ?>"><?= e($u->IsSuper ? 'Super Admin' : $u->RoleLabel) ?></span></td>
         <td><?php if ($lock): ?><small style="color:#94A3B8;"><?= $lock ?></small><?php else: ?>
@@ -103,7 +103,7 @@ $rowHtml = function (Obj $u) use ($roles, $tagCls, $me) {
         <div style="overflow-x:auto;"><table class="ur-tbl ur-log"><tr><th>ইউজার</th><th>রোল</th><th>প্যাকেজ</th><th>কে করেছেন</th><th>কবে</th><th></th></tr>
             <?php foreach ($changes as $c): $from = (string)$c->FromRole; $to = (string)$c->ToRole; ?>
                 <tr>
-                    <td><div class="ur-u"><span class="ur-av"><?= e(initials($c->Name, 'U')) ?><?php if (!is_blank($c->ProfileImageLink)): ?><img src="<?= e($c->ProfileImageLink) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                    <td><div class="ur-u"><span class="ur-av"><?= e(initials($c->Name, 'U')) ?><?php if (!is_blank($c->ProfileImageLink)): ?><img src="<?= e($c->ProfileImageLink) ?>" alt="<?= e($c->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                         <div><a href="/Profile/Show/<?= (int)$c->UserId ?>" target="_blank"><?= e($c->Name) ?></a><small>@<?= e((string)$c->UserName) ?></small></div></div></td>
                     <td style="white-space:nowrap;"><?php if ($from !== $to): ?><span class="ur-tag <?= $tagCls[$from] ?? 'u' ?>"><?= e($roleBn[$from] ?? $from) ?></span><i class="fas fa-arrow-right ur-arrow"></i><?php endif; ?><span class="ur-tag <?= $tagCls[$to] ?? 'u' ?>"><?= e($roleBn[$to] ?? $to) ?></span><?= $from === $to ? ' <small>(শুধু প্যাকেজ)</small>' : '' ?></td>
                     <td><?= !is_blank($c->Package) ? e((string)$c->Package) . ($c->PackageEnds ? '<br><small>' . e(date('d M Y', strtotime((string)$c->PackageEnds))) . ' পর্যন্ত</small>' : '') : '<small>—</small>' ?></td>

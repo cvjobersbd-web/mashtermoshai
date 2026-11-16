@@ -327,7 +327,7 @@ $jsMethods = array_map(function ($m) {
     </div>
 </div>
 
-<div class="co-lb" id="coLb" hidden><img alt="QR code" /></div>
+<div class="co-lb" id="coLb" hidden><img alt="পেমেন্টের QR কোড" /></div>
 
 <?php section_start('Scripts'); ?>
 <script>
@@ -382,7 +382,7 @@ $jsMethods = array_map(function ($m) {
         agentBox.hidden = true; qrBox.hidden = false;
         var q = document.getElementById('coQr');
         q.innerHTML = curAcc.qr
-            ? '<a class="co-qr-img" href="' + esc(curAcc.qr) + '" data-zoom><img src="' + esc(curAcc.qr) + '" alt="Scan to pay" /></a>'
+            ? '<a class="co-qr-img" href="' + esc(curAcc.qr) + '" data-zoom><img src="' + esc(curAcc.qr) + '" alt="স্ক্যান করে পেমেন্ট করুন — QR কোড" /></a>'
               + '<div class="co-qr-acts"><button type="button" data-zoom-btn><i class="fas fa-expand"></i> বড় করুন</button><a href="' + esc(curAcc.qr) + '" download target="_blank" rel="noopener"><i class="fas fa-download"></i> Download</a></div>'
             : '<div class="co-noqr"><i class="fas fa-qrcode fa-2x"></i><br>এই অ্যাকাউন্টের QR নেই — নিচের তথ্যে টাকা পাঠান</div>';
         var bankish = cur.kind === 'bank';
@@ -416,7 +416,7 @@ $jsMethods = array_map(function ($m) {
         if (!file) { prev.hidden = true; prev.innerHTML = ''; drop.hidden = false; inp.value = ''; return; }
         var isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name);
         var size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-        prev.innerHTML = (isPdf ? '<span class="pdf"><i class="fas fa-file-pdf"></i></span>' : '<img alt="" />')
+        prev.innerHTML = (isPdf ? '<span class="pdf"><i class="fas fa-file-pdf"></i></span>' : '<img alt="' + esc('পেমেন্টের রসিদ — ' + file.name) + '" />')
             + '<div><b>' + esc(file.name) + '</b><br><small>' + size + '</small></div><button type="button" data-rm><i class="fas fa-times"></i> Remove</button>';
         if (!isPdf) { var r = new FileReader(); r.onload = function () { prev.querySelector('img').src = r.result; }; r.readAsDataURL(file); }
         prev.hidden = false; drop.hidden = true;

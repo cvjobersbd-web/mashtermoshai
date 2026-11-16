@@ -94,7 +94,7 @@ $me = (int)current_user_id();
             <div class="am-card<?= $a->IsSuper ? ' super' : '' ?><?= $a->IsActive ? '' : ' off' ?>" data-id="<?= (int)$a->Id ?>" data-name="<?= e($a->Name) ?>"
                  data-super="<?= $a->IsSuper ? '1' : '0' ?>" data-perms="<?= e(implode(',', $a->PermList)) ?>">
                 <div class="am-avw">
-                    <span class="am-av"><?= e($a->Initials) ?><?php if (!is_blank($a->ProfileImageLink)): ?><img src="<?= e($a->ProfileImageLink) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                    <span class="am-av"><?= e($a->Initials) ?><?php if (!is_blank($a->ProfileImageLink)): ?><img src="<?= e($a->ProfileImageLink) ?>" alt="<?= e(($a->Name ?? 'অ্যাডমিন') . ' এর প্রোফাইল ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
                     <button type="button" class="am-cam" data-am="photo" title="প্রোফাইল ছবি বদলান" aria-label="প্রোফাইল ছবি বদলান"><i class="fas fa-camera"></i></button>
                     <div class="am-pmenu" hidden>
                         <button type="button" data-am="upload"><i class="fas fa-upload"></i> ছবি আপলোড</button>
@@ -228,7 +228,7 @@ $me = (int)current_user_id();
     });
     function setPhoto(card, url) {
         var av = card.querySelector('.am-av'), img = av.querySelector('img');
-        if (url) { if (!img) { img = document.createElement('img'); img.alt = ''; av.appendChild(img); } img.src = url; }
+        if (url) { if (!img) { img = document.createElement('img'); img.alt = 'অ্যাডমিনের প্রোফাইল ছবি'; av.appendChild(img); } img.src = url; }
         else if (img) img.remove();
         card.querySelector('[data-am="unphoto"]').hidden = !url;
         // নিজের ছবি হলে নেভবারেও বদলাই

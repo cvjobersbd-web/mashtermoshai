@@ -7,7 +7,7 @@ $sub = !is_blank($p->Institution) ? $p->Institution : (!is_blank($p->Education) 
     <a href="/Profile/Show/<?= (int)$p->Id ?>" class="fr-card-link" aria-label="<?= e($p->FullName) ?> এর প্রোফাইল">
         <span class="fr-avatar <?= $isTeacher ? 'is-teacher' : '' ?>">
             <?php if ($p->Image): ?>
-                <img src="<?= e($p->Image) ?>" alt="" loading="lazy" onerror="this.remove()" />
+                <img src="<?= e($p->Image) ?>" alt="<?= e(($p->Name ?? 'ইউজার') . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" />
             <?php endif; ?>
             <span class="fr-initials"><?= e($p->Initials) ?></span>
         </span>

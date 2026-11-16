@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = 'News & Announcements';
+$ViewData['FullTitle'] = t('নোটিশ ও ঘোষণা — সর্বশেষ খবর, অফার আর আপডেট', 'News & Announcements — Latest Updates and Offers') . ' | ' . seo_brand();
 $ViewData['Description'] = t('মাষ্টার মশাই এর সর্বশেষ নোটিশ, খবর আর ঘোষণা — টিউশন, প্যাকেজ, অফার আর সাইটের নতুন আপডেট।', 'Latest notices, news and announcements from Mashter Moshai — tuitions, packages, offers and site updates.');
 $news = is_array($Model) ? $Model : [];
 $announcements = is_array($ViewBag->Announcements) ? $ViewBag->Announcements : [];

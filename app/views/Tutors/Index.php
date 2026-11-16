@@ -4,10 +4,16 @@
  * @var array $Model  ['all' => ['title', 'tutors'], 'premium' => ..., ...]
  */
 $sections = is_array($Model) ? $Model : [];
+// Schema.org: পেজের টিউটরদের তালিকা (Person)
+$__seen = []; $__items = [];
+foreach ($sections as $__s) foreach (($__s['tutors'] ?? []) as $__t) { if (isset($__seen[(int)$__t->UserId])) continue; $__seen[(int)$__t->UserId] = 1;
+    $__items[] = ['name' => (string)$__t->FullName, 'url' => '/Tutors/Profile/' . (int)$__t->UserId, 'item' => array_filter(['@type' => 'Person', 'jobTitle' => 'Tutor', 'affiliation' => !is_blank($__t->Institution ?? '') ? ['@type' => 'EducationalOrganization', 'name' => (string)$__t->Institution] : null])]; }
+$ViewData['SchemaType'] = 'CollectionPage';
+seo_schema(seo_item_list(t('যাচাই করা টিউটর', 'Verified tutors'), $__items));
 $cities = is_array($ViewBag->Cities) ? $ViewBag->Cities : [];
 $ViewData['Title'] = 'Tutor List';
-$ViewData['FullTitle'] = 'Tutor List — যাচাই করা টিউটর খুঁজুন | মাষ্টার মশাই';
-$ViewData['Description'] = 'মাষ্টার মশাই এর অনুমোদিত সব টিউটরের তালিকা — জেলা, প্রতিষ্ঠান আর প্রোফাইল দেখে পছন্দের টিউটর বেছে নিন।';
+$ViewData['FullTitle'] = t('টিউটর লিস্ট — যাচাই করা হোম টিউটর খুঁজুন', 'Tutor List — Find Verified Home Tutors in BD') . ' | ' . seo_brand();
+$ViewData['Description'] = t('মাষ্টার মশাই এর অনুমোদিত সব টিউটরের তালিকা — জেলা, প্রতিষ্ঠান আর প্রোফাইল দেখে পছন্দের টিউটর বেছে নিন।', 'All approved tutors on Mashter Moshai — choose your tutor by district, institution and profile.');
 ?>
 <?php partial('Tutors/_Styles'); ?>
 <style>

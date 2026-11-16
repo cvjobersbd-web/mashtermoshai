@@ -1048,7 +1048,7 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
             <div class="col-lg-4">
                 <span class="hxt-l">ছবি</span>
                 <div style="border:1.5px dashed #CBD5E1;border-radius:14px;padding:10px;background:#F8FAFC;text-align:center;">
-                    <img id="auImgPrev" src="<?= e($auT['auth_img']) ?>" alt="" style="max-width:100%;max-height:220px;border-radius:10px;" onerror="this.style.opacity=.3" />
+                    <img id="auImgPrev" src="<?= e($auT['auth_img']) ?>" alt="লগইন / সাইনআপ পেজের ছবি" style="max-width:100%;max-height:220px;border-radius:10px;" onerror="this.style.opacity=.3" />
                 </div>
                 <div class="d-flex gap-2 mt-2 flex-wrap">
                     <label for="auImgFile" class="btn btn-outline-primary btn-sm mb-0"><i class="fas fa-upload me-1"></i> ছবি আপলোড</label>
@@ -1541,7 +1541,7 @@ if (!isset($sgGroups[$sgCur])) $sgCur = '';
                     <div class="kfa-pv">
                         <span class="n"><?= (int)$kfi ?></span>
                         <i class="fas <?= e($kf['icon']) ?>"></i>
-                        <img id="kfPv<?= (int)$kfi ?>" src="<?= e($kf['image']) ?>" alt=""<?= $kf['image'] === '' ? ' hidden' : '' ?> onerror="this.hidden = true" />
+                        <img id="kfPv<?= (int)$kfi ?>" src="<?= e($kf['image']) ?>" alt="<?= e('ফিচারের ছবি ' . (int)$kfi) ?>"<?= $kf['image'] === '' ? ' hidden' : '' ?> onerror="this.hidden = true" />
                     </div>
                     <div class="kfa-bd">
                         <b><?= e($kf['title']) ?></b>

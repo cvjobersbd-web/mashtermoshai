@@ -649,7 +649,7 @@ $ViewBag->PendingCount = $pendingTeacherCount;
 
                         var html = '';
                         html += '<div class="text-center mb-3">';
-                        html += '<img src="' + profileImage + '" alt="Profile" class="user-detail-avatar" />';
+                        html += '<img src="' + profileImage + '" alt="ইউজারের প্রোফাইল ছবি" class="user-detail-avatar" />';
                         html += '<h5 class="mt-2" style="color:#08224A;">' + u.fullName + '</h5>';
                         html += '<div><span class="badge ' + roleBadge + '">' + u.role + '</span><span class="badge ' + statusBadge + ' ms-1">' + statusText + '</span></div>';
                         html += '<p class="text-muted small mt-1">' + u.userName + ' • ' + u.email + '</p>';

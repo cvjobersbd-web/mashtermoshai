@@ -39,7 +39,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     $__canonical = !empty($ViewData['Canonical']) ? (string)$ViewData['Canonical'] : seo_origin() . $__cPath;
     if (empty($ViewData['Robots']) && seo_private_page((string)($__route['controller'] ?? ''), (string)($__route['action'] ?? ''))) $ViewData['Robots'] = 'noindex, follow';
     $__ogImage = !empty($ViewData['OgImage']) ? (string)$ViewData['OgImage'] : '';
-    $__desc = (string)($ViewData['Description'] ?? ($safeSiteName . ' — বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া। অভিজ্ঞ হোম টিউটর খুঁজুন অথবা টিউটর হিসেবে টিউশনে Apply করুন — সহজ, নিরাপদ ও দ্রুত।'));
+    $__desc = seo_short_desc((string)($ViewData['Description'] ?? t('বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া — যাচাই করা হোম টিউটর খুঁজুন, অথবা টিউটর হিসেবে টিউশনে Apply করুন।', 'Bangladesh\'s trusted tuition media — find verified home tutors, or apply for tuitions as a tutor.')));
     $__favicon = $__abs($layoutSettings->GetFaviconUrl());
     $__altNames = array_values(array_filter(['মাষ্টারমশাই', 'Mashter Moshai', 'MashterMoshai', $__host], fn($n) => strcasecmp($n, $safeSiteName) !== 0));
     ?>
@@ -50,6 +50,15 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <?php if ($__gs['ga_id'] !== '' && !is_admin()): /* Google Analytics (GA4) — অ্যাডমিন ট্র্যাক হয় না */ ?>
     <script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($__gs['ga_id']) ?>"></script>
     <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', <?= js($__gs['ga_id']) ?>);</script>
+    <?php endif; ?>
+    <?php if (!$isAdminPage): ?>
+    <script>/* SEO: পরে লোড হওয়া ছবির alt এর শেষেও সাইটের নাম (helpers.php → brand_img_alts এর মতো) */
+    (function () { var B = <?= js(seo_brand()) ?>, re = /মাষ্টার\s*মশাই|mashter\s*moshai/i;
+        function fix(i) { var a = i.getAttribute('alt'); if (a && a.trim() && !re.test(a)) i.setAttribute('alt', a + ' | ' + B); }
+        function scan(n) { if (n.nodeType !== 1) return; if (n.tagName === 'IMG') fix(n); else n.querySelectorAll('img[alt]').forEach(fix); }
+        try { new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.type === 'attributes') fix(m.target); else m.addedNodes.forEach(scan); }); })
+            .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['alt'] }); } catch (e) { }
+    })();</script>
     <?php endif; ?>
     <?php if (!empty($ViewData['Robots'])): ?><meta name="robots" content="<?= e($ViewData['Robots']) ?>" /><?php endif; ?>
 
@@ -67,15 +76,28 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <meta property="og:image" content="<?= e($__ogImage !== '' ? $__abs($__ogImage) : $__favicon) ?>" />
     <meta name="application-name" content="<?= e($safeSiteName) ?>" />
     <meta name="apple-mobile-web-app-title" content="<?= e($safeSiteName) ?>" />
-    <?php if ($__isHome): ?>
-    <!-- ✅ Google যেন সার্চ রেজাল্টে সঠিক সাইটের নাম ও লোগো দেখায় -->
-    <script type="application/ld+json"><?= json_encode([
-        '@context' => 'https://schema.org',
-        '@graph' => [
-            ['@type' => 'WebSite', 'name' => $safeSiteName, 'alternateName' => $__altNames, 'url' => $__origin . '/'],
-            ['@type' => 'Organization', 'name' => $safeSiteName, 'url' => $__origin . '/', 'logo' => $__favicon],
-        ],
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+    <?php if (!$isAdminPage && empty($ViewData['Robots'])):
+        // ✅ Schema.org (JSON-LD) — প্রতিটা পাবলিক পেজে: সাইট, প্রতিষ্ঠান, পেজ আর Breadcrumb; তালিকার পেজে ItemList ($ViewData['Schema'])
+        $__so = seo_origin();
+        $__crumbs = [['name' => t('হোম', 'Home'), 'url' => $__so . '/']];
+        if (!$__isHome) {
+            foreach ((array)($ViewData['Crumbs'] ?? []) as [$__cn, $__cu]) $__crumbs[] = ['name' => (string)$__cn, 'url' => $__so . '/' . ltrim((string)$__cu, '/')];
+            $__crumbs[] = ['name' => (string)($ViewData['Title'] ?? $__pageTitle), 'url' => $__canonical];
+        }
+        $__graph = [
+            ['@type' => 'WebSite', '@id' => $__so . '/#website', 'name' => $safeSiteName, 'alternateName' => $__altNames, 'url' => $__so . '/', 'inLanguage' => ['bn', 'en'], 'publisher' => ['@id' => $__so . '/#organization']],
+            ['@type' => 'Organization', '@id' => $__so . '/#organization', 'name' => $safeSiteName, 'url' => $__so . '/', 'logo' => $__favicon],
+            ['@type' => (string)($ViewData['SchemaType'] ?? 'WebPage'), '@id' => $__canonical . '#webpage', 'url' => $__canonical, 'name' => $__pageTitle,
+                'description' => $__desc, 'inLanguage' => site_lang(), 'isPartOf' => ['@id' => $__so . '/#website'], 'publisher' => ['@id' => $__so . '/#organization'],
+                'breadcrumb' => ['@id' => $__canonical . '#breadcrumb']],
+            ['@type' => 'BreadcrumbList', '@id' => $__canonical . '#breadcrumb', 'itemListElement' => array_map(fn($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $c['name'], 'item' => $c['url']], $__crumbs, array_keys($__crumbs))],
+        ];
+        foreach ((array)($ViewData['Schema'] ?? []) as $__node) if (is_array($__node) && $__node) {
+            if (($__node['@type'] ?? '') === 'ItemList') { if (!empty($__node['itemListElement'])) $__graph[2]['mainEntity'] = $__node; }   // তালিকাটা পেজের মূল বিষয়
+            else $__graph[] = $__node;
+        }
+    ?>
+    <script type="application/ld+json"><?= json_encode(['@context' => 'https://schema.org', '@graph' => $__graph], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
     <?php endif; ?>
 
     <!-- ✅ ফন্ট: শিরোনামে Sora, বাকি লেখায় Poppins (বাংলা অক্ষরের জন্য Hind Siliguri) -->
@@ -1383,7 +1405,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <aside class="m-drawer" id="mobileDrawer" aria-hidden="true" aria-label="Mobile menu">
         <div class="m-drawer-head">
             <a href="/" class="m-brand">
-                <span class="m-brand-logo"><img src="<?= e($navbarLogo) ?>" alt="logo" /></span>
+                <span class="m-brand-logo"><img src="<?= e($navbarLogo) ?>" alt="<?= e($safeSiteName . ' ' . t('লোগো', 'logo')) ?>" /></span>
                 <span class="m-brand-name"><?= e($safeSiteName) ?></span>
             </a>
             <button type="button" class="m-close" id="mobileDrawerClose" aria-label="Close menu"><i class="fas fa-times"></i></button>

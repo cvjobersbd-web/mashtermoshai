@@ -120,7 +120,7 @@ $total = array_sum(array_map(fn($g) => count($g->Categories), $groups));
                     <div class="ca-cat<?= $c->IsActive ? '' : ' off' ?>" data-id="<?= (int)$c->Id ?>">
                         <div class="ca-thumb">
                             <span class="tag"><?= $c->MatchType === 'class' ? 'Class' : 'Subject' ?></span>
-                            <?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="" loading="lazy" />
+                            <?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="<?= e($c->Name . ' — টিউশন ক্যাটাগরি') ?>" loading="lazy" />
                             <?php else: ?><span class="ic" style="background:<?= $bg ?>;color:<?= $fg ?>;"><i class="fas <?= e($c->Icon) ?>"></i></span><?php endif; ?>
                         </div>
                         <div class="ca-body">

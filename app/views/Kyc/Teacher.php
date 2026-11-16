@@ -47,7 +47,7 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
                     $has = $oldName && kyc_file_path($oldName); ?>
                     <div class="ky-f" data-f="kyc<?= $nm ?>"><label class="l"><?= $lbl ?> <?= $req ? '<span class="r">*</span>' : '<small>(ঐচ্ছিক)</small>' ?></label>
                         <label class="ky-drop" id="kyDrop<?= $nm ?>" for="kyc<?= $nm ?>">
-                            <img alt=""<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . $sd . '"' : ' hidden' ?> />
+                            <img alt="<?= e(strip_tags((string)$lbl)) ?>"<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . $sd . '"' : ' hidden' ?> />
                             <span<?= $has ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে</small></span>
                         </label>
                         <input type="file" id="kyc<?= $nm ?>" name="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" data-file="kyDrop<?= $nm ?>" hidden />

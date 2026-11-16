@@ -60,7 +60,7 @@ $stLbl = ['Approved' => ['ok', 'কিনেছে'], 'Pending' => ['w', 'যা
             <?php foreach ($rows as $i => $r): $nm = $r->FullName ?: ($r->UserName ?: 'মুছে ফেলা ইউজার'); [$pc, $pl] = $stLbl[$r->Status] ?? ['w', $r->Status]; ?>
                 <tr>
                     <td><?= $i + 1 ?></td>
-                    <td><div class="cu-u"><?= $r->ProfileImageLink ? '<img src="' . e($r->ProfileImageLink) . '" alt="" loading="lazy" />' : '<span class="av">' . e(mb_substr((string)$nm, 0, 1)) . '</span>' ?>
+                    <td><div class="cu-u"><?= $r->ProfileImageLink ? '<img src="' . e($r->ProfileImageLink) . '" alt="' . e($nm . ' এর প্রোফাইল ছবি') . '" loading="lazy" />' : '<span class="av">' . e(mb_substr((string)$nm, 0, 1)) . '</span>' ?>
                         <div><?php if ($r->UserName): ?><a href="/Admin/UserDetails/<?= (int)$r->UserId ?>"><?= e($nm) ?></a><br><small style="color:#94A3B8;">@<?= e($r->UserName) ?></small><?php else: ?><?= e($nm) ?><?php endif; ?></div></div></td>
                     <td><?= e((string)($r->MobileNumber ?? '')) ?: '—' ?></td>
                     <td><?= e((string)$r->PackageName) ?></td>

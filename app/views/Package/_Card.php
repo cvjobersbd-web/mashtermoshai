@@ -5,7 +5,7 @@
  */
 $free = !empty($studentFree) && $p->Audience === 'Student';
 ?>
-    <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
+    <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?>" id="pk-<?= (int)$p->Id ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
             <div class="pk-name"><?= e($p->Name) ?></div>
             <?php if (!is_blank($p->Badge)): ?><span class="pk-badge"><?= e($p->Badge) ?></span><?php endif; ?>

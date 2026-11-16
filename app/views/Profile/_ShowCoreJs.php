@@ -127,7 +127,7 @@
                 if (!d.success) { say(d.message || 'Upload failed', true); return; }
                 var url = d.imageUrl + '?t=' + Date.now();
                 [av].concat($$('.me-avatar'), $$('.pc[data-owner="1"] .pc-head .pc-avatar')).forEach(function (m) {
-                    var i = $('img', m); if (!i) { i = document.createElement('img'); i.alt = ''; m.appendChild(i); } i.src = url;
+                    var i = $('img', m); if (!i) { i = document.createElement('img'); i.alt = 'প্রোফাইল ছবি'; m.appendChild(i); } i.src = url;
                 });
                 $('[data-av="view"]', avMenu).hidden = false;
                 say('প্রোফাইল ছবি আপডেট হয়েছে।');

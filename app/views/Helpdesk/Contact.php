@@ -2,7 +2,7 @@
 /** Help Desk → Contact: মাষ্টার মশাই এর মোবাইল নম্বর, WhatsApp, ইমেইল (Admin → Settings → Contact & Social থেকে বদলানো যায়) */
 $c = $ViewBag->Info;
 $ViewData['Title'] = 'Contact';
-$ViewData['FullTitle'] = 'যোগাযোগ করুন | মাষ্টার মশাই';
+$ViewData['FullTitle'] = t('যোগাযোগ করুন — ফোন, ইমেইল ও হেল্পডেস্ক', 'Contact Us — Phone, Email & Helpdesk Support') . ' | ' . seo_brand();
 $ViewData['Description'] = 'মাষ্টার মশাই এর সাথে যোগাযোগ করুন — মোবাইল: ' . $c['ct_phone'] . ($c['ct_email'] !== '' ? ', ইমেইল: ' . $c['ct_email'] : '');
 ?>
 <style>

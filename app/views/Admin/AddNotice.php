@@ -328,7 +328,7 @@ $ViewData['Title'] = 'Add Notice';
                 </span>
                 <div id="imagePreviewWrapper" class="mt-3" style="<?= is_blank($Model->ImageUrl) ? 'display:none;' : '' ?>">
                     <p class="mb-1 fw-bold" style="font-size:12px; color:#08224A;">Preview:</p>
-                    <img id="imagePreview" src="<?= e($Model->ImageUrl) ?>" alt="Preview"
+                    <img id="imagePreview" src="<?= e($Model->ImageUrl) ?>" alt="নোটিশের ছবির প্রিভিউ"
                          style="max-width: 240px; max-height: 160px; border-radius: 10px; border: 2px solid #DCECF5; object-fit: cover;" />
                 </div>
             </div>

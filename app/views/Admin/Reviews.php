@@ -97,7 +97,7 @@ $reviews = is_array($Model) ? $Model : [];
             <div class="rv-item status-<?= e($r->Status) ?>" id="rv-<?= e($r->Id) ?>">
                 <div class="rv-head">
                     <div class="rv-ava">
-                        <?php if (!is_blank($r->ProfileImageLink)): ?><img src="<?= e($r->ProfileImageLink) ?>" alt="" /><?php else: ?><?= e($r->Initials) ?><?php endif; ?>
+                        <?php if (!is_blank($r->ProfileImageLink)): ?><img src="<?= e($r->ProfileImageLink) ?>" alt="<?= e(($r->FullName ?? $r->UserName ?? 'রিভিউদাতা') . ' এর প্রোফাইল ছবি') ?>" /><?php else: ?><?= e($r->Initials) ?><?php endif; ?>
                     </div>
                     <div style="min-width:0;">
                         <p class="rv-name"><?= e($r->FullName) ?></p>

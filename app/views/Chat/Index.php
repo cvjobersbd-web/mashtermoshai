@@ -183,7 +183,7 @@ $role = current_role();
                     <?php else: ?>
                         <?php foreach ($threads as $t): ?>
                             <a class="ch-t<?= $cur && $cur->Key === $t->Key ? ' on' : '' ?><?= $t->Unread ? ' unread' : '' ?>" href="/Chat?c=<?= e($t->Key) ?>" data-id="<?= e($t->Key) ?>">
-                                <span class="ch-av<?= $t->Kind === 'grp' ? ' grp' : '' ?>"><?= $t->Kind === 'grp' ? '<i class="fas fa-users"></i>' : e($t->Initials) ?><?php if ($t->OtherPhoto !== ''): ?><img src="<?= e($t->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                                <span class="ch-av<?= $t->Kind === 'grp' ? ' grp' : '' ?>"><?= $t->Kind === 'grp' ? '<i class="fas fa-users"></i>' : e($t->Initials) ?><?php if ($t->OtherPhoto !== ''): ?><img src="<?= e($t->OtherPhoto) ?>" alt="<?= e(($t->Name ?? 'চ্যাট') . ' এর ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
                                 <span class="ch-tm">
                                     <span class="ch-tn"><b><?= e($t->OtherName) ?></b> <span class="ch-tr"><?= e($t->OtherRole) ?></span><small><?= e(time_ago($t->LastAt)) ?></small></span>
                                     <span class="ch-tl"><?= $t->LastBody !== '' ? ($t->LastMine ? 'আপনি: ' : '') . e(str_preview($t->LastBody, 70)) : e($t->Topic !== '' ? $t->Topic : 'চ্যাট শুরু করুন') ?></span>
@@ -200,7 +200,7 @@ $role = current_role();
                     <header class="ch-mh">
                         <a class="ch-back" href="/Chat" aria-label="সব চ্যাট"><i class="fas fa-arrow-left"></i></a>
                         <?php $isGrp = $cur->Kind === 'grp'; ?>
-                        <span class="ch-av sm<?= $isGrp ? ' grp' : '' ?>"><?= $isGrp ? '<i class="fas fa-users"></i>' : e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span>
+                        <span class="ch-av sm<?= $isGrp ? ' grp' : '' ?>"><?= $isGrp ? '<i class="fas fa-users"></i>' : e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="<?= e(($cur->Name ?? 'চ্যাট') . ' এর ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
                         <div class="who">
                             <?php if ($isGrp): ?><b id="grpTitle"><?= e($cur->OtherName) ?></b><?php else: ?><a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a><?php endif; ?>
                             <div><?= $isGrp ? 'গ্রুপ' : e($cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
@@ -275,7 +275,7 @@ $role = current_role();
             <?php if (!$contacts): ?><div class="gp-empty">এখনো কোনো স্টুডেন্টের সাথে চ্যাট নেই — স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা চ্যাট শুরু করলে এখানে আসবে।</div><?php endif; ?>
             <?php foreach ($contacts as $c): ?>
                 <label class="gp-row"><input type="checkbox" name="members[]" value="<?= (int)$c->Id ?>" />
-                    <span class="ch-av"><?= e($c->Initials) ?><?php if ($c->Photo !== ''): ?><img src="<?= e($c->Photo) ?>" alt="" onerror="this.remove()" /><?php endif; ?></span><b><?= e($c->Name) ?></b></label>
+                    <span class="ch-av"><?= e($c->Initials) ?><?php if ($c->Photo !== ''): ?><img src="<?= e($c->Photo) ?>" alt="<?= e($c->Name . ' এর প্রোফাইল ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span><b><?= e($c->Name) ?></b></label>
             <?php endforeach; ?>
         </div>
         <div class="err" id="grpErr"></div>
@@ -307,7 +307,7 @@ $role = current_role();
         if (!list.length) return;
         threadsBox.innerHTML = list.map(function (t) {
             var cls = 'ch-t' + (t.id === CUR ? ' on' : '') + (t.unread && t.id !== CUR ? ' unread' : '');
-            var av = t.group ? '<span class="ch-av grp"><i class="fas fa-users"></i></span>' : '<span class="ch-av">' + esc(t.initials) + (t.photo ? '<img src="' + esc(t.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span>';
+            var av = t.group ? '<span class="ch-av grp"><i class="fas fa-users"></i></span>' : '<span class="ch-av">' + esc(t.initials) + (t.photo ? '<img src="' + esc(t.photo) + '" alt="' + esc((t.name || 'চ্যাট') + ' এর ছবি') + '" onerror="this.remove()" />' : '') + '</span>';
             var last = t.last ? (t.lastMine ? 'আপনি: ' : '') + esc(t.last) : esc(t.topic || 'চ্যাট শুরু করুন');
             return '<a class="' + cls + '" href="/Chat?c=' + encodeURIComponent(t.id) + '" data-id="' + esc(t.id) + '">' + av + '<span class="ch-tm"><span class="ch-tn"><b>' + esc(t.name) + '</b> <span class="ch-tr">' + esc(t.role)
                 + '</span><small>' + esc(t.ago) + '</small></span><span class="ch-tl">' + last + '</span></span><span class="dot">' + (t.unread || 0) + '</span></a>';
@@ -339,7 +339,7 @@ $role = current_role();
     var mBtn = document.getElementById('grpMemBtn'), mDlg = document.getElementById('memDlg');
     if (mBtn && mDlg) {
         var mBody = document.getElementById('memBody'), mErr = document.getElementById('memErr');
-        var av = function (u) { return '<span class="ch-av">' + esc(u.initials) + (u.photo ? '<img src="' + esc(u.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span>'; };
+        var av = function (u) { return '<span class="ch-av">' + esc(u.initials) + (u.photo ? '<img src="' + esc(u.photo) + '" alt="' + esc((u.name || 'সদস্য') + ' এর প্রোফাইল ছবি') + '" onerror="this.remove()" />' : '') + '</span>'; };
         var loadMembers = async function () {
             mErr.textContent = '';
             var r = await (await fetch('/Chat/GroupInfo?c=' + encodeURIComponent(CUR), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();

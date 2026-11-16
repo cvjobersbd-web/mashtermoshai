@@ -117,7 +117,7 @@ $activeSection = (string)(input_str('section') ?? '');
         <div class="profile-avatar-section">
             <label for="profileImageInput" class="avatar-click" title="ছবি বদলাতে ক্লিক করুন">
                 <img src="<?= e((string)$Model->ProfileImageLink === '' ? 'https://i.ibb.co/fd9sY88Y/IMG-6916-1.png' : $Model->ProfileImageLink) ?>"
-                     alt="Profile" class="profile-avatar" id="profileAvatar" />
+                     alt="<?= e(($Model->FullName ?? 'আমার') . ' এর প্রোফাইল ছবি') ?>" class="profile-avatar" id="profileAvatar" />
                 <span class="avatar-cam"><i class="fas fa-camera"></i></span>
                 <span class="avatar-hover"><i class="fas fa-camera"></i><br />Change</span>
             </label>
@@ -235,7 +235,7 @@ $activeSection = (string)(input_str('section') ?? '');
                         <div class="form-group">
                             <label>Profile Image</label>
                             <div class="image-upload-container">
-                                <img src="<?= e((string)$Model->ProfileImageLink === '' ? 'https://i.ibb.co/fd9sY88Y/IMG-6916-1.png' : $Model->ProfileImageLink) ?>" alt="Profile" class="image-preview" id="previewImage" />
+                                <img src="<?= e((string)$Model->ProfileImageLink === '' ? 'https://i.ibb.co/fd9sY88Y/IMG-6916-1.png' : $Model->ProfileImageLink) ?>" alt="<?= e(($Model->FullName ?? 'আমার') . ' এর প্রোফাইল ছবি') ?>" class="image-preview" id="previewImage" />
                                 <div>
                                     <label class="image-upload-btn"><i class="fas fa-upload me-2"></i> Upload Image<input type="file" id="profileImageInput" accept="image/*" /></label>
                                     <p class="text-muted" style="font-size:12px; margin-top:5px;">Max 5MB. JPG, PNG, GIF</p>
