@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = 'Home';
+$ViewData['Description'] = t('বাংলাদেশের বিশ্বস্ত টিউশন মিডিয়া — যাচাই করা হোম টিউটর খুঁজুন, অথবা টিউটর হিসেবে টিউশনে Apply করুন।', 'Bangladesh\'s trusted tuition media — find verified home tutors, or apply for tuitions as a tutor.');
 $settings = ($ViewBag->SiteSettings instanceof SiteSettings) ? $ViewBag->SiteSettings : new SiteSettings();
 $heroImages = $settings->GetHeroImageList();
 if (count($heroImages) == 0)
@@ -134,16 +135,16 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
             <?php elseif ($heroAnimated): ?>
                 <div class="hx-anim" role="img" aria-label="শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন">
                     <img class="base" src="<?= $hxA ?>base.webp" alt="<?= t('শিক্ষক শিক্ষার্থীকে পড়াচ্ছেন', 'A teacher teaching a student') ?>" width="1200" height="858" fetchpriority="high" />
-                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="plant" /></span>
-                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="vine" /></span>
+                    <span class="ly plant"><img src="<?= $hxA ?>plant_l.webp" alt="<?= e(t('ক্লাসরুমের গাছের ছবি', 'Classroom plant illustration')) ?>" /></span>
+                    <span class="ly vine"><img src="<?= $hxA ?>vine.webp" alt="<?= e(t('লতাপাতার নকশা', 'Leaf decoration')) ?>" /></span>
                     <span class="hx-glow"></span>
-                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="teacher" /></span>
-                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="teacher" />
+                    <span class="ly t-arm"><img src="<?= $hxA ?>t_arm.webp" alt="<?= e(t('শিক্ষক পড়াচ্ছেন', 'Teacher teaching')) ?>" /></span>
+                    <span class="ly t-head"><img src="<?= $hxA ?>t_head.webp" alt="<?= e(t('শিক্ষক', 'Teacher')) ?>" />
                         <i class="lid" style="left:52.3%;top:55.8%;width:15.5%;height:12%;"></i><i class="lid" style="left:80.3%;top:48.2%;width:14.5%;height:13%;"></i></span>
-                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="student" />
+                    <span class="ly s-head"><img src="<?= $hxA ?>s_head.webp" alt="<?= e(t('শিক্ষার্থী', 'Student')) ?>" />
                         <i class="lid" style="left:11.6%;top:50.9%;width:10%;height:15%;"></i><i class="lid" style="left:30.7%;top:59%;width:12%;height:12.7%;"></i></span>
                     <svg class="hx-ink" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 6 q4 -4 8 0 t8 0 t8 0 t8 0"/><path d="M2 13 q4 -4 8 0 t8 0 t8 0 t8 0 t8 0"/></svg>
-                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="student" /></span>
+                    <span class="ly s-hand"><img src="<?= $hxA ?>s_hand.webp" alt="<?= e(t('শিক্ষার্থী হাত তুলছে', 'Student raising hand')) ?>" /></span>
                     <span class="hx-spark a"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                     <span class="hx-spark b"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
                     <span class="hx-spark c"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 0c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z"/></svg></span>
@@ -524,7 +525,7 @@ $homeTuitions = is_array($ViewBag->HomeTuitions) ? $ViewBag->HomeTuitions : [];
                         <?php if ($fp->Images): ?>
                             <div class="hf-media"><img src="<?= e($fp->Images[0]) ?>" alt="<?= e($fp->Subject !== '' ? $fp->Subject : $fp->AuthorName) ?>" loading="lazy" /><?php if (count($fp->Images) > 1): ?><span class="cnt"><i class="fas fa-images"></i> <?= count($fp->Images) ?></span><?php endif; ?></div>
                         <?php elseif ($fp->YouTube !== ''): ?>
-                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="YouTube video" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
+                            <div class="hf-media"><img src="https://i.ytimg.com/vi/<?= e($fp->YouTube) ?>/hqdefault.jpg" alt="<?= e(t('Edu Feed এর YouTube ভিডিও', 'Edu Feed YouTube video')) ?>" loading="lazy" /><span class="play yt"><i class="fas fa-play"></i></span></div>
                         <?php elseif (($fp->Facebook ?? '') !== ''): ?>
                             <div class="hf-media" style="background:linear-gradient(135deg,#1877F2,#0B4FB3);display:flex;align-items:center;justify-content:center;"><i class="fab fa-facebook" style="font-size:54px;color:rgba(255,255,255,.9);"></i><span class="play"><i class="fas fa-play"></i></span></div>
                         <?php elseif ($fp->Video !== ''): ?>
@@ -1022,7 +1023,7 @@ $why = [
             <!-- ✅ Image from DB (or default fallback) -->
             <a href="/FindTutor/Index" class="block group relative" aria-label="Find Your Teacher">
                 <img src="<?= e($tutorSectionImg) ?>"
-                     alt="Find Your Teacher"
+                     alt="<?= e(t('মাষ্টার মশাই — আপনার জন্য সেরা টিচার খুঁজুন', 'Mashter Moshai — find the right teacher for you')) ?>"
                      class="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
 
                 <!-- Soft hover overlay -->

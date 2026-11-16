@@ -1,5 +1,5 @@
 <div class="ef-lb" id="efLb" role="dialog" aria-modal="true" aria-label="ছবি">
-    <img alt="photo" /><button type="button" class="x" aria-label="বন্ধ"><i class="fas fa-xmark"></i></button>
+    <img alt="Edu Feed পোস্টের ছবি" /><button type="button" class="x" aria-label="বন্ধ"><i class="fas fa-xmark"></i></button>
     <button type="button" class="pv" aria-label="আগের ছবি"><i class="fas fa-chevron-left"></i></button><button type="button" class="nx" aria-label="পরের ছবি"><i class="fas fa-chevron-right"></i></button>
     <span class="ct"></span>
 </div>

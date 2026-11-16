@@ -82,7 +82,7 @@ $url = fn(array $x) => '/Admin/ProfilePosts?' . http_build_query(array_filter(ar
             $prof = '/Profile/Show/' . (int)$p->UserId; ?>
             <div class="pp-card" id="pp<?= (int)$p->Id ?>">
                 <div class="pp-h">
-                    <a class="pp-av" href="<?= $prof ?>"><?= e($p->AuthorInitials) ?><?php if ($p->AuthorImage): ?><img src="<?= e($p->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                    <a class="pp-av" href="<?= $prof ?>"><?= e($p->AuthorInitials) ?><?php if ($p->AuthorImage): ?><img src="<?= e($p->AuthorImage) ?>" alt="<?= e(($p->AuthorName ?? 'লেখক') . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
                     <div class="pp-who">
                         <a href="<?= $prof ?>"><?= e($p->AuthorName) ?></a><span class="pp-tag <?= $tc ?>"><?= e($lbl) ?></span><?php if ($p->PostType !== 'post'): ?><span class="pp-tag ty"><?= e($typeBn[$p->PostType] ?? $p->PostType) ?></span><?php endif; ?>
                         <small>@<?= e($p->AuthorUserName) ?> · <?= e(date('d M Y, h:i A', strtotime((string)$p->CreatedAt))) ?> (<?= e($p->TimeAgo) ?>) · <i class="fas <?= $pic ?>"></i> <?= e($plb) ?><?= $p->IsEdited ? ' · Edited' : '' ?></small>
@@ -92,7 +92,7 @@ $url = fn(array $x) => '/Admin/ProfilePosts?' . http_build_query(array_filter(ar
                 <?php if ($p->SharedPostId): ?><div class="pp-shared"><i class="fas fa-share"></i> একটা পোস্ট শেয়ার করেছেন<?= $p->Shared ? ' — ' . e($p->Shared->AuthorName) . ': ' . e(mb_strimwidth((string)$p->Shared->Content, 0, 120, '…')) : '' ?></div><?php endif; ?>
                 <?php if (is_array($p->Poll) && !empty($p->Poll['options'])): ?><div class="pp-poll"><?php foreach ($p->Poll['options'] as $o): ?><div><span><?= e((string)$o->Text) ?></span><b><?= (int)$o->Votes ?> ভোট</b></div><?php endforeach; ?></div><?php endif; ?>
                 <?php if (!empty($p->Meta['file']['url'])): ?><div class="pp-file"><i class="fas fa-paperclip"></i> <a href="<?= e((string)$p->Meta['file']['url']) ?>" target="_blank" rel="noopener"><?= e((string)($p->Meta['file']['name'] ?? 'ফাইল')) ?></a></div><?php endif; ?>
-                <?php if ($p->ImageUrl): ?><div class="pp-img"><img src="<?= e($p->ImageUrl) ?>" alt="" loading="lazy" /></div><?php endif; ?>
+                <?php if ($p->ImageUrl): ?><div class="pp-img"><img src="<?= e($p->ImageUrl) ?>" alt="<?= e('পোস্টের ছবি — ' . ($p->AuthorName ?? 'মাষ্টার মশাই')) ?>" loading="lazy" /></div><?php endif; ?>
                 <div class="pp-foot">
                     <span><i class="fas fa-thumbs-up" style="color:#2563EB;"></i> <?= (int)$p->ReactionTotal ?></span>
                     <span><i class="fas fa-comment" style="color:#64748B;"></i> <?= (int)$p->CommentCount ?></span>

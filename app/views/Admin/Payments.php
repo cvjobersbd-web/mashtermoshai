@@ -141,7 +141,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                 <?php $pt = ['Teacher' => ['t', 'fa-chalkboard-user', 'শিক্ষক প্যাকেজ'], 'Course' => ['c', 'fa-book-open-reader', 'কোর্স কিনেছেন'], 'Student' => ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']][$p->Audience] ?? ['s', 'fa-user-graduate', 'শিক্ষার্থী প্যাকেজ']; ; $isLiveC = !empty($p->IsLiveClass); if ($isLiveC) $pt = ['c', 'fa-tower-broadcast', 'লাইভ ক্লাস কিনেছেন'];?>
                 <div class="ap-type <?= $pt[0] ?>"><i class="fas <?= $pt[1] ?>"></i> <?= $pt[2] ?><span><?= e(preg_replace('/^কোর্স:\s*/u', '', (string)$p->PackageName)) ?> · <?= e(taka($p->Amount)) ?></span></div>
                 <div class="ap-user">
-                    <span class="ap-ava"><?php if (!is_blank($p->ProfileImageLink)): ?><img src="<?= e($p->ProfileImageLink) ?>" alt="" /><?php else: ?><?= e($p->Initials) ?><?php endif; ?></span>
+                    <span class="ap-ava"><?php if (!is_blank($p->ProfileImageLink)): ?><img src="<?= e($p->ProfileImageLink) ?>" alt="<?= e(((string)$p->FullName ?: 'ইউজার') . ' এর প্রোফাইল ছবি') ?>" /><?php else: ?><?= e($p->Initials) ?><?php endif; ?></span>
                     <div>
                         <a class="nm" href="/Profile/Show/<?= (int)$p->UserId ?>" target="_blank"><?= e($p->FullName ?: 'Deleted user') ?></a>
                         <small><?= e(trim(($p->MobileNumber ?? '') . ' · ' . ($p->Email ?? ''), ' ·')) ?></small>

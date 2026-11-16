@@ -262,7 +262,7 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
         btn.disabled = false;
     });
     function findA(id) { var o = null; M.forEach(function (m) { (m.Accounts || []).forEach(function (a) { if (a.Id === id) o = a; }); }); return o; }
-    function pv(el, url, icon) { el.innerHTML = url ? '<img src="' + String(url).replace(/"/g, '&quot;') + '" alt="" />' : '<i class="fas ' + icon + '"></i>'; }
+    function pv(el, url, icon) { el.innerHTML = url ? '<img src="' + String(url).replace(/"/g, '&quot;') + '" alt="পেমেন্ট মেথডের লোগো" />' : '<i class="fas ' + icon + '"></i>'; }
     function preview(input, el, icon) { input.addEventListener('change', function () { var f = input.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { pv(el, r.result, icon); }; r.readAsDataURL(f); }); }
 
     var mModal = document.getElementById('mModal'), mForm = document.getElementById('mForm');

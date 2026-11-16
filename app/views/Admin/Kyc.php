@@ -2,10 +2,12 @@
 /** Admin → Verification: টিচার আর শিক্ষার্থীর পরিচয় যাচাই — আলাদা সেকশন; পুরো তথ্য + NID / ID কার্ডের ছবি দেখে Approve / Reject */
 $ViewData['Title'] = 'Verification';
 $list = is_array($Model) ? $Model : [];
-$kind = (string)$ViewBag->Kind; $S = (string)$ViewBag->S; $C = $ViewBag->Counts; $apps = $ViewBag->Apps ?? [];
+$kind = (string)$ViewBag->Kind; $S = (string)$ViewBag->S; $Q = (string)($ViewBag->Q ?? ''); $C = $ViewBag->Counts; $apps = $ViewBag->Apps ?? [];
 $classes = Db::KYC_CLASSES;
 $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 $exTxt = function ($x, $EX) { if (!is_array($x) || !$x) return null; return ($x['status'] ?? '') === 'running' ? "$EX — Running (এখন পড়ছে)" : "$EX {$x['year']} · GPA {$x['gpa']}" . (!empty($x['board']) ? " · {$x['board']}" : ''); };
+$RefMap = $ViewBag->RefMap ?? []; $PtMap = $ViewBag->PtMap ?? [];
+$qs = function (array $o) use ($kind, $S, $Q) { $a = ['k' => $kind, 's' => $S] + ($Q !== '' ? ['q' => $Q] : []); foreach ($o as $kk => $vv) { if ($vv === '') unset($a[$kk]); else $a[$kk] = $vv; } return '/Admin/Kyc?' . http_build_query($a); };
 $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['Approved', 'ok'], 'Rejected' => ['Rejected', 'no']];
 ?>
 <style>
@@ -22,6 +24,19 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
     .kc-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
     .kc-tabs a { padding: 8px 15px; border-radius: 999px; background: #fff; color: #334155; font-weight: 700; font-size: 13.5px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
     .kc-tabs a.on { background: #08224A; color: #fff; }
+    .kc-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .kc-bar .kc-tabs { margin-bottom: 0; }
+    .kc-q { display: flex; gap: 6px; flex: 0 1 380px; min-width: 240px; }
+    .kc-q input { flex: 1; min-width: 0; height: 40px; border: 1.5px solid #DCE7F0; border-radius: 10px; padding: 0 12px; font-size: 14px; font-family: inherit; background: #fff; outline: none; }
+    .kc-q input:focus { border-color: #02B8F5; }
+    .kc-q button, .kc-q a { height: 40px; padding: 0 14px; border-radius: 10px; border: none; background: #08224A; color: #fff; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 13.5px; }
+    .kc-q a { background: #F1F5F9; color: #334155; }
+    .kc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 10px; }
+    .kc-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 4px 12px; line-height: 1.5; }
+    .kc-chip i { font-size: 11.5px; } .kc-chip a { color: inherit; text-decoration: underline; }
+    .kc-chip.d { background: #F1F5F9; color: #475569; } .kc-chip.r { background: #FEF3C7; color: #92400E; }
+    .kc-chip.pt { background: #EDE9FE; color: #5B21B6; } .kc-chip.h { background: #ECFEFF; color: #155E75; }
+    .kc-found { font-size: 13.5px; color: #475569; margin: -4px 0 12px; }
     .kc-c { background: #fff; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.05); padding: 18px; margin-bottom: 14px; border-left: 5px solid var(--c, #F59E0B); }
     .kc-c.Approved { --c: #16A34A; } .kc-c.Rejected { --c: #DC2626; }
     .kc-top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -69,24 +84,41 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
             <a class="kc-kind <?= $cls ?><?= $kind === $kk ? ' on' : '' ?>" href="/Admin/Kyc?k=<?= $kk ?>"><span class="ic"><i class="fas <?= $ic ?>"></i></span><span><b><?= $lbl ?></b><small><?= $hint ?> · মোট <?= array_sum($C[$kk]) ?></small></span><?php if ($pc): ?><span class="pend"><?= $pc ?> যাচাই বাকি</span><?php endif; ?></a>
         <?php endforeach; ?>
     </div>
-    <div class="kc-tabs">
-        <?php foreach (['Pending' => 'যাচাই বাকি', 'Approved' => 'Approved', 'Rejected' => 'Rejected', 'all' => 'সব'] as $sk => $sl): ?>
-            <a class="<?= $S === $sk ? 'on' : '' ?>" href="/Admin/Kyc?k=<?= $kind ?>&amp;s=<?= $sk ?>"><?= $sl ?> <?= $sk !== 'all' ? '(' . (int)$C[$kind][$sk] . ')' : '' ?></a>
-        <?php endforeach; ?>
+    <div class="kc-bar">
+        <div class="kc-tabs">
+            <?php foreach (['Pending' => 'যাচাই বাকি', 'Approved' => 'Approved', 'Rejected' => 'Rejected', 'all' => 'সব'] as $sk => $sl): ?>
+                <a class="<?= $S === $sk ? 'on' : '' ?>" href="<?= e($qs(['s' => $sk])) ?>"><?= $sl ?> <?= $sk !== 'all' ? '(' . (int)$C[$kind][$sk] . ')' : '' ?></a>
+            <?php endforeach; ?>
+        </div>
+        <form class="kc-q" method="get" action="/Admin/Kyc" role="search">
+            <input type="hidden" name="k" value="<?= e($kind) ?>" />
+            <input type="hidden" name="s" value="<?= $Q === '' ? 'all' : e($S) ?>" />
+            <input type="search" name="q" value="<?= e($Q) ?>" maxlength="60" placeholder="নাম, ইউজারনেম, ইমেইল, মোবাইল বা রেফারারের নাম/কোড" aria-label="খুঁজুন" />
+            <button type="submit"><i class="fas fa-magnifying-glass"></i></button>
+            <?php if ($Q !== ''): ?><a href="/Admin/Kyc?k=<?= $kind ?>&amp;s=<?= e($S) ?>" title="খোঁজা মুছুন"><i class="fas fa-xmark"></i></a><?php endif; ?>
+        </form>
     </div>
+    <?php if ($Q !== ''): ?><div class="kc-found">"<b><?= e($Q) ?></b>" — <?= count($list) ?> জন পাওয়া গেছে<?= $S !== 'all' ? ' (' . e(['Pending' => 'যাচাই বাকি', 'Approved' => 'Approved', 'Rejected' => 'Rejected'][$S] ?? $S) . ' এর মধ্যে — সবার মধ্যে খুঁজতে "সব" চাপুন)' : '' ?></div><?php endif; ?>
 
     <?php if (!$list): ?><div class="kc-empty"><i class="fas fa-id-card"></i>এখানে কিছু নেই।</div><?php endif; ?>
 
     <?php foreach ($list as $k): $D = $k->D; $nm = (string)($k->UFullName ?: $k->UUserName ?: 'Deleted user'); [$sl, $sc] = $stBn[$k->Status] ?? [$k->Status, 'g']; ?>
         <div class="kc-c <?= e($k->Status) ?>" id="kyc-<?= (int)$k->Id ?>">
             <div class="kc-top">
-                <span class="kc-ava"><?php if (!is_blank($k->UPhoto)): ?><img src="<?= e($k->UPhoto) ?>" alt="" onerror="this.remove()" /><?php else: ?><?= e(mb_strtoupper(mb_substr($nm, 0, 1))) ?><?php endif; ?></span>
+                <span class="kc-ava"><?php if (!is_blank($k->UPhoto)): ?><img src="<?= e($k->UPhoto) ?>" alt="<?= e($nm . ' এর প্রোফাইল ছবি') ?>" onerror="this.remove()" /><?php else: ?><?= e(mb_strtoupper(mb_substr($nm, 0, 1))) ?><?php endif; ?></span>
                 <div><a class="nm" href="/Profile/Show/<?= (int)$k->UserId ?>" target="_blank"><?= e($kind === 'student' && !empty($D['fullName']) ? $D['fullName'] : $nm) ?></a>
                     <small>@<?= e((string)$k->UUserName) ?> · <?= e((string)$k->UEmail) ?> · জমা: <?= e($fmt($k->CreatedAt)) ?></small></div>
                 <span class="kc-pill g"><?= e(role_label($k->URole, $k->UserId)) ?></span>
                 <span class="kc-pill <?= $sc ?>" style="margin-left:auto;"><?= e($sl) ?></span>
             </div>
-            <div style="margin:-4px 0 10px;"><?= joined_via_full($k->UserId) ?></div>
+            <?php $rr = $RefMap[(int)$k->UserId] ?? null; $pp = $PtMap[(int)$k->UserId] ?? null; $how = ['', ''];
+            try { $how = db()->GetUserHowHeard((int)$k->UserId); } catch (Throwable $e) { } ?>
+            <div class="kc-chips">
+                <?php if ($rr): ?><span class="kc-chip r" title="<?= e('বোনাস: ' . (['Credited' => 'দেওয়া হয়েছে', 'Waiting' => 'বাকি — প্যাকেজ কিনলে পাবেন', 'Revoked' => 'বাতিল'][(string)$rr->Status] ?? '—')) ?>"><i class="fas fa-gift"></i> রেফারেন্স: <a href="/Profile/Show/<?= (int)$rr->ReferrerId ?>" target="_blank" rel="noopener"><?= e((string)$rr->ReferrerName) ?></a><?= !is_blank($rr->ReferrerUser ?? '') ? ' (@' . e((string)$rr->ReferrerUser) . ')' : '' ?><?= !is_blank($rr->RefCode ?? '') ? ' · ' . e((string)$rr->RefCode) : '' ?></span><?php endif; ?>
+                <?php if ($pp): ?><span class="kc-chip pt"><i class="fas fa-handshake"></i> এজেন্সি: <a href="/Admin/Partners"><?= e((string)$pp->PartnerName) ?></a> · <?= e((string)$pp->Code) ?></span><?php endif; ?>
+                <?php if (!$rr && !$pp): ?><span class="kc-chip d" title="কারো রেফারেল লিংক বা কোড দিয়ে আসেননি"><i class="fas fa-user-plus"></i> Direct</span><?php endif; ?>
+                <?php if ($how[0] !== ''): $ho = db()->ReferenceInfo($how[0]); ?><span class="kc-chip h" title="সাইনআপের সময় নিজে বেছেছেন"><i class="<?= e($ho['icon']) ?>" style="color:<?= e($ho['color']) ?>;"></i> জেনেছেন: <?= e($how[0] === 'other' && $how[1] !== '' ? $how[1] : $ho['label']) ?></span><?php endif; ?>
+            </div>
             <div class="kc-body">
                 <div>
                     <div class="kc-grid">
@@ -150,7 +182,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
                     elseif (!empty($D['uniCard'])) $imgs = ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []);
                     else $imgs = ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে'];
                     foreach ($imgs as $side => $sl2): $u = '/Kyc/File/' . (int)$k->Id . '?side=' . $side; ?>
-                        <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="" loading="lazy" /><span><?= e($sl2) ?></span></a>
+                        <a href="<?= e($u) ?>" data-lb><img src="<?= e($u) ?>" alt="<?= e($nm . ' — ' . $sl2) ?>" loading="lazy" /><span><?= e($sl2) ?></span></a>
                     <?php endforeach; ?>
                     <?php if ($kind === 'teacher' && !empty($D['uniCard']) && empty($D['nidFront']) && empty($D['nidBack'])): ?><div style="grid-column:1/-1;font-size:12.5px;color:#94A3B8;"><i class="fas fa-circle-info"></i> NID দেননি (ঐচ্ছিক)</div><?php endif; ?>
                 </div>
@@ -165,7 +197,7 @@ $stBn = ['Pending' => ['যাচাই বাকি', 'p'], 'Approved' => ['App
         </div>
     <?php endforeach; ?>
 </div>
-<div class="kc-lb" id="kcLb"><img alt="" /></div>
+<div class="kc-lb" id="kcLb"><img alt="ID কার্ডের বড় ছবি" /></div>
 <script>
 (function () {
     function toast(m) { var t = document.querySelector('.kc-toast'); if (!t) { t = document.createElement('div'); t.className = 'kc-toast'; document.body.appendChild(t); } t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(function () { t.style.display = 'none'; }, 3500); }

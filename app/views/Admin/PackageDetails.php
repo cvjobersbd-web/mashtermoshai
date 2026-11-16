@@ -103,7 +103,7 @@ $days = ['7' => '৭ দিন', '30' => '১ মাস', '90' => '৩ মাস
             <tr><th>ইউজার</th><th>প্যাকেজ</th><th>কেনা প্যাকেজগুলো</th><th>মোট খরচ</th><th>এখনকার অবস্থা</th><th>মেয়াদ বাড়ান</th></tr>
             <?php foreach ($rows as $o): [$sc, $sl] = $stBn[$o->State] ?? ['off', $o->State]; ?>
                 <tr>
-                    <td><div class="pd-u"><span class="pd-av"><?= e(initials($o->Name, 'U')) ?><?php if ($o->Photo !== ''): ?><img src="<?= e($o->Photo) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
+                    <td><div class="pd-u"><span class="pd-av"><?= e(initials($o->Name, 'U')) ?><?php if ($o->Photo !== ''): ?><img src="<?= e($o->Photo) ?>" alt="<?= e($o->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></span>
                         <div><a href="/Profile/Show/<?= (int)$o->UserId ?>" target="_blank"><?= e($o->Name) ?></a><small>@<?= e($o->UserName) ?> · <?= e(role_label($o->Role, $o->UserId)) ?></small></div></div></td>
                     <td><span class="pd-tag <?= e($o->Audience) ?>"><?= e($audBn[$o->Audience] ?? $o->Audience) ?></span></td>
                     <td><ul class="pd-hist"><?php foreach (array_slice($o->History, 0, 6) as $h): ?>

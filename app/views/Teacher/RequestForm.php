@@ -138,7 +138,7 @@ $ViewData['Title'] = 'Become a Tutor';
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold"><?= $lbl ?><?= $req ? ' <span class="required-star">*</span>' : '' ?></label>
                             <label class="kyc-drop" for="kyc<?= $nm ?>">
-                                <img alt="" id="kycPrev<?= $nm ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . $side . '"' : ' hidden' ?> />
+                                <img alt="<?= e(strip_tags((string)$lbl)) ?>" id="kycPrev<?= $nm ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . $side . '"' : ' hidden' ?> />
                                 <span id="kycPh<?= $nm ?>"<?= $has ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
                             </label>
                             <input type="file" name="kyc<?= $nm ?>" id="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" hidden data-kyc-req="<?= $req && !$has ? '1' : '0' ?>" />

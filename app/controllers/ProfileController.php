@@ -229,7 +229,10 @@ class ProfileController extends Controller
         }
         if ($current === $new) json_response(['success' => false, 'message' => 'নতুন পাসওয়ার্ড আগেরটার মতো হতে পারবে না।']);
         unset($_SESSION['_pw_tries']);
+        $hadRemember = !empty($_COOKIE[REMEMBER_COOKIE]);
         if (!$this->db->UpdatePassword($me, $new)) json_response(['success' => false, 'message' => 'পাসওয়ার্ড বদলানো যায়নি। আবার চেষ্টা করুন।']);
+        // অন্য সব ডিভাইসের "লগইন সেভ" বাতিল হয়েছে — এই ডিভাইসে সেভ করা থাকলে নতুন করে সেভ
+        if ($hadRemember) remember_issue($me);
         $this->db->CreateNotification($me, '🔑 Password Changed', 'আপনার অ্যাকাউন্টের পাসওয়ার্ড বদলানো হয়েছে। আপনি না করে থাকলে সাথে সাথে অ্যাডমিনকে জানান।', 'warning', null, 'fa-key');
         json_response(['success' => true, 'message' => 'পাসওয়ার্ড সফলভাবে বদলানো হয়েছে।']);
     }
@@ -318,8 +321,9 @@ class ProfileController extends Controller
         if ($fullName === '') $this->finishUpdate('basic', false, 'Full Name দিতে হবে।');
         if (mb_strlen($fullName) > 100) $this->finishUpdate('basic', false, 'নাম খুব বড়।');
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) $this->finishUpdate('basic', false, 'সঠিক ইমেইল দিন।');
-        if (strcasecmp($email, (string)$user->Email) !== 0 && $this->db->EmailExists($email)) $this->finishUpdate('basic', false, 'এই ইমেইল দিয়ে আরেকটি অ্যাকাউন্ট আছে।');
+        if (strcasecmp($email, (string)$user->Email) !== 0 && $this->db->EmailExists($email, (int)$user->Id)) $this->finishUpdate('basic', false, 'এই ইমেইল দিয়ে আরেকটি অ্যাকাউন্ট আছে — একটা ইমেইলে একটাই অ্যাকাউন্ট।');
         if ($mobile !== '' && !preg_match('/^\+?[0-9 \-]{6,20}$/', $mobile)) $this->finishUpdate('basic', false, 'মোবাইল নম্বর সঠিক নয়।');
+        if ($mobile !== '' && $this->db->MobileTaken($mobile, (int)$user->Id)) $this->finishUpdate('basic', false, 'এই মোবাইল নম্বর দিয়ে আরেকটি অ্যাকাউন্ট আছে — একটা মোবাইল নম্বরে একটাই অ্যাকাউন্ট।');
 
         $user->FullName = $fullName;
         $user->Email = $email;

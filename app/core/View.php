@@ -36,14 +36,15 @@ class View
         unset($_SESSION['_tempdata']);
 
         if ($layout === null) {
-            echo mask_teacher_photos($body);
+            echo brand_img_alts(mask_teacher_photos($body));
             return;
         }
         // প্যাকেজ ছাড়া শিক্ষার্থী / অতিথির জন্য টিচারের ছবি লুকানো (helpers.php → mask_teacher_photos)
-        echo mask_teacher_photos(self::capture(self::path($layout), [
+        // ছবির alt এর শেষে সাইটের নাম (SEO) — helpers.php → brand_img_alts
+        echo brand_img_alts(mask_teacher_photos(self::capture(self::path($layout), [
             'RenderBody' => $body,
             'ViewBag' => $ViewBag, 'ViewData' => $ViewData, 'TempData' => $TempData, 'Model' => $Model,
-        ]));
+        ])));
     }
 
     public static function partial(string $view, array $vars = []): void

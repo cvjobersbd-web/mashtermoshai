@@ -51,7 +51,7 @@ $logo = site_settings()->NavbarLogoUrl ?? '';
             <div class="ce-corner tl"></div><div class="ce-corner br"></div>
             <div class="ce-b1"></div><div class="ce-b2"></div>
             <div class="ce-in">
-                <?php if (!is_blank($logo)): ?><img class="ce-logo" src="<?= e($logo) ?>" alt="" onerror="this.remove()" /><?php endif; ?>
+                <?php if (!is_blank($logo)): ?><img class="ce-logo" src="<?= e($logo) ?>" alt="মাষ্টার মশাই লোগো" onerror="this.remove()" /><?php endif; ?>
                 <div class="ce-org">MASHTERMOSHAI · মাষ্টার মশাই</div>
                 <div class="ce-t">Certificate</div>
                 <div class="ce-t2">of Completion</div>

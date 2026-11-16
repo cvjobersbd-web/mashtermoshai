@@ -115,7 +115,7 @@ $opts = function_exists('tuition_options') ? tuition_options() : ['subjects' => 
                     <p class="sub">JPG/PNG/WEBP, সর্বোচ্চ 5MB। নিজের বা ফ্রি-লাইসেন্সের ছবি ব্যবহার করুন।</p>
                     <div class="ec-fg" style="margin-bottom:16px;"><label>কার্ডের ছবি (চারকোনা, সাদা/স্বচ্ছ ব্যাকগ্রাউন্ড — যেমন 600×600)</label>
                         <div class="ec-img" data-img="imageUrl">
-                            <div class="box"><?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="" /><?php else: ?>ছবি নেই<?php endif; ?></div>
+                            <div class="box"><?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="<?= e(($c->Name !== '' ? $c->Name : 'ক্যাটাগরি') . ' — কার্ডের ছবি') ?>" /><?php else: ?>ছবি নেই<?php endif; ?></div>
                             <div class="acts">
                                 <div><label class="ec-btn sm" style="margin:0;"><i class="fas fa-upload"></i> আপলোড<input type="file" accept="image/*" hidden data-up /></label>
                                     <button type="button" class="ec-btn sm" data-rm><i class="fas fa-xmark"></i> সরান</button></div>
@@ -124,7 +124,7 @@ $opts = function_exists('tuition_options') ? tuition_options() : ['subjects' => 
                         </div></div>
                     <div class="ec-fg"><label>ব্যানার ছবি (ঐচ্ছিক — চওড়া, যেমন 1600×450; না দিলে রঙিন ব্যাকগ্রাউন্ড + কার্ডের ছবি)</label>
                         <div class="ec-img" data-img="bannerUrl">
-                            <div class="box wide"><?php if ($c->BannerUrl !== ''): ?><img src="<?= e($c->BannerUrl) ?>" alt="" /><?php else: ?>ব্যানার নেই<?php endif; ?></div>
+                            <div class="box wide"><?php if ($c->BannerUrl !== ''): ?><img src="<?= e($c->BannerUrl) ?>" alt="<?= e(($c->Name !== '' ? $c->Name : 'ক্যাটাগরি') . ' — ব্যানার') ?>" /><?php else: ?>ব্যানার নেই<?php endif; ?></div>
                             <div class="acts">
                                 <div><label class="ec-btn sm" style="margin:0;"><i class="fas fa-upload"></i> আপলোড<input type="file" accept="image/*" hidden data-up /></label>
                                     <button type="button" class="ec-btn sm" data-rm><i class="fas fa-xmark"></i> সরান</button></div>
@@ -167,7 +167,7 @@ $opts = function_exists('tuition_options') ? tuition_options() : ['subjects' => 
                 <div class="ec-card">
                     <h5 style="margin-bottom:12px;"><i class="fas fa-eye" style="color:#1D7FE5;"></i> কার্ড প্রিভিউ</h5>
                     <div class="cc-card" id="ecPrev">
-                        <div class="cc-img"><?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="" /><?php else: ?><span class="cc-ic" style="background:<?= $tbg ?>;color:<?= $tfg ?>;"><i class="fas <?= e($c->Icon) ?>"></i></span><?php endif; ?></div>
+                        <div class="cc-img"><?php if ($c->ImageUrl !== ''): ?><img src="<?= e($c->ImageUrl) ?>" alt="<?= e(($c->Name !== '' ? $c->Name : 'ক্যাটাগরি') . ' — কার্ডের ছবি') ?>" /><?php else: ?><span class="cc-ic" style="background:<?= $tbg ?>;color:<?= $tfg ?>;"><i class="fas <?= e($c->Icon) ?>"></i></span><?php endif; ?></div>
                         <div class="cc-name"><?= e($c->Name !== '' ? $c->Name : 'Category') ?></div>
                     </div>
                     <div style="margin-top:16px;"><label class="ec-sw"><input type="checkbox" name="isActive" value="true"<?= $c->IsActive ? ' checked' : '' ?> /> সাইটে চালু</label></div>
@@ -199,7 +199,7 @@ $opts = function_exists('tuition_options') ? tuition_options() : ['subjects' => 
         prev.querySelector('.cc-name').textContent = form.name.value.trim() || 'Category';
         var img = form.imageUrl.value.trim(), box = prev.querySelector('.cc-img');
         var ic = box.querySelector('.cc-ic');
-        if (img) box.innerHTML = '<img src="' + esc(img) + '" alt="" />';
+        if (img) box.innerHTML = '<img src="' + esc(img) + '" alt="ক্যাটাগরির ছবি" />';
         else { var st = ic ? ic.getAttribute('style') : 'background:#E0F2FE;color:#0369A1;'; box.innerHTML = '<span class="cc-ic" style="' + st + '"><i class="fas ' + icon() + '"></i></span>'; }
         document.getElementById('ecIconPrev').innerHTML = '<i class="fas ' + icon() + '"></i>';
     }
@@ -208,7 +208,7 @@ $opts = function_exists('tuition_options') ? tuition_options() : ['subjects' => 
     // ===== ছবি আপলোড / সরানো / লিংক =====
     document.querySelectorAll('[data-img]').forEach(function (w) {
         var input = w.querySelector('input.ec-in'), box = w.querySelector('.box'), empty = box.classList.contains('wide') ? 'ব্যানার নেই' : 'ছবি নেই';
-        function setBox(u) { box.innerHTML = u ? '<img src="' + esc(u) + '" alt="" />' : empty; }
+        function setBox(u) { box.innerHTML = u ? '<img src="' + esc(u) + '" alt="ক্যাটাগরির ছবি" />' : empty; }
         input.addEventListener('change', function () { setBox(input.value.trim()); });
         w.querySelector('[data-rm]').addEventListener('click', function () { input.value = ''; setBox(''); updPrev(); });
         w.querySelector('[data-up]').addEventListener('change', async function () {

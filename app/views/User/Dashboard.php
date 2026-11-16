@@ -450,7 +450,7 @@ $waLink = function (?string $phone): string {
     <div class="ud-sidebar dd-drawer" id="udSidebar">
         <div class="ud-profile-header">
             <img src="<?= e(is_blank($user?->ProfileImageLink) ? 'https://ui-avatars.com/api/?name=' . rawurlencode($user?->FullName ?? 'User') . '&background=1F3B2C&color=fff&size=120' : $user?->ProfileImageLink) ?>"
-                 alt="Profile" class="ud-avatar" />
+                 alt="<?= e(($user?->FullName ?? 'আমার') . ' এর প্রোফাইল ছবি') ?>" class="ud-avatar" />
             <div>
                 <h3 class="ud-name"><?= e($user?->FullName) ?></h3>
                 <span class="ud-role"><i class="fas fa-user-graduate"></i> <?= e(role_label('User', (int)($user?->Id ?? current_user_id()))) ?></span>

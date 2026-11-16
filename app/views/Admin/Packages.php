@@ -135,7 +135,7 @@ $pkb = package_banner();
             <small>Package পেজের একদম উপরের ছবি। ছবিটা পুরোটা দেখায়, নিচে “শিক্ষকদের জন্য / শিক্ষার্থীদের জন্য” ট্যাব বসে। ছবির ভিতরে লেখা না থাকলে “ছবির উপর লেখা বসাও” চালু করুন — তখন বাম দিকে লেখা বসবে। (চওড়া ছবি ভালো, সর্বোচ্চ 5 MB)</small>
         </div>
         <div class="bnr-prev<?= $pkb['pk_banner_enabled'] === '0' ? ' off' : '' ?><?= ($pkb['pk_banner_text'] ?? '0') !== '1' ? ' imgonly' : '' ?>" id="pkbBox" style="--img:url('<?= e($pkb['pk_banner']) ?>')">
-            <div class="bnr-txt"><small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small><b>মাষ্টার মশাই প্যাকেজ</b><span>এভাবে পেজে দেখাবে</span></div><img class="bnr-img" src="<?= e($pkb['pk_banner']) ?>" alt="" />
+            <div class="bnr-txt"><small><i class="fas fa-graduation-cap"></i> Tutor &amp; Student Service</small><b>মাষ্টার মশাই প্যাকেজ</b><span>এভাবে পেজে দেখাবে</span></div><img class="bnr-img" src="<?= e($pkb['pk_banner']) ?>" alt="মাষ্টার মশাই প্যাকেজ পেজের ব্যানার" />
         </div>
         <div class="bnr-row">
             <label class="bn-add" for="pkbFile2" id="pkbUp"><i class="fas fa-upload"></i> নতুন ছবি আপলোড</label>

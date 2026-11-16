@@ -48,7 +48,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                     <?php if ($exam('ssc')): ?><div><small>SSC</small><b><?= e($examTxt($exam('ssc'), 'SSC')) ?></b></div><?php endif; ?>
                     <?php if ($exam('hsc')): ?><div><small>HSC</small><b><?= e($examTxt($exam('hsc'), 'HSC')) ?></b></div><?php endif; ?>
                 </div>
-                <div class="ky-ids"><img src="/Kyc/File/<?= (int)$k->Id ?>?side=front" alt="ID front" /><img src="/Kyc/File/<?= (int)$k->Id ?>?side=back" alt="ID back" /></div>
+                <div class="ky-ids"><img src="/Kyc/File/<?= (int)$k->Id ?>?side=front" alt="ID কার্ড — সামনে" /><img src="/Kyc/File/<?= (int)$k->Id ?>?side=back" alt="ID কার্ড — পেছনে" /></div>
             </div>
         <?php elseif ($showForm): ?>
         <form id="kyForm" autocomplete="off" novalidate>
@@ -115,7 +115,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
                     <?php foreach (['Front' => 'সামনের দিক', 'Back' => 'পেছনের দিক'] as $side => $lbl): $has = $k && kyc_file_path($k->{'File' . $side}); ?>
                         <div class="ky-f" data-f="file<?= $side ?>"><label class="l">ID কার্ড — <?= $lbl ?> <span class="r">*</span></label>
                             <label class="ky-drop" id="kyDrop<?= $side ?>" for="file<?= $side ?>">
-                                <img alt=""<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . strtolower($side) . '"' : ' hidden' ?> />
+                                <img alt="<?= e('ID কার্ড — ' . $lbl) ?>"<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . strtolower($side) . '"' : ' hidden' ?> />
                                 <span<?= $has ? ' hidden' : '' ?>><i class="fas fa-camera"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
                             </label>
                             <input type="file" id="file<?= $side ?>" name="file<?= $side ?>" accept="image/jpeg,image/png,image/webp" data-file="kyDrop<?= $side ?>" hidden />

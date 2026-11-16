@@ -372,7 +372,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                 <!-- ১. ইউজার প্রোফাইল হেডার -->
                 <div class="detail-card d-flex align-items-center gap-4 flex-wrap">
                     <img src="<?= e(is_blank($selected->ProfileImageLink) ? 'https://ui-avatars.com/api/?name=' . rawurlencode((string)$selected->FullName) . '&background=1F3B2C&color=fff&size=100' : $selected->ProfileImageLink) ?>"
-                         style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 4px solid #CFF2FC;" />
+                         alt="<?= e((string)$selected->FullName . ' এর প্রোফাইল ছবি') ?>" style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 4px solid #CFF2FC;" />
                     <div style="flex: 1; min-width: 200px;">
                         <h3 style="margin: 0 0 6px; color: #08224A; font-weight: 800;"><a href="/Profile/Show/<?= (int)$selected->Id ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;" title="প্রোফাইল দেখুন"><?= e($selected->FullName) ?> <i class="fas fa-arrow-up-right-from-square" style="font-size:13px;color:#0EA5E9;"></i></a></h3>
                         <div style="font-size: 13.5px; color: #64748B; display: flex; gap: 15px; flex-wrap: wrap;">
@@ -545,7 +545,7 @@ $apps = $ViewBag->UserTuitionApps ?? [];
                                         <div class="list-item teacher-item d-flex align-items-center gap-2">
                                             <div style="width: 36px; height: 36px; border-radius: 50%; background: #02B8F5; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; overflow: hidden;">
                                                 <?php if (!is_blank($t->ProfileImageLink)): ?>
-                                                    <img src="<?= e($t->ProfileImageLink) ?>" style="width:100%; height:100%; object-fit:cover;" />
+                                                    <img alt="<?= e(($t->FullName ?? 'টিচার') . ' এর প্রোফাইল ছবি') ?>" src="<?= e($t->ProfileImageLink) ?>" style="width:100%; height:100%; object-fit:cover;" />
                                                 <?php else: ?>
                                                     <?= e($t->Initials) ?>
                                                 <?php endif; ?>

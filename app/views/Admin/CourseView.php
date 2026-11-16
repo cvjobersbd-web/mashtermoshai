@@ -94,7 +94,7 @@ $srcLbl = ['payment' => 'পেমেন্ট', 'free' => 'ফ্রি', 'admi
             <?php foreach ($studs as $i => $s): $pg = $s->Progress ?? []; $nm = $s->FullName ?: $s->UserName; $py = $s->Payment ?? null; ?>
                 <tr>
                     <td><?= $i + 1 ?></td>
-                    <td><div class="cv-u"><?= $s->ProfileImageLink ? '<img src="' . e($s->ProfileImageLink) . '" alt="" loading="lazy" />' : '<span class="av">' . e(mb_substr((string)$nm, 0, 1)) . '</span>' ?>
+                    <td><div class="cv-u"><?= $s->ProfileImageLink ? '<img src="' . e($s->ProfileImageLink) . '" alt="' . e($nm . ' এর প্রোফাইল ছবি') . '" loading="lazy" />' : '<span class="av">' . e(mb_substr((string)$nm, 0, 1)) . '</span>' ?>
                         <div><a href="/Admin/UserDetails/<?= (int)$s->UserId ?>"><?= e($nm) ?></a><br><small style="color:#94A3B8;">@<?= e($s->UserName) ?></small></div></div></td>
                     <td><?= e($s->MobileNumber ?? '') ?: '—' ?></td>
                     <td style="font-size:12.5px;"><?= e($s->Email ?? '') ?: '—' ?></td>

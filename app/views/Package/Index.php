@@ -4,7 +4,8 @@
  * প্যাকেজগুলো অ্যাডমিন প্যানেল (Admin → Packages) থেকে সাজানো হয়। পেমেন্ট সিস্টেম পরে যুক্ত হবে।
  */
 $ViewData['Title'] = t('প্যাকেজ', 'Packages');
-$ViewData['Description'] = t('মাষ্টার মশাই প্যাকেজ — শিক্ষকদের জন্য Subscription আর শিক্ষার্থীদের জন্য প্যাকেজ। দাম, মেয়াদ আর সুবিধা দেখুন, bKash / Nagad দিয়ে সহজে কিনুন।', 'Mashter Moshai packages — subscriptions for teachers and packages for students. See prices, duration and benefits, and buy easily with bKash / Nagad.');
+$ViewData['FullTitle'] = t('প্যাকেজ ও দাম — শিক্ষক আর শিক্ষার্থীর প্যাকেজ', 'Packages & Prices for Teachers and Students') . ' | ' . seo_brand();
+$ViewData['Description'] = t('শিক্ষক ও শিক্ষার্থীদের প্যাকেজ — দাম, মেয়াদ আর সুবিধা দেখুন, bKash / Nagad দিয়ে সহজে কিনুন।', 'Packages for teachers and students — see prices, duration and benefits, and pay easily with bKash or Nagad.');
 $teacherPkAll = $ViewBag->TeacherPackages ?? [];
 // নরমাল আর Premium (লাইভ ক্লাস সহ) আলাদা দেখানো
 $teacherPk = array_values(array_filter($teacherPkAll, fn($p) => empty($p->IsLive)));
@@ -18,6 +19,11 @@ foreach ($teacherPk as $p) {
 }
 if (!$premPlaced) foreach ($premiumPk as $pp) $teacherCards[] = $pp;
 $studentPk = $ViewBag->StudentPackages ?? [];
+// Schema.org: প্যাকেজগুলো Product + Offer (দাম টাকায়)
+seo_schema(seo_item_list(t('প্যাকেজ', 'Packages'), array_map(fn($p) => ['name' => ($p->Audience === 'Teacher' ? t('শিক্ষকের প্যাকেজ', 'Teacher package') : t('শিক্ষার্থীর প্যাকেজ', 'Student package')) . ' — ' . (string)$p->Name, 'url' => '/Package#pk-' . (int)$p->Id, 'item' => [
+    '@type' => 'Product', 'description' => ($p->Audience === 'Teacher' ? t('মাষ্টার মশাই এ টিচার হিসেবে টিউশন পাওয়ার প্যাকেজ', 'Mashter Moshai package for teachers to get tuitions') : t('মাষ্টার মশাই এ টিউটর খোঁজার আর টিউশন পোস্টের প্যাকেজ', 'Mashter Moshai package for students to find tutors and post tuitions')) . ' · ' . (string)$p->DurationLabel,
+    'brand' => ['@type' => 'Brand', 'name' => 'Mashter Moshai'],
+    'offers' => ['@type' => 'Offer', 'price' => (string)(int)$p->Price, 'priceCurrency' => 'BDT', 'availability' => 'https://schema.org/InStock', 'url' => seo_origin() . '/Package']]], array_merge(is_array($teacherPkAll) ? $teacherPkAll : [], is_array($studentPk) ? $studentPk : []))));
 $tab = $ViewBag->Tab === 'student' ? 'student' : 'teacher';
 $isLoggedIn = session_get('UserName') != null;
 $me = $ViewBag->Me;
@@ -53,7 +59,7 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
 $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student';
     $cpo = $free ? null : db()->CouponOfferFor($p);
     $badge = $cpo ? t('স্পেশাল প্যাকেজ', 'Special Package') : (string)$p->Badge; // কুপন অফার থাকলে "জনপ্রিয়"-এর বদলে Special Package ?>
-    <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?><?= !empty($p->IsLive) ? ' pk-prem' : '' ?>" data-pkg="<?= (int)$p->Id ?>">
+    <div class="pk-card<?= $p->IsFeatured ? ' featured' : '' ?><?= !empty($p->IsLive) ? ' pk-prem' : '' ?>" id="pk-<?= (int)$p->Id ?>" data-pkg="<?= (int)$p->Id ?>">
         <div class="pk-top">
             <div class="pk-name"><?= e($p->Name) ?></div>
             <?php if (!is_blank($badge)): ?><span class="pk-badge"><?= e($badge) ?></span><?php endif; ?>

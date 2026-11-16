@@ -439,7 +439,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
                 <p class="pm-note" id="pmPollNote" hidden>পোলের অপশন পোস্ট করার পর বদলানো যায় না।</p>
             </div>
             <div class="pm-preview" id="pmPreview">
-                <img id="pmPreviewImg" alt="Preview" />
+                <img id="pmPreviewImg" alt="পোস্টের ছবির প্রিভিউ" />
                 <button type="button" data-pm="remove-image" aria-label="Remove photo"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="pm-shared" id="pmShared" hidden></div>
@@ -468,7 +468,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
     </div>
 </div>
 
-<div class="pc-lightbox" id="pcLightbox"><button type="button" aria-label="Close"><i class="fas fa-xmark"></i></button><img alt="" /></div>
+<div class="pc-lightbox" id="pcLightbox"><button type="button" aria-label="Close"><i class="fas fa-xmark"></i></button><img alt="পোস্টের ছবি" /></div>
 
 <script>
 (function () {
@@ -488,7 +488,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
     function token() { var t = $('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; }
 
     // ===== নিজের অবতার সব জায়গায় =====
-    function meAvatarHtml() { return esc(ME.initials) + (ME.img ? '<img src="' + esc(ME.img) + '" alt="" onerror="this.remove()" />' : ''); }
+    function meAvatarHtml() { return esc(ME.initials) + (ME.img ? '<img src="' + esc(ME.img) + '" alt="' + esc((ME.name || 'আমার') + ' প্রোফাইল ছবি') + '" onerror="this.remove()" />' : ''); }
     function fillMe(root) { $$('.me-avatar', root).forEach(function (el) { if (!el.dataset.filled) { el.innerHTML = meAvatarHtml(); el.dataset.filled = '1'; } }); }
     // ===== Toast =====
     var toastEl, toastT;
@@ -869,7 +869,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
                 var list = d.people.filter(function (p) { return k === 'all' || p.reaction === k; });
                 $('#rlList').innerHTML = list.map(function (p) {
                     return '<a class="rl-item" href="/Profile/Show/' + p.id + '"><span class="rl-av"><span class="pc-avatar">' + esc(p.initials)
-                        + (p.image ? '<img src="' + esc(p.image) + '" alt="" onerror="this.remove()" />' : '') + '</span><span class="rl-emo">' + p.emoji + '</span></span>'
+                        + (p.image ? '<img src="' + esc(p.image) + '" alt="' + esc(p.name + ' এর প্রোফাইল ছবি') + '" onerror="this.remove()" />' : '') + '</span><span class="rl-emo">' + p.emoji + '</span></span>'
                         + '<span><strong>' + esc(p.name) + '</strong><small>' + esc(p.role) + '</small></span></a>';
                 }).join('') || '<p style="padding:20px;text-align:center;color:#65676B;">এখনো কেউ লাইক দেয়নি।</p>';
             }
@@ -890,7 +890,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
             var d = await (await fetch('/Post/Sharers?id=' + encodeURIComponent(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
             $('#rlList').innerHTML = (d.people || []).map(function (p) {
                 return '<a class="rl-item" href="/Post/Details/' + p.shareId + '"><span class="rl-av"><span class="pc-avatar">' + esc(p.initials)
-                    + (p.image ? '<img src="' + esc(p.image) + '" alt="" onerror="this.remove()" />' : '') + '</span><span class="rl-emo">🔁</span></span>'
+                    + (p.image ? '<img src="' + esc(p.image) + '" alt="' + esc(p.name + ' এর প্রোফাইল ছবি') + '" onerror="this.remove()" />' : '') + '</span><span class="rl-emo">🔁</span></span>'
                     + '<span><strong>' + esc(p.name) + '</strong><small>' + esc(p.role) + '</small></span></a>';
             }).join('') || '<p style="padding:20px;text-align:center;color:#65676B;">দেখানোর মতো কোনো শেয়ার নেই।</p>';
         } catch (err) { $('#rlList').innerHTML = '<p style="padding:20px;text-align:center;">লোড করা যায়নি।</p>'; }
@@ -928,7 +928,7 @@ $typeBtns = ['post' => ['fa-pen', 'Post'], 'study' => ['fa-book-open', 'Study Up
         if (!mn.items.length) { mnBox.innerHTML = '<div class="mn-empty">কাউকে পাওয়া যায়নি — শুধু ফ্রেন্ড ও এই পোস্টের মানুষদের mention করা যায়।</div>'; }
         else mnBox.innerHTML = mn.items.map(function (p, i) {
             return '<button type="button" class="mn-item' + (i === mn.idx ? ' active' : '') + '" data-i="' + i + '" role="option">'
-                + '<span class="pc-avatar">' + esc(p.initials) + (p.image ? '<img src="' + esc(p.image) + '" alt="" onerror="this.remove()" />' : '') + '</span>'
+                + '<span class="pc-avatar">' + esc(p.initials) + (p.image ? '<img src="' + esc(p.image) + '" alt="' + esc(p.name + ' এর প্রোফাইল ছবি') + '" onerror="this.remove()" />' : '') + '</span>'
                 + '<span><strong>' + esc(p.name) + '</strong><small>' + esc(p.role) + ' · @' + esc(p.username) + '</small></span></button>';
         }).join('');
         mnBox.classList.add('open');

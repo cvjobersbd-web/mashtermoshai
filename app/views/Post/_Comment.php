@@ -13,7 +13,7 @@ $replies = $c->Replies ?? [];
      data-uid="<?= $c->UserId ?>" data-name="<?= e($c->AuthorName) ?>" data-raw="<?= e($plain) ?>" data-mentions="<?= e(json_encode((object)$mentionMap, JSON_UNESCAPED_UNICODE)) ?>"<?= !empty($hidden) ? ' hidden' : '' ?>>
     <a href="/Profile/Show/<?= $c->UserId ?>" class="cm-avatar<?= $isReply ? ' sm' : '' ?>" aria-label="<?= e($c->AuthorName) ?>">
         <?= e($c->AuthorInitials) ?>
-        <?php if ($c->AuthorImage): ?><img src="<?= e($c->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+        <?php if ($c->AuthorImage): ?><img src="<?= e($c->AuthorImage) ?>" alt="<?= e($c->AuthorName . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
     </a>
     <div class="cm-main">
         <div class="cm-bubble-row">

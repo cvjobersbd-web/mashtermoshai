@@ -4,14 +4,18 @@
  * @var Obj[] $Model  এই পেজের টিউটর
  */
 $tutors = is_array($Model) ? $Model : [];
+$ViewData['SchemaType'] = 'CollectionPage';
+$ViewData['Crumbs'] = [[t('টিউটর লিস্ট', 'Tutor List'), '/Tutors']];
+seo_schema(seo_item_list(t('যাচাই করা টিউটর', 'Verified tutors'), array_map(fn($t) => ['name' => (string)$t->FullName, 'url' => '/Tutors/Profile/' . (int)$t->UserId, 'item' => ['@type' => 'Person', 'jobTitle' => 'Tutor']], $tutors)));
 $type = (string)$ViewBag->Type;
 $sel = is_array($ViewBag->Cities) ? $ViewBag->Cities : [];
+$gender = (string)($ViewBag->Gender ?? '');
 $page = (int)$ViewBag->Page; $pages = (int)$ViewBag->Pages;
 $ViewData['Title'] = (string)$ViewBag->Title;
 $ViewData['Description'] = t('মাষ্টার মশাই এর যাচাই করা টিউটর — ', 'Verified tutors on Mashter Moshai — ') . $ViewBag->Title . t('। জেলা আর প্রতিষ্ঠান দেখে পছন্দের টিউটর বেছে নিন।', '. Choose your tutor by district and institution.');
 $ViewData['FullTitle'] = 'Showing ' . $ViewBag->Title . ($page > 1 ? " — Page $page" : '') . ' | মাষ্টার মশাই';
-$url = function (array $over) use ($type, $sel) {
-    $q = array_merge(['type' => $type !== 'all' ? $type : null, 'city' => $sel ?: null], $over);
+$url = function (array $over) use ($type, $sel, $gender) {
+    $q = array_merge(['type' => $type !== 'all' ? $type : null, 'gender' => $gender ?: null, 'city' => $sel ?: null], $over);
     $q = array_filter($q, fn($v) => $v !== null && $v !== '' && $v !== 1);
     return '/Tutors/All' . ($q ? '?' . preg_replace('/%5B\d+%5D/', '%5B%5D', http_build_query($q)) : '');
 };
@@ -35,6 +39,11 @@ else {
     .tl-filters input { width: 15px; height: 15px; accent-color: #00CFFF; margin: 0; cursor: pointer; }
     .tl-filters label.on { border-color: #00CFFF; background: #E6F9FF; }
     .tl-acts { display: flex; gap: 10px; }
+    .tl-gen { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tl-gen label { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid #CBD5E1; border-radius: 999px; padding: 8px 18px; font-size: 14px; font-weight: 700; color: #1F2937; cursor: pointer; background: #fff; }
+    .tl-gen label i { color: #00B5E0; }
+    .tl-gen label.on { border-color: #00CFFF; background: #00CFFF; color: #fff; } .tl-gen label.on i { color: #fff; }
+    .tl-gen input { display: none; }
     .tl-count { font-size: 13.5px; color: #64748B; margin: -8px 0 18px; }
     .tl-pg { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 36px; flex-wrap: wrap; }
     .tl-pg a, .tl-pg span { min-width: 40px; height: 40px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; text-decoration: none; background: #1F2328; color: #fff; }
@@ -59,6 +68,11 @@ else {
         </div>
         <form id="tlFilter" action="/Tutors/All" method="get">
             <?php if ($type !== 'all'): ?><input type="hidden" name="type" value="<?= e($type) ?>" /><?php endif; ?>
+            <div class="tl-gen" role="radiogroup" aria-label="Gender">
+                <?php foreach (['' => [t('সব টিউটর', 'All Tutors'), 'fa-user-group'], 'male' => ['Male Tutors', 'fa-person'], 'female' => ['Female Tutors', 'fa-person-dress']] as $gk => [$gl, $gi]): ?>
+                    <label class="<?= $gender === $gk ? 'on' : '' ?>"><input type="radio" name="gender" value="<?= $gk ?>" <?= $gender === $gk ? 'checked' : '' ?> /><i class="fas <?= $gi ?>"></i> <?= $gl ?></label>
+                <?php endforeach; ?>
+            </div>
             <div class="tl-filters">
                 <label class="<?= !$sel ? 'on' : '' ?>"><input type="checkbox" id="tlAll" <?= !$sel ? 'checked' : '' ?> /> All</label>
                 <?php foreach (TutorsController::CITIES as $c): ?>
@@ -66,7 +80,7 @@ else {
                 <?php endforeach; ?>
             </div>
         </form>
-        <div class="tl-count"><?= (int)$ViewBag->Total ?> জন টিউটর<?= $sel ? ' — ' . e(implode(', ', $sel)) : '' ?></div>
+        <div class="tl-count"><?= (int)$ViewBag->Total ?> জন <?= $gender === 'male' ? 'ছেলে (Male) ' : ($gender === 'female' ? 'মেয়ে (Female) ' : '') ?>টিউটর<?= $sel ? ' — ' . e(implode(', ', $sel)) : '' ?></div>
 
         <?php if (!$tutors): ?>
             <div class="tl-empty"><i class="fas fa-user-slash"></i>এই ফিল্টারে কোনো টিউটর পাওয়া যায়নি। অন্য জেলা বেছে দেখুন।</div>
@@ -96,8 +110,10 @@ else {
     // "All" চাপলে বাকিগুলো খালি; কোনো জেলা চাপলে "All" খালি — সাথে সাথে ফিল্টার
     var f = document.getElementById('tlFilter'), all = document.getElementById('tlAll');
     var boxes = f.querySelectorAll('input[name="city[]"]');
-    function paint() { f.querySelectorAll('label').forEach(function (l) { l.classList.toggle('on', l.querySelector('input').checked); }); }
+    function paint() { f.querySelectorAll('.tl-filters label').forEach(function (l) { l.classList.toggle('on', l.querySelector('input').checked); }); }
     all.addEventListener('change', function () { if (all.checked) boxes.forEach(function (b) { b.checked = false; }); else all.checked = true; paint(); f.submit(); });
+    f.querySelectorAll('input[name="gender"]').forEach(function (r) { r.addEventListener('change', function () { if (r.value === '') r.disabled = true; f.submit(); }); });
+    f.querySelectorAll('.tl-gen input:checked').forEach(function (r) { if (r.value === '') r.disabled = true; });
     boxes.forEach(function (b) { b.addEventListener('change', function () { var any = Array.prototype.some.call(boxes, function (x) { return x.checked; }); all.checked = !any; paint(); f.submit(); }); });
 })();
 </script>

@@ -1,6 +1,7 @@
 <?php
 /** গোপনীয়তা নীতি (Privacy Policy) — সাইট আসলে যে তথ্য নেয় আর যেভাবে ব্যবহার করে তার বিবরণ */
 $ViewData['Title'] = t('গোপনীয়তা নীতি', 'Privacy Policy');
+$ViewData['FullTitle'] = t('গোপনীয়তা নীতি — আপনার তথ্য কীভাবে সুরক্ষিত থাকে', 'Privacy Policy — How We Protect Your Data') . ' | ' . seo_brand();
 $ViewData['Description'] = t('মাষ্টার মশাই কোন তথ্য নেয়, কেন নেয়, কীভাবে সুরক্ষিত রাখে আর কার সাথে শেয়ার হয় — গোপনীয়তা নীতি।', 'What information Mashter Moshai collects, why, how it is protected and who it is shared with — our Privacy Policy.');
 $ct = contact_info(); $en = site_lang() === 'en';
 partial('Home/_PolicyStyles');

@@ -1,5 +1,6 @@
 <?php
 $ViewData['Title'] = 'Find Tutor';
+$ViewData['FullTitle'] = t('টিউটর খুঁজুন — হোম ও অনলাইন টিউটর বাংলাদেশে', 'Find a Tutor — Home & Online Tutors in Bangladesh') . ' | ' . seo_brand();
 $ViewData['Description'] = t('মাষ্টার মশাই-এ টিচারদের "পড়াতে চাই" পোস্ট — বিষয়, ক্লাস, এলাকা আর বেতন দেখে পছন্দের হোম টিউটর বা অনলাইন টিউটর খুঁজে নিন।', 'Teachers\' "Want to Teach" posts on Mashter Moshai — find a home or online tutor by subject, class, area and salary.');
 
 $isLoggedIn = session_get('UserName') !== null;
@@ -2164,7 +2165,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                             <!-- Image -->
                             <div class="fb-post-media" id="post-media-<?= e($post->Id) ?>">
                                 <?php if (!is_blank($post->ImageUrl)): ?>
-                                    <img src="<?= e($post->ImageUrl) ?>" alt="Post Image" />
+                                    <img src="<?= e($post->ImageUrl) ?>" alt="<?= e('টিউটরের পোস্টের ছবি — ' . ($post->UserFullName ?? '')) ?>" />
                                 <?php endif; ?>
                                 <?php if (!is_blank($post->VideoUrl ?? null)): ?>
                                     <video src="<?= e($post->VideoUrl) ?>" controls preload="metadata" playsinline></video>
@@ -2203,7 +2204,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                         <div class="fbc" id="fbc-<?= e($comment->Id) ?>" data-id="<?= e($comment->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($comment->UserFullName) ?>" data-raw="<?= e($comment->Content) ?>">
                                             <div class="fbc-avatar">
                                                 <?php if (!is_blank($comment->UserProfileImage)): ?>
-                                                    <img src="<?= e($comment->UserProfileImage) ?>" alt="user" />
+                                                    <img src="<?= e($comment->UserProfileImage) ?>" alt="<?= e($comment->UserFullName . ' এর প্রোফাইল ছবি') ?>" />
                                                 <?php else: ?>
                                                     <?= e($firstUpper($comment->UserFullName, 'U')) ?>
                                                 <?php endif; ?>
@@ -2237,7 +2238,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                                             <div class="fbc is-reply" id="fbc-<?= e($reply->Id) ?>" data-id="<?= e($reply->Id) ?>" data-root="<?= e($comment->Id) ?>" data-name="<?= e($reply->UserFullName) ?>" data-raw="<?= e($reply->Content) ?>">
                                                                 <div class="fbc-avatar">
                                                                     <?php if (!is_blank($reply->UserProfileImage)): ?>
-                                                                        <img src="<?= e($reply->UserProfileImage) ?>" alt="user" />
+                                                                        <img src="<?= e($reply->UserProfileImage) ?>" alt="<?= e($reply->UserFullName . ' এর প্রোফাইল ছবি') ?>" />
                                                                     <?php else: ?>
                                                                         <?= e($firstUpper($reply->UserFullName, 'U')) ?>
                                                                     <?php endif; ?>
@@ -2272,7 +2273,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                     <div class="fbc-input-row">
                                         <div class="fbc-avatar">
                                             <?php if (!is_blank($userProfileImg)): ?>
-                                                <img src="<?= e($userProfileImg) ?>" alt="me" />
+                                                <img src="<?= e($userProfileImg) ?>" alt="<?= e($userFullName . ' এর প্রোফাইল ছবি') ?>" />
                                             <?php else: ?>
                                                 <?= e($firstUpper($userFullName, 'U')) ?>
                                             <?php endif; ?>
@@ -2370,7 +2371,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 <div class="d-flex gap-2 align-items-center mb-3">
                     <div class="pc-avatar">
                         <?php if (!is_blank($userProfileImg)): ?>
-                            <img src="<?= e($userProfileImg) ?>" alt="me" />
+                            <img src="<?= e($userProfileImg) ?>" alt="<?= e($userFullName . ' এর প্রোফাইল ছবি') ?>" />
                         <?php else: ?>
                             <?= e($firstUpper($userFullName, 'T')) ?>
                         <?php endif; ?>
@@ -2385,7 +2386,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 <div class="modal-preview" id="imagePreviewBox">
                     <button type="button" class="remove-preview" onclick="removePostImage()"><i class="fas fa-times"></i></button>
-                    <img id="imagePreviewImg" src="" alt="Preview" />
+                    <img id="imagePreviewImg" src="" alt="পোস্টের ছবির প্রিভিউ" />
                 </div>
                 <div class="modal-preview" id="videoPreviewBox">
                     <button type="button" class="remove-preview" onclick="removePostVideo()" style="z-index:2;"><i class="fas fa-times"></i></button>
@@ -2427,7 +2428,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 <div class="modal-preview" id="editImgBox">
                     <button type="button" class="remove-preview" onclick="removeEditImage()"><i class="fas fa-times"></i></button>
-                    <img id="editImgPreview" src="" alt="Preview" />
+                    <img id="editImgPreview" src="" alt="পোস্টের ছবির প্রিভিউ" />
                 </div>
 
                 <div class="modal-actions-bottom">
@@ -2729,7 +2730,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 if (data.success) {
                     document.getElementById('post-content-' + editPostId).textContent = data.content;
                     var media = document.getElementById('post-media-' + editPostId);
-                    media.innerHTML = data.imageUrl ? '<img src="' + fbcEsc(data.imageUrl) + '" alt="Post Image" />' : '';
+                    media.innerHTML = data.imageUrl ? '<img src="' + fbcEsc(data.imageUrl) + '" alt="টিউটরের পোস্টের ছবি" />' : '';
                     bootstrap.Modal.getInstance(document.getElementById('editPostModal')).hide();
                 } else {
                     alert(data.message || 'Failed to update post.');
@@ -2812,7 +2813,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
         }
 
         function fbcAvatarHtml(img, name) {
-            if (img) return '<img src="' + fbcEsc(img) + '" alt="user" />';
+            if (img) return '<img src="' + fbcEsc(img) + '" alt="' + fbcEsc((name || 'ইউজার') + ' এর প্রোফাইল ছবি') + '" />';
             return fbcEsc((name || 'U').charAt(0).toUpperCase());
         }
 

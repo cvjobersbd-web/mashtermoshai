@@ -380,6 +380,70 @@ function session_clear(): void
     session_regenerate_id(true);
     if ($csrf) $_SESSION['_csrf'] = $csrf;
 }
+// ------------------------------------------------------------
+// "লগইন সেভ রাখুন" — ৩০ দিন, ব্রাউজার বন্ধ করলেও লগইন থাকে
+// ------------------------------------------------------------
+const REMEMBER_COOKIE = 'mm_rem';
+const REMEMBER_DAYS = 30;
+
+function remember_cookie_set(string $value, int $expires): void
+{
+    if (headers_sent()) return;
+    setcookie(REMEMBER_COOKIE, $value, ['expires' => $expires, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+}
+
+/** লগইনের সময় টিক দিলে — নতুন টোকেন বানিয়ে কুকিতে বসায় */
+function remember_issue(int $userId): void
+{
+    try { remember_cookie_set(db()->CreateRememberToken($userId, REMEMBER_DAYS), time() + REMEMBER_DAYS * 86400); }
+    catch (Throwable $e) { error_log('[remember] ' . $e->getMessage()); }
+}
+
+/** লগআউট করলে — এই ব্রাউজারের টোকেন মুছে কুকি সরায় */
+function remember_forget(): void
+{
+    $c = $_COOKIE[REMEMBER_COOKIE] ?? '';
+    if (is_string($c) && $c !== '') { try { db()->DeleteRememberToken($c); } catch (Throwable $e) { } }
+    unset($_COOKIE[REMEMBER_COOKIE]);
+    remember_cookie_set('', time() - 3600);
+}
+
+/** লগইন করা ইউজারের তথ্য সেশনে রাখা (লগইন ফর্ম আর "লগইন সেভ" — দুই জায়গাতেই) */
+function login_session_set(Obj $user): void
+{
+    session_regenerate_id(true);
+    session_set('UserId', $user->Id);
+    session_set('UserName', $user->UserName);
+    session_set('UserFullName', $user->FullName);
+    session_set('UserEmail', $user->Email);
+    session_set('UserRole', $user->Role);
+    session_set('ProfileImageLink', $user->ProfileImageLink ?? '');
+}
+
+/**
+ * সেশন শেষ (ব্রাউজার বন্ধ বা ৬০ মিনিট কিছু না করা) কিন্তু "লগইন সেভ" কুকি আছে — আবার লগইন করিয়ে দেয়।
+ * অ্যাকাউন্ট বন্ধ / Suspend / ইমেইল ভেরিফাই না / এই ডিভাইস অ্যাডমিন লগআউট করেছেন — তাহলে হবে না।
+ */
+function remember_restore(): void
+{
+    $c = $_COOKIE[REMEMBER_COOKIE] ?? '';
+    if (!is_string($c) || $c === '' || !empty($_SESSION['UserId'])) return;
+    try {
+        $db = db();
+        $uid = $db->CheckRememberToken($c);
+        $user = $uid ? $db->GetUserById($uid) : null;
+        $ok = $user && (int)$user->IsActive === 1;
+        if ($ok && $user->Role !== 'Admin') {
+            if ($db->GetActiveSuspension((int)$user->Id) || !$db->IsEmailVerified((int)$user->Id)) $ok = false;
+            elseif (device_lock_applies($user->Role) && $db->CheckLoginDevice((int)$user->Id, device_hash(), device_label(), client_ip()) !== 'ok') $ok = false;
+        }
+        if (!$ok) { remember_forget(); return; }
+        $db->UpdateLastLogin((int)$user->Id);
+        login_session_set($user);
+    } catch (Throwable $e) { error_log('[remember restore] ' . $e->getMessage()); }
+}
+
 function current_user_id(): ?int
 {
     $v = session_get('UserId');
@@ -1745,14 +1809,14 @@ function admin_action_rule(string $action): string
     if ($map === null) {
         $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
         $groups = [
-            'users' => ['TeacherOverview', 'UserOverview', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock'],
+            'users' => ['TeacherOverview', 'UserOverview', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock', 'SaveDeviceAuto', 'SaveDeviceMax'],
             'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
             'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus', 'ProfilePosts', 'DeleteProfilePost'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
-            'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'ReferralUser', 'RefUserSearch', 'SetRefNoBonus', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'LiveClasses', 'LivePayments', 'ToggleCourse', 'CourseView', 'BlockCourse', 'AddCoursePayout', 'SaveCourseSettings', 'SavePublishFee', 'ProcessWithdrawal', 'SetReferralStatus',
+            'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'NoBonusReferralsExcel', 'ReferralUser', 'RefUserSearch', 'SetRefNoBonus', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'LiveClasses', 'LivePayments', 'ToggleCourse', 'CourseView', 'BlockCourse', 'AddCoursePayout', 'SaveCourseSettings', 'SavePublishFee', 'ProcessWithdrawal', 'SetReferralStatus',
                 'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
@@ -2281,6 +2345,33 @@ function teacher_photo_placeholder(): string
  * পেজ / JSON পাঠানোর ঠিক আগে: যে ভিজিটর টিচারের ছবি দেখতে পারবে না, তার জন্য সব টিচারের ছবির লিংক বদলে placeholder।
  * (সব পেজে, ফিড, কার্ড, কমেন্ট — যেখানেই ছবি থাকুক, একসাথে ধরা পড়ে)
  */
+/** alt এ সাইটের নাম আছে কিনা (বাংলা / ইংরেজি) */
+const BRAND_ALT_RE = '/মাষ্টার\s*মশাই|mashter\s*moshai/iu';
+
+/**
+ * SEO: প্রতিটা ছবির alt এর শেষে সাইটের নাম — যেমন "Rahim Uddin এর প্রোফাইল ছবি | মাষ্টার মশাই"।
+ * পেজের HTML পাঠানোর আগে একবারে বসে, তাই নতুন কোনো ছবিতেও নিজে থেকে হবে।
+ * <script> এর ভেতরের লেখা ছোঁয় না (সেগুলো ব্রাউজারে লেআউটের ছোট স্ক্রিপ্ট ঠিক করে)। অ্যাডমিন প্যানেলে লাগানো হয় না।
+ */
+function brand_img_alts(string $html): string
+{
+    if (strcasecmp((string)($GLOBALS['__route']['controller'] ?? ''), 'Admin') === 0 || stripos($html, '<img') === false) return $html;
+    $brand = seo_brand();
+    $parts = preg_split('#(<script\b[^>]*>.*?</script>)#is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+    if ($parts === false) return $html;
+    foreach ($parts as $i => $part) {
+        if ($i % 2 === 1 || stripos($part, '<img') === false) continue;
+        $parts[$i] = preg_replace_callback('#<img\b[^>]*>#i', function ($m) use ($brand) {
+            return preg_replace_callback('#(\salt\s*=\s*")([^"]*)(")#i', function ($a) use ($brand) {
+                $v = $a[2];
+                if (trim($v) === '' || preg_match(BRAND_ALT_RE, html_entity_decode($v, ENT_QUOTES, 'UTF-8'))) return $a[0];
+                return $a[1] . $v . ' | ' . htmlspecialchars($brand, ENT_QUOTES, 'UTF-8') . $a[3];
+            }, $m[0], 1) ?? $m[0];
+        }, $part) ?? $part;
+    }
+    return implode('', $parts);
+}
+
 function mask_teacher_photos(string $out): string
 {
     static $map = null;
@@ -2425,12 +2516,51 @@ function seo_origin(): string
     $host = preg_replace('/^www\./', '', $host);
     return $o = 'https://' . $host;
 }
+/** টাইটেলের শেষে সাইটের নাম — বাংলায় "মাষ্টার মশাই", ইংরেজিতে "Mashter Moshai" */
+function seo_brand(): string { return t('মাষ্টার মশাই', 'Mashter Moshai'); }
+
+/** মেটা ডেসক্রিপশন ১২০ অক্ষরের মধ্যে — বড় হলে শব্দের মাঝখানে না কেটে ছোট করে "…" */
+function seo_short_desc(string $d, int $max = 120): string
+{
+    $d = trim(preg_replace('/\s+/u', ' ', $d));
+    if (mb_strlen($d) <= $max) return $d;
+    $cut = mb_substr($d, 0, $max - 1);
+    $sp = mb_strrpos($cut, ' ');
+    if ($sp !== false && $sp > $max * 0.6) $cut = mb_substr($cut, 0, $sp);
+    return rtrim($cut, " ,।.—-|:;") . '…';
+}
+
+/**
+ * Schema.org ItemList — তালিকার পেজে (টিউটর, কোর্স, ক্যাটাগরি, টিউশন, প্যাকেজ, পোস্ট) Google কে জানায় পেজে কী কী আছে।
+ * $items: [['name' => .., 'url' => '/path', 'item' => [ঐচ্ছিক — '@type' সহ পুরো জিনিসটা]], ...] — সর্বোচ্চ ৩০টা
+ */
+function seo_item_list(string $name, array $items): array
+{
+    $o = seo_origin(); $list = []; $i = 0;
+    foreach (array_slice($items, 0, 30) as $it) {
+        $url = (string)($it['url'] ?? ''); if ($url === '') continue;
+        $url = preg_match('#^https?://#i', $url) ? $url : $o . '/' . ltrim($url, '/');
+        $li = ['@type' => 'ListItem', 'position' => ++$i];
+        if (!empty($it['item'])) $li['item'] = ['url' => $url, 'name' => (string)($it['name'] ?? '')] + $it['item'];
+        else { $li['url'] = $url; $li['name'] = (string)($it['name'] ?? ''); }
+        $list[] = $li;
+    }
+    return ['@type' => 'ItemList', 'name' => $name, 'numberOfItems' => count($list), 'itemListElement' => $list];
+}
+
+/** পেজে Schema.org এর একটা অংশ যোগ করা (লেআউট <head> এ JSON-LD হিসেবে বসায়) */
+function seo_schema(array $node): void
+{
+    $vd = $GLOBALS['__ViewData'] ?? null; if (!$vd) return;
+    $all = $vd['Schema'] ?? []; $all = is_array($all) ? $all : []; $all[] = $node; $vd['Schema'] = $all;
+}
+
 /** Google এ দেখানোর দরকার নেই এমন পেজ (লগইন, পেমেন্ট, চ্যাট, ড্যাশবোর্ড ...) — noindex */
 function seo_private_page(string $controller, string $action): bool
 {
     $c = strtolower($controller); $a = strtolower($action);
     if (in_array($c, ['admin', 'payment', 'chat', 'kyc', 'notification', 'referral', 'saved', 'friends', 'live', 'partner', 'goal', 'user', 'profile', 'post', 'seo'], true)) return true;   // প্রোফাইল পেজ নিজস্ব — টিচারের পাবলিক পেজ /Tutors/Profile
-    if ($c === 'account') return !in_array($a, ['register'], true);   // সাইন আপ পেজ দেখাতে পারে, বাকিগুলো (লগইন, পাসওয়ার্ড রিসেট ...) না
+    if ($c === 'account') return !in_array($a, ['register', 'login'], true);   // লগইন আর সাইন আপ পেজ Google এ দেখাতে পারে, বাকিগুলো (পাসওয়ার্ড রিসেট ...) না
     if ($c === 'teacher' && $a !== 'index') return true;
     if ($c === 'course' && in_array($a, ['learn', 'manage', 'build', 'edit', 'students', 'my', 'earnings'], true)) return true;
     return false;

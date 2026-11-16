@@ -4,6 +4,8 @@
  * ইউজার/টিচারের পোস্ট আগে অ্যাডমিনের কাছে যায় → Approve হলে এখানে দেখায়।
  */
 $posts = is_array($Model) ? $Model : [];
+$ViewData['SchemaType'] = 'CollectionPage';
+seo_schema(seo_item_list('Edu Feed', array_map(fn($p) => ['name' => mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)($p->Content ?? '')))) ?: ((string)($p->Subject ?? '') ?: 'Edu Feed post'), 0, 110), 'url' => '/Feed/Post/' . (int)$p->Id], $posts)));
 $tab = $ViewBag->Tab ?? 'all';
 $subject = (string)($ViewBag->Subject ?? '');
 $q = (string)($ViewBag->Q ?? '');
@@ -17,8 +19,8 @@ $myPhoto = '';
 if ($me !== null) { try { $u = db()->GetUserById($me); $myPhoto = (string)($u->ProfileImageLink ?? ''); } catch (Throwable $e) { } }
 
 $ViewData['Title'] = 'Educational Feed';
-$ViewData['FullTitle'] = ($subject !== '' ? $subject . ' — ' : '') . 'Educational Feed | মাষ্টার মশাই';
-$ViewData['Description'] = 'Educational Feed — শিক্ষক ও শিক্ষার্থীদের শেয়ার করা নোট, ছবি, ভিডিও, টিপস আর শিক্ষামূলক পোস্ট। মাষ্টার মশাই-এ প্রতিটা পোস্ট রিভিউ করে প্রকাশ করা হয়।';
+$ViewData['FullTitle'] = ($subject !== '' ? $subject . ' — ' : '') . t('Edu Feed — শিক্ষামূলক নোট, ভিডিও ও পড়ার টিপস', 'Edu Feed — Study Notes, Videos & Learning Tips') . ' | ' . seo_brand();
+$ViewData['Description'] = t('শিক্ষক ও শিক্ষার্থীদের শেয়ার করা নোট, ছবি, ভিডিও আর পড়ার টিপস — রিভিউ করে প্রকাশ করা শিক্ষামূলক পোস্ট।', 'Notes, photos, videos and study tips shared by teachers and students — every educational post is reviewed first.');
 if ($tab === 'mine' || $q !== '') $ViewData['Robots'] = 'noindex, follow';
 $baseQs = function (array $over) use ($subject, $q, $tab) {
     $a = array_filter(array_merge(['tab' => $tab === 'mine' ? 'mine' : '', 'subject' => $subject, 'q' => $q], $over), fn($v) => $v !== '' && $v !== null);

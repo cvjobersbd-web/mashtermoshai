@@ -329,7 +329,10 @@ class AdminController extends Controller
         $counts = $this->db->KycCounts();
         if (input_str('k', '') === '' && $counts['teacher']['Pending'] === 0 && $counts['student']['Pending'] > 0) $k = 'student';
         $s = (string)input_str('s', 'Pending'); if (!in_array($s, ['Pending', 'Approved', 'Rejected', 'all'], true)) $s = 'Pending';
-        $list = $this->db->GetKycList($k, $s);
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
+        $list = $this->db->GetKycList($k, $s, $q);
+        // কে কার রেফারেন্সে এসেছে — রেফারেল (ইউজারের লিংক/কোড) আর এজেন্সি (পার্টনার) লিংক/কোড
+        $refMap = $this->db->GetReferralSourceMap(); $ptMap = $this->db->GetPartnerSignupMap();
         // টিচার: আবেদনের ফর্ম + পেমেন্টের অবস্থা
         $apps = [];
         if ($k === 'teacher') {
@@ -347,7 +350,8 @@ class AdminController extends Controller
         if ($k === 'student') foreach ($list as $x) {
             try { $p = $this->db->one("SELECT `Id`, `PackageName`, `Amount`, `Status`, `MethodName`, `CreatedAt` FROM `PaymentRequests` WHERE `UserId` = :u AND `Audience` = 'Student' ORDER BY `Id` DESC LIMIT 1", ['u' => $x->UserId]); if ($p) $pays[$x->Id] = $p; } catch (Throwable $e) { }
         }
-        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Counts' => $counts, 'Apps' => $apps, 'StuPays' => $pays]);
+        $this->view(null, $list, ['Kind' => $k, 'S' => $s, 'Q' => $q, 'Counts' => $counts, 'Apps' => $apps, 'StuPays' => $pays,
+            'RefMap' => $refMap, 'PtMap' => $ptMap]);
     }
 
     /** POST /Admin/KycDecide (id, action = Approve|Reject, note) */
@@ -1044,7 +1048,57 @@ class AdminController extends Controller
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers()]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusToday' => $this->db->NoBonusTodayCounts()]);
+    }
+
+    /**
+     * GET /Admin/NoBonusReferralsExcel?from=Y-m-d&to=Y-m-d — বোনাস ছাড়া রেফারাররা কোন তারিখে কতজন রেফার করেছে (Excel .xlsx)
+     *  শিট ১: সারাংশ (প্রতি রেফারার মোট) · শিট ২: তারিখ অনুযায়ী · শিট ৩: প্রতিটা রেফারেলের বিস্তারিত
+     */
+    public function NoBonusReferralsExcel(): void
+    {
+        $this->requireAdminPage();
+        require_once APP_ROOT . '/app/core/xlsx.php';
+        $d = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
+        $from = $d(input_str('from', '')); $to = $d(input_str('to', ''));
+        if ($from > $to) [$from, $to] = [$to, $from];
+        $refs = []; foreach ($this->db->GetRefNoBonusUsers() as $u) $refs[(int)$u->Id] = $u;
+        $rows = $this->db->GetNoBonusReferrals($from, $to);
+        $nm = fn($u) => $u ? (string)($u->FullName ?: $u->UserName) : 'Deleted user';
+        $fd = fn($v) => date('d M Y', strtotime((string)$v));
+        $range = $from === $to ? $fd($from) : $fd($from) . ' — ' . $fd($to);
+        $src = function ($r) {
+            if (($r->Via ?? '') === 'code') return 'প্যাকেজ কেনার সময় কোড';
+            if (($r->Via ?? '') === 'signupcode' || ($r->Src ?? '') === 'code') return 'সাইনআপে কোড';
+            $s = (string)($r->Src ?? ''); return isset(Db::REF_SOURCES[$s]) && $s !== 'link' ? Db::REF_SOURCES[$s][0] . ' লিংক' : 'লিংক';
+        };
+        // সারাংশ
+        $sum = []; foreach ($refs as $id => $u) $sum[$id] = ['n' => 0, 'b' => 0];
+        $byDay = [];
+        foreach ($rows as $r) {
+            $id = (int)$r->ReferrerId; $sum[$id] ??= ['n' => 0, 'b' => 0]; $sum[$id]['n']++; if ($r->Bought) $sum[$id]['b']++;
+            $day = substr((string)$r->CreatedAt, 0, 10); $byDay[$day][$id] ??= ['n' => 0, 'b' => 0]; $byDay[$day][$id]['n']++; if ($r->Bought) $byDay[$day][$id]['b']++;
+        }
+        uasort($sum, fn($a, $b) => $b['n'] <=> $a['n']);
+        $s1 = [['বোনাস ছাড়া রেফারার — রেফারেলের হিসাব'], ['তারিখ', $range], ['মোট রেফারেল', count($rows)], ['প্যাকেজ কিনেছে', count(array_filter($rows, fn($r) => $r->Bought))], [],
+            ['#', 'রেফারারের নাম', 'ইউজারনেম', 'ইমেইল', 'রেফারেল কোড', 'মোট রেফার', 'প্যাকেজ কিনেছে', 'এখনো কেনেনি']];
+        $i = 0; foreach ($sum as $id => $x) { $u = $refs[$id] ?? null; $s1[] = [++$i, $nm($u), $u ? '@' . $u->UserName : '', (string)($u->Email ?? ''), (string)($u->Code ?? ''), $x['n'], $x['b'], $x['n'] - $x['b']]; }
+        $s1[] = ['', 'মোট', '', '', '', count($rows), count(array_filter($rows, fn($r) => $r->Bought)), count(array_filter($rows, fn($r) => !$r->Bought))];
+        // তারিখ অনুযায়ী
+        $s2 = [['তারিখ', 'রেফারারের নাম', 'রেফারেল কোড', 'কতজন রেফার করেছে', 'প্যাকেজ কিনেছে']];
+        ksort($byDay);
+        foreach ($byDay as $day => $list) { uasort($list, fn($a, $b) => $b['n'] <=> $a['n']); foreach ($list as $id => $x) { $u = $refs[$id] ?? null; $s2[] = [$fd($day), $nm($u), (string)($u->Code ?? ''), $x['n'], $x['b']]; } $s2[] = [$fd($day) . ' — মোট', '', '', array_sum(array_column($list, 'n')), array_sum(array_column($list, 'b'))]; }
+        if (count($s2) === 1) $s2[] = ['এই সময়ে কোনো রেফারেল নেই'];
+        // বিস্তারিত
+        $s3 = [['#', 'তারিখ ও সময়', 'রেফারার', 'রেফারেল কোড', 'যে এসেছে', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'কোথা থেকে', 'প্যাকেজ কিনেছে?']];
+        $i = 0; foreach ($rows as $r) { $u = $refs[(int)$r->ReferrerId] ?? null;
+            $s3[] = [++$i, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), $nm($u), (string)($u->Code ?? ''), (string)($r->Name ?: $r->UserName ?: 'Deleted user'), $r->UserName ? '@' . $r->UserName : '', (string)($r->Email ?? ''), (string)($r->MobileNumber ?? ''), $src($r), $r->Bought ? 'হ্যাঁ' : 'না']; }
+        $bold2 = [0]; foreach ($s2 as $k => $row) if (str_contains((string)($row[0] ?? ''), '— মোট')) $bold2[] = $k;
+        xlsx_send('no-bonus-referrals-' . $from . ($from !== $to ? '-to-' . $to : ''), [
+            ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, 5, count($s1) - 1], 'widths' => [6, 26, 20, 30, 14, 12, 15, 14], 'freeze' => 6],
+            ['name' => 'তারিখ অনুযায়ী', 'rows' => $s2, 'bold' => $bold2, 'widths' => [22, 26, 14, 18, 15], 'freeze' => 1],
+            ['name' => 'বিস্তারিত', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 24, 14, 24, 18, 30, 16, 22, 15], 'freeze' => 1],
+        ]);
     }
 
     /** POST /Admin/RefUserSearch (q) — বোনাস ছাড়া তালিকায় যোগ করার জন্য ইউজার খোঁজা */
@@ -2536,9 +2590,9 @@ class AdminController extends Controller
     public function Devices(): void
     {
         $this->requireAdminPage();
-        $st = (string)input_str('st', 'Pending'); if (!in_array($st, ['Pending', 'Active', 'all'], true)) $st = 'Pending';
+        $st = (string)input_str('st', 'Active'); if (!in_array($st, ['Active', 'all'], true)) $st = 'Active';
         $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
-        $this->view(null, $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'On' => $this->db->DeviceLockOn(), 'Pending' => $this->db->CountPendingDevices()]);
+        $this->view(null, $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'Max' => $this->db->DeviceMax()]);
     }
 
     /** POST /Admin/ApproveDevice (id) — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট */
@@ -2547,8 +2601,9 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $d = $this->db->ApproveDevice(input_int('id', 0), (int)current_user_id());
         if (!$d) json_response(['success' => false, 'message' => 'অনুরোধটি পাওয়া যায়নি বা আগেই সিদ্ধান্ত হয়েছে।']);
-        $this->db->CreateNotification((int)$d->UserId, 'নতুন ডিভাইস চালু হয়েছে', "আপনার অনুরোধ Accept হয়েছে — এখন {$d->Label} থেকে লগইন করতে পারবেন। আগের ডিভাইস থেকে লগআউট করা হয়েছে।", 'success', '/Account/Login', 'fa-mobile-screen');
-        json_response(['success' => true, 'message' => 'Accept হয়েছে — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট হয়ে গেছে।']);
+        $out = implode(', ', array_map(fn($x) => (string)$x->Label, $d->Revoked ?? []));
+        $this->db->CreateNotification((int)$d->UserId, 'নতুন ডিভাইস চালু হয়েছে', "আপনার অনুরোধ Accept হয়েছে — এখন {$d->Label} থেকে লগইন করতে পারবেন।" . ($out !== '' ? " $out থেকে লগআউট করা হয়েছে।" : ''), 'success', '/Account/Login', 'fa-mobile-screen');
+        json_response(['success' => true, 'message' => 'Accept হয়েছে — নতুন ডিভাইস চালু' . ($out !== '' ? ", লগআউট হয়েছে: $out" : '') . '।']);
     }
 
     /** POST /Admin/RejectDevice (id) */
@@ -2576,6 +2631,24 @@ class AdminController extends Controller
         $on = input_bool('on');
         $this->db->SaveSiteContent(['dev_lock' => $on ? '1' : '0']);
         json_response(['success' => true, 'message' => $on ? 'চালু — শিক্ষার্থী আর টিচার একবারে একটা ডিভাইসেই লগইন থাকতে পারবেন।' : 'বন্ধ — যেকোনো ডিভাইসে লগইন করা যাবে।']);
+    }
+
+    /** POST /Admin/SaveDeviceMax (on) — চালু = শিক্ষার্থী / টিচার একসাথে ২টা ডিভাইসে লগইন (অনুমতি ছাড়া), বন্ধ = ১টা */
+    public function SaveDeviceMax_POST(): void
+    {
+        $this->requireAdminJson();
+        $on = input_bool('on');
+        $this->db->SaveSiteContent(['dev_max' => $on ? '2' : '1']);
+        json_response(['success' => true, 'message' => $on ? 'চালু — অনুমতি ছাড়াই ২টা ডিভাইসে লগইন করা যাবে (মোবাইল, পিসি, ল্যাপটপ যেকোনো)। ৩য় ডিভাইসে লগইন বা অনুরোধ — কোনোটাই করা যাবে না।' : 'বন্ধ — কোনো সীমা নেই, যত খুশি ডিভাইসে লগইন করা যাবে।']);
+    }
+
+    /** POST /Admin/SaveDeviceAuto (on) — নতুন ডিভাইসের অনুরোধ অটো Approve চালু / বন্ধ */
+    public function SaveDeviceAuto_POST(): void
+    {
+        $this->requireAdminJson();
+        $on = input_bool('on');
+        $this->db->SaveSiteContent(['dev_auto' => $on ? '1' : '0']);
+        json_response(['success' => true, 'message' => $on ? 'চালু — নতুন ডিভাইসের অনুরোধ দিলেই নিজে থেকে Approve হবে, আগের ডিভাইস লগআউট হয়ে যাবে।' : 'বন্ধ — আগের মতো অ্যাডমিন Accept করলে তবেই নতুন ডিভাইস চালু হবে।']);
     }
 
     /** Subscriptions রিপোর্টের ফিল্টার (aud, st, from, to) পড়া */

@@ -101,7 +101,7 @@ $q = fn(array $o) => '/Profile/Views' . (($a = array_filter(array_merge(['role' 
             <?php endif; ?>
             <?php foreach ($viewers as $v): ?>
                 <div class="pvp-row<?= $v->IsNew ? ' new' : '' ?>">
-                    <a class="pvp-av" href="/Profile/Show/<?= (int)$v->Id ?>" aria-hidden="true" tabindex="-1"><?= e($v->Initials) ?><?php if ($v->Image !== ''): ?><img src="<?= e($v->Image) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                    <a class="pvp-av" href="/Profile/Show/<?= (int)$v->Id ?>" aria-hidden="true" tabindex="-1"><?= e($v->Initials) ?><?php if ($v->Image !== ''): ?><img src="<?= e($v->Image) ?>" alt="<?= e($v->Name . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
                     <div class="pvp-who">
                         <a class="n" href="/Profile/Show/<?= (int)$v->Id ?>"><?= e($v->Name) ?></a><span class="pvp-role<?= $v->Role === 'Teacher' ? ' t' : '' ?>"><?= $v->Role ?></span><?php if ($v->IsNew): ?><span class="pvp-newb">New</span><?php endif; ?>
                         <p><?= e($v->Sub) ?></p>

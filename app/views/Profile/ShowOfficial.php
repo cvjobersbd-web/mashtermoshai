@@ -92,7 +92,7 @@ if ($photo !== '') $ViewData['OgImage'] = $photo;
     <section class="ofp-head">
         <div class="ofp-wrap">
             <div class="ofp-cover<?= $coverUrl !== '' ? ' has-img' : '' ?>" id="ofpCover">
-                <img id="ofpCoverImg" src="<?= e($coverUrl) ?>" alt="" style="object-position:50% <?= $coverY ?>%;<?= $coverUrl === '' ? 'display:none;' : '' ?>" />
+                <img id="ofpCoverImg" src="<?= e($coverUrl) ?>" alt="<?= e(($ViewData['Title'] ?? 'মাষ্টার মশাই') . ' — কভার ছবি') ?>" style="object-position:50% <?= $coverY ?>%;<?= $coverUrl === '' ? 'display:none;' : '' ?>" />
                 <?php if ($isOwner): ?>
                     <div class="ofp-cv-acts" id="ofpCvActs">
                         <label class="ofp-cv-btn" for="ofpCoverFile"><i class="fas fa-camera"></i> <span><?= $coverUrl !== '' ? 'কভার পরিবর্তন' : 'কভার ফটো দিন' ?></span></label>

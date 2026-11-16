@@ -52,7 +52,7 @@ $certs = count(array_filter($students, fn($s) => !empty($s->CertCode)));
                 <tbody>
                 <?php foreach ($students as $s): $p = $s->Progress; $nm = (string)($s->FullName ?: $s->UserName); ?>
                     <tr>
-                        <td><div class="st-u"><?php if (!empty($s->ProfileImageLink)): ?><img src="<?= e($s->ProfileImageLink) ?>" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'av',textContent:'<?= e(mb_substr($nm, 0, 1)) ?>'}))" /><?php else: ?><span class="av"><?= e(mb_substr($nm, 0, 1)) ?></span><?php endif; ?>
+                        <td><div class="st-u"><?php if (!empty($s->ProfileImageLink)): ?><img src="<?= e($s->ProfileImageLink) ?>" alt="<?= e($nm . ' এর প্রোফাইল ছবি') ?>" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'av',textContent:'<?= e(mb_substr($nm, 0, 1)) ?>'}))" /><?php else: ?><span class="av"><?= e(mb_substr($nm, 0, 1)) ?></span><?php endif; ?>
                             <div><b><?= is_admin() ? '<a href="/Admin/UserDetails/' . (int)$s->UserId . '" style="color:inherit;">' . e($nm) . '</a>' : e($nm) ?></b><small><?= e($s->MobileNumber ?: ($s->Email ?? '')) ?></small></div></div></td>
                         <td><?= e(fmt_date($s->CreatedAt, 'd M Y')) ?><br><small style="color:#94A3B8;"><?= (int)$s->Price > 0 ? '৳' . number_format((int)$s->Price) : 'ফ্রি' ?></small></td>
                         <td class="st-p"><div class="cx-bar"><div style="width:<?= (int)$p['percent'] ?>%;"></div></div><small><?= (int)$p['percent'] ?>%</small></td>

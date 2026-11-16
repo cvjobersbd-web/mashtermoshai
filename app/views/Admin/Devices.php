@@ -1,8 +1,8 @@
 <?php
-/** Admin → Devices: নতুন ডিভাইসে লগইনের অনুরোধ (Accept / বাতিল) আর চালু ডিভাইস লগআউট */
+/** Admin → Devices: "২টা ডিভাইসে লগইন" সুইচ আর চালু ডিভাইসের তালিকা (Logout করে জায়গা খালি করা) */
 $ViewData['Title'] = 'Devices';
 $list = is_array($Model) ? $Model : [];
-$st = (string)$ViewBag->St; $q = (string)$ViewBag->Q; $on = (bool)$ViewBag->On;
+$st = (string)$ViewBag->St; $q = (string)$ViewBag->Q; $two = (int)($ViewBag->Max ?? 1) === 2;
 $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn'], 'Active' => ['চালু', 'ok'], 'Revoked' => ['লগআউট করা', 'gray'], 'Rejected' => ['বাতিল', 'no']];
 ?>
 <style>
@@ -44,23 +44,23 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
 <div class="admin-main-content dv">
     <?= csrf_field() ?>
     <h2><i class="fas fa-mobile-screen" style="color:#00B5E0;"></i> Devices</h2>
-    <p class="sub">শিক্ষার্থী আর টিচার একবারে শুধু একটা ডিভাইসে লগইন থাকতে পারেন। অন্য ডিভাইস থেকে লগইন করতে চাইলে এখানে অনুরোধ আসে — <b>Accept</b> করলে নতুন ডিভাইস চালু হয় আর আগের ডিভাইস নিজে থেকেই লগআউট হয়ে যায়। চাইলে যেকোনো চালু ডিভাইস <b>Logout</b> করতে পারেন।</p>
+    <p class="sub">শিক্ষার্থী আর টিচার কয়টা ডিভাইসে লগইন থাকতে পারবেন সেটা এখান থেকে ঠিক করুন। নিচের তালিকায় সবার চালু ডিভাইস দেখবেন — কারো ডিভাইস হারালে বা বদলাতে চাইলে পুরোনোটা <b>Logout</b> করে দিন।</p>
 
     <div class="dv-card dv-rule">
-        <div><b>এক ডিভাইসে লগইনের নিয়ম</b><small>চালু থাকলে প্রথম যে ডিভাইসে লগইন করবেন সেটাই চালু থাকবে। অ্যাডমিন অ্যাকাউন্টে এই নিয়ম খাটে না।</small> <span id="dvMsg" role="status"></span></div>
-        <label class="dv-sw"><input type="checkbox" id="dvOn"<?= $on ? ' checked' : '' ?> /><span></span></label>
+        <div><b>২টা ডিভাইসে লগইন</b><small>চালু থাকলে শিক্ষার্থী আর টিচার অ্যাডমিনের অনুমতি ছাড়াই একসাথে ২টা ডিভাইসে লগইন থাকতে পারবেন — মোবাইল, পিসি, ল্যাপটপ যেকোনো। ২টার বেশি একদম না — ৩য় ডিভাইসে লগইন করা যাবে না, অনুরোধও পাঠানো যাবে না। কারো ডিভাইস হারালে নিচের তালিকা থেকে পুরোনোটা <strong>Logout</strong> করে দিন। বন্ধ থাকলে কোনো সীমা নেই — যত খুশি ডিভাইসে লগইন করা যাবে। অ্যাডমিন অ্যাকাউন্টে এই নিয়ম খাটে না।</small> <span id="dvMaxMsg" role="status"></span></div>
+        <label class="dv-sw"><input type="checkbox" id="dvMax"<?= $two ? ' checked' : '' ?> /><span></span></label>
     </div>
 
     <div class="dv-card">
         <div class="dv-bar">
             <div class="dv-tabs">
-                <?php foreach (['Pending' => 'অনুরোধ', 'Active' => 'চালু ডিভাইস', 'all' => 'সব'] as $k => $l): ?>
-                    <a href="/Admin/Devices?<?= e(http_build_query(array_filter(['st' => $k, 'q' => $q]))) ?>" class="<?= $st === $k ? 'on' : '' ?>"><?= $l ?><?= $k === 'Pending' && (int)$ViewBag->Pending ? '<span class="n">' . (int)$ViewBag->Pending . '</span>' : '' ?></a>
+                <?php foreach (['Active' => 'চালু ডিভাইস', 'all' => 'সব'] as $k => $l): ?>
+                    <a href="/Admin/Devices?<?= e(http_build_query(array_filter(['st' => $k, 'q' => $q]))) ?>" class="<?= $st === $k ? 'on' : '' ?>"><?= $l ?></a>
                 <?php endforeach; ?>
             </div>
             <form class="dv-q" method="get" action="/Admin/Devices"><input type="hidden" name="st" value="<?= e($st) ?>" /><input name="q" value="<?= e($q) ?>" placeholder="নাম, username, ইমেইল বা মোবাইল" /><button class="dv-btn dark" type="submit"><i class="fas fa-magnifying-glass"></i></button></form>
         </div>
-        <?php if (!$list): ?><div class="dv-empty"><?= $st === 'Pending' ? 'এখন কোনো নতুন ডিভাইসের অনুরোধ নেই।' : 'কিছু পাওয়া যায়নি।' ?></div><?php endif; ?>
+        <?php if (!$list): ?><div class="dv-empty"><?= $st === 'Active' ? 'এখন কোনো চালু ডিভাইস নেই।' : 'কিছু পাওয়া যায়নি।' ?></div><?php endif; ?>
         <?php foreach ($list as $d): [$pl, $pc] = $pill[$d->Status] ?? [$d->Status, 'gray']; ?>
             <div class="dv-row<?= $d->Status === 'Pending' ? ' pending' : '' ?>" id="dv-<?= $d->Id ?>">
                 <div class="dv-who">
@@ -96,7 +96,7 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
         var fd = new FormData(); for (var k in data) fd.append(k, data[k]); fd.append('__RequestVerificationToken', tk());
         return (await fetch(url, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
     }
-    var ask = { ApproveDevice: 'Accept করবেন? নতুন ডিভাইস চালু হবে আর আগের ডিভাইস থেকে লগআউট হয়ে যাবে।', RejectDevice: 'অনুরোধটি বাতিল করবেন?', RevokeDevice: 'এই ডিভাইস থেকে লগআউট করবেন? পরের বার যে ডিভাইসে লগইন করবে সেটাই চালু হবে।' };
+    var ask = { ApproveDevice: 'Accept করবেন? নতুন ডিভাইস চালু হবে আর আগের ডিভাইস থেকে লগআউট হয়ে যাবে।', RejectDevice: 'অনুরোধটি বাতিল করবেন?', RevokeDevice: 'এই ডিভাইস থেকে লগআউট করবেন? এতে একটা জায়গা খালি হবে — ইউজার নতুন ডিভাইসে লগইন করতে পারবেন।' };
     document.addEventListener('click', async function (e) {
         var b = e.target.closest('[data-dv]'); if (!b) return;
         var act = b.getAttribute('data-dv'); if (!confirm(ask[act])) return;
@@ -104,10 +104,10 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
         try { var r = await post('/Admin/' + act, { id: b.getAttribute('data-id') }); alert((r.success ? '✅ ' : '❌ ') + (r.message || '')); if (r.success) location.reload(); else b.disabled = false; }
         catch (x) { b.disabled = false; alert('নেটওয়ার্ক সমস্যা।'); }
     });
-    var on = document.getElementById('dvOn'), msg = document.getElementById('dvMsg');
-    on.addEventListener('change', async function () {
-        try { var r = await post('/Admin/SaveDeviceLock', { on: on.checked ? 'true' : 'false' }); msg.className = r.success ? 'ok' : 'err'; msg.textContent = r.message || ''; }
-        catch (x) { msg.className = 'err'; msg.textContent = 'সেভ করা যায়নি।'; }
+    var mx = document.getElementById('dvMax'), mm = document.getElementById('dvMaxMsg');
+    mx.addEventListener('change', async function () {
+        try { var r = await post('/Admin/SaveDeviceMax', { on: mx.checked ? 'true' : 'false' }); mm.style.cssText = 'font-size:13.5px;font-weight:600;margin-left:4px;color:' + (r.success ? '#15803D' : '#B91C1C'); mm.textContent = r.message || ''; }
+        catch (x) { mm.style.color = '#B91C1C'; mm.textContent = 'সেভ করা যায়নি।'; }
     });
 })();
 </script>

@@ -1013,7 +1013,7 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
             <div class="hd-create-top">
                 <div class="hd-avatar">
                     <?php if (!is_blank($userProfileImg)): ?>
-                        <img src="<?= e($userProfileImg) ?>" alt="me" />
+                        <img src="<?= e($userProfileImg) ?>" alt="<?= e(($userFullName ?? 'আমার') . ' এর প্রোফাইল ছবি') ?>" />
                     <?php else: ?>
                         <?= e($userInitials) ?>
                     <?php endif; ?>
@@ -1201,7 +1201,7 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
                         <div class="hd-comment-form">
                             <div class="hd-avatar">
                                 <?php if (!is_blank($userProfileImg)): ?>
-                                    <img src="<?= e($userProfileImg) ?>" alt="me" />
+                                    <img src="<?= e($userProfileImg) ?>" alt="<?= e(($userFullName ?? 'আমার') . ' এর প্রোফাইল ছবি') ?>" />
                                 <?php else: ?>
                                     <?= e($userInitials) ?>
                                 <?php endif; ?>
@@ -1304,7 +1304,7 @@ $hdFaqOn = function_exists('home_section_on') ? home_section_on('faq') : true;
                 if (isVideo) {
                     content.innerHTML = `<video src="${e.target.result}" controls></video>`;
                 } else {
-                    content.innerHTML = `<img src="${e.target.result}" alt="preview" />`;
+                    content.innerHTML = `<img src="${e.target.result}" alt="সংযুক্ত ছবির প্রিভিউ" />`;
                 }
                 preview.style.display = 'block';
             };

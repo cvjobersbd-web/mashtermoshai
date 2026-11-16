@@ -50,7 +50,7 @@ $mine = $post->MyReaction;
     <header class="pc-head">
         <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-avatar" aria-label="<?= e($post->AuthorName) ?>">
             <?= e($post->AuthorInitials) ?>
-            <?php if ($post->AuthorImage): ?><img src="<?= e($post->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+            <?php if ($post->AuthorImage): ?><img src="<?= e($post->AuthorImage) ?>" alt="<?= e($post->AuthorName . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
         </a>
         <div class="pc-who">
             <a href="/Profile/Show/<?= $post->UserId ?>" class="pc-name"><?= e($post->AuthorName) ?></a>
@@ -106,7 +106,7 @@ $mine = $post->MyReaction;
     <?php endif; ?>
 
     <?php if ($post->ImageUrl): ?>
-        <div class="pc-media"><img src="<?= e($post->ImageUrl) ?>" alt="Post photo" loading="lazy" data-pc="zoom" /></div>
+        <div class="pc-media"><img src="<?= e($post->ImageUrl) ?>" alt="<?= e($post->AuthorName . ' এর পোস্টের ছবি') ?>" loading="lazy" data-pc="zoom" /></div>
     <?php endif; ?>
 
     <?php if ($isShare): ?>
@@ -116,11 +116,11 @@ $mine = $post->MyReaction;
         ?>
             <div class="pc-shared">
                 <?php if ($orig->ImageUrl): ?>
-                    <div class="pc-media"><img src="<?= e($orig->ImageUrl) ?>" alt="Post photo" loading="lazy" data-pc="zoom" /></div>
+                    <div class="pc-media"><img src="<?= e($orig->ImageUrl) ?>" alt="<?= e(($orig->AuthorName ?? 'শেয়ার করা') . ' এর পোস্টের ছবি') ?>" loading="lazy" data-pc="zoom" /></div>
                 <?php endif; ?>
                 <div class="pc-shared-in">
                     <div class="pc-head">
-                        <a href="/Profile/Show/<?= $orig->UserId ?>" class="pc-avatar sm"><?= e($orig->AuthorInitials) ?><?php if ($orig->AuthorImage): ?><img src="<?= e($orig->AuthorImage) ?>" alt="" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
+                        <a href="/Profile/Show/<?= $orig->UserId ?>" class="pc-avatar sm"><?= e($orig->AuthorInitials) ?><?php if ($orig->AuthorImage): ?><img src="<?= e($orig->AuthorImage) ?>" alt="<?= e(($orig->AuthorName ?? 'লেখক') . ' এর প্রোফাইল ছবি') ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?></a>
                         <div class="pc-who">
                             <a href="/Profile/Show/<?= $orig->UserId ?>" class="pc-name"><?= e($orig->AuthorName) ?></a>
                             <?php if ($orig->AuthorRole === 'Teacher'): ?><i class="fas fa-circle-check pc-verified"></i><?php endif; ?>

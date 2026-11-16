@@ -468,7 +468,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
         <div class="td-profile-header">
             <!-- ✅ Safe Avatar fallback logic -->
             <img src="<?= e((string)$Model->ProfileImageLink === '' || str_contains($Model->ProfileImageLink, 'imgbb.com') ? 'https://ui-avatars.com/api/?name=' . rawurlencode($Model->FullName ?? 'Teacher') . '&background=1F3B2C&color=fff&size=120' : $Model->ProfileImageLink) ?>"
-                 alt="Profile" class="td-avatar" />
+                 alt="<?= e(($Model->FullName ?? 'টিচার') . ' এর প্রোফাইল ছবি') ?>" class="td-avatar" />
             <div>
                 <h3 class="td-name"><?= e($Model->FullName) ?></h3>
                 <span class="td-role"><i class="fas fa-check-circle"></i> Active Teacher</span>
@@ -730,7 +730,7 @@ if ($activeSection === '') { $activeSection = 'overview'; }
                         </div>
                         <div class="ps-content">
                             <?php if ((string)$post->ImageUrl !== ''): ?>
-                                <img src="<?= e($post->ImageUrl) ?>" class="ps-image" alt="Post Image" />
+                                <img src="<?= e($post->ImageUrl) ?>" class="ps-image" alt="আমার পোস্টের ছবি" />
                             <?php endif; ?>
                             <p style="margin:0; white-space:pre-line;"><?= e($post->Content) ?></p>
                         </div>

@@ -90,6 +90,33 @@ trait ReferralData
         return $this->all('SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id` WHERE u.`Id` IN (' . implode(',', $ids) . ') ORDER BY u.`FullName`');
     }
 
+    /**
+     * বোনাস ছাড়া রেফারারদের রেফারেল — তারিখের মধ্যে (Y-m-d, দুই দিনই ধরে)। Excel আর "আজ কতজন" এর জন্য।
+     * @return Obj[] (Id, ReferrerId, CreatedAt, Via, Src, Status, Bought, Name, UserName, Email, MobileNumber)
+     */
+    public function GetNoBonusReferrals(string $from, string $to): array
+    {
+        $ids = $this->RefNoBonusIds();
+        if (!$ids) return [];
+        $this->EnsureReferralTables();
+        try { $this->EnsureRefCodeCols(); $this->EnsurePaymentTables(); } catch (Throwable $e) { }
+        $rows = $this->all('SELECT r.`Id`, r.`ReferrerId`, r.`ReferredUserId`, r.`CreatedAt`, r.`Status`, r.`Via`, r.`Src`, u.`FullName` AS Name, u.`UserName`, u.`Email`, u.`MobileNumber`,
+                (SELECT COUNT(*) FROM `PaymentRequests` p WHERE p.`UserId` = r.`ReferredUserId` AND p.`Status` = \'Approved\') AS Paid
+            FROM `Referrals` r LEFT JOIN `Users` u ON u.`Id` = r.`ReferredUserId`
+            WHERE r.`ReferrerId` IN (' . implode(',', array_map('intval', $ids)) . ') AND r.`CreatedAt` >= :f AND r.`CreatedAt` < :t ORDER BY r.`CreatedAt`, r.`Id`',
+            ['f' => $from . ' 00:00:00', 't' => date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00']);
+        foreach ($rows as $r) $r->Bought = (string)$r->Status === 'Credited' || (int)$r->Paid > 0;
+        return $rows;
+    }
+
+    /** [ReferrerId => আজ কতজন] — বোনাস ছাড়া রেফারারদের তালিকায় দেখানোর জন্য */
+    public function NoBonusTodayCounts(): array
+    {
+        $out = [];
+        try { foreach ($this->GetNoBonusReferrals(date('Y-m-d'), date('Y-m-d')) as $r) $out[(int)$r->ReferrerId] = ($out[(int)$r->ReferrerId] ?? 0) + 1; } catch (Throwable $e) { error_log('[NoBonusTodayCounts] ' . $e->getMessage()); }
+        return $out;
+    }
+
     /** অ্যাডমিন: নাম / ইউজারনেম / ইমেইল / মোবাইল / রেফারেল কোড দিয়ে ইউজার খোঁজা */
     public function SearchUsersForReferral(string $q, int $limit = 10): array
     {
