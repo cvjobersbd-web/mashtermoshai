@@ -2536,9 +2536,10 @@ class AdminController extends Controller
     public function Devices(): void
     {
         $this->requireAdminPage();
-        $st = (string)input_str('st', 'Pending'); if (!in_array($st, ['Pending', 'Active', 'all'], true)) $st = 'Pending';
+        $st = (string)input_str('st', 'Pending'); if (!in_array($st, ['Pending', 'Active', 'all', 'auto'], true)) $st = 'Pending';
         $q = mb_substr(trim((string)input_str('q', '')), 0, 60);
-        $this->view(null, $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'On' => $this->db->DeviceLockOn(), 'Pending' => $this->db->CountPendingDevices()]);
+        $this->view(null, $st === 'auto' ? [] : $this->db->GetDevicesAdmin($st, $q), ['St' => $st, 'Q' => $q, 'On' => $this->db->DeviceLockOn(), 'Pending' => $this->db->CountPendingDevices(),
+            'Auto' => $this->db->DeviceAutoOn(), 'AutoCount' => $this->db->CountDeviceAutoLog(), 'AutoLog' => $st === 'auto' ? $this->db->GetDeviceAutoLog($q) : []]);
     }
 
     /** POST /Admin/ApproveDevice (id) — নতুন ডিভাইস চালু, আগের ডিভাইস লগআউট */
@@ -2576,6 +2577,15 @@ class AdminController extends Controller
         $on = input_bool('on');
         $this->db->SaveSiteContent(['dev_lock' => $on ? '1' : '0']);
         json_response(['success' => true, 'message' => $on ? 'চালু — শিক্ষার্থী আর টিচার একবারে একটা ডিভাইসেই লগইন থাকতে পারবেন।' : 'বন্ধ — যেকোনো ডিভাইসে লগইন করা যাবে।']);
+    }
+
+    /** POST /Admin/SaveDeviceAuto (on) — নতুন ডিভাইসের অনুরোধ অটো Approve চালু / বন্ধ */
+    public function SaveDeviceAuto_POST(): void
+    {
+        $this->requireAdminJson();
+        $on = input_bool('on');
+        $this->db->SaveSiteContent(['dev_auto' => $on ? '1' : '0']);
+        json_response(['success' => true, 'message' => $on ? 'চালু — নতুন ডিভাইসের অনুরোধ দিলেই নিজে থেকে Approve হবে, আগের ডিভাইস লগআউট হয়ে যাবে।' : 'বন্ধ — আগের মতো অ্যাডমিন Accept করলে তবেই নতুন ডিভাইস চালু হবে।']);
     }
 
     /** Subscriptions রিপোর্টের ফিল্টার (aud, st, from, to) পড়া */

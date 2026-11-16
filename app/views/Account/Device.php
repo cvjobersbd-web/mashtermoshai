@@ -41,7 +41,12 @@ $st = (string)$ViewBag->State;
                     <?= csrf_field() ?>
                     <label class="auth-label" for="dvNote">কেন নতুন ডিভাইস? <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
                     <textarea class="dv-note" id="dvNote" name="note" maxlength="300" placeholder="যেমন: আগের মোবাইল নষ্ট হয়ে গেছে, নতুন ফোন কিনেছি"></textarea>
+                    <?php if (!empty($ViewBag->Auto)): ?>
+                    <button type="submit" class="auth-btn"><i class="fas fa-mobile-screen-button"></i> অনুরোধ পাঠান — এই ডিভাইস চালু করুন</button>
+                    <p style="font-size:12.5px;color:#64748B;margin:8px 0 0;text-align:center;">চাপ দিলে সাথে সাথে এই ডিভাইস চালু হবে আর আগের ডিভাইস থেকে লগআউট হয়ে যাবে।</p>
+                    <?php else: ?>
                     <button type="submit" class="auth-btn"><i class="fas fa-paper-plane"></i> অ্যাডমিনের কাছে অনুরোধ পাঠান</button>
+                    <?php endif; ?>
                 </form>
             <?php endif; ?>
             <div class="auth-foot"><a href="/Account/Login"><i class="fas fa-arrow-left"></i> লগইনে ফিরে যান</a></div>

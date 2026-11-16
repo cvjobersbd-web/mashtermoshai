@@ -358,14 +358,24 @@ class AccountController extends Controller
         if (session_get('UserName') !== null) $this->redirectToAction('Index', 'Home');
         $u = $this->deviceUser();
         $st = $this->db->CheckLoginDevice((int)$u->Id, device_hash(), device_label(), client_ip());
+        $auto = $this->db->DeviceAutoOn();
+        // অটো Approve চালু হওয়ার আগে পাঠানো অনুরোধও এখন নিজে থেকে Approve
+        if ($st === 'pending' && $auto && $this->autoApproveThisDevice((int)$u->Id)) $st = 'ok';
         if ($st === 'ok') {
             unset($_SESSION['dev_uid']);
             tempdata_set('Success', 'এই ডিভাইস চালু করা হয়েছে — এখন লগইন করুন।');
             $this->redirectToAction('Login');
         }
         $act = $this->db->GetActiveDevice((int)$u->Id);
-        $this->view(null, null, ['State' => $st, 'Name' => (string)($u->FullName ?: $u->UserName), 'This' => device_label(),
+        $this->view(null, null, ['State' => $st, 'Name' => (string)($u->FullName ?: $u->UserName), 'This' => device_label(), 'Auto' => $auto,
             'Other' => $act ? (string)$act->Label : '', 'OtherSeen' => $act ? (string)($act->LastSeenAt ?: $act->CreatedAt) : '']);
+    }
+
+    /** এই ডিভাইসের অপেক্ষায় থাকা অনুরোধ অটো Approve — আগের ডিভাইস লগআউট */
+    private function autoApproveThisDevice(int $userId): bool
+    {
+        $id = (int)$this->db->scalar("SELECT `Id` FROM `UserDevices` WHERE `UserId` = :u AND `DeviceHash` = :h AND `Status` = 'Pending' ORDER BY `Id` DESC LIMIT 1", ['u' => $userId, 'h' => device_hash()]);
+        return $id > 0 && $this->db->AutoApproveDevice($id) !== null;
     }
 
     /** POST /Account/Device (note) — অ্যাডমিনের কাছে অনুরোধ */
@@ -373,7 +383,13 @@ class AccountController extends Controller
     {
         $u = $this->deviceUser();
         $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 300);
-        $this->db->RequestDevice((int)$u->Id, device_hash(), device_label(), client_ip(), $note);
+        $reqId = $this->db->RequestDevice((int)$u->Id, device_hash(), device_label(), client_ip(), $note);
+        // ✅ অটো Approve চালু — অ্যাডমিনের অপেক্ষা ছাড়াই এই ডিভাইস চালু, আগের ডিভাইস লগআউট
+        if ($this->db->DeviceAutoOn() && $this->db->AutoApproveDevice($reqId)) {
+            unset($_SESSION['dev_uid']);
+            tempdata_set('Success', 'এই ডিভাইস চালু হয়েছে — আগের ডিভাইস থেকে লগআউট করা হয়েছে। এখন লগইন করুন।');
+            $this->redirectToAction('Login');
+        }
         $name = (string)($u->FullName ?: $u->UserName);
         notify_actor((int)$u->Id);
             foreach ($this->db->GetAdmins() as $a) {

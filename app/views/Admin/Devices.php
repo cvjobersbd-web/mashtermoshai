@@ -2,7 +2,7 @@
 /** Admin → Devices: নতুন ডিভাইসে লগইনের অনুরোধ (Accept / বাতিল) আর চালু ডিভাইস লগআউট */
 $ViewData['Title'] = 'Devices';
 $list = is_array($Model) ? $Model : [];
-$st = (string)$ViewBag->St; $q = (string)$ViewBag->Q; $on = (bool)$ViewBag->On;
+$st = (string)$ViewBag->St; $q = (string)$ViewBag->Q; $on = (bool)$ViewBag->On; $auto = (bool)$ViewBag->Auto; $autoLog = $ViewBag->AutoLog ?? [];
 $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn'], 'Active' => ['চালু', 'ok'], 'Revoked' => ['লগআউট করা', 'gray'], 'Rejected' => ['বাতিল', 'no']];
 ?>
 <style>
@@ -51,15 +51,36 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
         <label class="dv-sw"><input type="checkbox" id="dvOn"<?= $on ? ' checked' : '' ?> /><span></span></label>
     </div>
 
+    <div class="dv-card dv-rule">
+        <div><b>অটো Approve</b><small>চালু থাকলে কেউ নতুন ডিভাইস থেকে অনুরোধ দিলেই সেটা নিজে থেকে Approve হয়ে যাবে — অ্যাডমিনের Accept লাগবে না। নতুন ডিভাইস চালু হবে আর আগের ডিভাইস থেকে লগআউট হয়ে যাবে। কয়টা অটো Approve হয়েছে নিচের <strong>অটো Approve</strong> ট্যাবে দেখবেন।</small> <span id="dvAutoMsg" role="status"></span></div>
+        <label class="dv-sw"><input type="checkbox" id="dvAuto"<?= $auto ? ' checked' : '' ?> /><span></span></label>
+    </div>
+
     <div class="dv-card">
         <div class="dv-bar">
             <div class="dv-tabs">
-                <?php foreach (['Pending' => 'অনুরোধ', 'Active' => 'চালু ডিভাইস', 'all' => 'সব'] as $k => $l): ?>
-                    <a href="/Admin/Devices?<?= e(http_build_query(array_filter(['st' => $k, 'q' => $q]))) ?>" class="<?= $st === $k ? 'on' : '' ?>"><?= $l ?><?= $k === 'Pending' && (int)$ViewBag->Pending ? '<span class="n">' . (int)$ViewBag->Pending . '</span>' : '' ?></a>
+                <?php foreach (['Pending' => 'অনুরোধ', 'Active' => 'চালু ডিভাইস', 'all' => 'সব', 'auto' => 'অটো Approve'] as $k => $l): ?>
+                    <a href="/Admin/Devices?<?= e(http_build_query(array_filter(['st' => $k, 'q' => $q]))) ?>" class="<?= $st === $k ? 'on' : '' ?>"><?= $l ?><?= $k === 'Pending' && (int)$ViewBag->Pending ? '<span class="n">' . (int)$ViewBag->Pending . '</span>' : '' ?><?= $k === 'auto' ? ' (' . (int)$ViewBag->AutoCount . ')' : '' ?></a>
                 <?php endforeach; ?>
             </div>
             <form class="dv-q" method="get" action="/Admin/Devices"><input type="hidden" name="st" value="<?= e($st) ?>" /><input name="q" value="<?= e($q) ?>" placeholder="নাম, username, ইমেইল বা মোবাইল" /><button class="dv-btn dark" type="submit"><i class="fas fa-magnifying-glass"></i></button></form>
         </div>
+        <?php if ($st === 'auto'): ?>
+            <?php if (!$autoLog): ?><div class="dv-empty">এখনো কোনো অনুরোধ অটো Approve হয়নি।</div><?php endif; ?>
+            <?php foreach ($autoLog as $i => $l): ?>
+                <div class="dv-row">
+                    <div class="dv-who">
+                        <span style="color:#94A3B8;font-weight:700;margin-right:6px;"><?= count($autoLog) - $i ?>.</span><a href="/Profile/Show/<?= $l->UserId ?>" target="_blank" rel="noopener"><?= e($l->Name) ?></a><?php if ($l->Role): ?><span class="dv-role <?= $l->Role === 'Teacher' ? 't' : 's' ?>"><?= $l->Role === 'Teacher' ? 'টিচার' : 'শিক্ষার্থী' ?></span><?php endif; ?>
+                        <small>@<?= e((string)$l->UserName) ?><?= !is_blank($l->MobileNumber) ? ' · ' . e($l->MobileNumber) : '' ?></small>
+                    </div>
+                    <div class="dv-devs">
+                        <div class="new"><i class="fas fa-mobile-screen-button"></i><span>চালু হয়েছে: <b><?= e((string)$l->NewLabel ?: '—') ?></b> <small>· IP <?= e((string)$l->Ip) ?></small></span></div>
+                        <div class="old"><i class="fas fa-right-from-bracket"></i><span>লগআউট হয়েছে: <b><?= e((string)$l->OldLabel ?: '—') ?></b></span></div>
+                    </div>
+                    <div class="dv-acts"><span class="dv-pill ok">অটো Approve</span><small style="color:#64748B;font-size:12.5px;"><?= e(date('d M Y, h:i A', strtotime((string)$l->CreatedAt))) ?></small></div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
         <?php if (!$list): ?><div class="dv-empty"><?= $st === 'Pending' ? 'এখন কোনো নতুন ডিভাইসের অনুরোধ নেই।' : 'কিছু পাওয়া যায়নি।' ?></div><?php endif; ?>
         <?php foreach ($list as $d): [$pl, $pc] = $pill[$d->Status] ?? [$d->Status, 'gray']; ?>
             <div class="dv-row<?= $d->Status === 'Pending' ? ' pending' : '' ?>" id="dv-<?= $d->Id ?>">
@@ -87,6 +108,7 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
                 </div>
             </div>
         <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 <script>
@@ -103,6 +125,11 @@ $pill = ['Pending' => ['অনুরোধ অপেক্ষায়', 'warn']
         b.disabled = true;
         try { var r = await post('/Admin/' + act, { id: b.getAttribute('data-id') }); alert((r.success ? '✅ ' : '❌ ') + (r.message || '')); if (r.success) location.reload(); else b.disabled = false; }
         catch (x) { b.disabled = false; alert('নেটওয়ার্ক সমস্যা।'); }
+    });
+    var au = document.getElementById('dvAuto'), am = document.getElementById('dvAutoMsg');
+    au.addEventListener('change', async function () {
+        try { var r = await post('/Admin/SaveDeviceAuto', { on: au.checked ? 'true' : 'false' }); am.style.cssText = 'font-size:13.5px;font-weight:600;margin-left:4px;color:' + (r.success ? '#15803D' : '#B91C1C'); am.textContent = r.message || ''; }
+        catch (x) { am.style.color = '#B91C1C'; am.textContent = 'সেভ করা যায়নি।'; }
     });
     var on = document.getElementById('dvOn'), msg = document.getElementById('dvMsg');
     on.addEventListener('change', async function () {

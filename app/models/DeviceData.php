@@ -25,7 +25,49 @@ trait DeviceData
                 `LastSeenAt` DATETIME NULL, `DecidedBy` INT NULL, `DecidedAt` DATETIME NULL, PRIMARY KEY (`Id`), KEY `IX_UD_User` (`UserId`, `Status`), KEY `IX_UD_Hash` (`DeviceHash`))
                 ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
+        // অটো Approve এর ইতিহাস — কে, কবে, কোন ডিভাইস চালু হলো আর কোনটা লগআউট হলো
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "DeviceAutoLog" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NOT NULL, "NewLabel" TEXT NULL, "OldLabel" TEXT NULL, "Ip" TEXT NULL, "CreatedAt" TEXT NOT NULL)');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `DeviceAutoLog` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NOT NULL, `NewLabel` VARCHAR(120) NULL, `OldLabel` VARCHAR(120) NULL,
+                `Ip` VARCHAR(64) NULL, `CreatedAt` DATETIME NOT NULL, PRIMARY KEY (`Id`), KEY `IX_DAL_User` (`UserId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
         $this->devReady = true;
+    }
+
+    /** অটো Approve চালু কিনা (Admin → Devices, ডিফল্ট বন্ধ) — চালু থাকলে অনুরোধ দিলেই নতুন ডিভাইস চালু, আগেরটা লগআউট */
+    public function DeviceAutoOn(): bool
+    {
+        return ($this->GetSiteContent(['dev_auto' => '0'])['dev_auto'] ?? '0') === '1';
+    }
+
+    /** অনুরোধ নিজে থেকেই Approve — আগের ডিভাইস লগআউট, ইতিহাসে লেখা থাকে */
+    public function AutoApproveDevice(int $requestId): ?Obj
+    {
+        $this->EnsureDeviceTable();
+        $d = $this->one('SELECT * FROM `UserDevices` WHERE `Id` = :i', ['i' => $requestId]);
+        if (!$d || $d->Status !== 'Pending') return null;
+        $old = $this->GetActiveDevice((int)$d->UserId);
+        $this->ApproveDevice($requestId, 0);   // DecidedBy 0 = সিস্টেম (অটো)
+        $this->insert('INSERT INTO `DeviceAutoLog` (`UserId`, `NewLabel`, `OldLabel`, `Ip`, `CreatedAt`) VALUES (:u, :n, :o, :ip, :t)',
+            ['u' => (int)$d->UserId, 'n' => $d->Label, 'o' => $old ? $old->Label : null, 'ip' => $d->Ip, 't' => now()]);
+        return $d;
+    }
+
+    public function CountDeviceAutoLog(): int
+    {
+        try { $this->EnsureDeviceTable(); return (int)$this->scalar('SELECT COUNT(*) FROM `DeviceAutoLog`'); } catch (Throwable $e) { return 0; }
+    }
+
+    /** অটো Approve এর তালিকা (নতুন আগে) — $q = নাম / username / ইমেইল / মোবাইল */
+    public function GetDeviceAutoLog(string $q = ''): array
+    {
+        $this->EnsureDeviceTable();
+        $w = '1 = 1'; $a = [];
+        if ($q !== '') { $w = '(u.`FullName` LIKE :q OR u.`UserName` LIKE :q2 OR u.`Email` LIKE :q3 OR u.`MobileNumber` LIKE :q4)'; $a = ['q' => "%$q%", 'q2' => "%$q%", 'q3' => "%$q%", 'q4' => "%$q%"]; }
+        $rows = $this->all("SELECT l.*, u.`FullName`, u.`UserName`, u.`Role`, u.`MobileNumber` FROM `DeviceAutoLog` l LEFT JOIN `Users` u ON u.`Id` = l.`UserId` WHERE $w ORDER BY l.`Id` DESC", $a);
+        foreach ($rows as $r) { $r->UserId = (int)$r->UserId; $r->Name = !is_blank($r->FullName) ? (string)$r->FullName : ((string)$r->UserName ?: 'Deleted user'); }
+        return $rows;
     }
 
     /** অ্যাডমিন এই নিয়ম চালু রেখেছেন কিনা (Admin → Devices, ডিফল্ট চালু) */
