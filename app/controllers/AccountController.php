@@ -37,7 +37,7 @@ class AccountController extends Controller
             if ($st !== 'ok') { session_set('dev_uid', (int)$user->Id); $this->redirectToAction('Device'); }
         }
         if ($user) {
-            $this->db->UpdateLastLogin($user->UserName);
+            $this->db->UpdateLastLogin((int)$user->Id);
             login_session_set($user);
             // "লগইন সেভ রাখুন" টিক দিলে ৩০ দিন লগইন থাকবে, না দিলে আগের মতো (ব্রাউজার বন্ধ করলে লগআউট)
             remember_forget();
@@ -48,6 +48,7 @@ class AccountController extends Controller
             $this->redirectToAction('Index', 'Home');
         }
 
+        if ($this->db->LoginAmbiguous) $this->view('Login', null, ['Error' => t('এই ইউজারনেমে একাধিক অ্যাকাউন্ট আছে — দয়া করে ইউজারনেমের বদলে আপনার Gmail দিয়ে লগইন করুন।', 'More than one account uses this username — please log in with your Gmail instead.'), 'ReturnUrl' => $returnUrl]);
         $this->view('Login', null, ['Error' => t('Username/Email অথবা পাসওয়ার্ড ভুল।', 'Wrong username/email or password.'), 'ReturnUrl' => $returnUrl]);
     }
 
@@ -76,8 +77,9 @@ class AccountController extends Controller
         $email = trim($email);
         if (!str_ends_with($email, '@gmail.com')) $fail(t('ইমেইলের শেষে @gmail.com থাকতে হবে (ছোট হাতের অক্ষরে)।', 'Email must end with @gmail.com (all lowercase).'));
         if (!preg_match('/^[A-Za-z0-9._%+-]+@gmail\.com$/', $email)) $fail(t('সঠিক Gmail দিন (যেমন yourname@gmail.com)।', 'Please enter a valid Gmail address (e.g. yourname@gmail.com).'));
-        if ($this->db->UsernameExists($username)) $fail(t('এই ইউজারনেম আগেই আছে — অন্য একটা দিন।', 'Username already exists'));
-        if ($this->db->EmailExists($email)) $fail(t('এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট খোলা আছে।', 'Email already registered'));
+        // ✅ ইউজারনেম একাধিক জনের একই হতে পারে (একই নামের অনেক মানুষ) — কিন্তু একটা Gmail এ একটাই অ্যাকাউন্ট
+        if ($this->db->EmailExists($email)) $fail(t('এই Gmail দিয়ে আগেই একটা অ্যাকাউন্ট খোলা আছে — একটা Gmail দিয়ে একটাই অ্যাকাউন্ট খোলা যায়। পাসওয়ার্ড ভুলে গেলে "পাসওয়ার্ড ভুলে গেছেন?" চাপুন।', 'An account already exists with this Gmail — one Gmail can have only one account. Forgot your password? Use "Forgot password".'));
+        $this->db->AllowDuplicateUsernames();
 
         // কোথা থেকে জেনেছেন (Facebook, YouTube ...) — ঐচ্ছিক, শুধু তালিকা থেকে
         $how = null;
@@ -103,7 +105,7 @@ class AccountController extends Controller
 
         try {
             if ($this->db->RegisterUser(obj(['UserName' => $username, 'Password' => $password, 'FullName' => $fullName, 'Email' => $email]))) {
-                $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]);
+                $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`Email`) = LOWER(:e) ORDER BY `Id` DESC LIMIT 1', ['e' => $email]);
                 $code = $userRef !== '' ? $userRef : (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
                 if (!preg_match('/^MM[A-Z0-9]{6}$/', $code)) $code = '';
                 if ($newId && $how) { try { $this->db->SetUserHowHeard($newId, $how[0], $how[1]); } catch (Throwable $e) { error_log('[howHeard] ' . $e->getMessage()); } }

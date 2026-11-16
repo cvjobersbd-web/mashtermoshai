@@ -321,8 +321,9 @@ class ProfileController extends Controller
         if ($fullName === '') $this->finishUpdate('basic', false, 'Full Name দিতে হবে।');
         if (mb_strlen($fullName) > 100) $this->finishUpdate('basic', false, 'নাম খুব বড়।');
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) $this->finishUpdate('basic', false, 'সঠিক ইমেইল দিন।');
-        if (strcasecmp($email, (string)$user->Email) !== 0 && $this->db->EmailExists($email)) $this->finishUpdate('basic', false, 'এই ইমেইল দিয়ে আরেকটি অ্যাকাউন্ট আছে।');
+        if (strcasecmp($email, (string)$user->Email) !== 0 && $this->db->EmailExists($email, (int)$user->Id)) $this->finishUpdate('basic', false, 'এই ইমেইল দিয়ে আরেকটি অ্যাকাউন্ট আছে — একটা ইমেইলে একটাই অ্যাকাউন্ট।');
         if ($mobile !== '' && !preg_match('/^\+?[0-9 \-]{6,20}$/', $mobile)) $this->finishUpdate('basic', false, 'মোবাইল নম্বর সঠিক নয়।');
+        if ($mobile !== '' && $this->db->MobileTaken($mobile, (int)$user->Id)) $this->finishUpdate('basic', false, 'এই মোবাইল নম্বর দিয়ে আরেকটি অ্যাকাউন্ট আছে — একটা মোবাইল নম্বরে একটাই অ্যাকাউন্ট।');
 
         $user->FullName = $fullName;
         $user->Email = $email;

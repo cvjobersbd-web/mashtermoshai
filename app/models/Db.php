@@ -211,6 +211,8 @@ class Db
      * লগইন যাচাই। পুরোনো (plain text) পাসওয়ার্ড এবং নতুন (hashed) — দুটোই সাপোর্ট করে।
      * plain text মিললে স্বয়ংক্রিয়ভাবে hash করে সেভ করে দেয়।
      */
+    public bool $LoginAmbiguous = false;
+
     public function AuthenticateUser(string $username, string $password): ?Obj
     {
         // ✅ Username, Email অথবা মোবাইল নম্বর — যেকোনোটা দিয়ে লগইন
@@ -227,10 +229,15 @@ class Db
             $rows = $this->all($cols . '`MobileNumber` LIKE :m ORDER BY `Id` LIMIT 50', ['m' => '%' . implode('%', str_split(substr($digits, -10))) . '%']);
             $candidates = array_values(array_filter($rows, fn($r) => phone_digits((string)$r->MobileNumber) === $digits));
         }
+        // একই ইউজারনেমে একাধিক অ্যাকাউন্ট থাকতে পারে — পাসওয়ার্ড যেটার সাথে মেলে সেটাই।
+        // দুটোর পাসওয়ার্ডও একই হলে কোনটা বোঝা যায় না — তখন ইমেইল / মোবাইল দিয়ে লগইন করতে বলা হয়
+        $this->LoginAmbiguous = false; $hit = null;
         foreach ($candidates as $u) {
-            if ($this->verifyUserPassword($u, $password)) return $this->mapUser($u);
+            if (!$this->verifyUserPassword($u, $password)) continue;
+            if ($hit !== null) { $this->LoginAmbiguous = true; return null; }
+            $hit = $u;
         }
-        return null;
+        return $hit ? $this->mapUser($hit) : null;
     }
 
     /** পুরোনো (plain text) পাসওয়ার্ড এবং নতুন (hashed) — দুটোই সাপোর্ট করে; plain text মিললে hash করে সেভ */
@@ -284,7 +291,7 @@ class Db
         $sql = 'SELECT `Id`, `UserName`, `FullName`, `Email` FROM `Users` WHERE `IsActive` = 1 AND `Email` IS NOT NULL AND `Email` <> \'\' AND ';
         return str_contains($v, '@')
             ? $this->all($sql . 'LOWER(`Email`) = LOWER(:v) ORDER BY `Id` LIMIT 5', ['v' => $v])
-            : $this->all($sql . 'LOWER(`UserName`) = LOWER(:v) LIMIT 1', ['v' => $v]);
+            : $this->all($sql . 'LOWER(`UserName`) = LOWER(:v) ORDER BY `Id` LIMIT 5', ['v' => $v]);   // একই ইউজারনেমে একাধিক অ্যাকাউন্ট থাকতে পারে
     }
 
     public function CountRecentResets(?int $userId, ?string $ip, int $minutes): int
@@ -483,14 +490,54 @@ class Db
         return (int)$this->scalar('SELECT COUNT(*) FROM `Users` WHERE LOWER(`UserName`) = LOWER(:u)', ['u' => $username]) > 0;
     }
 
-    public function EmailExists(string $email): bool
+    /**
+     * এই ইমেইল দিয়ে আগে থেকে অ্যাকাউন্ট আছে কিনা — একটা ইমেইলে একটাই অ্যাকাউন্ট।
+     * Gmail এ ডট (.) আর +কিছু বাদ দিয়ে মেলানো হয় — tanvir.hasan@gmail.com আর tanvirhasan+1@gmail.com একই ইমেইল।
+     */
+    public function EmailExists(string $email, int $exceptUserId = 0): bool
     {
-        return (int)$this->scalar('SELECT COUNT(*) FROM `Users` WHERE LOWER(`Email`) = LOWER(:e)', ['e' => trim($email)]) > 0;
+        $e = strtolower(trim($email));
+        if ($e === '') return false;
+        if ((int)$this->scalar('SELECT COUNT(*) FROM `Users` WHERE LOWER(`Email`) = :e AND `Id` <> :x', ['e' => $e, 'x' => $exceptUserId]) > 0) return true;
+        if (!preg_match('/^([^@]+)@(gmail|googlemail)\.com$/', $e, $m)) return false;
+        $key = str_replace('.', '', explode('+', $m[1])[0]);
+        foreach ($this->all("SELECT `Email` FROM `Users` WHERE `Id` <> :x AND (LOWER(`Email`) LIKE '%@gmail.com' OR LOWER(`Email`) LIKE '%@googlemail.com') AND REPLACE(LOWER(`Email`), '.', '') LIKE :k",
+            ['x' => $exceptUserId, 'k' => substr($key, 0, 3) . '%']) as $r) {
+            if (preg_match('/^([^@]+)@/', strtolower((string)$r->Email), $mm) && str_replace('.', '', explode('+', $mm[1])[0]) === $key) return true;
+        }
+        return false;
     }
 
-    public function UpdateLastLogin(string $username): void
+    /** এই মোবাইল নম্বর অন্য কোনো অ্যাকাউন্টে আছে কিনা (০১৭.. / +৮৮০ / স্পেস — যেভাবেই লেখা থাকুক, শেষ ১০ ডিজিট মিলিয়ে) */
+    public function MobileTaken(string $mobile, int $exceptUserId = 0): bool
     {
-        $this->exec('UPDATE `Users` SET `LastLoginAt` = :t WHERE `UserName` = :u', ['t' => now(), 'u' => $username]);
+        $d = phone_digits($mobile);
+        if (strlen($d) < 10) return false;
+        $last = substr($d, -10);
+        foreach ($this->all('SELECT `MobileNumber` FROM `Users` WHERE `Id` <> :x AND `MobileNumber` LIKE :m LIMIT 50', ['x' => $exceptUserId, 'm' => '%' . implode('%', str_split($last)) . '%']) as $r) {
+            if (substr(phone_digits((string)$r->MobileNumber), -10) === $last) return true;
+        }
+        return false;
+    }
+
+    /** ইউজারনেম এখন একাধিক অ্যাকাউন্টে একই হতে পারে — পুরোনো ডাটাবেসের UNIQUE নিয়ম একবার তুলে দেওয়া হয় */
+    public function AllowDuplicateUsernames(): void
+    {
+        try {
+            if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') return;   // টেস্ট ডাটাবেস
+            if (($this->GetSiteContent(['uname_dup_v1' => ''])['uname_dup_v1'] ?? '') === '1') return;
+            $idx = $this->all("SHOW INDEX FROM `Users` WHERE `Column_name` = 'UserName' AND `Non_unique` = 0");
+            foreach (array_unique(array_map(fn($r) => (string)$r->Key_name, $idx)) as $k) $this->pdo->exec('ALTER TABLE `Users` DROP INDEX `' . str_replace('`', '', $k) . '`');
+            if (!$this->all("SHOW INDEX FROM `Users` WHERE `Column_name` = 'UserName'")) $this->pdo->exec('ALTER TABLE `Users` ADD INDEX `IX_Users_UserName` (`UserName`)');
+            $this->SaveSiteContent(['uname_dup_v1' => '1']);
+        } catch (Throwable $e) { error_log('[AllowDuplicateUsernames] ' . $e->getMessage()); }
+    }
+
+    /** শেষ লগইনের সময় — Id দিয়ে (একই ইউজারনেমে একাধিক অ্যাকাউন্ট থাকতে পারে) */
+    public function UpdateLastLogin($userIdOrName): void
+    {
+        if (is_int($userIdOrName)) $this->exec('UPDATE `Users` SET `LastLoginAt` = :t WHERE `Id` = :u', ['t' => now(), 'u' => $userIdOrName]);
+        else $this->exec('UPDATE `Users` SET `LastLoginAt` = :t WHERE `UserName` = :u', ['t' => now(), 'u' => (string)$userIdOrName]);
     }
 
     /** @return Obj[] */

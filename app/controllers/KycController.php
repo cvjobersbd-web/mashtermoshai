@@ -79,6 +79,8 @@ class KycController extends Controller
             $raw = trim((string)input_str($k, ''));
             $d[$k] = $raw === '' ? '' : (self::cleanMobile($raw) ?? $this->fail("$who মোবাইল নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।", $k));
         }
+        // নিজের মোবাইল নম্বর — একটা নম্বরে একটাই অ্যাকাউন্ট (বাবা-মায়ের নম্বর ভাইবোনের একই হতে পারে, তাই সেটা দেখা হয় না)
+        if ($d['mobile'] !== '' && $this->db->MobileTaken($d['mobile'], (int)$me)) $this->fail('এই মোবাইল নম্বর দিয়ে আরেকটি অ্যাকাউন্ট আছে — একটা মোবাইল নম্বরে একটাই অ্যাকাউন্ট খোলা যায়।', 'mobile');
         if ($d['fatherMobile'] === '' && $d['motherMobile'] === '') $this->fail('বাবা অথবা মায়ের মোবাইল নম্বর দিন।', 'fatherMobile');
         // WhatsApp — বাধ্যতামূলক (অ্যাডমিন এক চাপে WhatsApp এ যোগাযোগ করতে পারেন)
         $wa = trim((string)input_str('whatsapp', ''));
@@ -141,6 +143,7 @@ class KycController extends Controller
     {
         $d = [];
         $d['mobile'] = self::cleanMobile((string)input_str('kycMobile', '')) ?? $fail('মোবাইল নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।', 'kycMobile');
+        if ($db->MobileTaken($d['mobile'], $me)) $fail('এই মোবাইল নম্বর দিয়ে আরেকটি অ্যাকাউন্ট আছে — একটা মোবাইল নম্বরে একটাই অ্যাকাউন্ট খোলা যায়।', 'kycMobile');
         $d['whatsapp'] = self::cleanMobile((string)input_str('kycWhatsapp', '')) ?? $fail('WhatsApp নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।', 'kycWhatsapp');
         $uni = trim(preg_replace('/\s+/u', ' ', strip_tags((string)input_str('kycUniversity', ''))));
         if ($uni === '') { $td = $_POST['td'] ?? []; $uni = is_array($td) ? trim(strip_tags((string)($td['university'] ?? ''))) : ''; }

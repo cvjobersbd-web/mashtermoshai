@@ -439,7 +439,7 @@ function remember_restore(): void
             elseif (device_lock_applies($user->Role) && $db->CheckLoginDevice((int)$user->Id, device_hash(), device_label(), client_ip()) !== 'ok') $ok = false;
         }
         if (!$ok) { remember_forget(); return; }
-        $db->UpdateLastLogin($user->UserName);
+        $db->UpdateLastLogin((int)$user->Id);
         login_session_set($user);
     } catch (Throwable $e) { error_log('[remember restore] ' . $e->getMessage()); }
 }
