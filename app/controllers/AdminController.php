@@ -1117,6 +1117,29 @@ class AdminController extends Controller
         ]);
     }
 
+    /** POST /Admin/RefLinkCheck (links) — রেফারেল লিংক / কোড পেস্ট করলে প্রতিটা থেকে কতজন এসেছে */
+    public function RefLinkCheck_POST(): void
+    {
+        $this->requireAdminJson();
+        $txt = mb_substr((string)input_str('links', ''), 0, 20000);
+        $found = [];   // code|src => [code, src, count]
+        if (preg_match_all('/(?:[?&]ref=)?\b(MM[A-Z0-9]{6})\b([^\s]*)/i', $txt, $m, PREG_SET_ORDER)) {
+            foreach ($m as $x) {
+                $code = strtoupper($x[1]); $src = '';
+                if (preg_match('/[?&]src=([A-Za-z0-9_-]{1,20})/', $x[0] . $x[2], $sm)) $src = Db::CleanRefSrc($sm[1]) ?: '';
+                $k = $code . '|' . $src;
+                $found[$k] = ($found[$k] ?? [$code, $src, 0]); $found[$k][2]++;
+            }
+        }
+        if (!$found) json_response(['success' => false, 'message' => 'কোনো রেফারেল লিংক বা কোড পাওয়া যায়নি — যেমন https://mashtermoshai.com/?ref=MMDQ4R97&src=copy অথবা শুধু MMDQ4R97 দিন।']);
+        $out = [];
+        foreach (array_slice($found, 0, 100) as [$code, $src, $times]) {
+            $st = $this->db->RefLinkStats($code, $src);
+            $out[] = $st ? $st + ['times' => $times, 'srcLabel' => $src !== '' ? (Db::REF_SOURCES[$src][0] ?? $src) : ''] : ['code' => $code, 'src' => $src, 'missing' => true, 'times' => $times];
+        }
+        json_response(['success' => true, 'items' => $out]);
+    }
+
     /** POST /Admin/RefUserSearch (q) — বোনাস ছাড়া তালিকায় যোগ করার জন্য ইউজার খোঁজা */
     public function RefUserSearch_POST(): void
     {

@@ -158,10 +158,26 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         return '<span class="rfa-pill" style="background:#F1F5F9;color:' . $c . ';margin-right:4px;"><i class="' . $i . '"></i> ' . e($l) . '</span>'; };
     $stBn = fn($r) => (($r->Via ?? '') === 'code' ? '<span class="rfa-pill" style="background:#FEF3C7;color:#92400E;margin-right:4px;"><i class="fas fa-ticket"></i> কেনার সময় কোড দিয়ে</span>' : $srcPill($r)) . ($r->Status === 'Credited' ? '<span class="rfa-pill ok">প্যাকেজ কিনেছে · ৳' . (int)$r->Bonus . ' বোনাস</span>' : ($r->Status === 'Waiting' ? '<span class="rfa-pill" style="background:#F1F5F9;color:#64748B;">এখনো প্যাকেজ কেনেনি</span>' : '<span class="rfa-pill no">বাতিল</span>'));
     ?>
+    <div class="rfa-card" id="refLink">
+        <h3><i class="fas fa-link" style="color:#0284C7;"></i> রেফারেল লিংক চেক — কোন লিংক থেকে কতজন এসেছে</h3>
+        <p style="font-size:13px;color:#64748B;margin:0 0 10px;">এক বা একাধিক রেফারেল লিংক পেস্ট করুন (প্রতি লাইনে একটা), অথবা শুধু কোড (যেমন MMDQ4R97)। প্রতিটা লিংক কার, কতবার খোলা হয়েছে, কতজন অ্যাকাউন্ট খুলেছে আর কতজন প্যাকেজ কিনেছে — দেখাবে।</p>
+        <textarea id="rlIn" rows="4" class="rl-in" placeholder="https://mashtermoshai.com/?ref=MMDQ4R97&src=copy&#10;https://mashtermoshai.com/?ref=MMB6GPYB&src=copy"></textarea>
+        <div style="display:flex;gap:8px;margin:8px 0 4px;flex-wrap:wrap;"><button type="button" class="rfa-btn" id="rlGo" style="background:#0284C7;color:#fff;"><i class="fas fa-magnifying-glass-chart"></i> চেক করুন</button><button type="button" class="rfa-btn l" id="rlClr">মুছুন</button></div>
+        <div id="rlOut"></div>
+        <style>
+            .rl-in { width: 100%; border: 1.5px solid #DCE7F0; border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; resize: vertical; outline: none; }
+            .rl-in:focus { border-color: #0284C7; }
+            .rl-sum { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+            .rl-sum span { background: #F1F5F9; border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; color: #334155; } .rl-sum b { color: #0F172A; }
+            .rl-num { font-weight: 800; font-size: 15px; } .rl-num.g { color: #16A34A; } .rl-num.b { color: #0284C7; }
+            .rl-sub { display: block; font-size: 11.5px; color: #64748B; font-weight: 600; }
+        </style>
+    </div>
+
     <div class="rfa-card">
         <h3><i class="fas fa-sitemap" style="color:#7C3AED;"></i> কে কার রেফারেল কোডে এসেছে <span class="rfa-pill" style="background:#EDE9FE;color:#5B21B6;"><?= count($groups) ?> জন রেফারার · <?= count($refs) ?> জন নতুন ইউজার</span></h3>
         <?php if (!$refs): ?><div class="rfa-empty">এখনো কোনো রেফারেল নেই।</div><?php else: ?>
-        <div class="rfg-search"><i class="fas fa-magnifying-glass"></i><input type="search" id="rfgQ" placeholder="নাম, ইউজারনেম, ইমেইল বা রেফারেল কোড (যেমন MMAB12CD) দিয়ে খুঁজুন" autocomplete="off" /></div>
+        <div class="rfg-search"><i class="fas fa-magnifying-glass"></i><input type="search" id="rfgQ" placeholder="নাম, ইউজারনেম, ইমেইল, রেফারেল কোড (যেমন MMAB12CD) বা পুরো রেফারেল লিংক দিয়ে খুঁজুন" autocomplete="off" /></div>
         <div id="rfgList">
         <?php foreach ($groups as $rid => $g): ?>
             <details class="rfg" data-s="<?= e(mb_strtolower($g['name'] . ' ' . $g['user'] . ' ' . $g['code'] . ' ' . implode(' ', array_map(fn($x) => ($x->ReferredName ?? '') . ' ' . ($x->ReferredUser ?? '') . ' ' . ($x->ReferredEmail ?? ''), $g['list'])))) ?>">
@@ -250,9 +266,37 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     });
     var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
+    // ===== রেফারেল লিংক চেক =====
+    var rlIn = document.getElementById('rlIn'), rlOut = document.getElementById('rlOut');
+    function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    document.getElementById('rlClr').addEventListener('click', function () { rlIn.value = ''; rlOut.innerHTML = ''; rlIn.focus(); });
+    document.getElementById('rlGo').addEventListener('click', async function () {
+        var b = this; if (!rlIn.value.trim()) { rlIn.focus(); return; }
+        b.disabled = true; rlOut.innerHTML = '<div class="rfa-empty" style="padding:10px 0;">খোঁজা হচ্ছে…</div>';
+        var r; try { r = await post('/Admin/RefLinkCheck', { links: rlIn.value }); } catch (e) { r = { success: false, message: 'সার্ভারে সমস্যা' }; }
+        b.disabled = false;
+        if (!r.success) { rlOut.innerHTML = '<div class="rfa-empty" style="padding:10px 0;color:#B91C1C;">' + esc2(r.message) + '</div>'; return; }
+        var T = { clicks: 0, signups: 0, bought: 0, today: 0 }, seen = {};
+        var rows = r.items.map(function (x) {
+            var link = '<span class="rfg-code">' + esc2(x.code) + '</span>' + (x.src ? ' <small style="color:#64748B;">src=' + esc2(x.src) + '</small>' : '') + (x.times > 1 ? ' <small style="color:#B45309;">(তালিকায় ' + x.times + ' বার)</small>' : '');
+            if (x.missing) return '<tr><td>' + link + '</td><td colspan="5" style="color:#B91C1C;">এই কোডের কোনো ইউজার পাওয়া যায়নি</td></tr>';
+            if (!seen[x.code]) { seen[x.code] = 1; T.clicks += x.clicks; T.signups += x.signups; T.bought += x.bought; T.today += x.today; }
+            return '<tr><td>' + link + '</td>'
+                + '<td><a href="/Admin/UserDetails/' + x.id + '"><b>' + esc2(x.name) + '</b></a> <small style="color:#64748B;">' + esc2(x.role) + (x.user ? ' · @' + esc2(x.user) : '') + '</small>' + (x.nobonus ? ' <span class="rfa-pill" style="background:#FEE2E2;color:#991B1B;">বোনাস নেই</span>' : '') + '</td>'
+                + '<td><span class="rl-num">' + x.clicks + '</span> বার' + (x.src ? '<span class="rl-sub">এই (' + esc2(x.srcLabel || x.src) + ') লিংক: ' + x.clicksSrc + ' বার</span>' : '') + '</td>'
+                + '<td><span class="rl-num b">' + x.signups + '</span> জন<span class="rl-sub">আজ: ' + x.today + ' জন' + (x.src ? ' · এই লিংকে: ' + x.signupsSrc + ' জন' : '') + '</span></td>'
+                + '<td><span class="rl-num g">' + x.bought + '</span> জন' + (x.src ? '<span class="rl-sub">এই লিংকে: ' + x.boughtSrc + ' জন</span>' : '') + '</td>'
+                + '<td><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Admin/ReferralUser/' + x.id + '">বিস্তারিত</a></td></tr>';
+        });
+        rlOut.innerHTML = '<div class="rl-sum"><span>রেফারার: <b>' + Object.keys(seen).length + ' জন</b></span><span>লিংক খোলা: <b>' + T.clicks + ' বার</b></span><span>অ্যাকাউন্ট খুলেছে: <b>' + T.signups + ' জন</b></span><span>আজ: <b>' + T.today + ' জন</b></span><span>প্যাকেজ কিনেছে: <b>' + T.bought + ' জন</b></span></div>'
+            + '<div class="rfa-tw"><table class="rfa-tbl"><tr><th>লিংক / কোড</th><th>কার লিংক</th><th>লিংক খোলা হয়েছে</th><th>অ্যাকাউন্ট খুলেছে</th><th>প্যাকেজ কিনেছে</th><th></th></tr>' + rows.join('') + '</table></div>'
+            + '<p style="font-size:12px;color:#64748B;margin:8px 0 0;">"লিংক খোলা" — একই ইন্টারনেট সংযোগ (IP) থেকে ঘণ্টায় একবারই গোনা হয়। "অ্যাকাউন্ট খুলেছে" আর "প্যাকেজ কিনেছে" — এই ইউজারের সব রেফারেল লিংক আর কোড মিলিয়ে; নিচের ছোট লেখায় শুধু পেস্ট করা ধরনের লিংক (যেমন copy) থেকে।</p>';
+    });
+
     var q = document.getElementById('rfgQ');
     if (q) q.addEventListener('input', function () {
-        var v = q.value.trim().toLowerCase(), any = false;
+        var raw = q.value.trim(), mm = raw.match(/\bMM[A-Z0-9]{6}\b/i);   // পুরো লিংক পেস্ট করলেও কোডটা দিয়ে খোঁজে
+        var v = (mm ? mm[0] : raw).toLowerCase(), any = false;
         document.querySelectorAll('#rfgList .rfg').forEach(function (d) {
             var hit = !v || d.getAttribute('data-s').indexOf(v) !== -1; d.hidden = !hit; if (hit) any = true;
             if (v && hit) d.open = true; else if (!v) d.open = false;

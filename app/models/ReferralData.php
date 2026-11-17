@@ -109,6 +109,37 @@ trait ReferralData
         return $rows;
     }
 
+    /**
+     * রেফারেল লিংক / কোড থেকে কতজন এসেছে — অ্যাডমিন লিংক পেস্ট করে দেখেন।
+     * $src দিলে (যেমন copy, wa) ওই ধরনের লিংক থেকে কতজন, সেটাও আলাদা করে।
+     */
+    public function RefLinkStats(string $code, string $src = ''): ?array
+    {
+        $this->EnsureReferralTables();
+        try { $this->EnsureRefCodeCols(); $this->EnsurePaymentTables(); } catch (Throwable $e) { }
+        $uid = $this->GetUserIdByReferralCode($code);
+        if (!$uid) return null;
+        $u = $this->one('SELECT `Id`, `FullName`, `UserName`, `Email`, `Role` FROM `Users` WHERE `Id` = :u', ['u' => $uid]);
+        $today = date('Y-m-d') . ' 00:00:00';
+        $clicks = 0; $clicksSrc = 0;
+        try {
+            $clicks = (int)$this->scalar("SELECT COUNT(*) FROM `ReferralEvents` WHERE `UserId` = :u AND `Kind` = 'click'", ['u' => $uid]);
+            if ($src !== '') $clicksSrc = (int)$this->scalar("SELECT COUNT(*) FROM `ReferralEvents` WHERE `UserId` = :u AND `Kind` = 'click' AND `Src` = :s", ['u' => $uid, 's' => $src]);
+        } catch (Throwable $e) { }
+        $rows = $this->all("SELECT r.`ReferredUserId`, r.`CreatedAt`, r.`Status`, r.`Src`, r.`Via`, (SELECT COUNT(*) FROM `PaymentRequests` p WHERE p.`UserId` = r.`ReferredUserId` AND p.`Status` = 'Approved') AS Paid
+            FROM `Referrals` r WHERE r.`ReferrerId` = :u AND r.`Status` <> 'Revoked'", ['u' => $uid]);
+        $bought = fn($r) => (string)$r->Status === 'Credited' || (int)$r->Paid > 0;
+        $srcRows = $src !== '' ? array_filter($rows, fn($r) => (string)$r->Src === $src && ($r->Via ?? '') !== 'code') : [];
+        return [
+            'id' => $uid, 'code' => strtoupper($code), 'src' => $src,
+            'name' => $u ? (string)($u->FullName ?: $u->UserName) : 'Deleted user', 'user' => (string)($u->UserName ?? ''), 'email' => (string)($u->Email ?? ''),
+            'role' => $u ? role_label((string)$u->Role, $uid) : '', 'nobonus' => $this->IsRefNoBonus($uid),
+            'clicks' => $clicks, 'clicksSrc' => $clicksSrc,
+            'signups' => count($rows), 'today' => count(array_filter($rows, fn($r) => (string)$r->CreatedAt >= $today)),
+            'bought' => count(array_filter($rows, $bought)), 'signupsSrc' => count($srcRows), 'boughtSrc' => count(array_filter($srcRows, $bought)),
+        ];
+    }
+
     /** [ReferrerId => আজ কতজন] — বোনাস ছাড়া রেফারারদের তালিকায় দেখানোর জন্য */
     public function NoBonusTodayCounts(): array
     {
