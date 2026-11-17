@@ -1047,8 +1047,101 @@ class AdminController extends Controller
         $this->requireAdminPage();
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
+        // বোনাস ছাড়া রেফারার: কোন তারিখের হিসাব দেখাবে (ডিফল্ট আজ)
+        $okd = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
+        $nbF = $okd(input_str('from', '')); $nbT = $okd(input_str('to', ''));
+        if ($nbF > $nbT) [$nbF, $nbT] = [$nbT, $nbF];
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers()]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusRange' => $this->db->NoBonusRangeCounts($nbF, $nbT), 'NbFrom' => $nbF, 'NbTo' => $nbT]);
+    }
+
+    /**
+     * GET /Admin/NoBonusReferralsExcel?from=Y-m-d&to=Y-m-d — বোনাস ছাড়া রেফারাররা কোন তারিখে কতজন রেফার করেছে (Excel .xlsx)
+     *  শিট ১: সারাংশ (প্রতি রেফারার মোট) · শিট ২: তারিখ অনুযায়ী · শিট ৩: প্রতিটা রেফারেলের বিস্তারিত
+     */
+    public function NoBonusReferralsExcel(): void
+    {
+        $this->requireAdminPage();
+        require_once APP_ROOT . '/app/core/xlsx.php';
+        $d = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
+        $from = $d(input_str('from', '')); $to = $d(input_str('to', ''));
+        if ($from > $to) [$from, $to] = [$to, $from];
+        $refs = []; foreach ($this->db->GetRefNoBonusUsers() as $u) $refs[(int)$u->Id] = $u;
+        $rows = $this->db->GetNoBonusReferrals($from, $to);
+        $nm = fn($u) => $u ? (string)($u->FullName ?: $u->UserName) : 'Deleted user';
+        // যে এসেছে সে টিচার না শিক্ষার্থী — টিচার / টিচারের আবেদন / টিচার প্যাকেজ → টিচার; Student Verification / শিক্ষার্থী প্যাকেজ → শিক্ষার্থী
+        $aud = [];
+        if ($rows) foreach ($this->db->all('SELECT `UserId`, `Audience` FROM `PaymentRequests` WHERE `Status` IN (\'Approved\', \'Pending\') AND `UserId` IN (' . implode(',', array_map(fn($r) => (int)$r->ReferredUserId, $rows)) . ')') as $p) $aud[(int)$p->UserId][(string)$p->Audience] = true;
+        $kind = function ($r) use ($aud) {
+            $uid = (int)$r->ReferredUserId; $tr = account_track($uid);
+            if ($tr === 'teacher' || isset($aud[$uid]['Teacher'])) return ['t', db()->GetUserById($uid)?->Role === 'Teacher' ? 'টিচার' : 'টিচার (আবেদন করেছে, এখনো Approve হয়নি)'];
+            if ($tr === 'student' || isset($aud[$uid]['Student'])) return ['s', 'শিক্ষার্থী'];
+            return ['n', 'এখনো ঠিক করেনি (টিচার / শিক্ষার্থী কোনোটার ফর্ম দেয়নি)'];
+        };
+        foreach ($rows as $r) [$r->K, $r->KLabel] = $kind($r);
+        $fd = fn($v) => date('d M Y', strtotime((string)$v));
+        $range = $from === $to ? $fd($from) : $fd($from) . ' — ' . $fd($to);
+        $src = function ($r) {
+            if (($r->Via ?? '') === 'code') return 'প্যাকেজ কেনার সময় কোড';
+            if (($r->Via ?? '') === 'signupcode' || ($r->Src ?? '') === 'code') return 'সাইনআপে কোড';
+            $s = (string)($r->Src ?? ''); return isset(Db::REF_SOURCES[$s]) && $s !== 'link' ? Db::REF_SOURCES[$s][0] . ' লিংক' : 'লিংক';
+        };
+        // সারাংশ
+        $z = ['n' => 0, 'b' => 0, 't' => 0, 's' => 0, 'x' => 0];
+        $sum = []; foreach ($refs as $id => $u) $sum[$id] = $z;
+        $byDay = [];
+        foreach ($rows as $r) {
+            $id = (int)$r->ReferrerId; $kk = $r->K === 'n' ? 'x' : $r->K; $day = substr((string)$r->CreatedAt, 0, 10);
+            $sum[$id] ??= $z; $byDay[$day][$id] ??= $z;
+            foreach ([&$sum[$id], &$byDay[$day][$id]] as &$c) { $c['n']++; $c[$kk]++; if ($r->Bought) $c['b']++; } unset($c);
+        }
+        uasort($sum, fn($a, $b) => $b['n'] <=> $a['n']);
+        $s1 = [['বোনাস ছাড়া রেফারার — রেফারেলের হিসাব'], ['তারিখ', $range], ['মোট রেফারেল', count($rows)], ['প্যাকেজ কিনেছে', count(array_filter($rows, fn($r) => $r->Bought))],
+            ['টিচার হিসেবে এসেছে', count(array_filter($rows, fn($r) => $r->K === 't'))], ['শিক্ষার্থী হিসেবে এসেছে', count(array_filter($rows, fn($r) => $r->K === 's'))],
+            ['এখনো ঠিক করেনি', count(array_filter($rows, fn($r) => $r->K === 'n'))], [],
+            ['#', 'রেফারারের নাম', 'ইউজারনেম', 'ইমেইল', 'রেফারেল কোড', 'মোট রেফার', 'টিচার', 'শিক্ষার্থী', 'এখনো ঠিক করেনি', 'প্যাকেজ কিনেছে', 'এখনো কেনেনি']];
+        $i = 0; foreach ($sum as $id => $x) { $u = $refs[$id] ?? null; $s1[] = [++$i, $nm($u), $u ? '@' . $u->UserName : '', (string)($u->Email ?? ''), (string)($u->Code ?? ''), $x['n'], $x['t'], $x['s'], $x['x'], $x['b'], $x['n'] - $x['b']]; }
+        $s1[] = ['', 'মোট', '', '', '', count($rows), count(array_filter($rows, fn($r) => $r->K === 't')), count(array_filter($rows, fn($r) => $r->K === 's')), count(array_filter($rows, fn($r) => $r->K === 'n')),
+            count(array_filter($rows, fn($r) => $r->Bought)), count(array_filter($rows, fn($r) => !$r->Bought))];
+        // তারিখ অনুযায়ী
+        $s2 = [['তারিখ', 'রেফারারের নাম', 'রেফারেল কোড', 'কতজন রেফার করেছে', 'টিচার', 'শিক্ষার্থী', 'এখনো ঠিক করেনি', 'প্যাকেজ কিনেছে']];
+        ksort($byDay);
+        foreach ($byDay as $day => $list) { uasort($list, fn($a, $b) => $b['n'] <=> $a['n']); foreach ($list as $id => $x) { $u = $refs[$id] ?? null; $s2[] = [$fd($day), $nm($u), (string)($u->Code ?? ''), $x['n'], $x['t'], $x['s'], $x['x'], $x['b']]; }
+            $s2[] = [$fd($day) . ' — মোট', '', '', array_sum(array_column($list, 'n')), array_sum(array_column($list, 't')), array_sum(array_column($list, 's')), array_sum(array_column($list, 'x')), array_sum(array_column($list, 'b'))]; }
+        if (count($s2) === 1) $s2[] = ['এই সময়ে কোনো রেফারেল নেই'];
+        // বিস্তারিত
+        $s3 = [['#', 'তারিখ ও সময়', 'রেফারার', 'রেফারেল কোড', 'যে এসেছে', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'টিচার না শিক্ষার্থী', 'কোথা থেকে', 'প্যাকেজ কিনেছে?']];
+        $i = 0; foreach ($rows as $r) { $u = $refs[(int)$r->ReferrerId] ?? null;
+            $s3[] = [++$i, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), $nm($u), (string)($u->Code ?? ''), (string)($r->Name ?: $r->UserName ?: 'Deleted user'), $r->UserName ? '@' . $r->UserName : '', (string)($r->Email ?? ''), (string)($r->MobileNumber ?? ''), $r->KLabel, $src($r), $r->Bought ? 'হ্যাঁ' : 'না']; }
+        $bold2 = [0]; foreach ($s2 as $k => $row) if (str_contains((string)($row[0] ?? ''), '— মোট')) $bold2[] = $k;
+        xlsx_send('no-bonus-referrals-' . $from . ($from !== $to ? '-to-' . $to : ''), [
+            ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, 8, count($s1) - 1], 'widths' => [6, 26, 20, 30, 14, 12, 10, 12, 16, 15, 14], 'freeze' => 9],
+            ['name' => 'তারিখ অনুযায়ী', 'rows' => $s2, 'bold' => $bold2, 'widths' => [22, 26, 14, 18, 10, 12, 16, 15], 'freeze' => 1],
+            ['name' => 'বিস্তারিত', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 24, 14, 24, 18, 30, 16, 34, 22, 15], 'freeze' => 1],
+        ]);
+    }
+
+    /** POST /Admin/RefLinkCheck (links) — রেফারেল লিংক / কোড পেস্ট করলে প্রতিটা থেকে কতজন এসেছে */
+    public function RefLinkCheck_POST(): void
+    {
+        $this->requireAdminJson();
+        $txt = mb_substr((string)input_str('links', ''), 0, 20000);
+        $found = [];   // code|src => [code, src, count]
+        if (preg_match_all('/(?:[?&]ref=)?\b(MM[A-Z0-9]{6})\b([^\s]*)/i', $txt, $m, PREG_SET_ORDER)) {
+            foreach ($m as $x) {
+                $code = strtoupper($x[1]); $src = '';
+                if (preg_match('/[?&]src=([A-Za-z0-9_-]{1,20})/', $x[0] . $x[2], $sm)) $src = Db::CleanRefSrc($sm[1]) ?: '';
+                $k = $code . '|' . $src;
+                $found[$k] = ($found[$k] ?? [$code, $src, 0]); $found[$k][2]++;
+            }
+        }
+        if (!$found) json_response(['success' => false, 'message' => 'কোনো রেফারেল লিংক বা কোড পাওয়া যায়নি — যেমন https://mashtermoshai.com/?ref=MMDQ4R97&src=copy অথবা শুধু MMDQ4R97 দিন।']);
+        $out = [];
+        foreach (array_slice($found, 0, 100) as [$code, $src, $times]) {
+            $st = $this->db->RefLinkStats($code, $src);
+            $out[] = $st ? $st + ['times' => $times, 'srcLabel' => $src !== '' ? (Db::REF_SOURCES[$src][0] ?? $src) : ''] : ['code' => $code, 'src' => $src, 'missing' => true, 'times' => $times];
+        }
+        json_response(['success' => true, 'items' => $out]);
     }
 
     /** POST /Admin/RefUserSearch (q) — বোনাস ছাড়া তালিকায় যোগ করার জন্য ইউজার খোঁজা */
