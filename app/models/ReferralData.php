@@ -164,6 +164,7 @@ trait ReferralData
 
     public const REF_KIND_LABEL = ['t' => 'টিচার', 'ta' => 'টিচার (আবেদন করেছে)', 's' => 'শিক্ষার্থী', 'n' => 'এখনো ঠিক করেনি'];
 
+<<<<<<< HEAD
     /** [ReferrerId => ['n' => কতজন, 'v' => কতজন ইমেইল ভেরিফাই করেছে]] — বাছাই করা তারিখের মধ্যে, বোনাস ছাড়া রেফারারদের */
     public function NoBonusRangeCounts(string $from, string $to): array
     {
@@ -179,6 +180,8 @@ trait ReferralData
         return $out;
     }
 
+=======
+>>>>>>> b5c840a52a98ca8628826b26ac9451e422617c47
     /** [ReferrerId => আজ কতজন] — বোনাস ছাড়া রেফারারদের তালিকায় দেখানোর জন্য */
     public function NoBonusTodayCounts(): array
     {

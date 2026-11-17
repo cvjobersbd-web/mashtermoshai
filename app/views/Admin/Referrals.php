@@ -85,6 +85,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     <div class="rfa-card" id="noBonus">
         <h3><i class="fas fa-user-slash" style="color:#DC2626;"></i> বোনাস ছাড়া রেফারার <span class="rfa-pill" style="background:#FEE2E2;color:#991B1B;"><?= count($nb) ?> জন</span></h3>
         <p style="font-size:13px;color:#64748B;margin:0 0 12px;">এই তালিকার ইউজারদের লিংক বা কোড দিয়ে কেউ সাইনআপ করে প্যাকেজ কিনলে তারা <b>৳ বোনাস পাবে না</b> — কিন্তু কত জন এনেছে আর কত জন কিনেছে সব নিচের তালিকায় আর "বিস্তারিত" পেজে গোনা হবে।</p>
+<<<<<<< HEAD
         <?php
         $nbR = $ViewBag->NoBonusRange ?? []; $nbF = (string)($ViewBag->NbFrom ?? date('Y-m-d')); $nbTo = (string)($ViewBag->NbTo ?? date('Y-m-d'));
         $fdN = fn($d) => date('d M Y', strtotime($d));
@@ -101,6 +102,16 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             <small>একদিনের হিসাব চাইলে দুই ঘরে একই তারিখ দিন। <b>খুঁজুন</b> চাপলে নিচের তালিকায় ওই তারিখের হিসাব দেখাবে।
                 <span class="nb-tot"><?= e($nbLabel) ?> মোট: <b><?= $nbSumN ?> জন</b> · ইমেইল ভেরিফাই করেছে: <b><?= $nbSumV ?> জন</b></span>
                 <?php if ($nbF !== date('Y-m-d') || $nbTo !== date('Y-m-d')): ?><a href="/Admin/Referrals#noBonus" class="nb-reset">আজকের হিসাবে ফিরুন ✕</a><?php endif; ?></small>
+=======
+        <?php $nbT = $ViewBag->NoBonusToday ?? []; ?>
+        <?php if ($nb): ?>
+        <form class="nb-xl" method="get" action="/Admin/NoBonusReferralsExcel">
+            <span class="nb-xl-h"><i class="fas fa-file-excel"></i> কত তারিখে কতজন রেফার করেছে — Excel</span>
+            <label>শুরু <input type="date" name="from" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required /></label>
+            <label>শেষ <input type="date" name="to" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required /></label>
+            <button type="submit"><i class="fas fa-download"></i> Excel ডাউনলোড</button>
+            <small>একদিনের হিসাব চাইলে দুই ঘরে একই তারিখ দিন। আজ মোট: <b><?= array_sum($nbT) ?> জন</b></small>
+>>>>>>> b5c840a52a98ca8628826b26ac9451e422617c47
         </form>
         <style>
             .nb-xl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; }
@@ -109,10 +120,13 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             .nb-xl input { height: 36px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 0 8px; font-family: inherit; font-size: 13px; }
             .nb-xl button { height: 36px; border: none; border-radius: 8px; background: #16A34A; color: #fff; font-weight: 700; padding: 0 16px; cursor: pointer; font-size: 13.5px; }
             .nb-xl button:hover { background: #15803D; }
+<<<<<<< HEAD
             .nb-xl button.nb-go { background: #0284C7; } .nb-xl button.nb-go:hover { background: #0369A1; }
             .nb-tot { display: inline-block; margin-left: 6px; background: #fff; border: 1px solid #BBF7D0; border-radius: 999px; padding: 2px 10px; color: #166534; }
             .nb-reset { margin-left: 8px; color: #B91C1C; font-weight: 700; text-decoration: none; }
             .nb-v { display: block; font-size: 11px; color: #64748B; margin-top: 2px; }
+=======
+>>>>>>> b5c840a52a98ca8628826b26ac9451e422617c47
             .nb-xl small { flex-basis: 100%; color: #64748B; font-size: 12.5px; }
             .nb-today { display: inline-block; min-width: 28px; text-align: center; font-weight: 800; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; background: #F1F5F9; color: #64748B; }
             .nb-today.on { background: #DCFCE7; color: #166534; }
@@ -122,11 +136,19 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <div id="nbRes" style="margin:-4px 0 12px;"></div>
         <?php if (!$nb): ?><div class="rfa-empty" style="padding:10px 0;">এখনো কেউ নেই।</div><?php else: ?>
         <div class="rfa-tw"><table class="rfa-tbl">
+<<<<<<< HEAD
             <tr><th>ইউজার</th><th>কোড</th><th style="text-align:center;"><?= e($nbLabel) ?> রেফার</th><th></th></tr>
             <?php foreach ($nb as $u): ?>
                 <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
                     <td><span class="rfg-code"><?= e((string)($u->Code ?: '—')) ?></span></td>
                     <td style="text-align:center;"><?php $tn = (int)($nbR[(int)$u->Id]['n'] ?? 0); $tv = (int)($nbR[(int)$u->Id]['v'] ?? 0); ?><span class="nb-today<?= $tn ? ' on' : '' ?>"><?= $tn ?> জন</span><?php if ($tn): ?><span class="nb-v">ভেরিফাই: <?= $tv ?> জন</span><?php endif; ?></td>
+=======
+            <tr><th>ইউজার</th><th>কোড</th><th style="text-align:center;">আজ রেফার</th><th></th></tr>
+            <?php foreach ($nb as $u): ?>
+                <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
+                    <td><span class="rfg-code"><?= e((string)($u->Code ?: '—')) ?></span></td>
+                    <td style="text-align:center;"><?php $tn = (int)($nbT[(int)$u->Id] ?? 0); ?><span class="nb-today<?= $tn ? ' on' : '' ?>"><?= $tn ?> জন</span></td>
+>>>>>>> b5c840a52a98ca8628826b26ac9451e422617c47
                     <td style="white-space:nowrap;text-align:right;"><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Profile/Show/<?= (int)$u->Id ?>" target="_blank" rel="noopener"><i class="fas fa-user"></i> প্রোফাইল</a>
                         <a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Admin/ReferralUser/<?= (int)$u->Id ?>">বিস্তারিত</a>
                         <button type="button" class="rfa-btn g" style="height:32px;font-size:12px;" data-nb="<?= (int)$u->Id ?>" data-on="0">বোনাস চালু করুন</button></td></tr>
@@ -298,7 +320,10 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     });
     var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
+<<<<<<< HEAD
     if (/[?&]from=/.test(location.search)) { var nbc = document.getElementById('noBonus'); if (nbc) setTimeout(function () { nbc.scrollIntoView(); }, 50); }
+=======
+>>>>>>> b5c840a52a98ca8628826b26ac9451e422617c47
     // ===== রেফারেল লিংক চেক =====
     var rlIn = document.getElementById('rlIn'), rlOut = document.getElementById('rlOut');
     function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
