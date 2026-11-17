@@ -129,6 +129,8 @@ trait ReferralData
         $rows = $this->all("SELECT r.`ReferredUserId`, r.`CreatedAt`, r.`Status`, r.`Src`, r.`Via`, (SELECT COUNT(*) FROM `PaymentRequests` p WHERE p.`UserId` = r.`ReferredUserId` AND p.`Status` = 'Approved') AS Paid
             FROM `Referrals` r WHERE r.`ReferrerId` = :u AND r.`Status` <> 'Revoked'", ['u' => $uid]);
         $bought = fn($r) => (string)$r->Status === 'Credited' || (int)$r->Paid > 0;
+        $km = $this->RefKindMap(array_map(fn($r) => (int)$r->ReferredUserId, $rows));
+        $kinds = ['t' => 0, 'ta' => 0, 's' => 0, 'n' => 0]; foreach ($rows as $r) $kinds[$km[(int)$r->ReferredUserId] ?? 'n']++;
         $srcRows = $src !== '' ? array_filter($rows, fn($r) => (string)$r->Src === $src && ($r->Via ?? '') !== 'code') : [];
         return [
             'id' => $uid, 'code' => strtoupper($code), 'src' => $src,
@@ -136,9 +138,31 @@ trait ReferralData
             'role' => $u ? role_label((string)$u->Role, $uid) : '', 'nobonus' => $this->IsRefNoBonus($uid),
             'clicks' => $clicks, 'clicksSrc' => $clicksSrc,
             'signups' => count($rows), 'today' => count(array_filter($rows, fn($r) => (string)$r->CreatedAt >= $today)),
+            'kinds' => $kinds,
             'bought' => count(array_filter($rows, $bought)), 'signupsSrc' => count($srcRows), 'boughtSrc' => count(array_filter($srcRows, $bought)),
         ];
     }
+
+    /**
+     * রেফারেলে আসা ইউজার টিচার না শিক্ষার্থী — একসাথে অনেকজনের (কম কোয়েরিতে)।
+     * t = টিচার (Approve) · ta = টিচারের আবেদন / টিচার প্যাকেজ, এখনো Approve হয়নি · s = শিক্ষার্থী (Student Verification / শিক্ষার্থী প্যাকেজ) · n = এখনো ঠিক করেনি
+     * @param int[] $uids  @return array<int,string>
+     */
+    public function RefKindMap(array $uids): array
+    {
+        $uids = array_values(array_unique(array_filter(array_map('intval', $uids))));
+        if (!$uids) return [];
+        $in = implode(',', $uids); $out = [];
+        $teacher = $tReq = $stu = $payT = $payS = [];
+        try { foreach ($this->all("SELECT `Id`, `Role` FROM `Users` WHERE `Id` IN ($in)") as $r) if ($r->Role === 'Teacher') $teacher[(int)$r->Id] = 1; } catch (Throwable $e) { }
+        try { foreach ($this->all("SELECT `UserId`, `Status` FROM `TeacherRequests` WHERE `UserId` IN ($in)") as $r) if (in_array((string)$r->Status, ['Pending', 'AwaitingPayment', 'Approved', 'Expired'], true)) $tReq[(int)$r->UserId] = 1; } catch (Throwable $e) { }
+        try { foreach ($this->all("SELECT `UserId`, `Status` FROM `KycRequests` WHERE `Kind` = 'student' AND `UserId` IN ($in)") as $r) if (in_array((string)$r->Status, ['Pending', 'Approved'], true)) $stu[(int)$r->UserId] = 1; } catch (Throwable $e) { }
+        try { foreach ($this->all("SELECT `UserId`, `Audience` FROM `PaymentRequests` WHERE `Status` IN ('Approved', 'Pending') AND `UserId` IN ($in)") as $r) { if ($r->Audience === 'Teacher') $payT[(int)$r->UserId] = 1; elseif ($r->Audience === 'Student') $payS[(int)$r->UserId] = 1; } } catch (Throwable $e) { }
+        foreach ($uids as $u) $out[$u] = isset($teacher[$u]) ? 't' : (isset($tReq[$u]) || isset($payT[$u]) ? 'ta' : (isset($stu[$u]) || isset($payS[$u]) ? 's' : 'n'));
+        return $out;
+    }
+
+    public const REF_KIND_LABEL = ['t' => 'টিচার', 'ta' => 'টিচার (আবেদন করেছে)', 's' => 'শিক্ষার্থী', 'n' => 'এখনো ঠিক করেনি'];
 
     /** [ReferrerId => আজ কতজন] — বোনাস ছাড়া রেফারারদের তালিকায় দেখানোর জন্য */
     public function NoBonusTodayCounts(): array
