@@ -1052,11 +1052,7 @@ class AdminController extends Controller
         $nbF = $okd(input_str('from', '')); $nbT = $okd(input_str('to', ''));
         if ($nbF > $nbT) [$nbF, $nbT] = [$nbT, $nbF];
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-<<<<<<< HEAD
             'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusRange' => $this->db->NoBonusRangeCounts($nbF, $nbT), 'NbFrom' => $nbF, 'NbTo' => $nbT]);
-=======
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusToday' => $this->db->NoBonusTodayCounts()]);
->>>>>>> b5c840a52a98ca8628826b26ac9451e422617c47
     }
 
     /**
