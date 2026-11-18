@@ -743,6 +743,13 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 
             <!-- ======================= MAIN ======================= -->
             <main class="tc-main">
+                <?php if ($isTeacher): ?>
+                    <!-- টিচাররা সার্কুলারে পোস্ট করতে পারেন না — শুধু Apply -->
+                    <div class="tc-card" style="padding:16px 18px;display:flex;gap:12px;align-items:flex-start;background:#F0F9FF;border:1px solid #BAE6FD;">
+                        <i class="fas fa-circle-info" style="color:#0369A1;font-size:20px;margin-top:2px;"></i>
+                        <div style="font-size:14.5px;color:#0C4A6E;line-height:1.6;">টিউশন সার্কুলারে শুধু শিক্ষার্থীরা “টিচার লাগবে” পোস্ট করেন — টিচাররা এখানে পোস্ট করতে পারবেন না। নিচের পোস্টগুলোতে <b>Apply</b> করুন, আর নিজের পড়ানোর কথা জানাতে <a href="/FindTutor" style="font-weight:700;color:#0369A1;">“পড়াতে চাই” পেইজে পোস্ট করুন</a>।</div>
+                    </div>
+                <?php else: ?>
                 <div class="tc-card tc-compose">
                     <div class="tc-compose-top">
                         <?= $avatar($isLoggedIn ? $userProfileImg : null, $isLoggedIn ? $userFullName : 'U') ?>
@@ -758,6 +765,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                         <div class="tc-login-note"><i class="fas fa-circle-info"></i> পোস্ট বা কমেন্ট করতে <a href="<?= e($loginUrl) ?>">লগইন করুন</a> — অ্যাকাউন্ট না থাকলে <a href="/Account/Register">রেজিস্টার করুন</a>।</div>
                     <?php endif; ?>
                 </div>
+                <?php endif; /* টিচার নয় */ ?>
 
                 <div class="tc-feed-h">
                     <h2><i class="fas fa-list-ul"></i> <?= $isFiltered ? 'Filtered Tuition Posts' : 'Recent Tuition Posts' ?>
@@ -970,6 +978,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 
             <!-- ======================= RIGHT ======================= -->
             <aside class="tc-side">
+<?php if (!$isTeacher): ?>
                 <div class="tc-card tc-need">
                     <h3><i class="fas fa-graduation-cap"></i> Need a Teacher?</h3>
                     <span class="trail" aria-hidden="true"></span><i class="fas fa-paper-plane plane" aria-hidden="true"></i>
@@ -985,6 +994,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                         <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> শিক্ষার্থী প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
                 <div class="tc-card tc-how">
                     <h3><i class="fas fa-lightbulb"></i> How It Works?</h3>
                     <ol class="tc-steps">
@@ -1413,6 +1423,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
             var ov = $('#tcmOv'), form = $('#tcmForm'), quick = $('#tcQuick');
             function openComposer(what) {
                 if (!LOGGED_IN) { location.href = LOGIN_URL; return; }
+                if (<?= $isTeacher ? 'true' : 'false' ?>) { alert('টিচাররা টিউশন সার্কুলারে পোস্ট করতে পারবেন না — পোস্টগুলোতে Apply করুন, আর “পড়াতে চাই” পেইজে পোস্ট করুন।'); return; }
                 if (!ov.classList.contains('open')) {
                     if (quick.value.trim() && !$('#tcmContent').value.trim()) $('#tcmContent').value = quick.value.trim();
                     $('#tcmErr').classList.remove('show');

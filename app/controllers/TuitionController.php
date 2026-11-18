@@ -43,6 +43,8 @@ class TuitionController extends Controller
     {
         $userId = current_user_id();
         if ($userId === null) $this->fail('পোস্ট করতে লগইন করুন।');
+        // টিউশন সার্কুলারে শুধু শিক্ষার্থী / ইউজার "টিচার লাগবে" পোস্ট করে — টিচার না
+        if (session_get('UserRole') === 'Teacher') $this->fail('টিচাররা টিউশন সার্কুলারে পোস্ট করতে পারবেন না — পোস্টগুলোতে Apply করুন, আর “পড়াতে চাই” পেইজে পোস্ট করুন।');
         $clean = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
         $title = $clean('title', 150);
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", str_replace("\r", '', (string)input_str('content', ''))));

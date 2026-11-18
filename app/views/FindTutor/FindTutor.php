@@ -3347,7 +3347,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + '  </div>'
                     + '</div>'
                     + '<div class="tp-cta">'
-                    + '  <p><i class="fas fa-shield-alt me-1"></i> For privacy, we never share tutor contact details. All requests go through our admin team.</p>'
+                    + '  <p><i class="fas fa-shield-alt me-1"></i> For privacy, we never share tutor contact details. রিকোয়েস্ট সরাসরি টিচারের কাছে যাবে — টিচার Accept করলে সাইটের চ্যাটে কথা বলতে পারবেন।</p>'
                     + (<?= viewer_can_contact_teachers() ? 'true' : 'false' ?>
                         ? '  <button class="btn-request-tr" style="width:100%; padding:14px;" onclick="switchToRequest(' + t.id + ')"><i class="fas fa-paper-plane"></i> Request This Tutor</button>'
                         : '  <a class="btn-request-tr" style="width:100%; padding:14px; display:block; text-align:center; text-decoration:none;" href="' + <?= js(student_package_url()) ?> + '"><i class="fas fa-lock"></i> <?= current_user_id() === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request' ?></a>')
@@ -3376,8 +3376,8 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 var headerInfo = t
                     ? '<div class="form-intro"><p>Requesting <strong>' + escapeHtml(t.fullName) + '</strong> '
                     + '(<span style="font-family:monospace;">' + escapeHtml(t.tutorId) + '</span>) — '
-                    + escapeHtml((t.subjects || []).join(', ')) + '. Your request goes to our admin team.</p></div>'
-                    : '<div class="form-intro"><p>Already know your tutor? Select them below and submit your request. Our admin team will forward it.</p></div>';
+                    + escapeHtml((t.subjects || []).join(', ')) + '. রিকোয়েস্ট সরাসরি এই টিচারের কাছে যাবে — টিচার Accept করলে চ্যাট খুলে যাবে।</p></div>'
+                    : '<div class="form-intro"><p>Already know your tutor? নিচে থেকে টিচার বাছাই করে রিকোয়েস্ট পাঠান — সরাসরি টিচারের কাছে যাবে।</p></div>';
 
                 var tutorOptions = allTutors.map(function (x) {
                     var sel = (t && t.id === x.id) ? ' selected' : '';
@@ -3499,7 +3499,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                         + '<div class="success-panel">'
                         + '  <div class="success-icon"><i class="fas fa-check"></i></div>'
                         + '  <h4>Request Submitted Successfully!</h4>'
-                        + '  <p>Your request for <strong>' + escapeHtml(tutor ? tutor.fullName : '') + '</strong> has been received. Our admin team will contact you on WhatsApp shortly.</p>'
+                        + '  <p>আপনার রিকোয়েস্ট <strong>' + escapeHtml(tutor ? tutor.fullName : '') + '</strong> এর কাছে পাঠানো হয়েছে। টিচার Accept করলে নোটিফিকেশন পাবেন আর সাইটের চ্যাটে কথা বলতে পারবেন।</p>'
                         + '  <div class="success-req-id"><span class="req-label">Request ID</span><span class="req-value">' + escapeHtml(data.requestId || reqId) + '</span></div>'
                         + '  <button class="btn-ok" onclick="closeModal(\'requestTutorModal\')">OK</button>'
                         + '</div>';

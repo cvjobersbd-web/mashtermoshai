@@ -15,7 +15,7 @@ try {
     $awaitTeacherPay = (int)db()->scalar("SELECT COUNT(*) FROM `TeacherRequests` WHERE `Status` = 'AwaitingPayment'");
 } catch (Throwable $e) { }
 $pendingTutorReq = 0;
-try { $pendingTutorReq = (int)db()->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `Status` = 'Pending'"); } catch (Throwable $e) { }
+try { $pendingTutorReq = (int)db()->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `Status` = 'Pending' AND " . Db::ADMIN_TUTOR_REQ_WHERE); } catch (Throwable $e) { }
 $openHelpdesk = 0;
 try { $openHelpdesk = (int)db()->scalar("SELECT COUNT(*) FROM `HelpdeskPosts` WHERE `Status` IS NULL OR `Status` = 'Open'"); } catch (Throwable $e) { }
 

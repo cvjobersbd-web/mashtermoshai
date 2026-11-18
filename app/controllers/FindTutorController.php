@@ -103,8 +103,9 @@ class FindTutorController extends Controller
             $err = null;
             if ($this->db->CreateTutorRequest($req, $err)) {
                 if ($useApply) { try { $this->db->ConsumeApplyCredit((int)current_user_id(), 'SApply'); } catch (Throwable $e) { error_log('[apply credit] ' . $e->getMessage()); } }
-                // ===== সব অ্যাডমিনকে নোটিফাই =====
-                try {
+                // ===== সব অ্যাডমিনকে নোটিফাই — নির্দিষ্ট টিচারের রিকোয়েস্ট (TCH-) সরাসরি টিচারের কাছে যায়, অ্যাডমিনের কাছে না =====
+                $toTeacher = !is_blank($req->TutorId) && str_starts_with((string)$req->TutorId, 'TCH-');
+                if (!$toTeacher) try {
                     $typeLabel = match ($req->RequestType) {
                         'NeedTutor' => 'New Tutor Request',
                         'AreaTuition' => 'Area Tuition Request',
@@ -147,7 +148,7 @@ class FindTutorController extends Controller
                 pixel_track('Lead', ['content_name' => 'Tutor Request', 'content_category' => (string)($req->RequiredSubject ?? '')]);
                 json_response([
                     'success' => true,
-                    'message' => 'Request submitted successfully! Our admin team will contact you soon.',
+                    'message' => $toTeacher ? 'রিকোয়েস্ট টিচারের কাছে পাঠানো হয়েছে! টিচার Accept করলে চ্যাটে কথা বলতে পারবেন।' : 'Request submitted successfully! Our admin team will contact you soon.',
                     'requestId' => $req->RequestId,
                     'id' => $req->Id,
                 ]);
