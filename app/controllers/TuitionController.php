@@ -63,12 +63,12 @@ class TuitionController extends Controller
         if ($needCredit && $this->db->GetStudentPostCredits($userId) === 0) json_response(['success' => false, 'needPackage' => '/Package?for=student',
             'message' => 'Tuition Post করতে শিক্ষার্থী প্যাকেজ লাগবে (' . package_price_hint('Student') . ')। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
         // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন — Special Request (content) ঐচ্ছিক
-        foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 120) === '') $this->fail($m);
+        foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 2000) === '') $this->fail($m);
         if ((int)preg_replace('/[^0-9]/', '', (string)input_str('budget', '')) <= 0) $this->fail('বাজেট (৳/মাস) দিন।');
         if (!in_array((string)input_str('medium', ''), Db::CIRCULAR_MEDIUMS, true)) $this->fail('মিডিয়াম বাছাই করুন।');
         if (!in_array((string)input_str('tuitionType', ''), Db::CIRCULAR_TYPES, true)) $this->fail('টিউশনের ধরন বাছাই করুন।');
         // মোবাইল নম্বর, ইমেইল, ফেসবুক, বাসা / রোড নম্বর ইত্যাদি থাকলে পোস্ট হবে না — টিচার Apply করলে সাইটের মাধ্যমেই যোগাযোগ
-        if (session_get('UserRole') !== 'Admin' && ($why = contact_info_error([$title, $content, $clean('preferredArea', 100), $clean('classLevel', 60), $clean('subjects', 120)], 'student')))
+        if (session_get('UserRole') !== 'Admin' && ($why = contact_info_error([$title, $content, $clean('preferredArea', 100), $clean('classLevel', 60), $clean('subjects', 2000)], 'student')))
             json_response(['success' => false, 'contact' => true, 'message' => $why]);
         $medium = (string)input_str('medium', '');
         $type = (string)input_str('tuitionType', '');
@@ -100,7 +100,7 @@ class TuitionController extends Controller
         $post = obj([
             'UserId' => $userId, 'Content' => $content, 'ImageUrl' => $imageUrl, 'VideoUrl' => $videoUrl, 'Title' => $title,
             'PreferredArea' => $clean('preferredArea', 100) ?: null, 'ClassLevel' => $clean('classLevel', 60) ?: null,
-            'Subjects' => $clean('subjects', 120) ?: null, 'Budget' => $budget !== '' ? $budget : null,
+            'Subjects' => $clean('subjects', 2000) ?: null, 'Budget' => $budget !== '' ? $budget : null,
             'Medium' => in_array($medium, Db::CIRCULAR_MEDIUMS, true) ? $medium : null,
             'TuitionType' => in_array($type, Db::CIRCULAR_TYPES, true) ? $type : null,
         ]);

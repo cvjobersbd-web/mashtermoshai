@@ -267,6 +267,15 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tcm-f input[type=text], .tcm-f input[type=number], .tcm-f textarea, .tcm-f select { width: 100%; border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 10px 12px; font-size: 15px;
         outline: none; background: #fff; font-family: inherit; color: var(--tc-navy); }
     .tcm-f textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+    .tcm-ms { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 46px; border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 6px 8px; background: #fff; cursor: text; }
+    .tcm-ms:focus-within { border-color: var(--tc-teal); box-shadow: 0 0 0 3px rgba(15,76,92,.12); }
+    .tcm-ms #tcmSubjChips { display: contents; }
+    .tcm-ms .ch { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #E0F2FE; color: #075985; font-size: 13.5px; font-weight: 700; }
+    .tcm-ms .ch button { border: none; background: rgba(7,89,133,.12); color: #075985; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+    .tcm-f .tcm-ms input[type=text] { flex: 1; min-width: 120px; border: none !important; box-shadow: none !important; padding: 6px 4px; outline: none; }
+    .tcm-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tcm-sugg button { border: 1.5px dashed #BAE6FD; background: #F8FCFF; color: #0369A1; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .tcm-sugg button.on { display: none; }
     .tcm-f input:focus, .tcm-f textarea:focus, .tcm-f select:focus { border-color: var(--tc-teal); box-shadow: 0 0 0 3px rgba(15,76,92,.12); }
     .tcm-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .tcm-seg { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1039,11 +1048,14 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <input type="text" id="tcmClass" name="classLevel" maxlength="60" list="tcClassList" placeholder="যেমন: HSC" /></div>
             </div>
             <div class="tcm-2">
-                <div class="tcm-f"><label for="tcmSubj"><i class="fas fa-book-open" style="color:#2563EB;"></i> বিষয় <b>*</b></label>
-                    <input type="text" id="tcmSubj" name="subjects" maxlength="120" list="tcSubjList" placeholder="যেমন: Mathematics, Physics" /></div>
+                <div class="tcm-f"><label for="tcmSubjIn"><i class="fas fa-book-open" style="color:#2563EB;"></i> বিষয় <b>*</b> <small>(একাধিক বাছাই করা যাবে)</small></label>
+                    <!-- একাধিক বিষয়: বাছাই করলে চিপ হয়ে বসে; সার্ভারে কমা দিয়ে যায় -->
+                    <div class="tcm-ms" id="tcmSubjBox"><span id="tcmSubjChips"></span><input type="text" id="tcmSubjIn" list="tcSubjList" autocomplete="off" placeholder="বিষয় লিখুন বা বাছাই করুন" /></div>
+                    <input type="hidden" id="tcmSubj" name="subjects" /></div>
                 <div class="tcm-f"><label for="tcmBudget">বাজেট (৳/মাস) <b>*</b></label>
                     <input type="number" id="tcmBudget" name="budget" min="0" max="9999999" inputmode="numeric" placeholder="যেমন: 5000" /></div>
             </div>
+            <div class="tcm-sugg" id="tcmSubjSugg" aria-label="জনপ্রিয় বিষয়"><?php foreach (array_slice($subjectOptions, 0, 14) as $o): ?><button type="button" data-subj="<?= e($o) ?>">+ <?= e($o) ?></button><?php endforeach; ?></div>
             <div class="tcm-f"><label>মিডিয়াম <b>*</b></label>
                 <div class="tcm-seg"><?php foreach (['Bangla' => 'Bangla Medium', 'English' => 'English Medium', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="medium" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
             <div class="tcm-f"><label>টিউশনের ধরন <b>*</b></label>
@@ -1421,6 +1433,42 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 
             // ----- পোস্ট লেখা -----
             var ov = $('#tcmOv'), form = $('#tcmForm'), quick = $('#tcQuick');
+            // ----- একাধিক বিষয় (চিপ) — লুকানো #tcmSubj এ কমা দিয়ে জমা -----
+            var subjs = [], sIn = $('#tcmSubjIn'), sHid = $('#tcmSubj'), sChips = $('#tcmSubjChips');
+            function subjDraw() {
+                sHid.value = subjs.join(', ');
+                sChips.innerHTML = subjs.map(function (x, i) { return '<span class="ch">' + x.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }) + '<button type="button" data-rm-subj="' + i + '" aria-label="সরান"><i class="fas fa-xmark"></i></button></span>'; }).join('');
+                document.querySelectorAll('#tcmSubjSugg [data-subj]').forEach(function (b) { b.classList.toggle('on', subjs.some(function (x) { return x.toLowerCase() === b.getAttribute('data-subj').toLowerCase(); })); });
+                sIn.placeholder = subjs.length ? 'আরো বিষয় যোগ করুন' : 'বিষয় লিখুন বা বাছাই করুন';
+            }
+            function subjAdd(v) {
+                (v || '').split(/[,،;]+/).forEach(function (x) {
+                    x = x.trim().replace(/\s+/g, ' ').slice(0, 40);
+                    if (!x || subjs.some(function (y) { return y.toLowerCase() === x.toLowerCase(); })) return;
+                    subjs.push(x);
+                });
+                subjDraw();
+            }
+            if (sIn) {
+                sIn.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); subjAdd(sIn.value); sIn.value = ''; }
+                    else if (e.key === 'Backspace' && !sIn.value && subjs.length) { subjs.pop(); subjDraw(); }
+                });
+                // datalist থেকে বাছাই করলে সাথে সাথে চিপ
+                sIn.addEventListener('input', function (e) {
+                    var v = sIn.value.trim();
+                    if (v && (e.inputType === 'insertReplacementText' || !e.inputType) && Array.prototype.some.call(document.querySelectorAll('#tcSubjList option'), function (o) { return o.value === v; })) { subjAdd(v); sIn.value = ''; }
+                    else if (/,/.test(sIn.value)) { subjAdd(sIn.value); sIn.value = ''; }
+                });
+                sIn.addEventListener('blur', function () { if (sIn.value.trim()) { subjAdd(sIn.value); sIn.value = ''; } });
+                $('#tcmSubjBox').addEventListener('click', function (e) {
+                    var rm = e.target.closest('[data-rm-subj]');
+                    if (rm) { subjs.splice(+rm.getAttribute('data-rm-subj'), 1); subjDraw(); return; }
+                    sIn.focus();
+                });
+                $('#tcmSubjSugg').addEventListener('click', function (e) { var b = e.target.closest('[data-subj]'); if (b) subjAdd(b.getAttribute('data-subj')); });
+                form.addEventListener('reset', function () { setTimeout(function () { subjs = []; subjDraw(); }, 0); });
+            }
             function openComposer(what) {
                 if (!LOGGED_IN) { location.href = LOGIN_URL; return; }
                 if (<?= $isTeacher ? 'true' : 'false' ?>) { alert('টিচাররা টিউশন সার্কুলারে পোস্ট করতে পারবেন না — পোস্টগুলোতে Apply করুন, আর “পড়াতে চাই” পেইজে পোস্ট করুন।'); return; }
@@ -1429,7 +1477,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     $('#tcmErr').classList.remove('show');
                     ov.classList.add('open'); document.documentElement.style.overflow = 'hidden';
                 }
-                var target = { photo: null, video: null, location: '#tcmLoc', subject: '#tcmSubj' }[what];
+                var target = { photo: null, video: null, location: '#tcmLoc', subject: '#tcmSubjIn' }[what];
                 if (what === 'photo') $('#tcmImg').click();
                 else if (what === 'video') $('#tcmVid').click();
                 setTimeout(function () {
@@ -1488,10 +1536,11 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 var err = $('#tcmErr'), btn = $('#tcmSubmit');
                 err.classList.remove('show');
                 // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন (শিরোনাম আর Special Request ঐচ্ছিক)
-                var need = [['#tcmLoc', 'লোকেশন দিন।'], ['#tcmClass', 'ক্লাস / লেভেল দিন।'], ['#tcmSubj', 'বিষয় দিন।'], ['#tcmBudget', 'বাজেট (৳/মাস) দিন।']];
+                if (sIn && sIn.value.trim()) { subjAdd(sIn.value); sIn.value = ''; }
+                var need = [['#tcmLoc', 'লোকেশন দিন।'], ['#tcmClass', 'ক্লাস / লেভেল দিন।'], ['#tcmSubj', 'বিষয় দিন (একাধিক বাছাই করা যায়)।'], ['#tcmBudget', 'বাজেট (৳/মাস) দিন।']];
                 for (var i = 0; i < need.length; i++) {
                     var el = $(need[i][0]);
-                    if (!el.value.trim() || (need[i][0] === '#tcmBudget' && !(+el.value > 0))) { err.textContent = need[i][1]; err.classList.add('show'); el.focus(); return; }
+                    if (!el.value.trim() || (need[i][0] === '#tcmBudget' && !(+el.value > 0))) { err.textContent = need[i][1]; err.classList.add('show'); (need[i][0] === '#tcmSubj' ? sIn : el).focus(); return; }
                 }
                 if (!form.querySelector('input[name="medium"]:checked')) { err.textContent = 'মিডিয়াম বাছাই করুন।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }
                 if (!form.querySelector('input[name="tuitionType"]:checked')) { err.textContent = 'টিউশনের ধরন বাছাই করুন।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }
