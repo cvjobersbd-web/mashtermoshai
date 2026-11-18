@@ -1117,12 +1117,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <!-- End Meta Pixel Code -->
 <?php endif; ?>
     <style>
-        .lang-sw { display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 4px 0 8px; border-radius: 999px; border: 1.5px solid #DCE7F0; background: #fff; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 800; color: #64748B; margin-right: 6px; flex-shrink: 0; }
-        .lang-sw > i { color: #0EA5E9; font-size: 14px; margin-right: 3px; }
+        .lang-sw { display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 4px; border-radius: 999px; border: 1.5px solid #DCE7F0; background: #fff; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 800; color: #64748B; margin-right: 6px; flex-shrink: 0; }
         .lang-sw span { padding: 3px 7px; border-radius: 999px; line-height: 1.2; }
         .lang-sw span.on { background: #08224A; color: #fff; }
         .lang-sw:hover { border-color: #02B8F5; }
-        @media (max-width: 420px) { .lang-sw > i { display: none; } .lang-sw { padding: 0 2px; margin-right: 0; height: 30px; font-size: 11px; } .lang-sw span { padding: 3px 5px; } }
+        @media (max-width: 420px) { .lang-sw { padding: 0 2px; margin-right: 0; height: 30px; font-size: 11px; } .lang-sw span { padding: 3px 5px; } }
     </style>
 </head>
 <body>
@@ -1197,7 +1196,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <div class="flex items-center gap-2 xl:gap-0 flex-shrink-0">
                     <?php if (!$isAdminPage): /* ভাষা বদল — বাংলা (ডিফল্ট) / English; অ্যাডমিন প্যানেলে নেই */ ?>
                     <button type="button" class="lang-sw" id="langSw" data-to="<?= site_lang() === 'en' ? 'bn' : 'en' ?>" title="<?= t('Switch to English', 'বাংলায় দেখুন') ?>" aria-label="<?= t('Switch to English', 'বাংলায় দেখুন') ?>">
-                        <i class="fas fa-language"></i><span class="<?= site_lang() === 'bn' ? 'on' : '' ?>">বাং</span><span class="<?= site_lang() === 'en' ? 'on' : '' ?>">EN</span>
+                        <span class="<?= site_lang() === 'bn' ? 'on' : '' ?>">বাং</span><span class="<?= site_lang() === 'en' ? 'on' : '' ?>">EN</span>
                     </button>
                     <?php endif; ?>
                     <?php if (session_get('UserName') !== null):
