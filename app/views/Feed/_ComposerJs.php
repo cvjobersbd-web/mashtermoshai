@@ -11,7 +11,7 @@
     var yt = document.getElementById('efcYt') || { value: '', hidden: true, focus: function () {} };
     var fb = document.getElementById('efcFb') || { value: '', hidden: true, focus: function () {} }, fbBtn = document.getElementById('efcFbBtn');
     var send = document.getElementById('efcSend'), bar = document.getElementById('efcBar');
-    var VIDEO_MAX = <?= (int)$videoLimit ?>, IMG_MAX = 5 * 1024 * 1024, MAX_IMGS = 6, TAB = <?= js($tab) ?>;
+    var VIDEO_MAX = <?= (int)$videoLimit ?>, IMG_MAX = 20 * 1024 * 1024, MAX_IMGS = 50, TAB = <?= js($tab) ?>;
     var images = [], video = null, urls = [];
     function expand() { moreBox.hidden = false; }
     ta.addEventListener('focus', expand);
@@ -46,7 +46,7 @@
         for (var i = 0; i < files.length; i++) {
             var f = files[i];
             if (!/^image\/(jpeg|png|gif|webp)$/.test(f.type)) { EF.toast('"' + f.name + '" — শুধু JPG, PNG, GIF বা WEBP ছবি।', true); continue; }
-            if (f.size > IMG_MAX) { EF.toast('"' + f.name + '" ৫MB এর বেশি বড়।', true); continue; }
+            if (f.size > IMG_MAX) { EF.toast('"' + f.name + '" ২০MB এর বেশি বড়।', true); continue; }
             if (images.length >= MAX_IMGS) { EF.toast('সর্বোচ্চ ' + MAX_IMGS + 'টা ছবি দেওয়া যাবে।', true); break; }
             images.push(f);
         }
@@ -60,13 +60,28 @@
     if (ytBtn) ytBtn.addEventListener('click', function () { expand(); only('yt'); yt.hidden = false; draw(); yt.focus(); });
     if (fbBtn) fbBtn.addEventListener('click', function () { expand(); only('fb'); fb.hidden = false; draw(); fb.focus(); });
 
-    form.addEventListener('submit', function (e) {
+    // বড় ছবি পাঠানোর আগে ছোট করা (সর্বোচ্চ ১৯২০px, JPEG) — ৫০টা ছবিও দ্রুত আর সার্ভারের সীমার মধ্যে যায়; GIF আর ছোট ছবি যেমন আছে তেমন
+    function shrink(f) {
+        return new Promise(function (ok) {
+            if (f.type === 'image/gif' || f.size < 700 * 1024 || !window.createImageBitmap) return ok(f);
+            createImageBitmap(f).then(function (bm) {
+                var MAXD = 1920, sc = Math.min(1, MAXD / Math.max(bm.width, bm.height));
+                var c = document.createElement('canvas'); c.width = Math.round(bm.width * sc); c.height = Math.round(bm.height * sc);
+                var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 0, 0, c.width, c.height);
+                c.toBlob(function (b) { ok(b && b.size < f.size ? new File([b], f.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : f); }, 'image/jpeg', 0.85);
+            }).catch(function () { ok(f); });
+        });
+    }
+    form.addEventListener('submit', async function (e) {
         e.preventDefault();
         var text = ta.value.trim();
         if (!text && !images.length && !video && !yt.value.trim() && !fb.value.trim()) { ta.focus(); EF.toast('কিছু লিখুন অথবা ছবি/ভিডিও দিন।', true); return; }
         var fd = new FormData();
         fd.append('content', text); fd.append('subject', form.subject.value.trim()); fd.append('youtube', yt.hidden ? '' : yt.value.trim()); fd.append('facebook', fb.hidden ? '' : fb.value.trim());
-        images.forEach(function (f) { fd.append('images[]', f, f.name); });
+        if (images.length) { send.disabled = true; send.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ছবি তৈরি হচ্ছে'; }
+        var ready = await Promise.all(images.map(shrink));
+        ready.forEach(function (f) { fd.append('images[]', f, f.name); });
+        if (ready.length) fd.append('imgCount', ready.length);
         if (video) fd.append('video', video, video.name);
         fd.append('__RequestVerificationToken', EF.token());
         send.disabled = true; send.innerHTML = '<i class="fas fa-spinner fa-spin"></i> পাঠানো হচ্ছে';

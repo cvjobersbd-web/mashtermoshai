@@ -69,7 +69,7 @@
             <?php if (!$isAdmin): ?><div class="efc-note"><i class="fas fa-shield-halved"></i><span>ছবি আর লেখা পোস্ট করা যায়। পোস্টটি আগে অ্যাডমিনের কাছে রিভিউর জন্য যাবে — Approve হলে সবাই দেখতে পাবে। শুধু শিক্ষামূলক পোস্ট দিন।</span></div><?php endif; ?>
         </div>
         <div class="efc-tools">
-            <label title="ছবি (সর্বোচ্চ ৬টা, প্রতিটা ৫MB)"><i class="fas fa-images" style="color:#22C55E;"></i><span class="lbl">Photo</span><input type="file" id="efcImg" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden /></label>
+            <label title="ছবি (সর্বোচ্চ ৫০টা)"><i class="fas fa-images" style="color:#22C55E;"></i><span class="lbl">Photo</span><input type="file" id="efcImg" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden /></label>
             <?php if ($isAdmin): ?>
             <label title="ভিডিও (MP4/WEBM, সর্বোচ্চ <?= $videoMb ?>MB)"><i class="fas fa-video" style="color:#EF4444;"></i><span class="lbl">Video</span><input type="file" id="efcVid" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" hidden /></label>
             <button type="button" class="t" id="efcYtBtn" title="YouTube লিংক"><i class="fab fa-youtube" style="color:#FF0000;"></i><span class="lbl">YouTube</span></button>
