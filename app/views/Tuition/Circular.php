@@ -750,8 +750,6 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                placeholder="আপনার টিউশনের প্রয়োজন সম্পর্কে লিখুন..." <?= $isLoggedIn ? '' : 'readonly' ?> data-tc-open="text" />
                     </div>
                     <div class="tc-compose-row">
-                        <button type="button" class="tc-chip ch-ph" data-tc-open="photo"><i class="fas fa-image"></i> Photo</button>
-                        <button type="button" class="tc-chip ch-vd" data-tc-open="video"><i class="fas fa-video"></i> Video</button>
                         <button type="button" class="tc-chip ch-lc" data-tc-open="location"><i class="fas fa-location-dot"></i> Location</button>
                         <button type="button" class="tc-chip ch-sb" data-tc-open="subject"><i class="fas fa-book-open"></i> Subject</button>
                         <button type="button" class="tc-btn dark" data-tc-open="post"><i class="fas fa-paper-plane"></i> Post Now</button>
@@ -1021,7 +1019,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
             </div>
             <div class="tcm-err" id="tcmErr"></div>
             <div class="tcm-f"><label>শিরোনাম</label>
-                <div class="tcm-seg"><label><input type="radio" name="title" value="পড়াতে চাই পোস্ট" id="tcmTitle" /><span><i class="fas fa-chalkboard-user"></i> পড়াতে চাই পোস্ট</span></label></div></div>
+                <div class="tcm-seg"><label><input type="radio" name="title" value="টিচার লাগবে" id="tcmTitle" /><span><i class="fas fa-chalkboard-user"></i> টিচার লাগবে</span></label></div></div>
             <div class="tcm-f"><label for="tcmContent">Special Request <small>(কোনো বিশেষ অনুরোধ থাকলে)</small></label>
                 <textarea id="tcmContent" name="content" maxlength="3000" style="min-height:90px;" placeholder="যেমন: মহিলা শিক্ষক হলে ভালো, সন্ধ্যার পরে পড়াতে হবে, সপ্তাহে ৩ দিন..."></textarea></div>
             <div class="tcm-2">
@@ -1040,7 +1038,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 <div class="tcm-seg"><?php foreach (['Bangla' => 'Bangla Medium', 'English' => 'English Medium', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="medium" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
             <div class="tcm-f"><label>টিউশনের ধরন <b>*</b></label>
                 <div class="tcm-seg"><?php foreach (['Home' => 'Home Tuition', 'Online' => 'Online Tuition', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="tuitionType" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
-            <div class="tcm-f"><label>ছবি বা ভিডিও <small>(ঐচ্ছিক — ছবি ৫ MB, ভিডিও ২৫ MB পর্যন্ত)</small></label>
+            <!-- ছবি / ভিডিও বন্ধ — এখানে শুধু লেখা দিয়ে পোস্ট -->
+            <div class="tcm-f" hidden style="display:none"><label>ছবি বা ভিডিও <small>(ঐচ্ছিক — ছবি ৫ MB, ভিডিও ২৫ MB পর্যন্ত)</small></label>
                 <div class="tcm-media">
                     <label class="tc-chip ch-ph" for="tcmImg"><i class="fas fa-image"></i> Photo</label>
                     <label class="tc-chip ch-vd" for="tcmVid"><i class="fas fa-video"></i> Video</label>

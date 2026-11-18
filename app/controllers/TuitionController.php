@@ -46,7 +46,7 @@ class TuitionController extends Controller
         $clean = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
         $title = $clean('title', 150);
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", str_replace("\r", '', (string)input_str('content', ''))));
-        if ($title === '') $title = 'পড়াতে চাই পোস্ট';   // শিরোনাম ঐচ্ছিক
+        if ($title === '' || $title === 'পড়াতে চাই পোস্ট') $title = 'টিচার লাগবে';   // শিরোনাম ঐচ্ছিক
         if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
         if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
         // Student Verification Approve না হলে টিউশন পোস্ট করা যাবে না
@@ -76,6 +76,8 @@ class TuitionController extends Controller
         $imageUrl = null; $videoUrl = null;
         $image = upload_file('imageFile');
         $video = upload_file('videoFile');
+        // Tuition Circular — শুধু লেখা (ছবি / ভিডিও বন্ধ)
+        if ($image || $video) $this->fail('এখানে শুধু লেখা দিয়ে পোস্ট করা যাবে — ছবি বা ভিডিও দেওয়া যাবে না।');
         if ($image && $video) $this->fail('একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।');
         if ($image) {
             $ext = strtolower('.' . pathinfo($image['name'], PATHINFO_EXTENSION));

@@ -29,6 +29,13 @@ trait CircularData
             }
         }
         $this->circularExtrasReady = true;
+        // একবারই: আগের ভুল শিরোনাম "পড়াতে চাই পোস্ট" → "টিচার লাগবে" (সার্কুলারে শিক্ষার্থী টিচার খোঁজে)
+        try {
+            if (($this->GetSiteContent(['circ_title_fix_v1' => ''])['circ_title_fix_v1'] ?? '') === '') {
+                $this->exec("UPDATE `TuitionCircularPosts` SET `Title` = :n WHERE `Title` = :o", ['n' => 'টিচার লাগবে', 'o' => 'পড়াতে চাই পোস্ট']);
+                $this->SaveSiteContent(['circ_title_fix_v1' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[circ title fix] ' . $e->getMessage()); }
     }
 
     /** ফিল্টারের SQL অংশ */

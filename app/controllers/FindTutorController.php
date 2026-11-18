@@ -186,7 +186,9 @@ class FindTutorController extends Controller
         $content = trim((string)input_str('content', ''));
         $image = upload_file('imageFile');
         $video = upload_file('videoFile');
-        if ($content === '' && !$image && !$video) json_response(['success' => false, 'message' => 'কিছু লিখুন অথবা ছবি/ভিডিও দিন।']);
+        // "পড়াতে চাই" — শুধু লেখা (ছবি / ভিডিও বন্ধ)
+        if ($image || $video) json_response(['success' => false, 'message' => 'এখানে শুধু লেখা দিয়ে পোস্ট করা যাবে — ছবি বা ভিডিও দেওয়া যাবে না।']);
+        if ($content === '') json_response(['success' => false, 'message' => 'কিছু লিখুন।']);
         if (mb_strlen($content) > 3000) json_response(['success' => false, 'message' => 'পোস্ট সর্বোচ্চ ৩০০০ অক্ষর।']);
         if ($image && $video) json_response(['success' => false, 'message' => 'একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।']);
         // মোবাইল নম্বর, ইমেইল, ফেসবুক, ঠিকানা ইত্যাদি থাকলে পোস্ট হবে না — যোগাযোগ শুধু সাইটের Apply দিয়ে
@@ -222,7 +224,7 @@ class FindTutorController extends Controller
         $image = upload_file('imageFile');
         $imageChanged = false;
         $newImageUrl = null;
-        if ($image) { $newImageUrl = $this->saveTeachImage($image); $imageChanged = true; }
+        if ($image) json_response(['success' => false, 'message' => 'এখানে শুধু লেখা দিয়ে পোস্ট করা যাবে — ছবি বা ভিডিও দেওয়া যাবে না।']);
         elseif (input_bool('removeImage')) $imageChanged = true;
 
         $old = $final = $err = null;

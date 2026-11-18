@@ -2061,8 +2061,6 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                         <button type="button" class="ft2-compose-in" data-ft-compose="text"><?= $isTeacher || !$isLoggedIn ? 'আপনার টিউশনের প্রয়োজনের বিস্তারিত লিখুন...' : 'শুধু টিচাররা এখানে পোস্ট করতে পারবেন' ?></button>
                     </div>
                     <div class="ft2-compose-row">
-                        <button type="button" class="ft2-mbtn" data-ft-compose="photo"><i class="fas fa-image" style="color:#22A35A;"></i> Photo</button>
-                        <button type="button" class="ft2-mbtn" data-ft-compose="video"><i class="fas fa-video" style="color:#E5383B;"></i> Video</button>
                         <button type="button" class="ft2-btn blue" data-ft-compose="post"><i class="fas fa-paper-plane"></i> পোস্ট করুন</button>
                     </div>
                     <?php if ($isLoggedIn && !$isTeacher && $userRole !== 'Admin'): ?>
@@ -2416,7 +2414,8 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <video id="videoPreviewEl" controls preload="metadata" style="width:100%;max-height:260px;border-radius:12px;background:#000;"></video>
                 </div>
 
-                <div class="modal-actions-bottom">
+                <!-- ছবি / ভিডিও বন্ধ — এখানে শুধু লেখা দিয়ে পোস্ট -->
+                <div class="modal-actions-bottom" style="display:none !important;">
                     <span style="font-size:14px; font-weight:600; color:#08224A;">Add to your post</span>
                     <div>
                         <label for="postImageInput" class="icon-btn" style="cursor:pointer; margin:0;">
@@ -2454,7 +2453,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <img id="editImgPreview" src="" alt="পোস্টের ছবির প্রিভিউ" />
                 </div>
 
-                <div class="modal-actions-bottom">
+                <div class="modal-actions-bottom" style="display:none !important;">
                     <span style="font-size:14px; font-weight:600; color:#08224A;">Photo</span>
                     <div>
                         <label for="editImageInput" class="icon-btn" style="cursor:pointer; margin:0;">
