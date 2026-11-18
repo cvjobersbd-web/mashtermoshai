@@ -96,17 +96,12 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             <span class="nb-xl-h"><i class="fas fa-calendar-days"></i> কোন তারিখে কতজন রেফার করেছে</span>
             <label>শুরু <input type="date" name="from" value="<?= e($nbF) ?>" max="<?= date('Y-m-d') ?>" required /></label>
             <label>শেষ <input type="date" name="to" value="<?= e($nbTo) ?>" max="<?= date('Y-m-d') ?>" required /></label>
-<<<<<<< HEAD
             <span class="nb-qr" aria-label="তাড়াতাড়ি তারিখ"><?php $td = date('Y-m-d');
                 foreach ([['আজ', $td, $td], ['গতকাল', date('Y-m-d', strtotime('-1 day')), date('Y-m-d', strtotime('-1 day'))], ['শেষ ৩ দিন', date('Y-m-d', strtotime('-2 days')), $td], ['শেষ ৭ দিন', date('Y-m-d', strtotime('-6 days')), $td], ['এই মাস', date('Y-m-01'), $td]] as [$ql, $qf, $qt]): ?>
                 <button type="button" data-qf="<?= $qf ?>" data-qt="<?= $qt ?>" class="<?= $qf === $nbF && $qt === $nbTo ? 'on' : '' ?>"><?= $ql ?></button><?php endforeach; ?></span>
             <input type="hidden" name="ids" id="nbIds" /><input type="hidden" name="codes" id="nbCodes" />
             <button type="submit" class="nb-go"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
             <button type="submit" formaction="/Admin/NoBonusReferralsExcel" id="nbXlBtn"><i class="fas fa-download"></i> <span>Excel ডাউনলোড</span></button>
-=======
-            <button type="submit" class="nb-go"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
-            <button type="submit" formaction="/Admin/NoBonusReferralsExcel"><i class="fas fa-download"></i> Excel ডাউনলোড</button>
->>>>>>> d9954e4c610bc3954916257a11b510bf0c3c18df
             <small>একদিনের হিসাব চাইলে দুই ঘরে একই তারিখ দিন। <b>খুঁজুন</b> চাপলে নিচের তালিকায় ওই তারিখের হিসাব দেখাবে।
                 <span class="nb-tot"><?= e($nbLabel) ?> মোট: <b><?= $nbSumN ?> জন</b> · ইমেইল ভেরিফাই করেছে: <b><?= $nbSumV ?> জন</b></span>
                 <?php if ($nbF !== date('Y-m-d') || $nbTo !== date('Y-m-d')): ?><a href="/Admin/Referrals#noBonus" class="nb-reset">আজকের হিসাবে ফিরুন ✕</a><?php endif; ?></small>
@@ -159,16 +154,10 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <div id="nbRes" style="margin:-4px 0 12px;"></div>
         <?php if (!$nb): ?><div class="rfa-empty" style="padding:10px 0;">এখনো কেউ নেই।</div><?php else: ?>
         <div class="rfa-tw"><table class="rfa-tbl">
-<<<<<<< HEAD
             <tr><th style="width:34px;"><input type="checkbox" class="nb-ck" id="nbCkAll" title="দেখানো সবাই" /></th><th>ইউজার</th><th>কোড</th><th style="text-align:center;"><?= e($nbLabel) ?> রেফার</th><th></th></tr>
             <?php foreach ($nb as $u): $tn0 = (int)($nbR[(int)$u->Id]['n'] ?? 0); $tv0 = (int)($nbR[(int)$u->Id]['v'] ?? 0); ?>
                 <tr class="nb-row" data-id="<?= (int)$u->Id ?>" data-code="<?= e(strtoupper((string)$u->Code)) ?>" data-s="<?= e(mb_strtolower(($u->FullName ?? '') . ' ' . $u->UserName . ' ' . $u->Email . ' ' . $u->Code)) ?>" data-n="<?= $tn0 ?>" data-v="<?= $tv0 ?>">
                     <td><input type="checkbox" class="nb-ck nb-one" value="<?= (int)$u->Id ?>" aria-label="বাছাই" /></td><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
-=======
-            <tr><th>ইউজার</th><th>কোড</th><th style="text-align:center;"><?= e($nbLabel) ?> রেফার</th><th></th></tr>
-            <?php foreach ($nb as $u): ?>
-                <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
->>>>>>> d9954e4c610bc3954916257a11b510bf0c3c18df
                     <td><span class="rfg-code"><?= e((string)($u->Code ?: '—')) ?></span></td>
                     <td style="text-align:center;"><?php $tn = (int)($nbR[(int)$u->Id]['n'] ?? 0); $tv = (int)($nbR[(int)$u->Id]['v'] ?? 0); ?><span class="nb-today<?= $tn ? ' on' : '' ?>"><?= $tn ?> জন</span><?php if ($tn): ?><span class="nb-v">ভেরিফাই: <?= $tv ?> জন</span><?php endif; ?></td>
                     <td style="white-space:nowrap;text-align:right;"><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Profile/Show/<?= (int)$u->Id ?>" target="_blank" rel="noopener"><i class="fas fa-user"></i> প্রোফাইল</a>
@@ -342,7 +331,6 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     });
     var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
-<<<<<<< HEAD
     // ===== নির্দিষ্ট রেফারার বাছাই (টিক / কোড পেস্ট) — Excel এ শুধু তাদের; বাছাই ব্রাউজারে মনে থাকে =====
     (function () {
         var form = document.getElementById('nbForm'); if (!form) return;
@@ -378,8 +366,6 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         [].forEach.call(form.querySelectorAll('[data-qf]'), function (b) { b.addEventListener('click', function () { form.from.value = b.getAttribute('data-qf'); form.to.value = b.getAttribute('data-qt'); form.submit(); }); });
         sync();
     })();
-=======
->>>>>>> d9954e4c610bc3954916257a11b510bf0c3c18df
     if (/[?&]from=/.test(location.search)) { var nbc = document.getElementById('noBonus'); if (nbc) setTimeout(function () { nbc.scrollIntoView(); }, 50); }
     // ===== রেফারেল লিংক চেক =====
     var rlIn = document.getElementById('rlIn'), rlOut = document.getElementById('rlOut');
