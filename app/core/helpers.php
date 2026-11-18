@@ -1539,6 +1539,28 @@ function slugify(string $s): string
  * প্রথমবার যে ক্যাটাগরিগুলো বসে: গ্রুপ => [[নাম, আইকন, মেলানোর ধরন (class|subject), টিউটর মেলানোর শব্দ[]], ...]
  * ছবি নেই — অ্যাডমিন Admin → Categories থেকে প্রতিটার ছবি দিতে পারবে (ততক্ষণ আইকন দেখায়)।
  */
+/** মাদ্রাসার ক্যাটাগরি — নূরানী, ইবতেদায়ী, দাখিল, আলিম, ফাজিল, কামিল, হিফজ, আরবি (ক্লাসের সাথে সাধারণ ক্লাস নম্বরও মেলে, তাই ওই ক্লাস পড়ান এমন টিউটররাও দেখাবে) */
+function madrasa_category_items(): array
+{
+    $ib = [];
+    for ($i = 1; $i <= 5; $i++) $ib[] = ["Ebtedayee $i", ['fa-pencil', 'fa-book-open', 'fa-shapes', 'fa-ruler', 'fa-flask'][$i - 1], 'class', ["Class $i", "Ebtedayee $i", 'Ebtedayee', 'Madrasa']];
+    return array_merge([
+        ['Nurani / Qaida', 'fa-book-quran', 'subject', ['Nurani', 'Qaida', 'Quran', 'Play / Nursery', 'KG']],
+    ], $ib, [
+        ['Class 6 (Madrasa)', 'fa-globe', 'class', ['Class 6', 'Madrasa']],
+        ['Class 7 (Madrasa)', 'fa-calculator', 'class', ['Class 7', 'Madrasa']],
+        ['Class 8 (Madrasa)', 'fa-microscope', 'class', ['Class 8', 'Madrasa']],
+        ['Dakhil 9', 'fa-atom', 'class', ['Class 9', 'Dakhil', 'SSC', 'Madrasa']],
+        ['Dakhil 10', 'fa-school', 'class', ['Class 10', 'Dakhil', 'SSC', 'Madrasa']],
+        ['Alim 1st Year', 'fa-building-columns', 'class', ['Class 11', 'Alim', 'HSC', 'Madrasa']],
+        ['Alim 2nd Year', 'fa-building-columns', 'class', ['Class 12', 'Alim', 'HSC', 'Madrasa']],
+        ['Fazil', 'fa-user-graduate', 'class', ['Fazil', 'University (Honours)', 'Madrasa']],
+        ['Kamil', 'fa-graduation-cap', 'class', ['Kamil', 'Masters', 'Madrasa']],
+        ['Hifz-ul-Quran', 'fa-mosque', 'subject', ['Hifz', 'Quran', 'Islam Studies']],
+        ['Arabic', 'fa-language', 'subject', ['Arabic']],
+    ]);
+}
+
 function category_seed_data(): array
 {
     $std = [];
@@ -1565,6 +1587,7 @@ function category_seed_data(): array
             ['HSC 1st Year', 'fa-building-columns', 'class', ['Class 11', 'HSC']],
             ['HSC 2nd Year', 'fa-building-columns', 'class', ['Class 12', 'HSC']],
         ]),
+        'Madrasa' => madrasa_category_items(),
         'Arts & Crafts' => [
             ['Crafting', 'fa-scissors', 'subject', ['Crafting', 'Arts & Crafts']],
             ['Dance', 'fa-person-running', 'subject', ['Dance']],
