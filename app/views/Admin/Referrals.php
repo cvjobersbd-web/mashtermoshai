@@ -85,22 +85,66 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     <div class="rfa-card" id="noBonus">
         <h3><i class="fas fa-user-slash" style="color:#DC2626;"></i> বোনাস ছাড়া রেফারার <span class="rfa-pill" style="background:#FEE2E2;color:#991B1B;"><?= count($nb) ?> জন</span></h3>
         <p style="font-size:13px;color:#64748B;margin:0 0 12px;">এই তালিকার ইউজারদের লিংক বা কোড দিয়ে কেউ সাইনআপ করে প্যাকেজ কিনলে তারা <b>৳ বোনাস পাবে না</b> — কিন্তু কত জন এনেছে আর কত জন কিনেছে সব নিচের তালিকায় আর "বিস্তারিত" পেজে গোনা হবে।</p>
-        <?php $nbT = $ViewBag->NoBonusToday ?? []; ?>
+        <?php
+        $nbR = $ViewBag->NoBonusRange ?? []; $nbF = (string)($ViewBag->NbFrom ?? date('Y-m-d')); $nbTo = (string)($ViewBag->NbTo ?? date('Y-m-d'));
+        $fdN = fn($d) => date('d M Y', strtotime($d));
+        $nbLabel = $nbF === $nbTo ? ($nbF === date('Y-m-d') ? 'আজ' : $fdN($nbF)) : $fdN($nbF) . ' — ' . $fdN($nbTo);
+        $nbSumN = array_sum(array_column($nbR, 'n')); $nbSumV = array_sum(array_column($nbR, 'v'));
+        ?>
         <?php if ($nb): ?>
-        <form class="nb-xl" method="get" action="/Admin/NoBonusReferralsExcel">
-            <span class="nb-xl-h"><i class="fas fa-file-excel"></i> কত তারিখে কতজন রেফার করেছে — Excel</span>
-            <label>শুরু <input type="date" name="from" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required /></label>
-            <label>শেষ <input type="date" name="to" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required /></label>
-            <button type="submit"><i class="fas fa-download"></i> Excel ডাউনলোড</button>
-            <small>একদিনের হিসাব চাইলে দুই ঘরে একই তারিখ দিন। আজ মোট: <b><?= array_sum($nbT) ?> জন</b></small>
+        <form class="nb-xl" method="get" action="/Admin/Referrals#noBonus" id="nbForm">
+            <span class="nb-xl-h"><i class="fas fa-calendar-days"></i> কোন তারিখে কতজন রেফার করেছে</span>
+            <label>শুরু <input type="date" name="from" value="<?= e($nbF) ?>" max="<?= date('Y-m-d') ?>" required /></label>
+            <label>শেষ <input type="date" name="to" value="<?= e($nbTo) ?>" max="<?= date('Y-m-d') ?>" required /></label>
+            <span class="nb-qr" aria-label="তাড়াতাড়ি তারিখ"><?php $td = date('Y-m-d');
+                foreach ([['আজ', $td, $td], ['গতকাল', date('Y-m-d', strtotime('-1 day')), date('Y-m-d', strtotime('-1 day'))], ['শেষ ৩ দিন', date('Y-m-d', strtotime('-2 days')), $td], ['শেষ ৭ দিন', date('Y-m-d', strtotime('-6 days')), $td], ['এই মাস', date('Y-m-01'), $td]] as [$ql, $qf, $qt]): ?>
+                <button type="button" data-qf="<?= $qf ?>" data-qt="<?= $qt ?>" class="<?= $qf === $nbF && $qt === $nbTo ? 'on' : '' ?>"><?= $ql ?></button><?php endforeach; ?></span>
+            <input type="hidden" name="ids" id="nbIds" /><input type="hidden" name="codes" id="nbCodes" />
+            <button type="submit" class="nb-go"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
+            <button type="submit" formaction="/Admin/NoBonusReferralsExcel" id="nbXlBtn"><i class="fas fa-download"></i> <span>Excel ডাউনলোড</span></button>
+            <small>একদিনের হিসাব চাইলে দুই ঘরে একই তারিখ দিন। <b>খুঁজুন</b> চাপলে নিচের তালিকায় ওই তারিখের হিসাব দেখাবে।
+                <span class="nb-tot"><?= e($nbLabel) ?> মোট: <b><?= $nbSumN ?> জন</b> · ইমেইল ভেরিফাই করেছে: <b><?= $nbSumV ?> জন</b></span>
+                <?php if ($nbF !== date('Y-m-d') || $nbTo !== date('Y-m-d')): ?><a href="/Admin/Referrals#noBonus" class="nb-reset">আজকের হিসাবে ফিরুন ✕</a><?php endif; ?></small>
         </form>
+        <!-- নির্দিষ্ট রেফারার বাছাই — টিক দিলে Excel এ শুধু তাদের হিসাব (ব্রাউজারে মনে থাকে) -->
+        <div class="nb-pick" id="nbPick">
+            <span class="nb-pick-h"><i class="fas fa-list-check"></i> শুধু কয়েকজনের রিপোর্ট চাইলে নিচের তালিকায় টিক দিন</span>
+            <input type="search" id="nbFilter" placeholder="নাম / ইউজারনেম / কোড দিয়ে তালিকায় খুঁজুন" autocomplete="off" />
+            <button type="button" id="nbAll">দেখানো সবাইকে বাছাই</button>
+            <button type="button" id="nbNone">বাছাই মুছুন</button>
+            <button type="button" id="nbPasteBtn"><i class="fas fa-paste"></i> কোড / লিংক পেস্ট করে বাছাই</button>
+            <span class="nb-sel" id="nbSel"></span>
+            <div class="nb-paste" id="nbPaste" hidden>
+                <textarea id="nbPasteIn" rows="4" placeholder="Excel থেকে কোডগুলো (MM5DEE39 ...) বা রেফারেল লিংকগুলো এখানে পেস্ট করুন — একসাথে যত খুশি"></textarea>
+                <button type="button" id="nbPasteGo">এগুলো বাছাই করুন</button>
+                <small id="nbPasteMsg"></small>
+            </div>
+        </div>
         <style>
+            .nb-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 14px; margin: -4px 0 14px; }
+            .nb-pick-h { font-weight: 800; color: #0F172A; font-size: 13.5px; flex-basis: 100%; } .nb-pick-h i { color: #0284C7; }
+            .nb-pick input[type=search] { height: 34px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 0 10px; font-family: inherit; font-size: 13px; min-width: 260px; flex: 1; max-width: 380px; }
+            .nb-pick button { height: 34px; border: 1.5px solid #CBD5E1; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 700; font-size: 12.5px; color: #334155; cursor: pointer; font-family: inherit; }
+            .nb-pick button:hover { border-color: #0284C7; color: #0369A1; }
+            .nb-sel { font-size: 13px; font-weight: 700; color: #0369A1; }
+            .nb-paste { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+            .nb-paste textarea { flex: 1; min-width: 260px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 10px; font-family: monospace; font-size: 12.5px; }
+            .nb-paste small { flex-basis: 100%; font-size: 12.5px; color: #64748B; }
+            .nb-qr { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+            .nb-xl .nb-qr button { height: 30px; padding: 0 10px; background: #fff; color: #166534; border: 1.5px solid #BBF7D0; font-size: 12.5px; }
+            .nb-xl .nb-qr button.on, .nb-xl .nb-qr button:hover { background: #16A34A; color: #fff; border-color: #16A34A; }
+            .nb-ck { width: 18px; height: 18px; cursor: pointer; accent-color: #0284C7; vertical-align: middle; }
+            tr.nb-on td { background: #F0F9FF; }
             .nb-xl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; }
             .nb-xl-h { font-weight: 800; color: #166534; font-size: 14px; } .nb-xl-h i { color: #16A34A; }
             .nb-xl label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #334155; margin: 0; }
             .nb-xl input { height: 36px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 0 8px; font-family: inherit; font-size: 13px; }
             .nb-xl button { height: 36px; border: none; border-radius: 8px; background: #16A34A; color: #fff; font-weight: 700; padding: 0 16px; cursor: pointer; font-size: 13.5px; }
             .nb-xl button:hover { background: #15803D; }
+            .nb-xl button.nb-go { background: #0284C7; } .nb-xl button.nb-go:hover { background: #0369A1; }
+            .nb-tot { display: inline-block; margin-left: 6px; background: #fff; border: 1px solid #BBF7D0; border-radius: 999px; padding: 2px 10px; color: #166534; }
+            .nb-reset { margin-left: 8px; color: #B91C1C; font-weight: 700; text-decoration: none; }
+            .nb-v { display: block; font-size: 11px; color: #64748B; margin-top: 2px; }
             .nb-xl small { flex-basis: 100%; color: #64748B; font-size: 12.5px; }
             .nb-today { display: inline-block; min-width: 28px; text-align: center; font-weight: 800; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; background: #F1F5F9; color: #64748B; }
             .nb-today.on { background: #DCFCE7; color: #166534; }
@@ -110,11 +154,12 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <div id="nbRes" style="margin:-4px 0 12px;"></div>
         <?php if (!$nb): ?><div class="rfa-empty" style="padding:10px 0;">এখনো কেউ নেই।</div><?php else: ?>
         <div class="rfa-tw"><table class="rfa-tbl">
-            <tr><th>ইউজার</th><th>কোড</th><th style="text-align:center;">আজ রেফার</th><th></th></tr>
-            <?php foreach ($nb as $u): ?>
-                <tr><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
+            <tr><th style="width:34px;"><input type="checkbox" class="nb-ck" id="nbCkAll" title="দেখানো সবাই" /></th><th>ইউজার</th><th>কোড</th><th style="text-align:center;"><?= e($nbLabel) ?> রেফার</th><th></th></tr>
+            <?php foreach ($nb as $u): $tn0 = (int)($nbR[(int)$u->Id]['n'] ?? 0); $tv0 = (int)($nbR[(int)$u->Id]['v'] ?? 0); ?>
+                <tr class="nb-row" data-id="<?= (int)$u->Id ?>" data-code="<?= e(strtoupper((string)$u->Code)) ?>" data-s="<?= e(mb_strtolower(($u->FullName ?? '') . ' ' . $u->UserName . ' ' . $u->Email . ' ' . $u->Code)) ?>" data-n="<?= $tn0 ?>" data-v="<?= $tv0 ?>">
+                    <td><input type="checkbox" class="nb-ck nb-one" value="<?= (int)$u->Id ?>" aria-label="বাছাই" /></td><td><b><?= e($u->FullName ?: $u->UserName) ?></b> <span class="rfg-code" style="font-size:12px;">@<?= e((string)$u->UserName) ?></span> <small style="color:#64748B;"><?= e((string)$u->Email) ?></small></td>
                     <td><span class="rfg-code"><?= e((string)($u->Code ?: '—')) ?></span></td>
-                    <td style="text-align:center;"><?php $tn = (int)($nbT[(int)$u->Id] ?? 0); ?><span class="nb-today<?= $tn ? ' on' : '' ?>"><?= $tn ?> জন</span></td>
+                    <td style="text-align:center;"><?php $tn = (int)($nbR[(int)$u->Id]['n'] ?? 0); $tv = (int)($nbR[(int)$u->Id]['v'] ?? 0); ?><span class="nb-today<?= $tn ? ' on' : '' ?>"><?= $tn ?> জন</span><?php if ($tn): ?><span class="nb-v">ভেরিফাই: <?= $tv ?> জন</span><?php endif; ?></td>
                     <td style="white-space:nowrap;text-align:right;"><a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Profile/Show/<?= (int)$u->Id ?>" target="_blank" rel="noopener"><i class="fas fa-user"></i> প্রোফাইল</a>
                         <a class="rfa-btn l" style="height:32px;font-size:12px;text-decoration:none;" href="/Admin/ReferralUser/<?= (int)$u->Id ?>">বিস্তারিত</a>
                         <button type="button" class="rfa-btn g" style="height:32px;font-size:12px;" data-nb="<?= (int)$u->Id ?>" data-on="0">বোনাস চালু করুন</button></td></tr>
@@ -286,6 +331,42 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     });
     var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
+    // ===== নির্দিষ্ট রেফারার বাছাই (টিক / কোড পেস্ট) — Excel এ শুধু তাদের; বাছাই ব্রাউজারে মনে থাকে =====
+    (function () {
+        var form = document.getElementById('nbForm'); if (!form) return;
+        var KEY = 'mm_nb_pick_v1', rows = [].slice.call(document.querySelectorAll('tr.nb-row')), extra = [];
+        var ids = document.getElementById('nbIds'), codes = document.getElementById('nbCodes'), sel = document.getElementById('nbSel'), xl = document.querySelector('#nbXlBtn span');
+        function save() { try { localStorage.setItem(KEY, JSON.stringify({ ids: picked(), extra: extra })); } catch (e) { } }
+        function picked() { return rows.filter(function (r) { return r.querySelector('.nb-one').checked; }).map(function (r) { return r.getAttribute('data-id'); }); }
+        function sync() {
+            var p = picked(), n = 0, v = 0;
+            rows.forEach(function (r) { var on = r.querySelector('.nb-one').checked; r.classList.toggle('nb-on', on); if (on) { n += +r.getAttribute('data-n'); v += +r.getAttribute('data-v'); } });
+            ids.value = p.join(','); codes.value = extra.join(',');
+            var k = p.length + extra.length;
+            sel.textContent = k ? ('বাছাই: ' + k + ' জন' + (extra.length ? ' (তালিকার বাইরের কোড ' + extra.length + 'টা)' : '') + ' · এই তারিখে মোট ' + n + ' জন এনেছে, ভেরিফাই ' + v + ' জন') : 'কাউকে বাছাই না করলে Excel এ সবার হিসাব আসবে';
+            xl.textContent = k ? 'বাছাই করা ' + k + ' জনের Excel' : 'Excel ডাউনলোড';
+            save();
+        }
+        try { var st = JSON.parse(localStorage.getItem(KEY) || 'null'); if (st) { rows.forEach(function (r) { r.querySelector('.nb-one').checked = (st.ids || []).indexOf(r.getAttribute('data-id')) > -1; }); extra = st.extra || []; } } catch (e) { }
+        rows.forEach(function (r) { r.querySelector('.nb-one').addEventListener('change', sync); });
+        var vis = function () { return rows.filter(function (r) { return r.style.display !== 'none'; }); };
+        document.getElementById('nbCkAll').addEventListener('change', function () { var on = this.checked; vis().forEach(function (r) { r.querySelector('.nb-one').checked = on; }); sync(); });
+        document.getElementById('nbAll').addEventListener('click', function () { vis().forEach(function (r) { r.querySelector('.nb-one').checked = true; }); sync(); });
+        document.getElementById('nbNone').addEventListener('click', function () { rows.forEach(function (r) { r.querySelector('.nb-one').checked = false; }); extra = []; sync(); });
+        document.getElementById('nbFilter').addEventListener('input', function () { var q = this.value.trim().toLowerCase(); rows.forEach(function (r) { r.style.display = !q || r.getAttribute('data-s').indexOf(q) > -1 ? '' : 'none'; }); });
+        document.getElementById('nbPasteBtn').addEventListener('click', function () { var b = document.getElementById('nbPaste'); b.hidden = !b.hidden; if (!b.hidden) document.getElementById('nbPasteIn').focus(); });
+        document.getElementById('nbPasteGo').addEventListener('click', function () {
+            var found = (document.getElementById('nbPasteIn').value.toUpperCase().match(/MM[A-Z0-9]{6}/g) || []).filter(function (c, i, a) { return a.indexOf(c) === i; });
+            var hit = 0, miss = [];
+            found.forEach(function (c) { var r = rows.find(function (x) { return x.getAttribute('data-code') === c; }); if (r) { r.querySelector('.nb-one').checked = true; hit++; } else { miss.push(c); if (extra.indexOf(c) < 0) extra.push(c); } });
+            document.getElementById('nbPasteMsg').textContent = found.length ? (hit + ' জন তালিকা থেকে বাছাই হয়েছে' + (miss.length ? ', ' + miss.length + 'টা কোড বোনাস ছাড়া তালিকায় নেই — সাইটে এই কোড থাকলে Excel এ তাদের হিসাবও আসবে: ' + miss.join(', ') : '') + '।') : 'কোনো কোড পাওয়া যায়নি (কোড দেখতে MM5DEE39 এর মতো)।';
+            sync();
+        });
+        // তাড়াতাড়ি তারিখ: আজ / গতকাল / শেষ ৩ দিন ...
+        [].forEach.call(form.querySelectorAll('[data-qf]'), function (b) { b.addEventListener('click', function () { form.from.value = b.getAttribute('data-qf'); form.to.value = b.getAttribute('data-qt'); form.submit(); }); });
+        sync();
+    })();
+    if (/[?&]from=/.test(location.search)) { var nbc = document.getElementById('noBonus'); if (nbc) setTimeout(function () { nbc.scrollIntoView(); }, 50); }
     // ===== রেফারেল লিংক চেক =====
     var rlIn = document.getElementById('rlIn'), rlOut = document.getElementById('rlOut');
     function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }

@@ -16,6 +16,20 @@ class PaymentController extends Controller
         $role = (string)session_get('UserRole');
         if ($role === 'Admin') return 'অ্যাডমিন অ্যাকাউন্ট দিয়ে প্যাকেজ কেনা যায় না।';
         $track = account_track((int)current_user_id());
+        // ৳২০ এর "১টা Apply" — শিক্ষার্থী (SApply) আর টিচার (TApply)
+        if ($pkg->Audience === 'SApply') {
+            if ($role === 'Teacher' || $track === 'teacher') return 'এই Apply শিক্ষার্থীদের জন্য — টিচার হিসেবে Tuition Circular এর জন্য টিচারের "১টা Apply" নিন।';
+            $ks = $this->db->KycStatus((int)current_user_id(), 'student');
+            if ($ks === 'Rejected') return 'আপনার Student Verification ফর্ম গ্রহণ করা হয়নি — ফর্মটা ঠিক করে আবার জমা দিন, তারপর কিনতে পারবেন।';
+            if ($ks !== 'Approved' && $ks !== 'Pending') return 'Apply কেনার আগে Student Verification ফর্ম (নাম, বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।';
+            if (student_has_package((int)current_user_id())) return 'আপনার শিক্ষার্থী প্যাকেজ চালু আছে — প্যাকেজ দিয়েই যত খুশি টিচারকে Apply করতে পারবেন, আলাদা কিনতে হবে না।';
+            return null;
+        }
+        if ($pkg->Audience === 'TApply') {
+            if ($role !== 'Teacher') return 'এই Apply টিচারদের জন্য — আগে “Become a Tutor” ফর্ম পূরণ করে টিচার হোন।';
+            if (teacher_profile_open((int)current_user_id())) return 'আপনার টিচার প্যাকেজ চালু আছে — প্যাকেজ দিয়েই যত খুশি টিউশনে Apply করতে পারবেন, আলাদা কিনতে হবে না।';
+            return null;
+        }
         if ($pkg->Audience === 'Student' && $track === 'teacher') return ONE_ROLE_MSG_TEACHER;
         if ($pkg->Audience === 'Teacher' && $track === 'student') return ONE_ROLE_MSG_STUDENT;
         if ($pkg->Audience === 'Student' && $role === 'User') {
@@ -196,6 +210,7 @@ class PaymentController extends Controller
 
         // রেফারেল কোড (ঐচ্ছিক) — কারো কোড দিলে পেমেন্ট Accept হলে কোডের মালিক বোনাস পায় (শুধু প্রথম কেনায়)
         $refCode = strtoupper(preg_replace('/\s+/', '', (string)input_str('refCode', '')));
+        if (!empty($pkg->IsApply)) $refCode = '';   // ৳২০ এর Apply কেনায় রেফারেল বোনাস নেই
         if ($refCode !== '' && (int)$pkg->Price > 0) {
             $rerr = null;
             if (!$this->db->CheckPurchaseReferralCode($refCode, $uid, $rerr)) $this->fail($rerr . ' (কোড না থাকলে ঘরটা ফাঁকা রাখুন)', ['field' => 'refCode']);
@@ -257,10 +272,10 @@ class PaymentController extends Controller
         }
         foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, 'New Payment', $full ? "$who “{$pkg->Name}” প্যাকেজ পুরোটা রেফারেল ব্যালেন্স (৳$disc) দিয়ে নিতে চেয়েছেন — Accept করুন।"
-                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', in_array($pkg->Audience, ['Course', 'Publish'], true) ? (($this->db->CourseKindMap()[(int)$courseId] ?? 'course') === 'live' ? '/Admin/LivePayments' : '/Admin/CoursePayments') : ($pkg->Audience === 'Teacher' ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
+                : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$method->Name})।", 'info', in_array($pkg->Audience, ['Course', 'Publish'], true) ? (($this->db->CourseKindMap()[(int)$courseId] ?? 'course') === 'live' ? '/Admin/LivePayments' : '/Admin/CoursePayments') : (in_array($pkg->Audience, ['Teacher', 'TApply'], true) ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
         }
         json_response(['success' => true, 'id' => $id, 'redirect' => '/Payment/My?new=' . $id,
-            'message' => 'পেমেন্টের তথ্য জমা হয়েছে! অ্যাডমিন যাচাই করে Accept করলে আপনার প্যাকেজ চালু হবে।']);
+            'message' => !empty($pkg->IsApply) ? 'পেমেন্টের তথ্য জমা হয়েছে! অ্যাডমিন যাচাই করে Accept করলে আপনি ১টা Apply করতে পারবেন।' : 'পেমেন্টের তথ্য জমা হয়েছে! অ্যাডমিন যাচাই করে Accept করলে আপনার প্যাকেজ চালু হবে।']);
     }
 
     /** GET /Payment/My — আমার পেমেন্ট ও Subscription */

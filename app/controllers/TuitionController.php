@@ -43,10 +43,12 @@ class TuitionController extends Controller
     {
         $userId = current_user_id();
         if ($userId === null) $this->fail('পোস্ট করতে লগইন করুন।');
+        // টিউশন সার্কুলারে শুধু শিক্ষার্থী / ইউজার "টিচার লাগবে" পোস্ট করে — টিচার না
+        if (session_get('UserRole') === 'Teacher') $this->fail('টিচাররা টিউশন সার্কুলারে পোস্ট করতে পারবেন না — পোস্টগুলোতে Apply করুন, আর “পড়াতে চাই” পেইজে পোস্ট করুন।');
         $clean = fn($k, $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str($k, ''))), 0, $max);
         $title = $clean('title', 150);
         $content = trim(preg_replace("/\n{4,}/", "\n\n\n", str_replace("\r", '', (string)input_str('content', ''))));
-        if ($title === '') $title = 'পড়াতে চাই পোস্ট';   // শিরোনাম ঐচ্ছিক
+        if ($title === '' || $title === 'পড়াতে চাই পোস্ট') $title = 'টিচার লাগবে';   // শিরোনাম ঐচ্ছিক
         if (mb_strlen($content) > 3000) $this->fail('বিস্তারিত সর্বোচ্চ ৩০০০ অক্ষর।');
         if ($this->db->CountRecentCircularPosts($userId, 60) >= 10) $this->fail('এক ঘণ্টায় অনেক পোস্ট করেছেন। কিছুক্ষণ পর চেষ্টা করুন।');
         // Student Verification Approve না হলে টিউশন পোস্ট করা যাবে না
@@ -61,10 +63,13 @@ class TuitionController extends Controller
         if ($needCredit && $this->db->GetStudentPostCredits($userId) === 0) json_response(['success' => false, 'needPackage' => '/Package?for=student',
             'message' => 'Tuition Post করতে শিক্ষার্থী প্যাকেজ লাগবে (' . package_price_hint('Student') . ')। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
         // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন — Special Request (content) ঐচ্ছিক
-        foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 120) === '') $this->fail($m);
+        foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 2000) === '') $this->fail($m);
         if ((int)preg_replace('/[^0-9]/', '', (string)input_str('budget', '')) <= 0) $this->fail('বাজেট (৳/মাস) দিন।');
         if (!in_array((string)input_str('medium', ''), Db::CIRCULAR_MEDIUMS, true)) $this->fail('মিডিয়াম বাছাই করুন।');
         if (!in_array((string)input_str('tuitionType', ''), Db::CIRCULAR_TYPES, true)) $this->fail('টিউশনের ধরন বাছাই করুন।');
+        // মোবাইল নম্বর, ইমেইল, ফেসবুক, বাসা / রোড নম্বর ইত্যাদি থাকলে পোস্ট হবে না — টিচার Apply করলে সাইটের মাধ্যমেই যোগাযোগ
+        if (session_get('UserRole') !== 'Admin' && ($why = contact_info_error([$title, $content, $clean('preferredArea', 100), $clean('classLevel', 60), $clean('subjects', 2000)], 'student')))
+            json_response(['success' => false, 'contact' => true, 'message' => $why]);
         $medium = (string)input_str('medium', '');
         $type = (string)input_str('tuitionType', '');
         $budget = preg_replace('/[^0-9]/', '', (string)input_str('budget', ''));
@@ -73,6 +78,8 @@ class TuitionController extends Controller
         $imageUrl = null; $videoUrl = null;
         $image = upload_file('imageFile');
         $video = upload_file('videoFile');
+        // Tuition Circular — শুধু লেখা (ছবি / ভিডিও বন্ধ)
+        if ($image || $video) $this->fail('এখানে শুধু লেখা দিয়ে পোস্ট করা যাবে — ছবি বা ভিডিও দেওয়া যাবে না।');
         if ($image && $video) $this->fail('একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।');
         if ($image) {
             $ext = strtolower('.' . pathinfo($image['name'], PATHINFO_EXTENSION));
@@ -93,7 +100,7 @@ class TuitionController extends Controller
         $post = obj([
             'UserId' => $userId, 'Content' => $content, 'ImageUrl' => $imageUrl, 'VideoUrl' => $videoUrl, 'Title' => $title,
             'PreferredArea' => $clean('preferredArea', 100) ?: null, 'ClassLevel' => $clean('classLevel', 60) ?: null,
-            'Subjects' => $clean('subjects', 120) ?: null, 'Budget' => $budget !== '' ? $budget : null,
+            'Subjects' => $clean('subjects', 2000) ?: null, 'Budget' => $budget !== '' ? $budget : null,
             'Medium' => in_array($medium, Db::CIRCULAR_MEDIUMS, true) ? $medium : null,
             'TuitionType' => in_array($type, Db::CIRCULAR_TYPES, true) ? $type : null,
         ]);
@@ -234,6 +241,13 @@ class TuitionController extends Controller
         if ($teacherId === null) json_response(['success' => false, 'message' => 'Apply করতে লগইন করুন।']);
         if (current_role() !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু অনুমোদিত টিচাররা Apply করতে পারবেন।']);
 
+        // টিচার প্যাকেজ চালু না থাকলে ৳২০ এর "১টা Apply" লাগে (একটা খরচ হয়)
+        $useApply = !teacher_profile_open((int)$teacherId);
+        if ($useApply && $this->db->GetApplyCredits((int)$teacherId, 'TApply') <= 0) {
+            $ap = $this->db->GetApplyPackage('TApply');
+            json_response(['success' => false, 'needPackage' => '/Package?for=teacher#apply-teacher',
+                'message' => 'টিউশনে Apply করতে টিচার প্যাকেজ নিন' . ($ap ? ' অথবা ৳' . (int)$ap->Price . ' দিয়ে ১টা Apply নিন' : '') . '।']);
+        }
         $postId = input_int('postId', 0);
         $message = trim((string)input_str('message', ''));
         $phone = preg_replace('/\D/', '', (string)input_str('phone', ''));
@@ -244,6 +258,7 @@ class TuitionController extends Controller
         $result = $this->db->ApplyToCircularPost($postId, $teacherId, $message === '' ? null : $message, $phone, $post);
         switch ($result) {
             case 'ok':
+                if ($useApply) { try { $this->db->ConsumeApplyCredit((int)$teacherId, 'TApply'); } catch (Throwable $e) { error_log('[apply credit] ' . $e->getMessage()); } }
                 $teacherName = session_get('UserFullName') ?? session_get('UserName') ?? 'A teacher';
                 $this->db->CreateNotification($post->UserId, 'New Teacher Application',
                     "$teacherName আপনার টিউশন পোস্টে Apply করেছেন।", 'success',

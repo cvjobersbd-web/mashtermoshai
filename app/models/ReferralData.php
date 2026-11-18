@@ -90,13 +90,36 @@ trait ReferralData
         return $this->all('SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id` WHERE u.`Id` IN (' . implode(',', $ids) . ') ORDER BY u.`FullName`');
     }
 
+    /** নির্দিষ্ট ইউজারদের তথ্য + রেফারেল কোড (Excel এ বাছাই করা রেফারার) */
+    public function GetRefUsersByIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) return [];
+        $this->EnsureReferralTables();
+        return $this->all('SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`Role`, c.`Code` FROM `Users` u LEFT JOIN `ReferralCodes` c ON c.`UserId` = u.`Id` WHERE u.`Id` IN (' . implode(',', $ids) . ') ORDER BY u.`FullName`');
+    }
+
+    /** রেফারেল কোড (MMXXXXXX) → ইউজার Id */
+    public function RefUserIdsByCodes(array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(fn($c) => strtoupper(trim((string)$c)), $codes), fn($c) => preg_match('/^MM[A-Z0-9]{6}$/', $c))));
+        if (!$codes) return [];
+        $this->EnsureReferralTables();
+        $ph = []; $args = [];
+        foreach ($codes as $i => $c) { $ph[] = ':c' . $i; $args['c' . $i] = $c; }
+        $out = [];
+        foreach ($this->all('SELECT `UserId`, `Code` FROM `ReferralCodes` WHERE UPPER(`Code`) IN (' . implode(',', $ph) . ')', $args) as $r) $out[strtoupper((string)$r->Code)] = (int)$r->UserId;
+        return $out;
+    }
+
     /**
      * বোনাস ছাড়া রেফারারদের রেফারেল — তারিখের মধ্যে (Y-m-d, দুই দিনই ধরে)। Excel আর "আজ কতজন" এর জন্য।
      * @return Obj[] (Id, ReferrerId, CreatedAt, Via, Src, Status, Bought, Name, UserName, Email, MobileNumber)
      */
-    public function GetNoBonusReferrals(string $from, string $to): array
+    public function GetNoBonusReferrals(string $from, string $to, ?array $only = null): array
     {
-        $ids = $this->RefNoBonusIds();
+        // $only দিলে শুধু ওই রেফারারদের (অ্যাডমিন নাম / কোড বাছাই করে Excel নেন)
+        $ids = $only !== null ? array_values(array_unique(array_filter(array_map('intval', $only)))) : $this->RefNoBonusIds();
         if (!$ids) return [];
         $this->EnsureReferralTables();
         try { $this->EnsureRefCodeCols(); $this->EnsurePaymentTables(); } catch (Throwable $e) { }
@@ -163,6 +186,21 @@ trait ReferralData
     }
 
     public const REF_KIND_LABEL = ['t' => 'টিচার', 'ta' => 'টিচার (আবেদন করেছে)', 's' => 'শিক্ষার্থী', 'n' => 'এখনো ঠিক করেনি'];
+
+    /** [ReferrerId => ['n' => কতজন, 'v' => কতজন ইমেইল ভেরিফাই করেছে]] — বাছাই করা তারিখের মধ্যে, বোনাস ছাড়া রেফারারদের */
+    public function NoBonusRangeCounts(string $from, string $to): array
+    {
+        $out = [];
+        try {
+            $rows = $this->GetNoBonusReferrals($from, $to);
+            $ver = [];
+            if ($rows) {
+                try { $this->EnsureEmailVerify(); foreach ($this->all('SELECT `Id`, `EmailVerified` FROM `Users` WHERE `Id` IN (' . implode(',', array_map(fn($r) => (int)$r->ReferredUserId, $rows)) . ')') as $u) $ver[(int)$u->Id] = $u->EmailVerified === null || (int)$u->EmailVerified === 1; } catch (Throwable $e) { }
+            }
+            foreach ($rows as $r) { $k = (int)$r->ReferrerId; $out[$k] ??= ['n' => 0, 'v' => 0]; $out[$k]['n']++; if ($ver[(int)$r->ReferredUserId] ?? true) $out[$k]['v']++; }
+        } catch (Throwable $e) { error_log('[NoBonusRangeCounts] ' . $e->getMessage()); }
+        return $out;
+    }
 
     /** [ReferrerId => আজ কতজন] — বোনাস ছাড়া রেফারারদের তালিকায় দেখানোর জন্য */
     public function NoBonusTodayCounts(): array

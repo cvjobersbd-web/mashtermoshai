@@ -16,10 +16,16 @@ $posts = [];
 try {
     $posts = db()->GetAllTeachWantedPosts($userId);
 } catch (Throwable $ex) { error_log($ex->getMessage()); }
-// টিচারদের "পড়াতে চাই" পোস্ট — শিক্ষার্থী / ইউজার প্যাকেজ কিনলে তবেই দেখবে (টিচার ও অ্যাডমিন সবসময় দেখে)
-$postsLocked = !$isTeacher && !viewer_has_package();
-$lockedPostCount = $postsLocked ? count($posts) : 0;
-if ($postsLocked) $posts = [];
+// টিচারদের "পড়াতে চাই" পোস্ট — সবাই ফ্রিতে দেখতে আর লাইক দিতে পারে (প্যাকেজ ছাড়া টিচারের ছবি ছোট করে দেখায়)।
+// Apply (টিচারকে রিকোয়েস্ট) — শিক্ষার্থী প্যাকেজ থাকলে, অথবা ৳২০ এর "১টা Apply" কেনা থাকলে
+$postsLocked = false;
+$lockedPostCount = 0;
+$isAdminViewer = $userRole === 'Admin';
+$sApplyLeft = $isLoggedIn && $userRole === 'User' ? db()->GetApplyCredits((int)$userId, 'SApply') : 0;
+$canContactAll = viewer_can_contact_teachers();
+$canRequest = $canContactAll || $sApplyLeft > 0;
+$sApplyPkg = db()->GetApplyPackage('SApply');
+$applyLockUrl = !$isLoggedIn ? '/Account/Login?returnUrl=' . rawurlencode('/FindTutor#postFeed') : '/Package?for=student#apply-student';
 
 // নামের প্রথম অক্ষর (বড় হাতের), খালি হলে ডিফল্ট
 $firstUpper = fn($s, string $d) => mb_strlen((string)$s) > 0 ? mb_strtoupper(mb_substr((string)$s, 0, 1)) : $d;
@@ -249,6 +255,11 @@ $CommentIso = function ($dt): string {
         padding: 4px;
     }
 
+    .fb-action-btn.fb-apply { color: #fff !important; background: linear-gradient(135deg, #0EA5E9, #0369A1); border-radius: 10px; margin: 4px; font-weight: 700; }
+    .fb-action-btn.fb-apply:hover { background: linear-gradient(135deg, #0284C7, #075985); color: #fff; }
+    .fb-action-btn.fb-apply small { font-weight: 600; opacity: .9; margin-left: 2px; }
+    .fb-action-btn.fb-apply-lock { color: #92400E !important; text-decoration: none; font-size: 13px; }
+    .fb-action-btn.fb-apply-lock i { color: #B45309; }
     .fb-action-btn {
         flex: 1;
         background: none;
@@ -2050,8 +2061,6 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                         <button type="button" class="ft2-compose-in" data-ft-compose="text"><?= $isTeacher || !$isLoggedIn ? 'আপনার টিউশনের প্রয়োজনের বিস্তারিত লিখুন...' : 'শুধু টিচাররা এখানে পোস্ট করতে পারবেন' ?></button>
                     </div>
                     <div class="ft2-compose-row">
-                        <button type="button" class="ft2-mbtn" data-ft-compose="photo"><i class="fas fa-image" style="color:#22A35A;"></i> Photo</button>
-                        <button type="button" class="ft2-mbtn" data-ft-compose="video"><i class="fas fa-video" style="color:#E5383B;"></i> Video</button>
                         <button type="button" class="ft2-btn blue" data-ft-compose="post"><i class="fas fa-paper-plane"></i> পোস্ট করুন</button>
                     </div>
                     <?php if ($isLoggedIn && !$isTeacher && $userRole !== 'Admin'): ?>
@@ -2120,9 +2129,10 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                             <!-- Header -->
                             <div class="fb-post-header">
                                 <div class="fb-post-user">
+                                    <?php $pcImg = is_blank($post->UserProfileImage) ? '' : (viewer_sees_teacher_full((int)$post->UserId) ? (string)$post->UserProfileImage : teacher_thumb_url((int)$post->UserId, $post->UserProfileImage)); ?>
                                     <div class="pc-avatar">
-                                        <?php if (!is_blank($post->UserProfileImage)): ?>
-                                            <img src="<?= e($post->UserProfileImage) ?>" alt="<?= e($post->UserName) ?>" />
+                                        <?php if ($pcImg !== ''): ?>
+                                            <img src="<?= e($pcImg) ?>" alt="<?= e($post->UserFullName . ' এর প্রোফাইল ছবি') ?>" loading="lazy" draggable="false" oncontextmenu="return false" />
                                         <?php else: ?>
                                             <?= e($firstUpper($post->UserFullName, 'T')) ?>
                                         <?php endif; ?>
@@ -2188,6 +2198,17 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                     <button class="fb-action-btn" onclick="alert('লাইক করতে লগইন করুন!')">
                                         <i class="far fa-thumbs-up"></i> Like
                                     </button>
+                                <?php endif; ?>
+                                <?php if (!$isTeacher && !$isAdminViewer && (string)$post->UserId !== (string)$userId): ?>
+                                    <?php if ($canRequest): ?>
+                                        <button class="fb-action-btn fb-apply" onclick="applyTeachPost(<?= (int)$post->UserId ?>)" title="এই টিচারকে টিউশন রিকোয়েস্ট পাঠান">
+                                            <i class="fas fa-paper-plane"></i> Apply<?= !$canContactAll ? ' <small>(' . e(bn_num($sApplyLeft)) . 'টা বাকি)</small>' : '' ?>
+                                        </button>
+                                    <?php elseif ($sApplyPkg || !$isLoggedIn): ?>
+                                        <a class="fb-action-btn fb-apply-lock" href="<?= e($applyLockUrl) ?>" title="Apply করতে শিক্ষার্থী প্যাকেজ নিন<?= $sApplyPkg ? ' অথবা ৳' . (int)$sApplyPkg->Price . ' দিয়ে ১টা Apply' : '' ?>">
+                                            <i class="fas fa-lock"></i> <?= !$isLoggedIn ? 'লগইন করে Apply' : 'Apply করতে প্যাকেজ / ৳' . (int)($sApplyPkg->Price ?? 20) ?>
+                                        </a>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if (feed_comments_on()): ?>
                                 <button class="fb-action-btn" onclick="toggleComments(<?= (int)$post->Id ?>)">
@@ -2393,7 +2414,8 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <video id="videoPreviewEl" controls preload="metadata" style="width:100%;max-height:260px;border-radius:12px;background:#000;"></video>
                 </div>
 
-                <div class="modal-actions-bottom">
+                <!-- ছবি / ভিডিও বন্ধ — এখানে শুধু লেখা দিয়ে পোস্ট -->
+                <div class="modal-actions-bottom" style="display:none !important;">
                     <span style="font-size:14px; font-weight:600; color:#08224A;">Add to your post</span>
                     <div>
                         <label for="postImageInput" class="icon-btn" style="cursor:pointer; margin:0;">
@@ -2431,7 +2453,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     <img id="editImgPreview" src="" alt="পোস্টের ছবির প্রিভিউ" />
                 </div>
 
-                <div class="modal-actions-bottom">
+                <div class="modal-actions-bottom" style="display:none !important;">
                     <span style="font-size:14px; font-weight:600; color:#08224A;">Photo</span>
                     <div>
                         <label for="editImageInput" class="icon-btn" style="cursor:pointer; margin:0;">
@@ -3325,7 +3347,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                     + '  </div>'
                     + '</div>'
                     + '<div class="tp-cta">'
-                    + '  <p><i class="fas fa-shield-alt me-1"></i> For privacy, we never share tutor contact details. All requests go through our admin team.</p>'
+                    + '  <p><i class="fas fa-shield-alt me-1"></i> For privacy, we never share tutor contact details. রিকোয়েস্ট সরাসরি টিচারের কাছে যাবে — টিচার Accept করলে সাইটের চ্যাটে কথা বলতে পারবেন।</p>'
                     + (<?= viewer_can_contact_teachers() ? 'true' : 'false' ?>
                         ? '  <button class="btn-request-tr" style="width:100%; padding:14px;" onclick="switchToRequest(' + t.id + ')"><i class="fas fa-paper-plane"></i> Request This Tutor</button>'
                         : '  <a class="btn-request-tr" style="width:100%; padding:14px; display:block; text-align:center; text-decoration:none;" href="' + <?= js(student_package_url()) ?> + '"><i class="fas fa-lock"></i> <?= current_user_id() === null ? 'লগইন করে Request' : 'প্যাকেজ নিয়ে Request' ?></a>')
@@ -3349,13 +3371,13 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                 }
 
                 var t = tutorId ? allTutors.find(function (x) { return x.id === tutorId; }) : null;
-                if (!<?= viewer_can_contact_teachers() ? 'true' : 'false' ?>) { alert('টিচারকে রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন।'); location.href = <?= js(student_package_url()) ?>; return; }
+                if (!<?= $canRequest ? 'true' : 'false' ?>) { alert('টিচারকে রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন<?= $sApplyPkg ? ' অথবা ৳' . (int)$sApplyPkg->Price . ' দিয়ে ১টা Apply নিন' : '' ?>।'); location.href = <?= js($sApplyPkg && $isLoggedIn ? '/Package?for=student#apply-student' : student_package_url()) ?>; return; }
 
                 var headerInfo = t
                     ? '<div class="form-intro"><p>Requesting <strong>' + escapeHtml(t.fullName) + '</strong> '
                     + '(<span style="font-family:monospace;">' + escapeHtml(t.tutorId) + '</span>) — '
-                    + escapeHtml((t.subjects || []).join(', ')) + '. Your request goes to our admin team.</p></div>'
-                    : '<div class="form-intro"><p>Already know your tutor? Select them below and submit your request. Our admin team will forward it.</p></div>';
+                    + escapeHtml((t.subjects || []).join(', ')) + '. রিকোয়েস্ট সরাসরি এই টিচারের কাছে যাবে — টিচার Accept করলে চ্যাট খুলে যাবে।</p></div>'
+                    : '<div class="form-intro"><p>Already know your tutor? নিচে থেকে টিচার বাছাই করে রিকোয়েস্ট পাঠান — সরাসরি টিচারের কাছে যাবে।</p></div>';
 
                 var tutorOptions = allTutors.map(function (x) {
                     var sel = (t && t.id === x.id) ? ' selected' : '';
@@ -3477,7 +3499,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                         + '<div class="success-panel">'
                         + '  <div class="success-icon"><i class="fas fa-check"></i></div>'
                         + '  <h4>Request Submitted Successfully!</h4>'
-                        + '  <p>Your request for <strong>' + escapeHtml(tutor ? tutor.fullName : '') + '</strong> has been received. Our admin team will contact you on WhatsApp shortly.</p>'
+                        + '  <p>আপনার রিকোয়েস্ট <strong>' + escapeHtml(tutor ? tutor.fullName : '') + '</strong> এর কাছে পাঠানো হয়েছে। টিচার Accept করলে নোটিফিকেশন পাবেন আর সাইটের চ্যাটে কথা বলতে পারবেন।</p>'
                         + '  <div class="success-req-id"><span class="req-label">Request ID</span><span class="req-value">' + escapeHtml(data.requestId || reqId) + '</span></div>'
                         + '  <button class="btn-ok" onclick="closeModal(\'requestTutorModal\')">OK</button>'
                         + '</div>';
@@ -3880,6 +3902,12 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
             window.submitNeedTutor = submitNeedTutor;
             window.submitAreaTuition = submitAreaTuition;
             window.applySearch = applySearch;
+            // "পড়াতে চাই" পোস্টের Apply → ওই টিচারের রিকোয়েস্ট ফর্ম
+            window.applyTeachPost = function (uid) {
+                var rt = (window.allTutors || allTutors || []).find(function (x) { return +x.userId === +uid; });
+                if (!rt) { alert('এই টিচার এখন টিউটর তালিকায় নেই — তাই রিকোয়েস্ট পাঠানো যাচ্ছে না।'); return; }
+                openRequestTutorModal(rt.id);
+            };
             window.findByTutorId = findByTutorId;
             window.closeModal = closeModal;
 
@@ -3893,7 +3921,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
 
                 // টিচারের প্রোফাইল থেকে "Request Tutor" (/FindTutor?req={userId}) — সরাসরি রিকোয়েস্ট ফর্ম খোলে
                 var reqUid = parseInt(new URLSearchParams(location.search).get('req') || '0', 10);
-                if (reqUid && !<?= viewer_can_contact_teachers() ? 'true' : 'false' ?>) {
+                if (reqUid && !<?= $canRequest ? 'true' : 'false' ?>) {
                     alert('<?= current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।' ?>');
                     location.href = <?= js(student_package_url()) ?>; reqUid = 0;
                 }

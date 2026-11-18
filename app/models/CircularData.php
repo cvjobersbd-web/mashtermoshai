@@ -29,6 +29,20 @@ trait CircularData
             }
         }
         $this->circularExtrasReady = true;
+        // একবারই: বিষয় এখন যত খুশি (একাধিক) — MySQL এ Subjects কলাম VARCHAR(300) থেকে TEXT
+        try {
+            if (!$sqlite && ($this->GetSiteContent(['circ_subj_text_v1' => ''])['circ_subj_text_v1'] ?? '') === '') {
+                $this->pdo->exec('ALTER TABLE `TuitionCircularPosts` MODIFY `Subjects` TEXT NULL');
+                $this->SaveSiteContent(['circ_subj_text_v1' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[circ subj text] ' . $e->getMessage()); }
+        // একবারই: আগের ভুল শিরোনাম "পড়াতে চাই পোস্ট" → "টিচার লাগবে" (সার্কুলারে শিক্ষার্থী টিচার খোঁজে)
+        try {
+            if (($this->GetSiteContent(['circ_title_fix_v1' => ''])['circ_title_fix_v1'] ?? '') === '') {
+                $this->exec("UPDATE `TuitionCircularPosts` SET `Title` = :n WHERE `Title` = :o", ['n' => 'টিচার লাগবে', 'o' => 'পড়াতে চাই পোস্ট']);
+                $this->SaveSiteContent(['circ_title_fix_v1' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[circ title fix] ' . $e->getMessage()); }
     }
 
     /** ফিল্টারের SQL অংশ */

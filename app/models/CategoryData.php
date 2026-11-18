@@ -41,6 +41,28 @@ trait CategoryData
                 $this->SaveSiteContent(['cat_seeded' => '1']);
             }
         } catch (Throwable $e) { error_log('[categories seed] ' . $e->getMessage()); }
+        // নতুন: মাদ্রাসার ক্যাটাগরি (Bangla Medium এর ঠিক পরে) — একবারই, আগে থেকে "Madrasa" নামে গ্রুপ থাকলে বসায় না
+        try {
+            if (($this->GetSiteContent(['cat_madrasa_v1' => ''])['cat_madrasa_v1'] ?? '') === '') {
+                $this->SaveSiteContent(['cat_madrasa_v1' => '1']);
+                if ((int)$this->scalar("SELECT COUNT(*) FROM `CategoryGroups` WHERE LOWER(`Name`) IN ('madrasa', 'madrasah')") === 0) $this->addMadrasaGroup();
+            }
+        } catch (Throwable $e) { error_log('[categories madrasa] ' . $e->getMessage()); }
+    }
+
+    private function addMadrasaGroup(): void
+    {
+        $after = $this->one("SELECT `SortOrder` FROM `CategoryGroups` WHERE `Name` = 'Bangla Medium' ORDER BY `Id` LIMIT 1");
+        $pos = $after ? (int)$after->SortOrder + 1 : (int)$this->scalar('SELECT COALESCE(MAX(`SortOrder`), 0) FROM `CategoryGroups`') + 1;
+        $this->exec('UPDATE `CategoryGroups` SET `SortOrder` = `SortOrder` + 1 WHERE `SortOrder` >= :p', ['p' => $pos]);
+        $gid = $this->insert('INSERT INTO `CategoryGroups` (`Name`, `SortOrder`, `IsActive`, `CreatedAt`) VALUES (:n, :s, 1, :t)', ['n' => 'Madrasa', 's' => $pos, 't' => now()]);
+        foreach (madrasa_category_items() as $i => [$name, $icon, $type, $keywords]) {
+            $this->insertCategory([
+                'GroupId' => $gid, 'Name' => $name, 'Slug' => $this->uniqueCategorySlug($name, 'Madrasa', 0), 'Icon' => $icon,
+                'ImageUrl' => '', 'BannerUrl' => '', 'Highlights' => '', 'About' => '', 'WhyChoose' => '',
+                'MatchType' => $type, 'Keywords' => implode(', ', $keywords), 'IsActive' => 1, 'SortOrder' => $i + 1,
+            ]);
+        }
     }
 
     private function seedCategories(): void

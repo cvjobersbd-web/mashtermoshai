@@ -726,10 +726,13 @@ class Db
     public function GetAllTutorRequests(?string $statusFilter = null): array
     {
         try {
+            // নির্দিষ্ট টিচারকে পাঠানো রিকোয়েস্ট (TCH-) সরাসরি টিচারের কাছে যায় — অ্যাডমিনের তালিকায় না
+            $this->EnsureTutorRequestUserColumns();
+            $own = self::ADMIN_TUTOR_REQ_WHERE;
             if (!is_blank($statusFilter) && $statusFilter !== 'all') {
-                $rows = $this->all('SELECT * FROM `TutorRequests` WHERE `Status` = :s ORDER BY `CreatedAt` DESC', ['s' => $statusFilter]);
+                $rows = $this->all("SELECT * FROM `TutorRequests` WHERE `Status` = :s AND $own ORDER BY `CreatedAt` DESC", ['s' => $statusFilter]);
             } else {
-                $rows = $this->all('SELECT * FROM `TutorRequests` ORDER BY `CreatedAt` DESC');
+                $rows = $this->all("SELECT * FROM `TutorRequests` WHERE $own ORDER BY `CreatedAt` DESC");
             }
             return array_map([self::class, 'mapTutorRequest'], $rows);
         } catch (Throwable $e) { return []; }
@@ -765,6 +768,9 @@ class Db
         try { return $this->exec('DELETE FROM `TutorRequests` WHERE `Id` = :id', ['id' => $id]) > 0; } catch (Throwable $e) { return false; }
     }
 
+    /** অ্যাডমিনের Tutor Requests এ যেগুলো দেখায় — নির্দিষ্ট টিচারকে পাঠানো (TCH-) গুলো বাদ */
+    public const ADMIN_TUTOR_REQ_WHERE = "(`TutorId` IS NULL OR `TutorId` = '' OR `TutorId` NOT LIKE 'TCH-%')";
+
     public function GetTutorRequestStats(): Obj
     {
         try {
@@ -772,7 +778,7 @@ class Db
                     SUM(CASE WHEN `Status` = 'Pending' THEN 1 ELSE 0 END) AS Pending,
                     SUM(CASE WHEN `Status` = 'Contacted' THEN 1 ELSE 0 END) AS Contacted,
                     SUM(CASE WHEN `Status` = 'Completed' THEN 1 ELSE 0 END) AS Completed
-                FROM `TutorRequests`");
+                FROM `TutorRequests` WHERE " . self::ADMIN_TUTOR_REQ_WHERE);
             return obj(['Total' => (int)$r->Total, 'Pending' => (int)$r->Pending, 'Contacted' => (int)$r->Contacted, 'Completed' => (int)$r->Completed]);
         } catch (Throwable $e) {
             return obj(['Total' => 0, 'Pending' => 0, 'Contacted' => 0, 'Completed' => 0]);
@@ -1049,6 +1055,11 @@ class Db
         $r->Id = (int)$r->Id;
         $r->UserId = (int)$r->UserId;
         $r->Content = $r->Content ?? '';
+        // আগের পোস্টে মোবাইল নম্বর / ইমেইল / লিংক / ঠিকানা থাকলে অন্যদের কাছে ঢাকা (•••) — অ্যাডমিন আর পোস্টদাতা আসলটা দেখেন
+        if (!is_admin() && (int)(current_user_id() ?? 0) !== $r->UserId) {
+            $r->Content = contact_mask($r->Content);
+            if (isset($r->Title)) $r->Title = contact_mask((string)$r->Title);
+        }
         $r->LikeCount = (int)$r->LikeCount;
         $r->UserFullName = $r->FullName ?? $defaultName;
         $r->UserName = $r->UserName ?? '';

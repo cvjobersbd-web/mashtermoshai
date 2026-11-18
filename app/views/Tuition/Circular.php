@@ -30,6 +30,10 @@ $savedKeys = ($isLoggedIn && $userId && !$isAdmin) ? db()->SavedKeys((int)$userI
 $canSave = $isLoggedIn && !$isAdmin;
 $myApplied = [];
 $myPhone = '';
+// টিচারের Apply — টিচার প্যাকেজ চালু থাকলে যত খুশি, না থাকলে ৳২০ এর "১টা Apply" দিয়ে
+$tOpen = $isTeacher && $userId && teacher_profile_open((int)$userId);
+$tApplyLeft = $isTeacher && $userId && !$tOpen ? db()->GetApplyCredits((int)$userId, 'TApply') : 0;
+$tApplyPkg = $isTeacher && !$tOpen ? db()->GetApplyPackage('TApply') : null;
 if ($isLoggedIn && $isTeacher && $userId) {
     $myApplied = db()->GetCircularApplicationStatusesByTeacher((int)$userId);
     $myPhone = (string)(db()->GetUserById((int)$userId)?->MobileNumber ?? '');
@@ -263,6 +267,15 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     .tcm-f input[type=text], .tcm-f input[type=number], .tcm-f textarea, .tcm-f select { width: 100%; border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 10px 12px; font-size: 15px;
         outline: none; background: #fff; font-family: inherit; color: var(--tc-navy); }
     .tcm-f textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+    .tcm-ms { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 46px; border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 6px 8px; background: #fff; cursor: text; }
+    .tcm-ms:focus-within { border-color: var(--tc-teal); box-shadow: 0 0 0 3px rgba(15,76,92,.12); }
+    .tcm-ms #tcmSubjChips { display: contents; }
+    .tcm-ms .ch { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #E0F2FE; color: #075985; font-size: 13.5px; font-weight: 700; }
+    .tcm-ms .ch button { border: none; background: rgba(7,89,133,.12); color: #075985; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+    .tcm-f .tcm-ms input[type=text] { flex: 1; min-width: 120px; border: none !important; box-shadow: none !important; padding: 6px 4px; outline: none; }
+    .tcm-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tcm-sugg button { border: 1.5px dashed #BAE6FD; background: #F8FCFF; color: #0369A1; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .tcm-sugg button.on { display: none; }
     .tcm-f input:focus, .tcm-f textarea:focus, .tcm-f select:focus { border-color: var(--tc-teal); box-shadow: 0 0 0 3px rgba(15,76,92,.12); }
     .tcm-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .tcm-seg { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -739,6 +752,13 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 
             <!-- ======================= MAIN ======================= -->
             <main class="tc-main">
+                <?php if ($isTeacher): ?>
+                    <!-- টিচাররা সার্কুলারে পোস্ট করতে পারেন না — শুধু Apply -->
+                    <div class="tc-card" style="padding:16px 18px;display:flex;gap:12px;align-items:flex-start;background:#F0F9FF;border:1px solid #BAE6FD;">
+                        <i class="fas fa-circle-info" style="color:#0369A1;font-size:20px;margin-top:2px;"></i>
+                        <div style="font-size:14.5px;color:#0C4A6E;line-height:1.6;">টিউশন সার্কুলারে শুধু শিক্ষার্থীরা “টিচার লাগবে” পোস্ট করেন — টিচাররা এখানে পোস্ট করতে পারবেন না। নিচের পোস্টগুলোতে <b>Apply</b> করুন, আর নিজের পড়ানোর কথা জানাতে <a href="/FindTutor" style="font-weight:700;color:#0369A1;">“পড়াতে চাই” পেইজে পোস্ট করুন</a>।</div>
+                    </div>
+                <?php else: ?>
                 <div class="tc-card tc-compose">
                     <div class="tc-compose-top">
                         <?= $avatar($isLoggedIn ? $userProfileImg : null, $isLoggedIn ? $userFullName : 'U') ?>
@@ -746,8 +766,6 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                placeholder="আপনার টিউশনের প্রয়োজন সম্পর্কে লিখুন..." <?= $isLoggedIn ? '' : 'readonly' ?> data-tc-open="text" />
                     </div>
                     <div class="tc-compose-row">
-                        <button type="button" class="tc-chip ch-ph" data-tc-open="photo"><i class="fas fa-image"></i> Photo</button>
-                        <button type="button" class="tc-chip ch-vd" data-tc-open="video"><i class="fas fa-video"></i> Video</button>
                         <button type="button" class="tc-chip ch-lc" data-tc-open="location"><i class="fas fa-location-dot"></i> Location</button>
                         <button type="button" class="tc-chip ch-sb" data-tc-open="subject"><i class="fas fa-book-open"></i> Subject</button>
                         <button type="button" class="tc-btn dark" data-tc-open="post"><i class="fas fa-paper-plane"></i> Post Now</button>
@@ -756,6 +774,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                         <div class="tc-login-note"><i class="fas fa-circle-info"></i> পোস্ট বা কমেন্ট করতে <a href="<?= e($loginUrl) ?>">লগইন করুন</a> — অ্যাকাউন্ট না থাকলে <a href="/Account/Register">রেজিস্টার করুন</a>।</div>
                     <?php endif; ?>
                 </div>
+                <?php endif; /* টিচার নয় */ ?>
 
                 <div class="tc-feed-h">
                     <h2><i class="fas fa-list-ul"></i> <?= $isFiltered ? 'Filtered Tuition Posts' : 'Recent Tuition Posts' ?>
@@ -858,8 +877,10 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                             <?php if ($isLoggedIn && $isTeacher && !$isOwn): ?>
                                                 <?php if (isset($myApplied[$pid])): ?>
                                                     <button type="button" class="tc-apply applied" disabled><i class="fas fa-check-circle"></i> Applied<?= $myApplied[$pid] !== 'Pending' ? ' · ' . e($myApplied[$pid]) : '' ?></button>
+                                                <?php elseif ($tOpen || $tApplyLeft > 0): ?>
+                                                    <button type="button" class="tc-apply" id="apply-btn-<?= $pid ?>" onclick="applyForCircular(<?= $pid ?>)"><i class="fas fa-paper-plane"></i> Apply Now<?= !$tOpen ? ' <small style="font-weight:600;opacity:.9;">(' . e(bn_num($tApplyLeft)) . 'টা বাকি)</small>' : '' ?></button>
                                                 <?php else: ?>
-                                                    <button type="button" class="tc-apply" id="apply-btn-<?= $pid ?>" onclick="applyForCircular(<?= $pid ?>)"><i class="fas fa-paper-plane"></i> Apply Now</button>
+                                                    <a class="tc-apply" style="background:#FEF3C7;color:#92400E;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap;" href="/Package?for=teacher#apply-teacher" title="Apply করতে টিচার প্যাকেজ নিন<?= $tApplyPkg ? ' অথবা ৳' . (int)$tApplyPkg->Price . ' দিয়ে ১টা Apply' : '' ?>"><i class="fas fa-lock"></i> Apply<?= $tApplyPkg ? ' · ৳' . (int)$tApplyPkg->Price : '' ?></a>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
@@ -966,6 +987,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 
             <!-- ======================= RIGHT ======================= -->
             <aside class="tc-side">
+<?php if (!$isTeacher): ?>
                 <div class="tc-card tc-need">
                     <h3><i class="fas fa-graduation-cap"></i> Need a Teacher?</h3>
                     <span class="trail" aria-hidden="true"></span><i class="fas fa-paper-plane plane" aria-hidden="true"></i>
@@ -981,6 +1003,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                         <a href="/Package?for=student" class="tc-pk-link"><i class="fas fa-tags"></i> শিক্ষার্থী প্যাকেজ ও খরচ দেখুন <i class="fas fa-arrow-right"></i></a>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
                 <div class="tc-card tc-how">
                     <h3><i class="fas fa-lightbulb"></i> How It Works?</h3>
                     <ol class="tc-steps">
@@ -1015,7 +1038,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
             </div>
             <div class="tcm-err" id="tcmErr"></div>
             <div class="tcm-f"><label>শিরোনাম</label>
-                <div class="tcm-seg"><label><input type="radio" name="title" value="পড়াতে চাই পোস্ট" id="tcmTitle" /><span><i class="fas fa-chalkboard-user"></i> পড়াতে চাই পোস্ট</span></label></div></div>
+                <div class="tcm-seg"><label><input type="radio" name="title" value="টিচার লাগবে" id="tcmTitle" /><span><i class="fas fa-chalkboard-user"></i> টিচার লাগবে</span></label></div></div>
             <div class="tcm-f"><label for="tcmContent">Special Request <small>(কোনো বিশেষ অনুরোধ থাকলে)</small></label>
                 <textarea id="tcmContent" name="content" maxlength="3000" style="min-height:90px;" placeholder="যেমন: মহিলা শিক্ষক হলে ভালো, সন্ধ্যার পরে পড়াতে হবে, সপ্তাহে ৩ দিন..."></textarea></div>
             <div class="tcm-2">
@@ -1025,16 +1048,20 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <input type="text" id="tcmClass" name="classLevel" maxlength="60" list="tcClassList" placeholder="যেমন: HSC" /></div>
             </div>
             <div class="tcm-2">
-                <div class="tcm-f"><label for="tcmSubj"><i class="fas fa-book-open" style="color:#2563EB;"></i> বিষয় <b>*</b></label>
-                    <input type="text" id="tcmSubj" name="subjects" maxlength="120" list="tcSubjList" placeholder="যেমন: Mathematics, Physics" /></div>
+                <div class="tcm-f"><label for="tcmSubjIn"><i class="fas fa-book-open" style="color:#2563EB;"></i> বিষয় <b>*</b> <small>(একাধিক বাছাই করা যাবে)</small></label>
+                    <!-- একাধিক বিষয়: বাছাই করলে চিপ হয়ে বসে; সার্ভারে কমা দিয়ে যায় -->
+                    <div class="tcm-ms" id="tcmSubjBox"><span id="tcmSubjChips"></span><input type="text" id="tcmSubjIn" list="tcSubjList" autocomplete="off" placeholder="বিষয় লিখুন বা বাছাই করুন" /></div>
+                    <input type="hidden" id="tcmSubj" name="subjects" /></div>
                 <div class="tcm-f"><label for="tcmBudget">বাজেট (৳/মাস) <b>*</b></label>
                     <input type="number" id="tcmBudget" name="budget" min="0" max="9999999" inputmode="numeric" placeholder="যেমন: 5000" /></div>
             </div>
+            <div class="tcm-sugg" id="tcmSubjSugg" aria-label="জনপ্রিয় বিষয়"><?php foreach (array_slice($subjectOptions, 0, 14) as $o): ?><button type="button" data-subj="<?= e($o) ?>">+ <?= e($o) ?></button><?php endforeach; ?></div>
             <div class="tcm-f"><label>মিডিয়াম <b>*</b></label>
                 <div class="tcm-seg"><?php foreach (['Bangla' => 'Bangla Medium', 'English' => 'English Medium', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="medium" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
             <div class="tcm-f"><label>টিউশনের ধরন <b>*</b></label>
                 <div class="tcm-seg"><?php foreach (['Home' => 'Home Tuition', 'Online' => 'Online Tuition', 'Both' => 'Both'] as $v => $l): ?><label><input type="radio" name="tuitionType" value="<?= $v ?>" /><span><?= $l ?></span></label><?php endforeach; ?></div></div>
-            <div class="tcm-f"><label>ছবি বা ভিডিও <small>(ঐচ্ছিক — ছবি ৫ MB, ভিডিও ২৫ MB পর্যন্ত)</small></label>
+            <!-- ছবি / ভিডিও বন্ধ — এখানে শুধু লেখা দিয়ে পোস্ট -->
+            <div class="tcm-f" hidden style="display:none"><label>ছবি বা ভিডিও <small>(ঐচ্ছিক — ছবি ৫ MB, ভিডিও ২৫ MB পর্যন্ত)</small></label>
                 <div class="tcm-media">
                     <label class="tc-chip ch-ph" for="tcmImg"><i class="fas fa-image"></i> Photo</label>
                     <label class="tc-chip ch-vd" for="tcmVid"><i class="fas fa-video"></i> Video</label>
@@ -1285,6 +1312,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 var res = await fetch('/Tuition/ApplyCircular', { method: 'POST', body: fd });
                 var data = await res.json();
                 alert(data.message || (data.success ? 'Applied!' : 'Failed.'));
+                if (data.needPackage) { location.href = data.needPackage; return; }
+                if (data.success && <?= $tOpen ? 'false' : 'true' ?>) { location.reload(); return; }   // ১টা Apply খরচ হলো — বাকির সংখ্যা ঠিক করতে
                 if (data.success || /আগেই/.test(data.message || '')) {
                     bootstrap.Modal.getInstance(document.getElementById('applyCircularModal')).hide();
                     var b = document.getElementById('apply-btn-' + postId);
@@ -1404,14 +1433,51 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
 
             // ----- পোস্ট লেখা -----
             var ov = $('#tcmOv'), form = $('#tcmForm'), quick = $('#tcQuick');
+            // ----- একাধিক বিষয় (চিপ) — লুকানো #tcmSubj এ কমা দিয়ে জমা -----
+            var subjs = [], sIn = $('#tcmSubjIn'), sHid = $('#tcmSubj'), sChips = $('#tcmSubjChips');
+            function subjDraw() {
+                sHid.value = subjs.join(', ');
+                sChips.innerHTML = subjs.map(function (x, i) { return '<span class="ch">' + x.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }) + '<button type="button" data-rm-subj="' + i + '" aria-label="সরান"><i class="fas fa-xmark"></i></button></span>'; }).join('');
+                document.querySelectorAll('#tcmSubjSugg [data-subj]').forEach(function (b) { b.classList.toggle('on', subjs.some(function (x) { return x.toLowerCase() === b.getAttribute('data-subj').toLowerCase(); })); });
+                sIn.placeholder = subjs.length ? 'আরো বিষয় যোগ করুন' : 'বিষয় লিখুন বা বাছাই করুন';
+            }
+            function subjAdd(v) {
+                (v || '').split(/[,،;]+/).forEach(function (x) {
+                    x = x.trim().replace(/\s+/g, ' ').slice(0, 40);
+                    if (!x || subjs.some(function (y) { return y.toLowerCase() === x.toLowerCase(); })) return;
+                    subjs.push(x);
+                });
+                subjDraw();
+            }
+            if (sIn) {
+                sIn.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); subjAdd(sIn.value); sIn.value = ''; }
+                    else if (e.key === 'Backspace' && !sIn.value && subjs.length) { subjs.pop(); subjDraw(); }
+                });
+                // datalist থেকে বাছাই করলে সাথে সাথে চিপ
+                sIn.addEventListener('input', function (e) {
+                    var v = sIn.value.trim();
+                    if (v && (e.inputType === 'insertReplacementText' || !e.inputType) && Array.prototype.some.call(document.querySelectorAll('#tcSubjList option'), function (o) { return o.value === v; })) { subjAdd(v); sIn.value = ''; }
+                    else if (/,/.test(sIn.value)) { subjAdd(sIn.value); sIn.value = ''; }
+                });
+                sIn.addEventListener('blur', function () { if (sIn.value.trim()) { subjAdd(sIn.value); sIn.value = ''; } });
+                $('#tcmSubjBox').addEventListener('click', function (e) {
+                    var rm = e.target.closest('[data-rm-subj]');
+                    if (rm) { subjs.splice(+rm.getAttribute('data-rm-subj'), 1); subjDraw(); return; }
+                    sIn.focus();
+                });
+                $('#tcmSubjSugg').addEventListener('click', function (e) { var b = e.target.closest('[data-subj]'); if (b) subjAdd(b.getAttribute('data-subj')); });
+                form.addEventListener('reset', function () { setTimeout(function () { subjs = []; subjDraw(); }, 0); });
+            }
             function openComposer(what) {
                 if (!LOGGED_IN) { location.href = LOGIN_URL; return; }
+                if (<?= $isTeacher ? 'true' : 'false' ?>) { alert('টিচাররা টিউশন সার্কুলারে পোস্ট করতে পারবেন না — পোস্টগুলোতে Apply করুন, আর “পড়াতে চাই” পেইজে পোস্ট করুন।'); return; }
                 if (!ov.classList.contains('open')) {
                     if (quick.value.trim() && !$('#tcmContent').value.trim()) $('#tcmContent').value = quick.value.trim();
                     $('#tcmErr').classList.remove('show');
                     ov.classList.add('open'); document.documentElement.style.overflow = 'hidden';
                 }
-                var target = { photo: null, video: null, location: '#tcmLoc', subject: '#tcmSubj' }[what];
+                var target = { photo: null, video: null, location: '#tcmLoc', subject: '#tcmSubjIn' }[what];
                 if (what === 'photo') $('#tcmImg').click();
                 else if (what === 'video') $('#tcmVid').click();
                 setTimeout(function () {
@@ -1470,10 +1536,11 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 var err = $('#tcmErr'), btn = $('#tcmSubmit');
                 err.classList.remove('show');
                 // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন (শিরোনাম আর Special Request ঐচ্ছিক)
-                var need = [['#tcmLoc', 'লোকেশন দিন।'], ['#tcmClass', 'ক্লাস / লেভেল দিন।'], ['#tcmSubj', 'বিষয় দিন।'], ['#tcmBudget', 'বাজেট (৳/মাস) দিন।']];
+                if (sIn && sIn.value.trim()) { subjAdd(sIn.value); sIn.value = ''; }
+                var need = [['#tcmLoc', 'লোকেশন দিন।'], ['#tcmClass', 'ক্লাস / লেভেল দিন।'], ['#tcmSubj', 'বিষয় দিন (একাধিক বাছাই করা যায়)।'], ['#tcmBudget', 'বাজেট (৳/মাস) দিন।']];
                 for (var i = 0; i < need.length; i++) {
                     var el = $(need[i][0]);
-                    if (!el.value.trim() || (need[i][0] === '#tcmBudget' && !(+el.value > 0))) { err.textContent = need[i][1]; err.classList.add('show'); el.focus(); return; }
+                    if (!el.value.trim() || (need[i][0] === '#tcmBudget' && !(+el.value > 0))) { err.textContent = need[i][1]; err.classList.add('show'); (need[i][0] === '#tcmSubj' ? sIn : el).focus(); return; }
                 }
                 if (!form.querySelector('input[name="medium"]:checked')) { err.textContent = 'মিডিয়াম বাছাই করুন।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }
                 if (!form.querySelector('input[name="tuitionType"]:checked')) { err.textContent = 'টিউশনের ধরন বাছাই করুন।'; err.classList.add('show'); err.scrollIntoView({ block: 'nearest' }); return; }

@@ -70,6 +70,14 @@ $fmtDate = fn($d) => $d ? date('d M Y', strtotime((string)$d)) : '';
                 <span><?= $credits === 0 ? 'Teacher Needed পোস্ট করতে প্যাকেজ নিন' : 'Tuition Circular-এ পোস্ট করতে পারবেন' ?></span>
             </div></div>
         <?php endif; ?>
+        <?php $apAud = $role === 'Teacher' ? 'TApply' : 'SApply'; $apLeft = db()->GetApplyCredits((int)current_user_id(), $apAud);
+        if ($apLeft > 0 || db()->GetApplyPackage($apAud)): ?>
+            <div class="mp-s <?= $apLeft > 0 ? 'on' : 'off' ?>"><span class="ic"><i class="fas fa-paper-plane"></i></span><div>
+                <small>৳২০ এর Apply</small>
+                <b><?= e(bn_num($apLeft)) ?>টা Apply বাকি</b>
+                <span><?= $apLeft > 0 ? ($apAud === 'TApply' ? 'Tuition Circular এর পোস্টে Apply করতে পারবেন' : '"পড়াতে চাই" পেইজে টিচারের পোস্টে Apply করতে পারবেন') : 'প্যাকেজ ছাড়া একটা পোস্টে Apply করতে ৳২০ দিয়ে ১টা Apply নিন' ?></span>
+            </div></div>
+        <?php endif; ?>
     </div>
 
     <?php if (!$list): ?>

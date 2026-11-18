@@ -13,7 +13,7 @@ class FeedController extends Controller
 {
     private const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     private const VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.m4v'];
-    private const MAX_IMAGES = 6;
+    private const MAX_IMAGES = 50;   // একটা পোস্টে সর্বোচ্চ ছবি (ব্রাউজার আগে ছোট করে পাঠায়)
     private const MAX_IMAGE = 5 * 1024 * 1024;
     private const MAX_VIDEO = 50 * 1024 * 1024;
     private const MAX_POST_LEN = 5000;
@@ -147,6 +147,9 @@ class FeedController extends Controller
         $video = upload_file('video');
         // ভিডিও আর YouTube শুধু অ্যাডমিন অ্যাকাউন্ট থেকে — সাধারণ ইউজার/টিচার শুধু ছবি আর লেখা
         if (!$isAdmin && ($video || $yt !== '' || $ytRaw !== '' || $fbRaw !== '')) $this->fail('ভিডিও শুধু অ্যাডমিন পোস্ট করতে পারেন — আপনি ছবি আর লেখা দিয়ে পোস্ট করুন।');
+        // সার্ভারের max_file_uploads কম হলে PHP নিজে থেকে বাড়তি ছবি ফেলে দেয় — চুপচাপ কম ছবি সেভ না করে জানিয়ে দেওয়া
+        $sent = (int)($_POST['imgCount'] ?? 0);
+        if ($sent > count($imgs)) $this->fail('সার্ভার একসাথে ' . count($imgs) . 'টার বেশি ছবি নিচ্ছে না — ' . $sent . 'টা পাঠানো হয়েছিল। কম ছবি দিয়ে আবার চেষ্টা করুন।');
         if (count($imgs) > self::MAX_IMAGES) $this->fail('সর্বোচ্চ ' . self::MAX_IMAGES . 'টা ছবি দেওয়া যাবে।');
         if (($imgs ? 1 : 0) + ($video ? 1 : 0) + ($yt !== '' ? 1 : 0) + ($fb !== '' ? 1 : 0) > 1) $this->fail('একটা পোস্টে ছবি, ভিডিও, YouTube অথবা Facebook লিংক — যেকোনো একটা দিন।');
         foreach ($imgs as $f) {

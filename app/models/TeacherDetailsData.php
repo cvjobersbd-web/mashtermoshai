@@ -356,7 +356,8 @@ trait TeacherDetailsData
             $rows = $this->all('SELECT s.`Id`, s.`UserId`, s.`Audience`, s.`PackageName`, s.`StartsAt`, s.`EndsAt`, s.`PostsTotal`, s.`PostsUsed`, s.`CreatedAt`,
                     p.`Amount`, u.`FullName`, u.`UserName`, u.`Role`, u.`ProfileImageLink`
                 FROM `UserSubscriptions` s LEFT JOIN `PaymentRequests` p ON p.`Id` = s.`PaymentId` LEFT JOIN `Users` u ON u.`Id` = s.`UserId`
-                ORDER BY s.`Id` ASC');
+                WHERE s.`Audience` IN (\'Teacher\', \'Student\')
+                ORDER BY s.`Id` ASC');   // ৳২০ এর "১টা Apply" প্যাকেজ না (সেটা Payment Requests এ দেখা যায়)
             $alert = $this->SubAlertDays(); $now = time(); $by = [];
             foreach ($rows as $r) {
                 $k = $r->Audience . ':' . $r->UserId;

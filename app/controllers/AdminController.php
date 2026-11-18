@@ -1047,8 +1047,12 @@ class AdminController extends Controller
         $this->requireAdminPage();
         $w = (string)input_str('w', 'Pending');
         if (!in_array($w, ['Pending', 'Paid', 'Rejected', 'all'], true)) $w = 'Pending';
+        // বোনাস ছাড়া রেফারার: কোন তারিখের হিসাব দেখাবে (ডিফল্ট আজ)
+        $okd = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
+        $nbF = $okd(input_str('from', '')); $nbT = $okd(input_str('to', ''));
+        if ($nbF > $nbT) [$nbF, $nbT] = [$nbT, $nbF];
         $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
-            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusToday' => $this->db->NoBonusTodayCounts()]);
+            'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusRange' => $this->db->NoBonusRangeCounts($nbF, $nbT), 'NbFrom' => $nbF, 'NbTo' => $nbT]);
     }
 
     /**
@@ -1062,8 +1066,13 @@ class AdminController extends Controller
         $d = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
         $from = $d(input_str('from', '')); $to = $d(input_str('to', ''));
         if ($from > $to) [$from, $to] = [$to, $from];
-        $refs = []; foreach ($this->db->GetRefNoBonusUsers() as $u) $refs[(int)$u->Id] = $u;
-        $rows = $this->db->GetNoBonusReferrals($from, $to);
+        // বাছাই করা রেফারার (ids = টিক দেওয়া, codes = কোড পেস্ট করা) — কিছু না দিলে বোনাস ছাড়া সবাই
+        $pick = array_filter(array_map('intval', preg_split('/[^0-9]+/', (string)input_str('ids', ''))));
+        preg_match_all('/MM[A-Z0-9]{6}/', strtoupper((string)input_str('codes', '')), $cm);
+        if ($cm[0]) $pick = array_merge($pick, array_values($this->db->RefUserIdsByCodes($cm[0])));
+        $pick = array_values(array_unique($pick));
+        $refs = []; foreach ($pick ? $this->db->GetRefUsersByIds($pick) : $this->db->GetRefNoBonusUsers() as $u) $refs[(int)$u->Id] = $u;
+        $rows = $this->db->GetNoBonusReferrals($from, $to, $pick ? array_keys($refs) : null);
         $nm = fn($u) => $u ? (string)($u->FullName ?: $u->UserName) : 'Deleted user';
         // যে এসেছে সে টিচার না শিক্ষার্থী — টিচার / টিচারের আবেদন / টিচার প্যাকেজ → টিচার; Student Verification / শিক্ষার্থী প্যাকেজ → শিক্ষার্থী
         $aud = [];
@@ -1092,7 +1101,7 @@ class AdminController extends Controller
             foreach ([&$sum[$id], &$byDay[$day][$id]] as &$c) { $c['n']++; $c[$kk]++; if ($r->Bought) $c['b']++; } unset($c);
         }
         uasort($sum, fn($a, $b) => $b['n'] <=> $a['n']);
-        $s1 = [['বোনাস ছাড়া রেফারার — রেফারেলের হিসাব'], ['তারিখ', $range], ['মোট রেফারেল', count($rows)], ['প্যাকেজ কিনেছে', count(array_filter($rows, fn($r) => $r->Bought))],
+        $s1 = [[$pick ? 'বাছাই করা ' . count($refs) . ' জন রেফারার — রেফারেলের হিসাব' : 'বোনাস ছাড়া রেফারার — রেফারেলের হিসাব'], ['তারিখ', $range], ['মোট রেফারেল', count($rows)], ['প্যাকেজ কিনেছে', count(array_filter($rows, fn($r) => $r->Bought))],
             ['টিচার হিসেবে এসেছে', count(array_filter($rows, fn($r) => $r->K === 't'))], ['শিক্ষার্থী হিসেবে এসেছে', count(array_filter($rows, fn($r) => $r->K === 's'))],
             ['এখনো ঠিক করেনি', count(array_filter($rows, fn($r) => $r->K === 'n'))], [],
             ['#', 'রেফারারের নাম', 'ইউজারনেম', 'ইমেইল', 'রেফারেল কোড', 'মোট রেফার', 'টিচার', 'শিক্ষার্থী', 'এখনো ঠিক করেনি', 'প্যাকেজ কিনেছে', 'এখনো কেনেনি']];
@@ -1110,7 +1119,7 @@ class AdminController extends Controller
         $i = 0; foreach ($rows as $r) { $u = $refs[(int)$r->ReferrerId] ?? null;
             $s3[] = [++$i, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), $nm($u), (string)($u->Code ?? ''), (string)($r->Name ?: $r->UserName ?: 'Deleted user'), $r->UserName ? '@' . $r->UserName : '', (string)($r->Email ?? ''), (string)($r->MobileNumber ?? ''), $r->KLabel, $src($r), $r->Bought ? 'হ্যাঁ' : 'না']; }
         $bold2 = [0]; foreach ($s2 as $k => $row) if (str_contains((string)($row[0] ?? ''), '— মোট')) $bold2[] = $k;
-        xlsx_send('no-bonus-referrals-' . $from . ($from !== $to ? '-to-' . $to : ''), [
+        xlsx_send(($pick ? 'selected-referrers-' : 'no-bonus-referrals-') . $from . ($from !== $to ? '-to-' . $to : ''), [
             ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, 8, count($s1) - 1], 'widths' => [6, 26, 20, 30, 14, 12, 10, 12, 16, 15, 14], 'freeze' => 9],
             ['name' => 'তারিখ অনুযায়ী', 'rows' => $s2, 'bold' => $bold2, 'widths' => [22, 26, 14, 18, 10, 12, 16, 15], 'freeze' => 1],
             ['name' => 'বিস্তারিত', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 24, 14, 24, 18, 30, 16, 34, 22, 15], 'freeze' => 1],
@@ -1850,7 +1859,9 @@ class AdminController extends Controller
         $this->requireAdminJson();
         $clean = fn($v, $max) => mb_substr(trim(preg_replace('/[ \t]+/u', ' ', strip_tags((string)$v))), 0, $max);
         $aud = input_str('audience', '');
-        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true)) json_response(['success' => false, 'message' => 'ভুল প্যাকেজের ধরন।']);
+        $isApply = isset(Db::APPLY_AUDIENCES[$aud]);   // ৳২০ এর "১টা Apply" (শুধু এডিট করা যায়)
+        if (!in_array($aud, Db::PACKAGE_AUDIENCES, true) && !$isApply) json_response(['success' => false, 'message' => 'ভুল প্যাকেজের ধরন।']);
+        if ($isApply && (int)input_int('id', 0) <= 0) json_response(['success' => false, 'message' => '১টা Apply নতুন করে যোগ করা যায় না — আগেরটা Edit করুন।']);
         $name = $clean(input_str('name', ''), 80);
         if ($name === '') json_response(['success' => false, 'message' => 'প্যাকেজের নাম দিন।']);
         $price = input_str('price', '');
@@ -1865,7 +1876,7 @@ class AdminController extends Controller
         if ($aud === 'Teacher' && $months < 1) json_response(['success' => false, 'message' => 'টিচার প্যাকেজের মেয়াদ (মাস) দিন।']);
         $features = implode("\n", array_slice(array_values(array_filter(array_map(fn($l) => $clean($l, 120), preg_split('/\r?\n/', (string)input_str('features', ''))))), 0, 15));
         $data = [
-            'Audience' => $aud, 'Name' => $name, 'DurationMonths' => $months, 'PostLimit' => $aud === 'Student' ? $limit : 0,
+            'Audience' => $aud, 'Name' => $name, 'DurationMonths' => $isApply ? 0 : $months, 'PostLimit' => $isApply ? max(1, $limit) : ($aud === 'Student' ? $limit : 0),
             'Price' => $price, 'RegularPrice' => $reg, 'Badge' => $clean(input_str('badge', ''), 40),
             'Description' => $clean(input_str('description', ''), 300), 'Features' => $features,
             'IsActive' => input_bool('isActive', true) ? 1 : 0, 'IsFeatured' => input_bool('isFeatured') ? 1 : 0,
@@ -2213,6 +2224,70 @@ class AdminController extends Controller
         $this->view(null, $posts, ['Role' => $role, 'Q' => $q, 'Page' => $page, 'Pages' => max(1, (int)ceil($total / $per)), 'Total' => $total, 'Counts' => $counts]);
     }
 
+    /**
+     * GET /Admin/PublicPosts — "পড়াতে চাই" (টিচারের) আর Tuition Circular (শিক্ষার্থীর) সব পোস্ট এক জায়গায়।
+     * k=all|teach|circular, q= (নাম / ইউজারনেম / লেখা), c=1 হলে শুধু যোগাযোগের তথ্য থাকা পোস্ট
+     */
+    public function PublicPosts(): void
+    {
+        $this->requireAdminPage();
+        $k = (string)input_str('k', 'all'); if (!in_array($k, ['all', 'teach', 'circular'], true)) $k = 'all';
+        $q = mb_substr(trim((string)input_str('q', '')), 0, 80);
+        $onlyContact = input_bool('c');
+        $rows = [];
+        try {
+            foreach ($this->db->all('SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`VideoUrl`, p.`LikeCount`, p.`CreatedAt`, u.`FullName`, u.`UserName`, u.`ProfileImageLink`, u.`Role`
+                FROM `TeachWantedPosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId` ORDER BY p.`Id` DESC LIMIT 3000') as $r) {
+                $r->Kind = 'teach'; $r->Title = ''; $r->Tags = []; $rows[] = $r;
+            }
+        } catch (Throwable $e) { error_log('[PublicPosts teach] ' . $e->getMessage()); }
+        try {
+            foreach ($this->db->all('SELECT p.`Id`, p.`UserId`, p.`Content`, p.`ImageUrl`, p.`VideoUrl`, p.`LikeCount`, p.`CreatedAt`, p.`Title`, p.`PreferredArea`, p.`ClassLevel`, p.`Subjects`, p.`Budget`,
+                    u.`FullName`, u.`UserName`, u.`ProfileImageLink`, u.`Role`
+                FROM `TuitionCircularPosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId` ORDER BY p.`Id` DESC LIMIT 3000') as $r) {
+                $r->Kind = 'circular';
+                $r->Tags = array_values(array_filter([(string)$r->PreferredArea, (string)$r->ClassLevel, (string)$r->Subjects, $r->Budget ? '৳' . $r->Budget : '']));
+                $rows[] = $r;
+            }
+        } catch (Throwable $e) { error_log('[PublicPosts circular] ' . $e->getMessage()); }
+        $counts = ['all' => 0, 'teach' => 0, 'circular' => 0, 'contact' => 0];
+        foreach ($rows as $r) {
+            $r->Contact = contact_info_error([(string)($r->Title ?? ''), (string)$r->Content, implode(' ', $r->Tags)]) !== null;
+            $counts['all']++; $counts[$r->Kind]++; if ($r->Contact) $counts['contact']++;
+        }
+        $ql = mb_strtolower($q);
+        $rows = array_values(array_filter($rows, fn($r) => ($k === 'all' || $r->Kind === $k) && (!$onlyContact || $r->Contact)
+            && ($ql === '' || str_contains(mb_strtolower($r->FullName . ' ' . $r->UserName . ' #' . $r->UserId . ' ' . ($r->Title ?? '') . ' ' . $r->Content . ' ' . implode(' ', $r->Tags)), $ql))));
+        usort($rows, fn($a, $b) => strcmp((string)$b->CreatedAt, (string)$a->CreatedAt));
+        $page = max(1, (int)input_int('page', 1)); $per = 20; $total = count($rows);
+        $this->view(null, array_slice($rows, ($page - 1) * $per, $per), ['K' => $k, 'Q' => $q, 'C' => $onlyContact, 'Page' => $page, 'Pages' => max(1, (int)ceil($total / $per)), 'Total' => $total, 'Counts' => $counts]);
+    }
+
+    /** POST /Admin/DeletePublicPost — kind=teach|circular, id */
+    public function DeletePublicPost_POST(): void
+    {
+        $this->requireAdminJson();
+        $kind = (string)input_str('kind', ''); $id = (int)input_int('id', 0);
+        if ($kind === 'teach') {
+            $img = $err = null;
+            $owner = (int)($this->db->GetTeachWantedPostById($id)->UserId ?? 0);
+            if (!$this->db->DeleteTeachWantedPost($id, (int)current_user_id(), true, $img, $err)) json_response(['success' => false, 'message' => $err ?: 'মুছা যায়নি।']);
+            if ($img && str_starts_with($img, '/uploads/teach-posts/')) delete_upload('/uploads/teach-posts/' . basename($img));
+            delete_upload($this->db->lastDeletedTeachVideo);
+            if ($owner) { try { $this->db->CreateNotification($owner, 'Post Removed', 'আপনার একটি "পড়াতে চাই" পোস্ট অ্যাডমিন সরিয়ে দিয়েছেন।', 'warning', '/FindTutor', 'fa-trash'); } catch (Throwable $e) { } }
+            json_response(['success' => true, 'message' => 'পোস্ট মুছে ফেলা হয়েছে।']);
+        }
+        if ($kind === 'circular') {
+            $post = $this->db->GetTuitionCircularPostById($id);
+            if (!$post) json_response(['success' => false, 'message' => 'পোস্টটি পাওয়া যায়নি।']);
+            if (!$this->db->DeleteCircularPost($post->Id)) json_response(['success' => false, 'message' => 'মুছা যায়নি।']);
+            delete_upload($post->ImageUrl ?? null); delete_upload($post->VideoUrl ?? null);
+            try { $this->db->CreateNotification((int)$post->UserId, 'Post Removed', 'আপনার একটি Tuition Circular পোস্ট অ্যাডমিন সরিয়ে দিয়েছেন।', 'warning', '/Tuition/Circular', 'fa-trash'); } catch (Throwable $e) { }
+            json_response(['success' => true, 'message' => 'পোস্ট মুছে ফেলা হয়েছে।']);
+        }
+        json_response(['success' => false, 'message' => 'ভুল পোস্ট।']);
+    }
+
     /** POST /Admin/DeleteProfilePost — id */
     public function DeleteProfilePost_POST(): void
     {
@@ -2429,7 +2504,7 @@ class AdminController extends Controller
         $st = input_str('status', 'Pending');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
         $km = []; try { $km = $this->db->CourseKindMap(); } catch (Throwable $e) { }
-        $audOf = fn($x) => $x->Audience === 'Teacher' ? 'Teacher' : (in_array($x->Audience, ['Course', 'Publish'], true) ? (($km[(int)($x->CourseId ?? 0)] ?? 'course') === 'live' ? 'Live' : 'Course') : 'Student');
+        $audOf = fn($x) => in_array($x->Audience, ['Teacher', 'TApply'], true) ? 'Teacher' : (in_array($x->Audience, ['Course', 'Publish'], true) ? (($km[(int)($x->CourseId ?? 0)] ?? 'course') === 'live' ? 'Live' : 'Course') : 'Student');
         $all = $this->db->GetPaymentRequests(null);
         $cnt = []; $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
         foreach ($all as $x) {
@@ -2475,7 +2550,7 @@ class AdminController extends Controller
             }
         }
         // শিক্ষার্থী প্যাকেজ: আগে Student Verification Approve (পুরোনো ইউজার যার ফর্মই নেই — আগের মতো চলে)
-        if ($pre && $pre->Audience === 'Student' && $pre->Status === 'Pending') {
+        if ($pre && in_array($pre->Audience, ['Student', 'SApply'], true) && $pre->Status === 'Pending') {
             $sk = $this->db->KycStatus((int)$pre->UserId, 'student');
             if ($sk === 'Pending' || $sk === 'Rejected') json_response(['success' => false, 'needKyc' => true, 'message' => $sk === 'Rejected'
                 ? 'এই শিক্ষার্থীর Student Verification বাতিল করা আছে — নতুন ফর্ম জমা দিয়ে Approve না হওয়া পর্যন্ত পেমেন্ট Accept করা যাবে না।'
@@ -2499,6 +2574,14 @@ class AdminController extends Controller
                 if ($c && $e && ($c->TeacherRole ?? '') !== 'Admin') $this->db->CreateNotification((int)$c->TeacherId, 'নতুন কোর্স বিক্রি 💰', ($p->FullName ?: 'একজন শিক্ষার্থী') . " “{$c->Title}” কিনেছেন — আপনার ভাগ " . taka((int)$e->TeacherShare) . '।', 'success', '/Course/Earnings', 'fa-sack-dollar');
             } catch (Throwable $ex) { }
             json_response(['success' => true, 'message' => 'Accept হয়েছে — শিক্ষার্থী কোর্সে ভর্তি হয়েছেন।' . ($e ? ' (টিচার ' . taka((int)$e->TeacherShare) . ' · অ্যাডমিন ' . taka((int)$e->AdminShare) . ')' : ''), 'payment' => $p]);
+        }
+        if (isset(Db::APPLY_AUDIENCES[$p->Audience])) {
+            $left = $this->db->GetApplyCredits((int)$p->UserId, $p->Audience);
+            $msg = $p->Audience === 'TApply'
+                ? 'আপনার ৳' . (int)$p->Amount . ' এর পেমেন্ট Accept হয়েছে — এখন Tuition Circular এর যেকোনো ' . bn_num($left) . 'টা পোস্টে Apply করতে পারবেন।'
+                : 'আপনার ৳' . (int)$p->Amount . ' এর পেমেন্ট Accept হয়েছে — এখন "পড়াতে চাই" পেইজে যেকোনো ' . bn_num($left) . 'জন টিচারের পোস্টে Apply করতে পারবেন।';
+            $this->db->CreateNotification($p->UserId, 'Payment Accepted', $msg, 'success', $p->Audience === 'TApply' ? '/Tuition/Circular' : '/FindTutor#postFeed', 'fa-circle-check');
+            json_response(['success' => true, 'payment' => $p, 'message' => 'Payment accepted — ১টা Apply চালু হয়েছে।']);
         }
         if ($p->Audience === 'Teacher') {
             $sub = $this->db->GetActiveTeacherSubscription($p->UserId);

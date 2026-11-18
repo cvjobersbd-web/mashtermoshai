@@ -15,7 +15,7 @@ try {
     $awaitTeacherPay = (int)db()->scalar("SELECT COUNT(*) FROM `TeacherRequests` WHERE `Status` = 'AwaitingPayment'");
 } catch (Throwable $e) { }
 $pendingTutorReq = 0;
-try { $pendingTutorReq = (int)db()->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `Status` = 'Pending'"); } catch (Throwable $e) { }
+try { $pendingTutorReq = (int)db()->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `Status` = 'Pending' AND " . Db::ADMIN_TUTOR_REQ_WHERE); } catch (Throwable $e) { }
 $openHelpdesk = 0;
 try { $openHelpdesk = (int)db()->scalar("SELECT COUNT(*) FROM `HelpdeskPosts` WHERE `Status` IS NULL OR `Status` = 'Open'"); } catch (Throwable $e) { }
 
@@ -321,7 +321,7 @@ try {
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
         'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'CouponUsers' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'CourseView' => 'Course Details', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
-        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'ProfilePosts' => 'Profile Posts', 'PackageDetails' => 'Package Details', 'UserRoles' => 'User Role', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
+        'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'ProfilePosts' => 'Profile Posts', 'PublicPosts' => 'পড়াতে চাই ও সার্কুলার পোস্ট', 'PackageDetails' => 'Package Details', 'UserRoles' => 'User Role', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
     $adminPendingTotal = $kycPend['teacher'] + $kycPend['student'] + $pendingTuitionApps + $pendingReviews + $pendingPayments + $pendingEduPosts;
@@ -478,6 +478,13 @@ try {
         <li>
             <a href="/Admin/ProfilePosts" class="<?= $currentAction === 'ProfilePosts' ? 'active' : '' ?>">
                 <i class="fas fa-address-card"></i> Profile Posts
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('PublicPosts'))): ?>
+        <li>
+            <a href="/Admin/PublicPosts" class="<?= $currentAction === 'PublicPosts' ? 'active' : '' ?>">
+                <i class="fas fa-chalkboard-user"></i> পড়াতে চাই ও সার্কুলার
             </a>
         </li>
         <?php endif; ?>
