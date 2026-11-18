@@ -1049,6 +1049,11 @@ class Db
         $r->Id = (int)$r->Id;
         $r->UserId = (int)$r->UserId;
         $r->Content = $r->Content ?? '';
+        // আগের পোস্টে মোবাইল নম্বর / ইমেইল / লিংক / ঠিকানা থাকলে অন্যদের কাছে ঢাকা (•••) — অ্যাডমিন আর পোস্টদাতা আসলটা দেখেন
+        if (!is_admin() && (int)(current_user_id() ?? 0) !== $r->UserId) {
+            $r->Content = contact_mask($r->Content);
+            if (isset($r->Title)) $r->Title = contact_mask((string)$r->Title);
+        }
         $r->LikeCount = (int)$r->LikeCount;
         $r->UserFullName = $r->FullName ?? $defaultName;
         $r->UserName = $r->UserName ?? '';

@@ -55,8 +55,11 @@ class FindTutorController extends Controller
     public function SubmitTutorRequest_POST(): void
     {
         try {
-            // নির্দিষ্ট টিচারকে Direct Request — শুধু প্যাকেজ নেওয়া শিক্ষার্থী
-            if (!is_blank(input_str('tutorId')) && !viewer_can_contact_teachers()) {
+            // নির্দিষ্ট টিচারকে Direct Request — প্যাকেজ নেওয়া শিক্ষার্থী, অথবা ৳২০ এর "১টা Apply" থাকলে (একটা খরচ হয়)
+            $useApply = false;
+            if (!is_blank(input_str('tutorId')) && !viewer_can_contact_teachers()
+                && current_user_id() !== null && current_role() === 'User' && $this->db->GetApplyCredits((int)current_user_id(), 'SApply') > 0) $useApply = true;
+            if (!is_blank(input_str('tutorId')) && !viewer_can_contact_teachers() && !$useApply) {
                 json_response(['success' => false, 'needPackage' => student_package_url(),
                     'message' => current_user_id() === null ? 'টিচারকে রিকোয়েস্ট পাঠাতে আগে লগইন করুন।' : 'টিচারকে সরাসরি রিকোয়েস্ট পাঠাতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।']);
             }
@@ -99,6 +102,7 @@ class FindTutorController extends Controller
 
             $err = null;
             if ($this->db->CreateTutorRequest($req, $err)) {
+                if ($useApply) { try { $this->db->ConsumeApplyCredit((int)current_user_id(), 'SApply'); } catch (Throwable $e) { error_log('[apply credit] ' . $e->getMessage()); } }
                 // ===== সব অ্যাডমিনকে নোটিফাই =====
                 try {
                     $typeLabel = match ($req->RequestType) {
@@ -185,6 +189,8 @@ class FindTutorController extends Controller
         if ($content === '' && !$image && !$video) json_response(['success' => false, 'message' => 'কিছু লিখুন অথবা ছবি/ভিডিও দিন।']);
         if (mb_strlen($content) > 3000) json_response(['success' => false, 'message' => 'পোস্ট সর্বোচ্চ ৩০০০ অক্ষর।']);
         if ($image && $video) json_response(['success' => false, 'message' => 'একটা ছবি অথবা একটা ভিডিও দিন — দুটো একসাথে নয়।']);
+        // মোবাইল নম্বর, ইমেইল, ফেসবুক, ঠিকানা ইত্যাদি থাকলে পোস্ট হবে না — যোগাযোগ শুধু সাইটের Apply দিয়ে
+        if ($why = contact_info_error([$content], 'teacher')) json_response(['success' => false, 'contact' => true, 'message' => $why]);
         $userId = current_user_id();
         if ($userId === null) json_response(['success' => false, 'message' => 'Invalid user.']);
         if (!$this->db->TeacherCanWork($userId)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher',
@@ -212,6 +218,7 @@ class FindTutorController extends Controller
 
         $postId = input_int('postId', 0);
         $content = trim((string)input_str('content', ''));
+        if (!is_admin() && ($why = contact_info_error([$content], 'teacher'))) json_response(['success' => false, 'contact' => true, 'message' => $why]);
         $image = upload_file('imageFile');
         $imageChanged = false;
         $newImageUrl = null;

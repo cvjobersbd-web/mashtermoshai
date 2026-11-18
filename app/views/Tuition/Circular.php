@@ -30,6 +30,10 @@ $savedKeys = ($isLoggedIn && $userId && !$isAdmin) ? db()->SavedKeys((int)$userI
 $canSave = $isLoggedIn && !$isAdmin;
 $myApplied = [];
 $myPhone = '';
+// টিচারের Apply — টিচার প্যাকেজ চালু থাকলে যত খুশি, না থাকলে ৳২০ এর "১টা Apply" দিয়ে
+$tOpen = $isTeacher && $userId && teacher_profile_open((int)$userId);
+$tApplyLeft = $isTeacher && $userId && !$tOpen ? db()->GetApplyCredits((int)$userId, 'TApply') : 0;
+$tApplyPkg = $isTeacher && !$tOpen ? db()->GetApplyPackage('TApply') : null;
 if ($isLoggedIn && $isTeacher && $userId) {
     $myApplied = db()->GetCircularApplicationStatusesByTeacher((int)$userId);
     $myPhone = (string)(db()->GetUserById((int)$userId)?->MobileNumber ?? '');
@@ -858,8 +862,10 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                             <?php if ($isLoggedIn && $isTeacher && !$isOwn): ?>
                                                 <?php if (isset($myApplied[$pid])): ?>
                                                     <button type="button" class="tc-apply applied" disabled><i class="fas fa-check-circle"></i> Applied<?= $myApplied[$pid] !== 'Pending' ? ' · ' . e($myApplied[$pid]) : '' ?></button>
+                                                <?php elseif ($tOpen || $tApplyLeft > 0): ?>
+                                                    <button type="button" class="tc-apply" id="apply-btn-<?= $pid ?>" onclick="applyForCircular(<?= $pid ?>)"><i class="fas fa-paper-plane"></i> Apply Now<?= !$tOpen ? ' <small style="font-weight:600;opacity:.9;">(' . e(bn_num($tApplyLeft)) . 'টা বাকি)</small>' : '' ?></button>
                                                 <?php else: ?>
-                                                    <button type="button" class="tc-apply" id="apply-btn-<?= $pid ?>" onclick="applyForCircular(<?= $pid ?>)"><i class="fas fa-paper-plane"></i> Apply Now</button>
+                                                    <a class="tc-apply" style="background:#FEF3C7;color:#92400E;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap;" href="/Package?for=teacher#apply-teacher" title="Apply করতে টিচার প্যাকেজ নিন<?= $tApplyPkg ? ' অথবা ৳' . (int)$tApplyPkg->Price . ' দিয়ে ১টা Apply' : '' ?>"><i class="fas fa-lock"></i> Apply<?= $tApplyPkg ? ' · ৳' . (int)$tApplyPkg->Price : '' ?></a>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
@@ -1285,6 +1291,8 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                 var res = await fetch('/Tuition/ApplyCircular', { method: 'POST', body: fd });
                 var data = await res.json();
                 alert(data.message || (data.success ? 'Applied!' : 'Failed.'));
+                if (data.needPackage) { location.href = data.needPackage; return; }
+                if (data.success && <?= $tOpen ? 'false' : 'true' ?>) { location.reload(); return; }   // ১টা Apply খরচ হলো — বাকির সংখ্যা ঠিক করতে
                 if (data.success || /আগেই/.test(data.message || '')) {
                     bootstrap.Modal.getInstance(document.getElementById('applyCircularModal')).hide();
                     var b = document.getElementById('apply-btn-' + postId);

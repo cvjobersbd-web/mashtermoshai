@@ -170,6 +170,16 @@ $pkb = package_banner();
         </div>
         <div class="pa-list" id="list-Student"></div>
     </div>
+    <div class="pa-sec" id="sec-Apply">
+        <div class="pa-sec-h">
+            <h5><i class="fas fa-paper-plane" style="color:#B45309;"></i> ১টা Apply (প্যাকেজ ছাড়া)</h5>
+            <small>প্যাকেজ না কিনে একবার Apply — শিক্ষার্থী একজন টিচারের “পড়াতে চাই” পোস্টে, টিচার একটা Tuition Circular পোস্টে। দাম, নাম আর সুবিধা Edit থেকে বদলানো যায়; “চালু” বন্ধ করলে Package পেজ থেকে সরে যাবে।</small>
+        </div>
+        <div style="font-weight:700;color:#166534;margin:4px 0 6px;"><i class="fas fa-user-graduate"></i> শিক্ষার্থী</div>
+        <div class="pa-list" id="list-SApply"></div>
+        <div style="font-weight:700;color:#1D4ED8;margin:14px 0 6px;"><i class="fas fa-chalkboard-teacher"></i> টিচার</div>
+        <div class="pa-list" id="list-TApply"></div>
+    </div>
     <div class="pa-sec" id="sec-Benefits">
         <div class="pa-sec-h">
             <h5><i class="fas fa-list-check" style="color:#7C3AED;"></i> প্যাকেজের বিস্তারিত — কিনলে যা যা পাবে</h5>
@@ -197,7 +207,7 @@ $pkb = package_banner();
         <div class="pa-f">
             <div>
                 <label for="paAud">কার জন্য</label>
-                <select id="paAud" name="audience"><option value="Teacher">শিক্ষক (Subscription)</option><option value="Student">শিক্ষার্থী (Tuition Post)</option></select>
+                <select id="paAud" name="audience"><option value="Teacher">শিক্ষক (Subscription)</option><option value="Student">শিক্ষার্থী (Tuition Post)</option><option value="SApply" hidden>শিক্ষার্থী — ১টা Apply</option><option value="TApply" hidden>টিচার — ১টা Apply</option></select>
             </div>
             <div>
                 <label for="paName">প্যাকেজের নাম</label>
@@ -271,11 +281,11 @@ $pkb = package_banner();
             + '<div class="pa-price"><b>' + tk(p.Price) + '</b>' + (p.RegularPrice ? '<s>' + tk(p.RegularPrice) + '</s><span class="off">' + p.Discount + '% ছাড়</span>' : '') + '</div>'
             + '<div class="pa-tg"><label><input type="checkbox" class="pa-sw" data-tg="active"' + (p.IsActive ? ' checked' : '') + '> চালু</label>'
             + '<label><input type="checkbox" class="pa-sw ft" data-tg="featured"' + (p.IsFeatured ? ' checked' : '') + '> হাইলাইট</label></div>'
-            + '<div class="pa-acts"><button type="button" data-ed><i class="fas fa-pen"></i> Edit</button><button type="button" class="del" data-del><i class="fas fa-trash"></i></button></div>'
+            + '<div class="pa-acts"><button type="button" data-ed><i class="fas fa-pen"></i> Edit</button>' + (p.IsApply ? '' : '<button type="button" class="del" data-del><i class="fas fa-trash"></i></button>') + '</div>'
             + '</div>';
     }
     function render() {
-        ['Teacher', 'Student'].forEach(function (a) {
+        ['Teacher', 'Student', 'SApply', 'TApply'].forEach(function (a) {
             var list = byAud(a), el = document.getElementById('list-' + a);
             el.innerHTML = list.length ? list.map(function (p, i) { return row(p, i, list.length); }).join('')
                 : '<div class="pa-empty"><i class="fas fa-box-open"></i> কোনো প্যাকেজ নেই — “নতুন প্যাকেজ” চেপে যোগ করুন।</div>';
@@ -287,7 +297,9 @@ $pkb = package_banner();
     // ===== ফর্ম =====
     var modal = document.getElementById('paModal'), form = document.getElementById('paForm'), err = document.getElementById('paErr');
     function syncAud() {
-        var st = form.audience.value === 'Student';
+        var ap = form.audience.value === 'SApply' || form.audience.value === 'TApply';
+        form.audience.disabled = ap; if (ap) form.audience.setAttribute('data-ap', form.audience.value); else form.audience.removeAttribute('data-ap');
+        var st = form.audience.value === 'Student' || ap;
         document.querySelectorAll('[data-only-student]').forEach(function (x) { x.hidden = !st; });
         form.name.placeholder = st ? 'যেমন: Tuition Post' : 'যেমন: ১ মাস';
         var lw = document.getElementById('paLiveWrap'); if (lw) lw.style.display = st ? 'none' : '';
@@ -311,6 +323,7 @@ $pkb = package_banner();
         e.preventDefault();
         var btn = form.querySelector('.sv'); btn.disabled = true; err.hidden = true;
         var fd = new FormData(form);
+        if (form.audience.disabled) fd.set('audience', form.audience.value);   // ১টা Apply এর ধরন বদলানো যায় না
         fd.set('isActive', form.isActive.checked ? 'true' : 'false'); fd.set('isFeatured', form.isFeatured.checked ? 'true' : 'false'); fd.set('isLive', form.isLive.checked ? 'true' : 'false');
         try {
             var d = await post('/Admin/SavePackage', fd);

@@ -397,13 +397,13 @@ trait PaymentData
             $this->insert('INSERT INTO `UserSubscriptions` (`UserId`, `PaymentId`, `PackageName`, `Audience`, `StartsAt`, `EndsAt`, `PostsTotal`, `PostsUsed`, `CreatedAt`)
                 VALUES (:u, :p, :n, :a, :s, :e, :pt, 0, :c)', [
                 'u' => $p->UserId, 'p' => $id, 'n' => $p->PackageName, 'a' => $p->Audience, 's' => $start, 'e' => $end,
-                'pt' => $p->Audience === 'Student' ? $p->PostLimit : 0, 'c' => now(),
+                'pt' => $p->Audience === 'Student' || isset(self::APPLY_AUDIENCES[$p->Audience]) ? max($p->Audience === 'Student' ? 0 : 1, $p->PostLimit) : 0, 'c' => now(),
             ]);
             $this->pdo->commit();
         } catch (Throwable $e) { $this->pdo->rollBack(); throw $e; }
         if ((int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'SettleReferralDiscount')) $this->SettleReferralDiscount($id, true);
-        // রেফারেল: এই ইউজার কারো লিংক দিয়ে এসে থাকলে, প্রথম প্যাকেজ কেনায় রেফারার বোনাস পায়
-        if ((int)$p->Amount + (int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
+        // রেফারেল: এই ইউজার কারো লিংক দিয়ে এসে থাকলে, প্রথম প্যাকেজ কেনায় রেফারার বোনাস পায় (৳২০ এর "১টা Apply" কেনায় না)
+        if (!isset(self::APPLY_AUDIENCES[$p->Audience]) && (int)$p->Amount + (int)($p->RefDiscount ?? 0) > 0 && method_exists($this, 'CreditReferralPurchase')) $this->CreditReferralPurchase((int)$p->UserId, (string)($p->RefCode ?? ''));
         return $this->GetPaymentRequest($id);
     }
 
@@ -524,6 +524,25 @@ trait PaymentData
             }
             return $left;
         } catch (Throwable $e) { return 0; }
+    }
+
+    /** ৳২০ এর "১টা Apply" — কয়টা বাকি ($aud = SApply | TApply) */
+    public function GetApplyCredits(int $userId, string $aud): int
+    {
+        try {
+            $this->EnsurePaymentTables();
+            return (int)$this->scalar('SELECT COALESCE(SUM(`PostsTotal` - `PostsUsed`), 0) FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = :a AND `PostsUsed` < `PostsTotal`', ['u' => $userId, 'a' => $aud]);
+        } catch (Throwable $e) { return 0; }
+    }
+
+    /** একটা Apply খরচ — সফল হলে true (একসাথে দুইবার চাপলেও একটাই কাটে) */
+    public function ConsumeApplyCredit(int $userId, string $aud): bool
+    {
+        $this->EnsurePaymentTables();
+        foreach ($this->all('SELECT `Id` FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = :a AND `PostsUsed` < `PostsTotal` ORDER BY `Id`', ['u' => $userId, 'a' => $aud]) as $r) {
+            if ($this->exec('UPDATE `UserSubscriptions` SET `PostsUsed` = `PostsUsed` + 1 WHERE `Id` = :i AND `PostsUsed` < `PostsTotal`', ['i' => (int)$r->Id]) > 0) return true;
+        }
+        return false;
     }
 
     /** শিক্ষার্থীর চালু প্যাকেজের শেষ তারিখ (মেয়াদহীন ক্রেডিট হলে null) */

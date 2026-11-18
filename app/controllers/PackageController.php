@@ -23,6 +23,9 @@ class PackageController extends Controller
             'TeacherPackages' => $this->db->GetPackages('Teacher', true),
             'StudentPackages' => $this->db->GetPackages('Student', true),
             'Tab' => $for,
+            'ApplyT' => $this->db->GetApplyPackage('TApply'),
+            'ApplyS' => $this->db->GetApplyPackage('SApply'),
+            'ApplyLeft' => $uid !== null ? $this->db->GetApplyCredits($uid, session_get('UserRole') === 'Teacher' ? 'TApply' : 'SApply') : 0,
         ]);
     }
 }

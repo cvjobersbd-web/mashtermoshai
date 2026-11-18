@@ -1834,7 +1834,7 @@ function admin_action_rule(string $action): string
         $groups = [
             'users' => ['TeacherOverview', 'UserOverview', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock', 'SaveDeviceAuto', 'SaveDeviceMax'],
             'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
-            'tuition' => ['TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
+            'tuition' => ['PublicPosts', 'DeletePublicPost', 'TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus', 'ProfilePosts', 'DeleteProfilePost'],
@@ -2358,6 +2358,41 @@ function viewer_sees_profile_posts(int $ownerId): bool
     return $c[$ownerId] = $role === 'Teacher' ? viewer_sees_teacher_photos() : viewer_has_package();
 }
 
+/**
+ * "পড়াতে চাই" পোস্টে প্যাকেজ ছাড়া ভিজিটরের জন্য টিচারের ছোট ছবি (৮০×৮০, কম কোয়ালিটি) — আসল / বড় ছবির লিংক পেজে যায় না।
+ * একবার বানিয়ে /uploads/thumbs এ রাখা হয়; ছবি বদলালে নতুন নামে নতুনটা হয়। বানানো না গেলে '' (তখন নামের অক্ষর দেখায়)।
+ */
+function teacher_thumb_url(int $userId, ?string $src): string
+{
+    static $made = 0;
+    $src = trim((string)$src);
+    if ($src === '' || !function_exists('imagecreatefromstring')) return '';
+    $rel = '/uploads/thumbs/t' . $userId . '_' . substr(md5($src . '|80'), 0, 12) . '.jpg';
+    $path = APP_ROOT . $rel;
+    if (is_file($path)) return $rel;
+    if ($made >= 12) return '';   // এক পেজে বেশি নতুন ছবি বানালে পেজ ধীর হয় — বাকিগুলো পরের বার
+    $made++;
+    $data = null;
+    if (str_starts_with($src, '/uploads/')) {
+        $p = realpath(APP_ROOT . strtok($src, '?')); $root = realpath(APP_ROOT . '/uploads');
+        if ($p && $root && str_starts_with($p, $root) && is_file($p) && filesize($p) < 15 * 1024 * 1024) $data = @file_get_contents($p);
+    } elseif (preg_match('#^https?://#i', $src)) {
+        $ctx = stream_context_create(['http' => ['timeout' => 4, 'follow_location' => 1, 'user_agent' => 'Mozilla/5.0']]);
+        $data = @file_get_contents($src, false, $ctx, 0, 10 * 1024 * 1024);
+    }
+    if (!$data) return '';
+    $im = @imagecreatefromstring($data);
+    if (!$im) return '';
+    $w = imagesx($im); $h = imagesy($im); $side = min($w, $h);
+    $t = imagecreatetruecolor(80, 80);
+    imagefill($t, 0, 0, imagecolorallocate($t, 255, 255, 255));
+    imagecopyresampled($t, $im, 0, 0, (int)(($w - $side) / 2), (int)(($h - $side) / 2), 80, 80, $side, $side);
+    if (!is_dir(dirname($path))) @mkdir(dirname($path), 0755, true);
+    $ok = @imagejpeg($t, $path, 72);
+    imagedestroy($im); imagedestroy($t);
+    return $ok ? $rel : '';
+}
+
 /** প্যাকেজ ছাড়া দেখালে টিচারের ছবির জায়গায় এই ছবি */
 function teacher_photo_placeholder(): string
 {
@@ -2588,3 +2623,7 @@ function seo_private_page(string $controller, string $action): bool
     if ($c === 'course' && in_array($a, ['learn', 'manage', 'build', 'edit', 'students', 'my', 'earnings'], true)) return true;
     return false;
 }
+
+
+// পড়াতে চাই / টিউশন সার্কুলার পোস্টে যোগাযোগের তথ্য ঠেকানো
+require_once __DIR__ . '/contact_guard.php';

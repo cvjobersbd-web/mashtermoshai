@@ -65,6 +65,9 @@ class TuitionController extends Controller
         if ((int)preg_replace('/[^0-9]/', '', (string)input_str('budget', '')) <= 0) $this->fail('বাজেট (৳/মাস) দিন।');
         if (!in_array((string)input_str('medium', ''), Db::CIRCULAR_MEDIUMS, true)) $this->fail('মিডিয়াম বাছাই করুন।');
         if (!in_array((string)input_str('tuitionType', ''), Db::CIRCULAR_TYPES, true)) $this->fail('টিউশনের ধরন বাছাই করুন।');
+        // মোবাইল নম্বর, ইমেইল, ফেসবুক, বাসা / রোড নম্বর ইত্যাদি থাকলে পোস্ট হবে না — টিচার Apply করলে সাইটের মাধ্যমেই যোগাযোগ
+        if (session_get('UserRole') !== 'Admin' && ($why = contact_info_error([$title, $content, $clean('preferredArea', 100), $clean('classLevel', 60), $clean('subjects', 120)], 'student')))
+            json_response(['success' => false, 'contact' => true, 'message' => $why]);
         $medium = (string)input_str('medium', '');
         $type = (string)input_str('tuitionType', '');
         $budget = preg_replace('/[^0-9]/', '', (string)input_str('budget', ''));
@@ -234,6 +237,13 @@ class TuitionController extends Controller
         if ($teacherId === null) json_response(['success' => false, 'message' => 'Apply করতে লগইন করুন।']);
         if (current_role() !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু অনুমোদিত টিচাররা Apply করতে পারবেন।']);
 
+        // টিচার প্যাকেজ চালু না থাকলে ৳২০ এর "১টা Apply" লাগে (একটা খরচ হয়)
+        $useApply = !teacher_profile_open((int)$teacherId);
+        if ($useApply && $this->db->GetApplyCredits((int)$teacherId, 'TApply') <= 0) {
+            $ap = $this->db->GetApplyPackage('TApply');
+            json_response(['success' => false, 'needPackage' => '/Package?for=teacher#apply-teacher',
+                'message' => 'টিউশনে Apply করতে টিচার প্যাকেজ নিন' . ($ap ? ' অথবা ৳' . (int)$ap->Price . ' দিয়ে ১টা Apply নিন' : '') . '।']);
+        }
         $postId = input_int('postId', 0);
         $message = trim((string)input_str('message', ''));
         $phone = preg_replace('/\D/', '', (string)input_str('phone', ''));
@@ -244,6 +254,7 @@ class TuitionController extends Controller
         $result = $this->db->ApplyToCircularPost($postId, $teacherId, $message === '' ? null : $message, $phone, $post);
         switch ($result) {
             case 'ok':
+                if ($useApply) { try { $this->db->ConsumeApplyCredit((int)$teacherId, 'TApply'); } catch (Throwable $e) { error_log('[apply credit] ' . $e->getMessage()); } }
                 $teacherName = session_get('UserFullName') ?? session_get('UserName') ?? 'A teacher';
                 $this->db->CreateNotification($post->UserId, 'New Teacher Application',
                     "$teacherName আপনার টিউশন পোস্টে Apply করেছেন।", 'success',

@@ -52,10 +52,30 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
 ?>
 <style>
     .pk-offer { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 4px; padding: 10px 12px; border-radius: 12px; background: linear-gradient(135deg, #F5F3FF, #FDF4FF); border: 1.5px dashed #8B5CF6; color: #5B21B6; font-size: 13px; line-height: 1.5; }
+    .pk-apply { display: flex; gap: 14px; align-items: center; margin: 18px 0 4px; padding: 16px 18px; border-radius: 16px; background: #fff; border: 1.5px dashed #F59E0B; box-shadow: 0 6px 18px rgba(8,34,74,.05); }
+    .pk-apply .ic { width: 48px; height: 48px; border-radius: 14px; background: #FEF3C7; color: #B45309; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .pk-apply .tx { flex: 1; min-width: 0; } .pk-apply .tx b { display: block; color: #08224A; font-size: 16px; font-weight: 800; }
+    .pk-apply .tx span { color: #475569; font-size: 13.5px; line-height: 1.55; } .pk-apply .tx em { display: block; font-style: normal; color: #15803D; font-weight: 700; margin-top: 3px; }
+    .pk-apply .pk-btn { margin: 0; width: auto; flex-shrink: 0; white-space: nowrap; }
+    @media (max-width: 640px) { .pk-apply { flex-wrap: wrap; } .pk-apply .pk-btn { width: 100%; justify-content: center; } }
     .pk-offer i { font-size: 18px; margin-top: 2px; color: #7C3AED; }
     .pk-offer b { display: block; font-size: 13.5px; } .pk-offer b.p { display: inline; font-size: 16px; color: #15803D; }
 </style>
 <?php
+// ৳২০ এর "১টা Apply" — প্যাকেজ ছাড়া একটা পোস্টে Apply
+$applyStrip = function ($p, string $for) {
+    if (!$p) return;
+    $left = (int)($GLOBALS['__ViewBag']->ApplyLeft ?? 0); ?>
+    <div class="pk-apply" id="apply-<?= e($for) ?>">
+        <span class="ic"><i class="fas fa-paper-plane"></i></span>
+        <div class="tx">
+            <b><?= e($p->Name) ?> — <?= e(taka($p->Price)) ?></b>
+            <span><?= $for === 'teacher' ? t('প্যাকেজ না নিয়েও একটা Tuition Circular পোস্টে Apply করতে চান? ৳' . (int)$p->Price . ' দিয়ে ১টা Apply নিন — আবেদন সরাসরি শিক্ষার্থীর কাছে যাবে।', 'Want to apply to one Tuition Circular post without a package? Get one apply for ৳' . (int)$p->Price . '.') : t('প্যাকেজ না নিয়েও একজন টিচারের "পড়াতে চাই" পোস্টে Apply করতে চান? ৳' . (int)$p->Price . ' দিয়ে ১টা Apply নিন।', 'Want to apply to one teacher\'s "Want to Teach" post without a package? Get one apply for ৳' . (int)$p->Price . '.') ?>
+            <?php if ($left > 0): ?><em><?= t('আপনার ' . bn_num($left) . 'টা Apply বাকি আছে', 'You have ' . $left . ' apply left') ?></em><?php endif; ?></span>
+        </div>
+        <a class="pk-btn" href="/Payment/Checkout/<?= (int)$p->Id ?>"><?= t('৳' . (int)$p->Price . ' দিয়ে Apply নিন', 'Get it for ৳' . (int)$p->Price) ?> <i class="fas fa-arrow-right"></i></a>
+    </div>
+<?php };
 $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree && $p->Audience === 'Student';
     $cpo = $free ? null : db()->CouponOfferFor($p);
     $badge = $cpo ? t('স্পেশাল প্যাকেজ', 'Special Package') : (string)$p->Badge; // কুপন অফার থাকলে "জনপ্রিয়"-এর বদলে Special Package ?>
@@ -295,6 +315,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             </div>
             <?php foreach ($teacherCards as $p) $card($p, !empty($p->IsLive) ? t('Premium নিন', 'Get Premium') : t('Subscribe করুন', 'Subscribe')); ?>
         </div>
+        <?php $applyStrip($ViewBag->ApplyT ?? null, 'teacher'); ?>
         
         <div class="pk-tick-demo">
             <div class="pk-tick-card">
@@ -334,6 +355,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
             </div>
             <?php foreach ($studentPk as $p) $card($p, t('প্যাকেজ নিন', 'Get package')); ?>
         </div>
+        <?php if (!$studentFree) $applyStrip($ViewBag->ApplyS ?? null, 'student'); ?>
         <div class="pk-note"><i class="fas fa-info-circle" style="margin-top:3px;"></i>
             <span><?= t('পেমেন্ট অ্যাডমিন Accept করলেই প্যাকেজ চালু হবে — মেয়াদের মধ্যে টিচারদের ছবি ও যোগাযোগের তথ্য দেখতে, Direct Request পাঠাতে আর Tuition Circular এ যত খুশি পোস্ট করতে পারবেন।', 'The package starts as soon as the admin accepts your payment — during the package period you can see teachers\' photos and contact info, send Direct Requests and post on the Tuition Circular as much as you like.') ?></span></div>
         <?php $benefitGrid($benefits['Student'], t('প্যাকেজ নিলে যা যা পাবেন', 'What you get with a package')); ?>

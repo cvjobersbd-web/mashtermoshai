@@ -11,6 +11,8 @@ trait PackageData
     private bool $packagesReady = false;
 
     public const PACKAGE_AUDIENCES = ['Teacher', 'Student'];
+    /** ৳২০ এর "১টা Apply" — প্যাকেজ ছাড়া একবার Apply (SApply = শিক্ষার্থী → টিচারের "পড়াতে চাই" পোস্টে, TApply = টিচার → Tuition Circular পোস্টে) */
+    public const APPLY_AUDIENCES = ['SApply' => 'Student', 'TApply' => 'Teacher'];
     private const TEACHER_FEATURES_V1 = "প্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
     private const STUDENT_FEATURES_V2 = "টিচারদের প্রোফাইল ছবি, মোবাইল নম্বর ও ইমেইল দেখতে পারবেন\nপছন্দের টিচারকে সরাসরি Direct Request পাঠাতে পারবেন\nTuition Circular এ যত খুশি টিউশন পোস্ট করতে পারবেন\nআগ্রহী টিচারদের আবেদন দেখে পছন্দের টিচার বাছাই করতে পারবেন";
     private const TEACHER_FEATURES_V2 = "Find Tutor তালিকায় উপরের দিকে দেখাবে\nপ্রোফাইল সক্রিয় থাকবে — Find Tutor এ দেখাবে\nশিক্ষার্থীদের Tuition পোস্ট দেখতে ও যোগাযোগ করতে পারবেন\nTeacher Wanted পোস্ট করতে পারবেন\nনিজের স্টুডেন্ট, ক্লাস ও পেমেন্ট ম্যানেজ করতে পারবেন";
@@ -167,7 +169,24 @@ trait PackageData
                 }
                 $this->SaveSiteContent(['pkg_v5b' => '1']);
             }
+            // নতুন (একবারই): ৳২০ দিয়ে ১টা Apply — শিক্ষার্থী একজন টিচারের "পড়াতে চাই" পোস্টে, টিচার একটা Tuition Circular পোস্টে
+            if (($this->GetSiteContent(['pkg_apply_v1' => ''])['pkg_apply_v1'] ?? '') === '') {
+                $this->insertPackage(['Audience' => 'SApply', 'Name' => '১টা Apply', 'DurationMonths' => 0, 'PostLimit' => 1, 'Price' => 20, 'RegularPrice' => null, 'Badge' => '',
+                    'Description' => 'প্যাকেজ ছাড়াই একজন টিচারের "পড়াতে চাই" পোস্টে Apply করুন',
+                    'Features' => "একজন টিচারের \"পড়াতে চাই\" পোস্টে ১ বার Apply (রিকোয়েস্ট) করতে পারবেন\nটিচার Accept করলে সাইটের চ্যাটে কথা বলতে পারবেন\nমেয়াদ শেষ হয় না — যখন খুশি ব্যবহার করুন", 'IsFeatured' => 0, 'IsLive' => 0, 'SortOrder' => 1]);
+                $this->insertPackage(['Audience' => 'TApply', 'Name' => '১টা Apply', 'DurationMonths' => 0, 'PostLimit' => 1, 'Price' => 20, 'RegularPrice' => null, 'Badge' => '',
+                    'Description' => 'প্যাকেজ ছাড়াই একটা Tuition Circular পোস্টে Apply করুন',
+                    'Features' => "একটা Tuition Circular পোস্টে ১ বার Apply করতে পারবেন\nআপনার আবেদন সরাসরি শিক্ষার্থীর কাছে যাবে\nমেয়াদ শেষ হয় না — যখন খুশি ব্যবহার করুন", 'IsFeatured' => 0, 'IsLive' => 0, 'SortOrder' => 1]);
+                $this->SaveSiteContent(['pkg_apply_v1' => '1']);
+            }
         } catch (Throwable $e) { error_log('[packages seed] ' . $e->getMessage()); }
+    }
+
+    /** ৳২০ এর "১টা Apply" প্যাকেজ (চালু থাকলে) — $aud = SApply | TApply */
+    public function GetApplyPackage(string $aud): ?Obj
+    {
+        foreach ($this->GetPackages($aud, true) as $p) return $p;
+        return null;
     }
 
     // ============================================================ কুপন কোড (স্পেশাল অফার)
@@ -338,7 +357,8 @@ trait PackageData
         $p->IsActive = (bool)(int)$p->IsActive; $p->IsFeatured = (bool)(int)$p->IsFeatured; $p->IsLive = (bool)(int)($p->IsLive ?? 0);
         $p->Discount = $p->RegularPrice ? (int)round(100 - $p->Price * 100 / $p->RegularPrice) : 0;
         $p->FeatureList = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)$p->Features))));
-        $p->DurationLabel = package_duration_label($p);
+        $p->DurationLabel = isset(self::APPLY_AUDIENCES[$p->Audience]) ? ($p->PostLimit > 1 ? bn_num($p->PostLimit) . 'টা' : '১টা') . ' পোস্টে Apply · মেয়াদ শেষ হয় না' : package_duration_label($p);
+        $p->IsApply = isset(self::APPLY_AUDIENCES[$p->Audience]);
         $p->PerMonth = $p->Audience === 'Teacher' && $p->DurationMonths > 1 ? (int)round($p->Price / $p->DurationMonths) : null;
         return $p;
     }

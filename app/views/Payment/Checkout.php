@@ -169,7 +169,7 @@ $jsMethods = array_map(function ($m) {
 <div class="co-wrap">
     <?php if ($pkg->Audience === 'Publish'): ?><a class="co-back" href="/Course/Build/<?= (int)$pkg->CourseId ?>"><i class="fas fa-arrow-left"></i> ফিরে যান</a>
     <?php elseif ($pkg->Audience === 'Course'): ?><a class="co-back" href="/Course/Details/<?= (int)$pkg->CourseId ?>"><i class="fas fa-arrow-left"></i> কোর্সে ফিরে যান</a>
-    <?php else: ?><a class="co-back" href="/Package?for=<?= $pkg->Audience === 'Student' ? 'student' : 'teacher' ?>"><i class="fas fa-arrow-left"></i> সব প্যাকেজ</a><?php endif; ?>
+    <?php else: ?><a class="co-back" href="/Package?for=<?= in_array($pkg->Audience, ['Student', 'SApply'], true) ? 'student' : 'teacher' ?>"><i class="fas fa-arrow-left"></i> সব প্যাকেজ</a><?php endif; ?>
     <h1 class="co-h1">পেমেন্ট করুন</h1>
     <p class="co-lead">bKash, Nagad, Rocket বা Upay এর এজেন্ট নম্বরে Cash Out করুন অথবা Bank Transfer এর QR স্ক্যান করুন — তারপর রসিদ জমা দিন। অ্যাডমিন যাচাই করে Accept করলেই প্যাকেজ চালু হবে।</p>
 
@@ -195,7 +195,7 @@ $jsMethods = array_map(function ($m) {
                 <input type="hidden" name="accountId" id="coAccountId" />
                 <input type="hidden" name="useBalance" id="coUseBalance" value="0" />
                 <input type="hidden" name="couponCode" id="coCouponCode" value="" />
-                <?php if (!in_array($pkg->Audience, ['Course', 'Publish'], true) && empty($pkg->IsLive)): $preCp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('coupon', ''))); ?>
+                <?php if (!in_array($pkg->Audience, ['Course', 'Publish'], true) && empty($pkg->IsLive) && empty($pkg->IsApply)): $preCp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('coupon', ''))); ?>
                 <div class="co-card co-cp" id="coCpCard" data-f="couponCode">
                     <label for="coCpIn" class="co-cp-h"><i class="fas fa-ticket"></i> কুপন কোড আছে? <small>স্পেশাল অফারের কোড দিলে দাম কমে যাবে</small></label>
                     <div class="co-cp-row"><input type="text" id="coCpIn" maxlength="30" autocomplete="off" placeholder="কুপন কোড লিখুন" value="<?= e($preCp) ?>" /><button type="button" id="coCpBtn">Apply</button></div>
@@ -283,7 +283,7 @@ $jsMethods = array_map(function ($m) {
                             </select>
                         </div>
                         <?php endif; ?>
-                        <?php $rfOn = false; try { $rfOn = db()->ReferralSettings()['enabled'] && (int)$pkg->Price > 0; } catch (Throwable $e) { } ?>
+                        <?php $rfOn = false; try { $rfOn = db()->ReferralSettings()['enabled'] && (int)$pkg->Price > 0 && empty($pkg->IsApply); } catch (Throwable $e) { } ?>
                         <?php if ($rfOn): $preCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)input_str('code', ''))); ?>
                         <div class="full" data-f="refCode">
                             <label for="coRefCode"><i class="fas fa-gift" style="color:#F59E0B;"></i> রেফারেল কোড <span style="font-weight:500;color:#94A3B8;">(ঐচ্ছিক)</span></label>
@@ -306,7 +306,7 @@ $jsMethods = array_map(function ($m) {
         <aside class="co-card co-sum">
             <h3>অর্ডার সারাংশ</h3>
             <div class="co-pkg">
-                <div class="aud"><?= $pkg->Audience === 'Publish' ? 'প্রকাশ ফি' : ($pkg->Audience === 'Course' ? ((db()->CourseKindMap()[(int)($pkg->CourseId ?? 0)] ?? '') === 'live' ? 'লাইভ ক্লাস' : 'কোর্স') : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ')) ?></div>
+                <div class="aud"><?= $pkg->Audience === 'Publish' ? 'প্রকাশ ফি' : ($pkg->Audience === 'Course' ? ((db()->CourseKindMap()[(int)($pkg->CourseId ?? 0)] ?? '') === 'live' ? 'লাইভ ক্লাস' : 'কোর্স') : ($pkg->Audience === 'TApply' ? 'টিচার — ১টা Apply' : ($pkg->Audience === 'SApply' ? 'শিক্ষার্থী — ১টা Apply' : ($pkg->Audience === 'Teacher' ? 'শিক্ষক Subscription' : 'শিক্ষার্থী প্যাকেজ')))) ?></div>
                 <div class="nm"><?= e($pkg->Name) ?></div>
                 <div class="du"><i class="far fa-clock"></i> <?= e($pkg->DurationLabel) ?></div>
             </div>
