@@ -1066,8 +1066,13 @@ class AdminController extends Controller
         $d = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
         $from = $d(input_str('from', '')); $to = $d(input_str('to', ''));
         if ($from > $to) [$from, $to] = [$to, $from];
-        $refs = []; foreach ($this->db->GetRefNoBonusUsers() as $u) $refs[(int)$u->Id] = $u;
-        $rows = $this->db->GetNoBonusReferrals($from, $to);
+        // বাছাই করা রেফারার (ids = টিক দেওয়া, codes = কোড পেস্ট করা) — কিছু না দিলে বোনাস ছাড়া সবাই
+        $pick = array_filter(array_map('intval', preg_split('/[^0-9]+/', (string)input_str('ids', ''))));
+        preg_match_all('/MM[A-Z0-9]{6}/', strtoupper((string)input_str('codes', '')), $cm);
+        if ($cm[0]) $pick = array_merge($pick, array_values($this->db->RefUserIdsByCodes($cm[0])));
+        $pick = array_values(array_unique($pick));
+        $refs = []; foreach ($pick ? $this->db->GetRefUsersByIds($pick) : $this->db->GetRefNoBonusUsers() as $u) $refs[(int)$u->Id] = $u;
+        $rows = $this->db->GetNoBonusReferrals($from, $to, $pick ? array_keys($refs) : null);
         $nm = fn($u) => $u ? (string)($u->FullName ?: $u->UserName) : 'Deleted user';
         // যে এসেছে সে টিচার না শিক্ষার্থী — টিচার / টিচারের আবেদন / টিচার প্যাকেজ → টিচার; Student Verification / শিক্ষার্থী প্যাকেজ → শিক্ষার্থী
         $aud = [];
@@ -1096,7 +1101,7 @@ class AdminController extends Controller
             foreach ([&$sum[$id], &$byDay[$day][$id]] as &$c) { $c['n']++; $c[$kk]++; if ($r->Bought) $c['b']++; } unset($c);
         }
         uasort($sum, fn($a, $b) => $b['n'] <=> $a['n']);
-        $s1 = [['বোনাস ছাড়া রেফারার — রেফারেলের হিসাব'], ['তারিখ', $range], ['মোট রেফারেল', count($rows)], ['প্যাকেজ কিনেছে', count(array_filter($rows, fn($r) => $r->Bought))],
+        $s1 = [[$pick ? 'বাছাই করা ' . count($refs) . ' জন রেফারার — রেফারেলের হিসাব' : 'বোনাস ছাড়া রেফারার — রেফারেলের হিসাব'], ['তারিখ', $range], ['মোট রেফারেল', count($rows)], ['প্যাকেজ কিনেছে', count(array_filter($rows, fn($r) => $r->Bought))],
             ['টিচার হিসেবে এসেছে', count(array_filter($rows, fn($r) => $r->K === 't'))], ['শিক্ষার্থী হিসেবে এসেছে', count(array_filter($rows, fn($r) => $r->K === 's'))],
             ['এখনো ঠিক করেনি', count(array_filter($rows, fn($r) => $r->K === 'n'))], [],
             ['#', 'রেফারারের নাম', 'ইউজারনেম', 'ইমেইল', 'রেফারেল কোড', 'মোট রেফার', 'টিচার', 'শিক্ষার্থী', 'এখনো ঠিক করেনি', 'প্যাকেজ কিনেছে', 'এখনো কেনেনি']];
@@ -1114,10 +1119,109 @@ class AdminController extends Controller
         $i = 0; foreach ($rows as $r) { $u = $refs[(int)$r->ReferrerId] ?? null;
             $s3[] = [++$i, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), $nm($u), (string)($u->Code ?? ''), (string)($r->Name ?: $r->UserName ?: 'Deleted user'), $r->UserName ? '@' . $r->UserName : '', (string)($r->Email ?? ''), (string)($r->MobileNumber ?? ''), $r->KLabel, $src($r), $r->Bought ? 'হ্যাঁ' : 'না']; }
         $bold2 = [0]; foreach ($s2 as $k => $row) if (str_contains((string)($row[0] ?? ''), '— মোট')) $bold2[] = $k;
-        xlsx_send('no-bonus-referrals-' . $from . ($from !== $to ? '-to-' . $to : ''), [
+        xlsx_send(($pick ? 'selected-referrers-' : 'no-bonus-referrals-') . $from . ($from !== $to ? '-to-' . $to : ''), [
             ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, 8, count($s1) - 1], 'widths' => [6, 26, 20, 30, 14, 12, 10, 12, 16, 15, 14], 'freeze' => 9],
             ['name' => 'তারিখ অনুযায়ী', 'rows' => $s2, 'bold' => $bold2, 'widths' => [22, 26, 14, 18, 10, 12, 16, 15], 'freeze' => 1],
             ['name' => 'বিস্তারিত', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 24, 14, 24, 18, 30, 16, 34, 22, 15], 'freeze' => 1],
+        ]);
+    }
+
+    /**
+     * GET /Admin/RefKindReport?ids=1,2&from=&to=&format=xlsx|print
+     * বাছাই করা রেফারারদের রেফারেলে কে এসেছে আর সে টিচার না শিক্ষার্থী — Excel, অথবা প্রিন্টের পেজ (ব্রাউজারে Save as PDF)।
+     * ids না দিলে সব রেফারার; তারিখ না দিলে সব সময়ের।
+     */
+    public function RefKindReport(): void
+    {
+        $this->requireAdminPage();
+        $pick = array_values(array_unique(array_filter(array_map('intval', preg_split('/[^0-9]+/', (string)input_str('ids', ''))))));
+        $okd = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : '';
+        $from = $okd(input_str('from', '')); $to = $okd(input_str('to', ''));
+        if ($from !== '' && $to !== '' && $from > $to) [$from, $to] = [$to, $from];
+        $all = array_values(array_filter($this->db->GetReferralsAdmin(), function ($r) use ($pick, $from, $to) {
+            if ($r->Status === 'Revoked') return false;
+            if ($pick && !in_array((int)$r->ReferrerId, $pick, true)) return false;
+            $d = substr((string)$r->CreatedAt, 0, 10);
+            return ($from === '' || $d >= $from) && ($to === '' || $d <= $to);
+        }));
+        usort($all, fn($a, $b) => strcmp((string)$a->CreatedAt, (string)$b->CreatedAt));
+        $uids = array_map(fn($r) => (int)$r->ReferredUserId, $all);
+        $km = $this->db->RefKindMap($uids);
+        $paid = []; $ver = []; $mob = [];
+        if ($uids) {
+            $in = implode(',', array_unique($uids));
+            try { foreach ($this->db->all("SELECT `UserId` FROM `PaymentRequests` WHERE `Status` = 'Approved' AND `UserId` IN ($in)") as $p) $paid[(int)$p->UserId] = 1; } catch (Throwable $e) { }
+            try { $this->db->EnsureEmailVerify(); } catch (Throwable $e) { }
+            try { foreach ($this->db->all("SELECT `Id`, `EmailVerified`, `MobileNumber` FROM `Users` WHERE `Id` IN ($in)") as $u) { $ver[(int)$u->Id] = $u->EmailVerified === null || (int)$u->EmailVerified === 1; $mob[(int)$u->Id] = (string)($u->MobileNumber ?? ''); } }
+            catch (Throwable $e) { try { foreach ($this->db->all("SELECT `Id`, `MobileNumber` FROM `Users` WHERE `Id` IN ($in)") as $u) $mob[(int)$u->Id] = (string)($u->MobileNumber ?? ''); } catch (Throwable $e2) { } }
+        }
+        // রেফারার অনুযায়ী ভাগ (বাছাই করা কেউ ০ জন আনলেও তালিকায় থাকে)
+        $groups = [];
+        $refUsers = $pick ? $this->db->GetRefUsersByIds($pick) : [];
+        foreach ($refUsers as $u) $groups[(int)$u->Id] = ['name' => (string)($u->FullName ?: $u->UserName), 'user' => (string)$u->UserName, 'code' => (string)($u->Code ?? ''), 'list' => []];
+        foreach ($all as $r) {
+            $k = (int)$r->ReferrerId;
+            $groups[$k] ??= ['name' => (string)($r->ReferrerName ?: $r->ReferrerUser ?: ('#' . $k)), 'user' => (string)$r->ReferrerUser, 'code' => (string)$r->RefCode, 'list' => []];
+            $uid = (int)$r->ReferredUserId;
+            $r->K = $km[$uid] ?? 'n'; $r->KLabel = Db::REF_KIND_LABEL[$r->K] ?? Db::REF_KIND_LABEL['n'];
+            $r->Bought = $r->Status === 'Credited' || isset($paid[$uid]); $r->Verified = $ver[$uid] ?? true; $r->Mobile = $mob[$uid] ?? '';
+            $groups[$k]['list'][] = $r;
+        }
+        uasort($groups, fn($a, $b) => count($b['list']) <=> count($a['list']));
+        $cnt = function (array $l) { $c = ['n' => count($l), 't' => 0, 'ta' => 0, 's' => 0, 'x' => 0, 'b' => 0];
+            foreach ($l as $r) { $c[$r->K === 'n' ? 'x' : $r->K]++; if ($r->Bought) $c['b']++; } return $c; };
+        $fd = fn($v) => date('d M Y', strtotime((string)$v));
+        $range = $from === '' && $to === '' ? 'সব সময়' : (($from !== '' ? $fd($from) : 'শুরু থেকে') . ' — ' . ($to !== '' ? $fd($to) : 'আজ পর্যন্ত'));
+        $tot = $cnt($all);
+        $title = ($pick ? 'বাছাই করা ' . count($groups) . ' জন রেফারার' : 'সব রেফারার') . ' — কে কাকে রেফার করেছে, কে টিচার / শিক্ষার্থী';
+
+        if (input_str('format', 'xlsx') === 'print') {
+            while (ob_get_level() > 0) ob_end_clean();
+            header('Content-Type: text/html; charset=utf-8');
+            $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+            $pill = ['t' => '#DBEAFE;color:#1D4ED8', 'ta' => '#EDE9FE;color:#6D28D9', 's' => '#DCFCE7;color:#166534', 'n' => '#F1F5F9;color:#475569'];
+            echo '<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . $h('referral-report-' . date('Y-m-d')) . '</title><style>
+                @page { size: A4; margin: 12mm; } *{box-sizing:border-box} body{font-family:"Hind Siliguri","Noto Sans Bengali","SolaimanLipi",Arial,sans-serif;color:#0F172A;margin:0;padding:18px;font-size:12.5px}
+                h1{font-size:19px;margin:0 0 4px} .sub{color:#475569;margin:0 0 12px} .bar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+                .bar span{background:#F1F5F9;border-radius:999px;padding:4px 11px;font-weight:700} table{width:100%;border-collapse:collapse;margin:0 0 14px}
+                th,td{border:1px solid #CBD5E1;padding:5px 7px;text-align:left;vertical-align:top} th{background:#E2E8F0} .g{page-break-inside:avoid;margin:0 0 16px}
+                .g h2{font-size:14.5px;margin:0 0 6px;background:#0F172A;color:#fff;padding:6px 10px;border-radius:6px} .k{display:inline-block;padding:1px 8px;border-radius:999px;font-weight:700;font-size:11.5px}
+                .noprint{margin:0 0 12px} .noprint button{padding:8px 16px;border:none;border-radius:8px;background:#16A34A;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
+                @media print{.noprint{display:none} body{padding:0}}</style></head><body>';
+            echo '<div class="noprint"><button onclick="window.print()">PDF হিসেবে সেভ / প্রিন্ট</button> &nbsp;প্রিন্ট উইন্ডোতে <b>Destination: Save as PDF</b> বাছাই করুন।</div>';
+            echo '<h1>মাষ্টার মশাই — রেফারেল রিপোর্ট</h1><p class="sub">' . $h($title) . ' · তারিখ: ' . $h($range) . ' · তৈরি: ' . $h(date('d M Y, h:i A')) . '</p>';
+            echo '<div class="bar"><span>মোট রেফারেল: ' . $tot['n'] . '</span><span>টিচার: ' . $tot['t'] . '</span><span>টিচার (আবেদন করেছে): ' . $tot['ta'] . '</span><span>শিক্ষার্থী: ' . $tot['s'] . '</span><span>এখনো ঠিক করেনি: ' . $tot['x'] . '</span><span>প্যাকেজ কিনেছে: ' . $tot['b'] . '</span></div>';
+            echo '<table><tr><th>#</th><th>রেফারার</th><th>কোড</th><th>মোট</th><th>টিচার</th><th>টিচার (আবেদন)</th><th>শিক্ষার্থী</th><th>ঠিক করেনি</th><th>প্যাকেজ কিনেছে</th></tr>';
+            $i = 0; foreach ($groups as $g) { $c = $cnt($g['list']); echo '<tr><td>' . (++$i) . '</td><td>' . $h($g['name']) . ($g['user'] !== '' ? ' <small>@' . $h($g['user']) . '</small>' : '') . '</td><td>' . $h($g['code']) . '</td><td><b>' . $c['n'] . '</b></td><td>' . $c['t'] . '</td><td>' . $c['ta'] . '</td><td>' . $c['s'] . '</td><td>' . $c['x'] . '</td><td>' . $c['b'] . '</td></tr>'; }
+            echo '</table>';
+            foreach ($groups as $g) {
+                $c = $cnt($g['list']);
+                echo '<div class="g"><h2>' . $h($g['name']) . ($g['code'] !== '' ? ' · ' . $h($g['code']) : '') . ' — ' . $c['n'] . ' জন (টিচার ' . ($c['t'] + $c['ta']) . ', শিক্ষার্থী ' . $c['s'] . ', ঠিক করেনি ' . $c['x'] . ')</h2>';
+                if (!$g['list']) { echo '<p class="sub">এই সময়ে কেউ আসেনি।</p></div>'; continue; }
+                echo '<table><tr><th>#</th><th>যে এসেছে</th><th>ইউজারনেম</th><th>ইমেইল</th><th>মোবাইল</th><th>কবে</th><th>টিচার না শিক্ষার্থী</th><th>ইমেইল ভেরিফাই</th><th>প্যাকেজ</th></tr>';
+                $j = 0; foreach ($g['list'] as $r) echo '<tr><td>' . (++$j) . '</td><td>' . $h($r->ReferredName ?: $r->ReferredUser ?: 'Deleted user') . '</td><td>' . ($r->ReferredUser ? '@' . $h($r->ReferredUser) : '') . '</td><td>' . $h($r->ReferredEmail) . '</td><td>' . $h($r->Mobile) . '</td><td>' . $h(date('d M Y', strtotime((string)$r->CreatedAt))) . '</td><td><span class="k" style="background:' . $pill[$r->K] . '">' . $h($r->KLabel) . '</span></td><td>' . ($r->Verified ? 'হ্যাঁ' : 'না') . '</td><td>' . ($r->Bought ? 'কিনেছে' : '—') . '</td></tr>';
+                echo '</table></div>';
+            }
+            echo '<script>setTimeout(function(){window.print()},500)</script></body></html>';
+            exit;
+        }
+
+        require_once APP_ROOT . '/app/core/xlsx.php';
+        $s1 = [[$title], ['তারিখ', $range], ['মোট রেফারেল', $tot['n']], ['টিচার', $tot['t']], ['টিচার (আবেদন করেছে, Approve হয়নি)', $tot['ta']], ['শিক্ষার্থী', $tot['s']], ['এখনো ঠিক করেনি', $tot['x']], ['প্যাকেজ কিনেছে', $tot['b']], [],
+            ['#', 'রেফারারের নাম', 'ইউজারনেম', 'রেফারেল কোড', 'মোট রেফার', 'টিচার', 'টিচার (আবেদন)', 'শিক্ষার্থী', 'এখনো ঠিক করেনি', 'প্যাকেজ কিনেছে']];
+        $i = 0; foreach ($groups as $g) { $c = $cnt($g['list']); $s1[] = [++$i, $g['name'], $g['user'] !== '' ? '@' . $g['user'] : '', $g['code'], $c['n'], $c['t'], $c['ta'], $c['s'], $c['x'], $c['b']]; }
+        $s1[] = ['', 'মোট', '', '', $tot['n'], $tot['t'], $tot['ta'], $tot['s'], $tot['x'], $tot['b']];
+        $s2 = [['রেফারার', 'রেফারেল কোড', '#', 'যে এসেছে', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'কবে এসেছে', 'টিচার না শিক্ষার্থী', 'ইমেইল ভেরিফাই', 'প্যাকেজ কিনেছে?']];
+        $bold2 = [0];
+        foreach ($groups as $g) {
+            $c = $cnt($g['list']);
+            $s2[] = [$g['name'] . ' — মোট ' . $c['n'] . ' জন (টিচার ' . ($c['t'] + $c['ta']) . ', শিক্ষার্থী ' . $c['s'] . ', ঠিক করেনি ' . $c['x'] . ')', $g['code']]; $bold2[] = count($s2) - 1;
+            $j = 0; foreach ($g['list'] as $r) $s2[] = [$g['name'], $g['code'], ++$j, (string)($r->ReferredName ?: $r->ReferredUser ?: 'Deleted user'), $r->ReferredUser ? '@' . $r->ReferredUser : '', (string)$r->ReferredEmail, $r->Mobile, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), $r->KLabel, $r->Verified ? 'হ্যাঁ' : 'না', $r->Bought ? 'হ্যাঁ' : 'না'];
+            if (!$g['list']) $s2[] = ['', '', '', 'এই সময়ে কেউ আসেনি'];
+        }
+        xlsx_send('referral-teacher-student-' . date('Y-m-d'), [
+            ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, 9, count($s1) - 1], 'widths' => [6, 28, 20, 14, 12, 10, 14, 12, 16, 15], 'freeze' => 10],
+            ['name' => 'বিস্তারিত', 'rows' => $s2, 'bold' => $bold2, 'widths' => [26, 14, 6, 26, 18, 30, 16, 22, 26, 14, 15], 'freeze' => 1],
         ]);
     }
 
