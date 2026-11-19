@@ -373,7 +373,8 @@ class AccountController extends Controller
         }
         $acts = $this->db->GetActiveDevices((int)$u->Id); $act = $acts ? end($acts) : null;
         $this->view(null, null, ['State' => $st, 'Name' => (string)($u->FullName ?: $u->UserName), 'This' => device_label(), 'Auto' => $auto, 'Max' => $this->db->DeviceMax(),
-            'Other' => implode(' ও ', array_map(fn($x) => (string)$x->Label, $acts)), 'OtherSeen' => $act ? (string)($act->LastSeenAt ?: $act->CreatedAt) : '']);
+            'Other' => implode(' ও ', array_map(fn($x) => (string)$x->Label, $acts)), 'OtherSeen' => $act ? (string)($act->LastSeenAt ?: $act->CreatedAt) : '',
+            'Devs' => array_map(fn($x) => ['label' => (string)$x->Label, 'seen' => (string)($x->LastSeenAt ?: $x->CreatedAt)], $acts)]);
     }
 
     /** এই ডিভাইসের অপেক্ষায় থাকা অনুরোধ অটো Approve — আগের ডিভাইস লগআউট */

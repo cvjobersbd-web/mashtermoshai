@@ -126,9 +126,11 @@ trait DeviceData
             $this->exec('UPDATE `UserDevices` SET `LastSeenAt` = :t, `Ip` = :ip, `Label` = :l WHERE `Id` = :i', ['t' => now(), 'ip' => $ip, 'l' => $label, 'i' => (int)$mine->Id]);
             return 'ok';
         }
-        // ৭ দিন ধরে ব্যবহার হয়নি এমন চালু ডিভাইস (ব্রাউজার বন্ধ / কুকি মুছে ফেলা / পুরোনো ফোন) — জায়গা আটকে রাখে না
-        $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = NULL, `DecidedAt` = :t WHERE `UserId` = :u AND `Status` = 'Active' AND `DeviceHash` <> :h AND COALESCE(`LastSeenAt`, `CreatedAt`) < :old",
-            ['t' => now(), 'u' => $userId, 'h' => $hash, 'old' => date('Y-m-d H:i:s', time() - 7 * 86400)]);
+        // নিয়ম শুধু একটাই — একসাথে ২টা ডিভাইস। যে ডিভাইসে ৩০ মিনিট সাইট ব্যবহার হয়নি (ব্রাউজার বন্ধ, Incognito বন্ধ, লগআউট না করে চলে গেছে)
+        // সেটা জায়গা আটকে রাখে না — নতুন ডিভাইস ঢুকলে ওটা লগআউট হয়ে যায় (পরে আবার লগইন করা যাবে, জায়গা থাকলে)
+        if ($this->DeviceMax() > 1)
+            $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = NULL, `DecidedAt` = :t WHERE `UserId` = :u AND `Status` = 'Active' AND `DeviceHash` <> :h AND COALESCE(`LastSeenAt`, `CreatedAt`) < :old",
+                ['t' => now(), 'u' => $userId, 'h' => $hash, 'old' => date('Y-m-d H:i:s', time() - 30 * 60)]);
         if (count($this->GetActiveDevices($userId)) < $this->DeviceMax()) {
             // প্রথম ডিভাইস / সীমার মধ্যে (২টা ডিভাইস চালু থাকলে ২য়টা) / অ্যাডমিন আগেরটা লগআউট করেছেন — এটাও চালু ডিভাইস
             if ($mine) $this->exec("UPDATE `UserDevices` SET `Status` = 'Active', `LastSeenAt` = :t, `Ip` = :ip, `Label` = :l WHERE `Id` = :i", ['t' => now(), 'ip' => $ip, 'l' => $label, 'i' => (int)$mine->Id]);

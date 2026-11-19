@@ -26,14 +26,18 @@ $st = (string)$ViewBag->State;
         <div class="auth-body">
             <?php if ($TempData['Success'] !== null): ?><div class="auth-alert ok"><i class="fas fa-paper-plane"></i><div><?= e($TempData['Success']) ?></div></div><?php endif; ?>
             <div class="dv-devs">
-                <?php if ($ViewBag->Other !== ''): ?>
+                <?php $devs = (array)($ViewBag->Devs ?? []); if ($devs): foreach ($devs as $k => $d): $mob = (bool)preg_match('/Android|iPhone|iPad/i', $d['label']); ?>
+                    <div class="dv-d old"><i class="fas fa-<?= $mob ? 'mobile-screen-button' : 'laptop' ?>"></i><div><small>চালু ডিভাইস <?= $k + 1 ?></small><b><?= e($d['label']) ?></b><small>শেষ ব্যবহার: <?= e(time_ago($d['seen'])) ?></small></div></div>
+                <?php endforeach; elseif ($ViewBag->Other !== ''): ?>
                     <div class="dv-d old"><i class="fas fa-laptop"></i><div><small>এখন চালু আছে</small><b><?= e($ViewBag->Other) ?></b><small>শেষ ব্যবহার: <?= e(time_ago($ViewBag->OtherSeen)) ?></small></div></div>
                 <?php endif; ?>
                 <div class="dv-d new"><i class="fas fa-mobile-screen-button"></i><div><small>এই ডিভাইস</small><b><?= e($ViewBag->This) ?></b></div></div>
             </div>
 
             <?php if ($st === 'full'): ?>
-                <div class="auth-alert err"><i class="fas fa-ban"></i><div>আপনার অ্যাকাউন্ট ইতিমধ্যে <b>২টা ডিভাইসে</b> চালু আছে। একসাথে ২টার বেশি ডিভাইসে লগইন করা যায় না — এই ডিভাইসে লগইন করা যাবে না।</div></div>
+                <div class="auth-alert err"><i class="fas fa-ban"></i><div>আপনার অ্যাকাউন্ট এখন <b>২টা ডিভাইসে</b> চালু আছে — একসাথে ২টার বেশি ডিভাইসে লগইন করা যায় না।</div></div>
+                <div class="auth-alert ok" style="margin-top:10px;"><i class="fas fa-lightbulb"></i><div><b>সহজ সমাধান:</b> উপরের যেকোনো একটা ডিভাইস থেকে <b>লগআউট</b> করুন, তারপর এখানে আবার লগইন করুন — সাথে সাথে হয়ে যাবে।<br>কোনো ডিভাইসে <b>৩০ মিনিট</b> সাইট ব্যবহার না হলে সেটার জায়গাও নিজে থেকে খালি হয়ে যায়।</div></div>
+                <a class="auth-btn" href="/Account/Login" style="text-decoration:none;margin-top:12px;"><i class="fas fa-rotate"></i> লগআউট করেছি — আবার লগইন করুন</a>
                 <p style="font-size:13px;color:#64748B;margin:10px 0 0;text-align:center;">আগের কোনো ডিভাইস হারিয়ে গেলে বা নষ্ট হলে <a href="/Helpdesk/Contact">যোগাযোগ করুন</a>।</p>
             <?php elseif ($st === 'pending'): ?>
                 <div class="dv-wait"><i class="fas fa-clock"></i>অ্যাডমিন আপনার অনুরোধ দেখছেন। Accept হলে এই পেজ রিফ্রেশ করুন বা আবার লগইন করুন — তখন আগের ডিভাইস থেকে নিজে থেকেই লগআউট হয়ে যাবে।</div>
