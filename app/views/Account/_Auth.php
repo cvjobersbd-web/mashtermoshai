@@ -59,6 +59,10 @@ $authImg = $authT['auth_img'];
     .au-stats { display: flex; gap: 44px; margin-top: 26px; flex-wrap: wrap; }
     .au-stat b { display: block; font-size: 38px; font-weight: 800; line-height: 1.05; color: var(--au-ink); letter-spacing: -.5px; }
     .au-stat span { display: block; margin-top: 6px; font-size: 15px; color: #64748B; }
+    .au-stat { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .au-stat i { width: 52px; height: 52px; border-radius: 14px; background: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 8px 22px rgba(22,119,229,.12); }
+    .au-stat i svg { width: 26px; height: 26px; }
+    .au-stat i.u { color: #1677E5; } .au-stat i.t { color: #0E9F6E; } .au-stat i.s { color: #7C3AED; }
     .au[data-mode="register"] .au-stats { justify-content: center; }
     @media (max-width: 1200px) { .au-stats { gap: 30px; } .au-stat b { font-size: 32px; } }
     @media (max-width: 1200px) { .au-feats { grid-template-columns: repeat(3, 128px); gap: 12px; } .au-feat { font-size: 13.5px; } }
@@ -121,7 +125,7 @@ $authImg = $authT['auth_img'];
         .au-pic { width: 42%; max-width: 230px; margin: 0; animation: none; }
         .au-copy, .au[data-mode="register"] .au-copy { margin: 0; text-align: left; }
         .au-copy h2 { font-size: 22px; } .au-copy p, .au-feats { display: none; }
-        .au-stats, .au[data-mode="register"] .au-stats { gap: 14px; margin-top: 10px; justify-content: flex-start; } .au-stat b { font-size: 20px; } .au-stat span { font-size: 11.5px; margin-top: 2px; }
+        .au-stats, .au[data-mode="register"] .au-stats { gap: 14px; margin-top: 10px; justify-content: flex-start; } .au-stat b { font-size: 20px; } .au-stat span { font-size: 11.5px; margin-top: 2px; } .au-stat i { width: 30px; height: 30px; border-radius: 9px; margin-bottom: 4px; } .au-stat i svg { width: 17px; height: 17px; }
         .au-card { padding: 28px 22px 26px; border-radius: 20px; }
         .au-form.off { left: 22px; right: 22px; top: 28px; }
     }
@@ -140,9 +144,9 @@ $authImg = $authT['auth_img'];
                 <?php if ($authT['auth_desc_html'] !== ''): ?><p><?= $authT['auth_desc_html'] ?></p><?php endif; ?>
                 <?php if ($authT['auth_feats'] !== '0'): ?>
                 <div class="au-stats">
-                    <div class="au-stat"><b><?= $auNum($auStats['all']) ?></b><span><?= t('মোট ইউজার', 'Total users') ?></span></div>
-                    <div class="au-stat"><b><?= $auNum($auStats['tch']) ?></b><span><?= t('টিচার', 'Teachers') ?></span></div>
-                    <div class="au-stat"><b><?= $auNum($auStats['stu']) ?></b><span><?= t('শিক্ষার্থী', 'Students') ?></span></div>
+                    <div class="au-stat"><i class="u" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.8 6.5-5.8s5.9 2.2 6.5 5.8"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.4c2.8.2 4.6 2.2 5 5.1"/></svg></i><b><?= $auNum($auStats['all']) ?></b><span><?= t('মোট ইউজার', 'Total users') ?></span></div>
+                    <div class="au-stat"><i class="t" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="12.5" height="9" rx="1.5"/><path d="M12 15.5 17 12"/><circle cx="6" cy="8" r="2.8"/><path d="M1.8 21c.4-3.6 2-6 4.2-6s3 1.2 4.2 2.4L13 15"/></svg></i><b><?= $auNum($auStats['tch']) ?></b><span><?= t('টিচার', 'Teachers') ?></span></div>
+                    <div class="au-stat"><i class="s" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 1.8 9 12 14l10.2-5L12 4Z"/><path d="M5.6 11v4.6c0 1.6 2.9 3.4 6.4 3.4s6.4-1.8 6.4-3.4V11"/><path d="M22.2 9v5.5"/></svg></i><b><?= $auNum($auStats['stu']) ?></b><span><?= t('শিক্ষার্থী', 'Students') ?></span></div>
                 </div>
                 <?php endif; ?>
             </div>
