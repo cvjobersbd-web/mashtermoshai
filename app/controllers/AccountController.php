@@ -142,6 +142,8 @@ class AccountController extends Controller
     /** POST /Account/Logout */
     public function Logout_POST(): void
     {
+        // এই ডিভাইসের জায়গা খালি — লগআউট করে অন্য ডিভাইসে লগইন করা যাবে
+        if (($lu = current_user_id()) !== null) $this->db->ReleaseDevice((int)$lu, device_hash());
         remember_forget();
         session_clear();
         $this->redirectToAction('Login');
@@ -150,6 +152,8 @@ class AccountController extends Controller
     /** GET /Account/Logout — লিংক থেকে লগআউট করলেও কাজ করবে */
     public function Logout(): void
     {
+        // এই ডিভাইসের জায়গা খালি — লগআউট করে অন্য ডিভাইসে লগইন করা যাবে
+        if (($lu = current_user_id()) !== null) $this->db->ReleaseDevice((int)$lu, device_hash());
         remember_forget();
         session_clear();
         $this->redirectToAction('Login');

@@ -126,6 +126,9 @@ trait DeviceData
             $this->exec('UPDATE `UserDevices` SET `LastSeenAt` = :t, `Ip` = :ip, `Label` = :l WHERE `Id` = :i', ['t' => now(), 'ip' => $ip, 'l' => $label, 'i' => (int)$mine->Id]);
             return 'ok';
         }
+        // ৭ দিন ধরে ব্যবহার হয়নি এমন চালু ডিভাইস (ব্রাউজার বন্ধ / কুকি মুছে ফেলা / পুরোনো ফোন) — জায়গা আটকে রাখে না
+        $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = NULL, `DecidedAt` = :t WHERE `UserId` = :u AND `Status` = 'Active' AND `DeviceHash` <> :h AND COALESCE(`LastSeenAt`, `CreatedAt`) < :old",
+            ['t' => now(), 'u' => $userId, 'h' => $hash, 'old' => date('Y-m-d H:i:s', time() - 7 * 86400)]);
         if (count($this->GetActiveDevices($userId)) < $this->DeviceMax()) {
             // প্রথম ডিভাইস / সীমার মধ্যে (২টা ডিভাইস চালু থাকলে ২য়টা) / অ্যাডমিন আগেরটা লগআউট করেছেন — এটাও চালু ডিভাইস
             if ($mine) $this->exec("UPDATE `UserDevices` SET `Status` = 'Active', `LastSeenAt` = :t, `Ip` = :ip, `Label` = :l WHERE `Id` = :i", ['t' => now(), 'ip' => $ip, 'l' => $label, 'i' => (int)$mine->Id]);
@@ -199,6 +202,15 @@ trait DeviceData
         // অ্যাডমিন লগআউট করলে "লগইন সেভ" ও বাতিল — নাহলে সেই ডিভাইস নিজে থেকে আবার ঢুকে যেত
         $this->DeleteRememberTokensOfUser((int)$d->UserId);
         return $d;
+    }
+
+    /** ইউজার নিজে লগআউট করলে এই ডিভাইসের জায়গা খালি হয় — তাহলে অন্য ডিভাইসে (যেমন মোবাইলে) লগইন করা যায় */
+    public function ReleaseDevice(int $userId, string $hash): void
+    {
+        try {
+            $this->EnsureDeviceTable();
+            $this->exec("UPDATE `UserDevices` SET `Status` = 'Revoked', `DecidedBy` = NULL, `DecidedAt` = :t WHERE `UserId` = :u AND `DeviceHash` = :h AND `Status` = 'Active'", ['t' => now(), 'u' => $userId, 'h' => $hash]);
+        } catch (Throwable $e) { error_log('[ReleaseDevice] ' . $e->getMessage()); }
     }
 
     public function CountPendingDevices(): int
