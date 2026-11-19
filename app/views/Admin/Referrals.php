@@ -189,14 +189,13 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         <h3><i class="fas fa-ranking-star" style="color:#0EA5E9;"></i> সব রেফারার — কে কতটা শেয়ার করছে <span class="rfa-pill" style="background:#E0F2FE;color:#075985;"><?= count($ov) ?> জন</span></h3>
         <?php if (!$ov): ?><div class="rfa-empty">এখনো কেউ লিংক শেয়ার করেনি।</div><?php else: ?>
         <div class="rfg-search"><i class="fas fa-magnifying-glass"></i><input type="search" id="rovQ" placeholder="নাম, ইউজারনেম বা কোড দিয়ে খুঁজুন" autocomplete="off" /></div>
-        <!-- বাছাই করা রেফারারদের রেফারেলে কে টিচার / কে শিক্ষার্থী — Excel / PDF -->
+        <!-- বাছাই করা রেফারারদের রেফারেলে কে টিচার / কে শিক্ষার্থী — Excel -->
         <div class="rov-x" id="rovX">
-            <span class="rov-x-h"><i class="fas fa-file-export"></i> কে কাকে রেফার করেছে আর সে টিচার না শিক্ষার্থী — নাম বাছাই করে Excel / PDF নিন</span>
+            <span class="rov-x-h"><i class="fas fa-file-export"></i> কে কাকে রেফার করেছে আর সে টিচার না শিক্ষার্থী — নাম বাছাই করে Excel নিন</span>
             <button type="button" id="rovAll">দেখানো সবাইকে বাছাই</button><button type="button" id="rovNone">বাছাই মুছুন</button>
             <label>শুরু <input type="date" id="rovFrom" max="<?= date('Y-m-d') ?>" /></label><label>শেষ <input type="date" id="rovTo" max="<?= date('Y-m-d') ?>" /></label>
             <button type="button" class="go" id="rovGo"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
             <button type="button" class="xl" id="rovXl"><i class="fas fa-file-excel"></i> Excel</button>
-            <button type="button" class="pdf" id="rovPdf"><i class="fas fa-file-pdf"></i> PDF</button>
             <small id="rovSel">কাউকে বাছাই না করলে সবার রিপোর্ট আসবে · তারিখ খালি রাখলে সব সময়ের</small>
             <div class="rov-res" id="rovRes" hidden></div>
         </div>
@@ -362,7 +361,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     });
     var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
-    // ===== সব রেফারার: নাম বাছাই করে "কে টিচার / শিক্ষার্থী" Excel / PDF — বাছাই ব্রাউজারে মনে থাকে =====
+    // ===== সব রেফারার: নাম বাছাই করে "কে টিচার / শিক্ষার্থী" Excel — বাছাই ব্রাউজারে মনে থাকে =====
     (function () {
         var rows = [].slice.call(document.querySelectorAll('#rovT tr.rov-row')); if (!rows.length) return;
         var KEY = 'mm_rov_pick_v1', sel = document.getElementById('rovSel');
@@ -370,7 +369,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         var vis = function () { return rows.filter(function (r) { return !r.hidden; }); };
         function sync() {
             var p = picked(); rows.forEach(function (r) { r.classList.toggle('rov-on', r.querySelector('.rov-one').checked); });
-            sel.textContent = p.length ? 'বাছাই: ' + p.length + ' জন রেফারার — Excel / PDF এ শুধু এদের রেফারেল আসবে' : 'কাউকে বাছাই না করলে সবার রিপোর্ট আসবে · তারিখ খালি রাখলে সব সময়ের';
+            sel.textContent = p.length ? 'বাছাই: ' + p.length + ' জন রেফারার — Excel এ শুধু এদের রেফারেল আসবে' : 'কাউকে বাছাই না করলে সবার রিপোর্ট আসবে · তারিখ খালি রাখলে সব সময়ের';
             try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { }
         }
         try { var st = JSON.parse(localStorage.getItem(KEY) || '[]'); rows.forEach(function (r) { r.querySelector('.rov-one').checked = st.indexOf(r.getAttribute('data-id')) > -1; }); } catch (e) { }
@@ -396,7 +395,6 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             } catch (e) { res.innerHTML = 'খোঁজা যায়নি — আবার চেষ্টা করুন।'; }
             b.disabled = false;
         });
-        document.getElementById('rovPdf').addEventListener('click', function () { window.open(url('print'), '_blank'); });
         sync();
     })();
     // ===== নির্দিষ্ট রেফারার বাছাই (টিক / কোড পেস্ট) — Excel এ শুধু তাদের; বাছাই ব্রাউজারে মনে থাকে =====
