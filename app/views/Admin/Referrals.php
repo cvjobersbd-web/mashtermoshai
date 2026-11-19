@@ -194,14 +194,24 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
             <span class="rov-x-h"><i class="fas fa-file-export"></i> কে কাকে রেফার করেছে আর সে টিচার না শিক্ষার্থী — নাম বাছাই করে Excel / PDF নিন</span>
             <button type="button" id="rovAll">দেখানো সবাইকে বাছাই</button><button type="button" id="rovNone">বাছাই মুছুন</button>
             <label>শুরু <input type="date" id="rovFrom" max="<?= date('Y-m-d') ?>" /></label><label>শেষ <input type="date" id="rovTo" max="<?= date('Y-m-d') ?>" /></label>
+            <button type="button" class="go" id="rovGo"><i class="fas fa-magnifying-glass"></i> খুঁজুন</button>
             <button type="button" class="xl" id="rovXl"><i class="fas fa-file-excel"></i> Excel</button>
             <button type="button" class="pdf" id="rovPdf"><i class="fas fa-file-pdf"></i> PDF</button>
             <small id="rovSel">কাউকে বাছাই না করলে সবার রিপোর্ট আসবে · তারিখ খালি রাখলে সব সময়ের</small>
+            <div class="rov-res" id="rovRes" hidden></div>
         </div>
         <style>
             .rov-x { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: #F5F3FF; border: 1px solid #DDD6FE; border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; }
             .rov-x-h { flex-basis: 100%; font-weight: 800; font-size: 13.5px; color: #4C1D95; } .rov-x-h i { color: #7C3AED; }
             .rov-x button { height: 34px; border: 1.5px solid #CBD5E1; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 700; font-size: 12.5px; color: #334155; cursor: pointer; font-family: inherit; }
+            .rov-x button.go { background: #0284C7; border-color: #0284C7; color: #fff; }
+            .rov-res { flex-basis: 100%; background: #fff; border: 1px solid #DDD6FE; border-radius: 10px; padding: 10px 12px; overflow-x: auto; }
+            .rov-res .sum { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; font-size: 12.5px; font-weight: 700; }
+            .rov-res .sum span { background: #F1F5F9; border-radius: 999px; padding: 3px 10px; }
+            .rov-res table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            .rov-res th, .rov-res td { padding: 6px 8px; border-bottom: 1px solid #EEF2F7; text-align: left; white-space: nowrap; }
+            .rov-res th { font-size: 12px; color: #64748B; }
+            .rov-res td.n { font-weight: 800; } .rov-res td.t { color: #1D4ED8; font-weight: 700; } .rov-res td.s { color: #166534; font-weight: 700; }
             .rov-x button.xl { background: #16A34A; border-color: #16A34A; color: #fff; } .rov-x button.pdf { background: #DC2626; border-color: #DC2626; color: #fff; }
             .rov-x label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #334155; margin: 0; }
             .rov-x input[type=date] { height: 34px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 0 8px; font-family: inherit; font-size: 12.5px; }
@@ -371,6 +381,21 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         function url(fmt) { var f = document.getElementById('rovFrom').value, t = document.getElementById('rovTo').value;
             return '/Admin/RefKindReport?format=' + fmt + '&ids=' + picked().join(',') + (f ? '&from=' + f : '') + (t ? '&to=' + t : ''); }
         document.getElementById('rovXl').addEventListener('click', function () { location.href = url('xlsx'); });
+        // খুঁজুন — পেজেই বাছাই করা রেফারারদের ওই তারিখের হিসাব (কতজন টিচার / শিক্ষার্থী)
+        var res = document.getElementById('rovRes');
+        var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+        document.getElementById('rovGo').addEventListener('click', async function () {
+            var b = this; b.disabled = true; res.hidden = false; res.innerHTML = '<i class="fas fa-spinner fa-spin"></i> খোঁজা হচ্ছে...';
+            try {
+                var d = await (await fetch(url('json'), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                var t = d.total;
+                res.innerHTML = '<div class="sum"><span>' + esc(d.range) + '</span><span>মোট: ' + t.n + ' জন</span><span style="color:#1D4ED8">টিচার: ' + t.t + '</span><span style="color:#6D28D9">টিচার (আবেদন): ' + t.ta + '</span><span style="color:#166534">শিক্ষার্থী: ' + t.s + '</span><span>ঠিক করেনি: ' + t.x + '</span><span style="color:#15803D">প্যাকেজ কিনেছে: ' + t.b + '</span></div>'
+                    + (d.rows.length ? '<table><tr><th>#</th><th>রেফারার</th><th>কোড</th><th>মোট</th><th>টিচার</th><th>টিচার (আবেদন)</th><th>শিক্ষার্থী</th><th>ঠিক করেনি</th><th>প্যাকেজ কিনেছে</th></tr>'
+                    + d.rows.map(function (r, i) { return '<tr><td>' + (i + 1) + '</td><td><b>' + esc(r.name) + '</b>' + (r.user ? ' <small style="color:#64748B">@' + esc(r.user) + '</small>' : '') + '</td><td>' + esc(r.code) + '</td><td class="n">' + r.n + '</td><td class="t">' + r.t + '</td><td style="color:#6D28D9">' + r.ta + '</td><td class="s">' + r.s + '</td><td>' + r.x + '</td><td>' + r.b + '</td></tr>'; }).join('') + '</table>'
+                    : '<div style="color:#64748B">এই সময়ে কোনো রেফারেল নেই।</div>');
+            } catch (e) { res.innerHTML = 'খোঁজা যায়নি — আবার চেষ্টা করুন।'; }
+            b.disabled = false;
+        });
         document.getElementById('rovPdf').addEventListener('click', function () { window.open(url('print'), '_blank'); });
         sync();
     })();

@@ -1175,6 +1175,12 @@ class AdminController extends Controller
         $tot = $cnt($all);
         $title = ($pick ? 'বাছাই করা ' . count($groups) . ' জন রেফারার' : 'সব রেফারার') . ' — কে কাকে রেফার করেছে, কে টিচার / শিক্ষার্থী';
 
+        // পেজেই দেখানোর জন্য (খুঁজুন বাটন) — রেফারার অনুযায়ী সংখ্যা
+        if (input_str('format', 'xlsx') === 'json') {
+            $out = [];
+            foreach ($groups as $id => $g) { $c = $cnt($g['list']); $out[] = ['id' => $id, 'name' => $g['name'], 'user' => $g['user'], 'code' => $g['code']] + $c; }
+            json_response(['success' => true, 'range' => $range, 'total' => $tot, 'rows' => $out]);
+        }
         if (input_str('format', 'xlsx') === 'print') {
             while (ob_get_level() > 0) ob_end_clean();
             header('Content-Type: text/html; charset=utf-8');
