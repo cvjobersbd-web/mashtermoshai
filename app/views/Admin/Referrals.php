@@ -352,6 +352,7 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     });
     var oq = document.getElementById('rovQ');
     if (oq) oq.addEventListener('input', function () { var v = oq.value.trim().toLowerCase(); document.querySelectorAll('#rovT tr[data-s]').forEach(function (t) { t.hidden = v && t.getAttribute('data-s').indexOf(v) === -1; }); });
+<<<<<<< HEAD
     // ===== সব রেফারার: নাম বাছাই করে "কে টিচার / শিক্ষার্থী" Excel / PDF — বাছাই ব্রাউজারে মনে থাকে =====
     (function () {
         var rows = [].slice.call(document.querySelectorAll('#rovT tr.rov-row')); if (!rows.length) return;
@@ -374,6 +375,8 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
         document.getElementById('rovPdf').addEventListener('click', function () { window.open(url('print'), '_blank'); });
         sync();
     })();
+=======
+>>>>>>> b1779d40aea760fd68291955d8b16bd3c3c67c9e
     // ===== নির্দিষ্ট রেফারার বাছাই (টিক / কোড পেস্ট) — Excel এ শুধু তাদের; বাছাই ব্রাউজারে মনে থাকে =====
     (function () {
         var form = document.getElementById('nbForm'); if (!form) return;
