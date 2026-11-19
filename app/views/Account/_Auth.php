@@ -10,6 +10,16 @@ $returnUrl = (string)($ViewBag->ReturnUrl ?? '');
 $susp = is_array($ViewBag->Suspension ?? null) ? $ViewBag->Suspension : null;
 $err = $ViewBag->Error ?? null;
 $authT = auth_page_texts();
+// সাইটের আসল সংখ্যা — ইউজার / টিচার / শিক্ষার্থী বাড়লে নিজে থেকেই বাড়ে
+$auStats = ['all' => 0, 'tch' => 0, 'stu' => 0];
+try {
+    foreach (db()->all("SELECT `Role`, COUNT(*) AS N FROM `Users` GROUP BY `Role`") as $r) {
+        $auStats['all'] += (int)$r->N;
+        if ($r->Role === 'Teacher') $auStats['tch'] += (int)$r->N;
+        elseif ($r->Role !== 'Admin') $auStats['stu'] += (int)$r->N;
+    }
+} catch (Throwable $e) { }
+$auNum = fn(int $n) => t(bn_num(number_format($n)), number_format($n));
 $authImg = $authT['auth_img'];
 ?>
 <style>
@@ -45,6 +55,12 @@ $authImg = $authT['auth_img'];
     .au[data-mode="register"] .au-copy { text-align: center; }
     .au[data-mode="register"] .au-copy p { margin-left: auto; margin-right: auto; }
     .au[data-mode="register"] .au-feats { justify-content: center; }
+    /* সাইটের সংখ্যা — মোট ইউজার / টিচার / শিক্ষার্থী */
+    .au-stats { display: flex; gap: 44px; margin-top: 26px; flex-wrap: wrap; }
+    .au-stat b { display: block; font-size: 38px; font-weight: 800; line-height: 1.05; color: var(--au-ink); letter-spacing: -.5px; }
+    .au-stat span { display: block; margin-top: 6px; font-size: 15px; color: #64748B; }
+    .au[data-mode="register"] .au-stats { justify-content: center; }
+    @media (max-width: 1200px) { .au-stats { gap: 30px; } .au-stat b { font-size: 32px; } }
     @media (max-width: 1200px) { .au-feats { grid-template-columns: repeat(3, 128px); gap: 12px; } .au-feat { font-size: 13.5px; } }
     /* ===== ফর্ম কার্ড ===== */
     .au-card { position: relative; width: 100%; max-width: 600px; background: #fff; border: 1px solid #E3ECF6; border-radius: 26px; box-shadow: 0 24px 60px rgba(15,52,103,.10);
@@ -105,6 +121,7 @@ $authImg = $authT['auth_img'];
         .au-pic { width: 42%; max-width: 230px; margin: 0; animation: none; }
         .au-copy, .au[data-mode="register"] .au-copy { margin: 0; text-align: left; }
         .au-copy h2 { font-size: 22px; } .au-copy p, .au-feats { display: none; }
+        .au-stats, .au[data-mode="register"] .au-stats { gap: 14px; margin-top: 10px; justify-content: flex-start; } .au-stat b { font-size: 20px; } .au-stat span { font-size: 11.5px; margin-top: 2px; }
         .au-card { padding: 28px 22px 26px; border-radius: 20px; }
         .au-form.off { left: 22px; right: 22px; top: 28px; }
     }
@@ -122,10 +139,10 @@ $authImg = $authT['auth_img'];
                 <h2 class="rich"><?= $authT['auth_title_html'] /* sanitize_rich_html করা */ ?></h2>
                 <?php if ($authT['auth_desc_html'] !== ''): ?><p><?= $authT['auth_desc_html'] ?></p><?php endif; ?>
                 <?php if ($authT['auth_feats'] !== '0'): ?>
-                <div class="au-feats">
-                    <span class="au-feat"><i class="fas fa-magnifying-glass"></i><?= t('টিউটর খুঁজুন', 'Find Tutor') ?></span>
-                    <span class="au-feat"><i class="far fa-calendar-check"></i><?= t('টিউশন পোস্ট', 'Post Requirement') ?></span>
-                    <span class="au-feat"><i class="fas fa-graduation-cap"></i><?= t('টিউশন সার্কুলার', 'Tuition Circular') ?></span>
+                <div class="au-stats">
+                    <div class="au-stat"><b><?= $auNum($auStats['all']) ?></b><span><?= t('মোট ইউজার', 'Total users') ?></span></div>
+                    <div class="au-stat"><b><?= $auNum($auStats['tch']) ?></b><span><?= t('টিচার', 'Teachers') ?></span></div>
+                    <div class="au-stat"><b><?= $auNum($auStats['stu']) ?></b><span><?= t('শিক্ষার্থী', 'Students') ?></span></div>
                 </div>
                 <?php endif; ?>
             </div>
