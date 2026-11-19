@@ -1182,33 +1182,92 @@ class AdminController extends Controller
             json_response(['success' => true, 'range' => $range, 'total' => $tot, 'rows' => $out]);
         }
         if (input_str('format', 'xlsx') === 'print') {
+            // A4 মাপের আলাদা আলাদা পাতা বানিয়ে পাঠানো হয় — ব্রাউজার প্রতিটা পাতার ছবি তুলে সরাসরি PDF ফাইল নামায় (বাংলা লেখা ঠিক থাকে)
             while (ob_get_level() > 0) ob_end_clean();
             header('Content-Type: text/html; charset=utf-8');
             $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
             $pill = ['t' => '#DBEAFE;color:#1D4ED8', 'ta' => '#EDE9FE;color:#6D28D9', 's' => '#DCFCE7;color:#166534', 'n' => '#F1F5F9;color:#475569'];
-            echo '<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . $h('referral-report-' . date('Y-m-d')) . '</title><style>
-                @page { size: A4; margin: 12mm; } *{box-sizing:border-box} body{font-family:"Hind Siliguri","Noto Sans Bengali","SolaimanLipi",Arial,sans-serif;color:#0F172A;margin:0;padding:18px;font-size:12.5px}
-                h1{font-size:19px;margin:0 0 4px} .sub{color:#475569;margin:0 0 12px} .bar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
-                .bar span{background:#F1F5F9;border-radius:999px;padding:4px 11px;font-weight:700} table{width:100%;border-collapse:collapse;margin:0 0 14px}
-                th,td{border:1px solid #CBD5E1;padding:5px 7px;text-align:left;vertical-align:top} th{background:#E2E8F0} .g{page-break-inside:avoid;margin:0 0 16px}
-                .g h2{font-size:14.5px;margin:0 0 6px;background:#0F172A;color:#fff;padding:6px 10px;border-radius:6px} .k{display:inline-block;padding:1px 8px;border-radius:999px;font-weight:700;font-size:11.5px}
-                .noprint{margin:0 0 12px} .noprint button{padding:8px 16px;border:none;border-radius:8px;background:#16A34A;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
-                @media print{.noprint{display:none} body{padding:0}}</style></head><body>';
-            echo '<div class="noprint"><button onclick="window.print()">PDF হিসেবে সেভ / প্রিন্ট</button> &nbsp;প্রিন্ট উইন্ডোতে <b>Destination: Save as PDF</b> বাছাই করুন।</div>';
-            echo '<h1>মাষ্টার মশাই — রেফারেল রিপোর্ট</h1><p class="sub">' . $h($title) . ' · তারিখ: ' . $h($range) . ' · তৈরি: ' . $h(date('d M Y, h:i A')) . '</p>';
-            echo '<div class="bar"><span>মোট রেফারেল: ' . $tot['n'] . '</span><span>টিচার: ' . $tot['t'] . '</span><span>টিচার (আবেদন করেছে): ' . $tot['ta'] . '</span><span>শিক্ষার্থী: ' . $tot['s'] . '</span><span>এখনো ঠিক করেনি: ' . $tot['x'] . '</span><span>প্যাকেজ কিনেছে: ' . $tot['b'] . '</span></div>';
-            echo '<table><tr><th>#</th><th>রেফারার</th><th>কোড</th><th>মোট</th><th>টিচার</th><th>টিচার (আবেদন)</th><th>শিক্ষার্থী</th><th>ঠিক করেনি</th><th>প্যাকেজ কিনেছে</th></tr>';
-            $i = 0; foreach ($groups as $g) { $c = $cnt($g['list']); echo '<tr><td>' . (++$i) . '</td><td>' . $h($g['name']) . ($g['user'] !== '' ? ' <small>@' . $h($g['user']) . '</small>' : '') . '</td><td>' . $h($g['code']) . '</td><td><b>' . $c['n'] . '</b></td><td>' . $c['t'] . '</td><td>' . $c['ta'] . '</td><td>' . $c['s'] . '</td><td>' . $c['x'] . '</td><td>' . $c['b'] . '</td></tr>'; }
-            echo '</table>';
+            $PER = 34;   // এক পাতায় কয়টা সারি
+            $pages = []; $cur = ''; $used = 0;
+            $flush = function () use (&$pages, &$cur, &$used) { if ($cur !== '') $pages[] = $cur; $cur = ''; $used = 0; };
+            $head = '<div class="hd"><b>মাষ্টার মশাই — রেফারেল রিপোর্ট</b><span>' . $h($range) . '</span></div>';
+            // প্রথম পাতা: শিরোনাম + মোট হিসাব
+            $cur = '<h1>মাষ্টার মশাই — রেফারেল রিপোর্ট</h1><p class="sub">' . $h($title) . '<br>তারিখ: ' . $h($range) . ' · তৈরি: ' . $h(date('d M Y, h:i A')) . '</p>'
+                . '<div class="bar"><span>মোট রেফারেল: ' . $tot['n'] . '</span><span>টিচার: ' . $tot['t'] . '</span><span>টিচার (আবেদন করেছে): ' . $tot['ta'] . '</span><span>শিক্ষার্থী: ' . $tot['s'] . '</span><span>এখনো ঠিক করেনি: ' . $tot['x'] . '</span><span>প্যাকেজ কিনেছে: ' . $tot['b'] . '</span></div>';
+            $used = 6;
+            $sumHead = '<table><tr><th style="width:5%">#</th><th>রেফারার</th><th style="width:13%">কোড</th><th style="width:7%">মোট</th><th style="width:8%">টিচার</th><th style="width:10%">টিচার (আবেদন)</th><th style="width:10%">শিক্ষার্থী</th><th style="width:10%">ঠিক করেনি</th><th style="width:9%">কিনেছে</th></tr>';
+            $cur .= $sumHead; $used++;
+            $i = 0;
+            foreach ($groups as $g) {
+                if ($used >= $PER) { $cur .= '</table>'; $flush(); $cur = $head . $sumHead; $used = 2; }
+                $c = $cnt($g['list']);
+                $cur .= '<tr><td>' . (++$i) . '</td><td class="el">' . $h($g['name']) . ($g['user'] !== '' ? ' <small>@' . $h($g['user']) . '</small>' : '') . '</td><td>' . $h($g['code']) . '</td><td><b>' . $c['n'] . '</b></td><td>' . $c['t'] . '</td><td>' . $c['ta'] . '</td><td>' . $c['s'] . '</td><td>' . $c['x'] . '</td><td>' . $c['b'] . '</td></tr>';
+                $used++;
+            }
+            $cur .= '</table>'; $used++;
+            // প্রতিজন রেফারারের বিস্তারিত — দরকার হলে পরের পাতায় "(চলমান)" লিখে চলে
+            $detHead = '<table><tr><th style="width:5%">#</th><th style="width:20%">যে এসেছে</th><th style="width:15%">ইউজারনেম</th><th style="width:24%">ইমেইল</th><th style="width:12%">কবে</th><th style="width:16%">টিচার না শিক্ষার্থী</th><th style="width:8%">কিনেছে</th></tr>';
             foreach ($groups as $g) {
                 $c = $cnt($g['list']);
-                echo '<div class="g"><h2>' . $h($g['name']) . ($g['code'] !== '' ? ' · ' . $h($g['code']) : '') . ' — ' . $c['n'] . ' জন (টিচার ' . ($c['t'] + $c['ta']) . ', শিক্ষার্থী ' . $c['s'] . ', ঠিক করেনি ' . $c['x'] . ')</h2>';
-                if (!$g['list']) { echo '<p class="sub">এই সময়ে কেউ আসেনি।</p></div>'; continue; }
-                echo '<table><tr><th>#</th><th>যে এসেছে</th><th>ইউজারনেম</th><th>ইমেইল</th><th>মোবাইল</th><th>কবে</th><th>টিচার না শিক্ষার্থী</th><th>ইমেইল ভেরিফাই</th><th>প্যাকেজ</th></tr>';
-                $j = 0; foreach ($g['list'] as $r) echo '<tr><td>' . (++$j) . '</td><td>' . $h($r->ReferredName ?: $r->ReferredUser ?: 'Deleted user') . '</td><td>' . ($r->ReferredUser ? '@' . $h($r->ReferredUser) : '') . '</td><td>' . $h($r->ReferredEmail) . '</td><td>' . $h($r->Mobile) . '</td><td>' . $h(date('d M Y', strtotime((string)$r->CreatedAt))) . '</td><td><span class="k" style="background:' . $pill[$r->K] . '">' . $h($r->KLabel) . '</span></td><td>' . ($r->Verified ? 'হ্যাঁ' : 'না') . '</td><td>' . ($r->Bought ? 'কিনেছে' : '—') . '</td></tr>';
-                echo '</table></div>';
+                $title2 = $h($g['name']) . ($g['code'] !== '' ? ' · ' . $h($g['code']) : '') . ' — ' . $c['n'] . ' জন (টিচার ' . ($c['t'] + $c['ta']) . ', শিক্ষার্থী ' . $c['s'] . ', ঠিক করেনি ' . $c['x'] . ')';
+                if ($used + 4 > $PER) $flush();
+                if ($cur === '') { $cur = $head; $used = 1; }
+                $cur .= '<h2>' . $title2 . '</h2>'; $used += 2;
+                if (!$g['list']) { $cur .= '<p class="sub">এই সময়ে কেউ আসেনি।</p>'; $used++; continue; }
+                $cur .= $detHead; $used++;
+                $j = 0;
+                foreach ($g['list'] as $r) {
+                    if ($used >= $PER) { $cur .= '</table>'; $flush(); $cur = $head . '<h2>' . $title2 . ' (চলমান)</h2>' . $detHead; $used = 4; }
+                    $cur .= '<tr><td>' . (++$j) . '</td><td class="el">' . $h($r->ReferredName ?: $r->ReferredUser ?: 'Deleted user') . '</td><td class="el">' . ($r->ReferredUser ? '@' . $h($r->ReferredUser) : '') . '</td><td class="el">' . $h($r->ReferredEmail) . '</td><td>' . $h(date('d M Y', strtotime((string)$r->CreatedAt))) . '</td><td><span class="k" style="background:' . $pill[$r->K] . '">' . $h($r->KLabel) . '</span></td><td>' . ($r->Bought ? 'হ্যাঁ' : '—') . '</td></tr>';
+                    $used++;
+                }
+                $cur .= '</table>'; $used++;
             }
-            echo '<script>setTimeout(function(){window.print()},500)</script></body></html>';
+            $flush();
+            $fname = 'referral-report-' . ($from ?: 'all') . ($to && $to !== $from ? '-to-' . $to : '') . '.pdf';
+            echo '<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . $h($fname) . '</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+                <style>@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;background:#CBD5E1;font-family:"Hind Siliguri","Noto Sans Bengali",Arial,sans-serif;color:#0F172A}
+                .top{position:sticky;top:0;z-index:5;background:#0F172A;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px}
+                .top button{padding:9px 16px;border:none;border-radius:8px;background:#DC2626;color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit}.top button.p{background:#475569}
+                .pg{width:794px;height:1123px;background:#fff;margin:16px auto;padding:38px 36px;overflow:hidden;font-size:12px;position:relative}
+                .pg .no{position:absolute;bottom:16px;right:36px;font-size:10.5px;color:#64748B}
+                h1{font-size:21px;margin:0 0 4px}h2{font-size:13px;margin:10px 0 5px;background:#0F172A;color:#fff;padding:5px 9px;border-radius:5px}
+                .sub{color:#475569;margin:0 0 10px;font-size:12px}.bar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.bar span{background:#F1F5F9;border-radius:999px;padding:3px 10px;font-weight:700;font-size:11.5px}
+                .hd{display:flex;justify-content:space-between;border-bottom:2px solid #0F172A;padding:0 0 5px;margin:0 0 8px;font-size:11.5px}
+                table{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 6px}th,td{border:1px solid #CBD5E1;padding:0 6px;height:27px;text-align:left;vertical-align:middle;font-size:11px}
+                th{background:#E2E8F0;font-size:10.5px}td.el{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td small{color:#64748B}
+                .k{display:inline-block;padding:0 7px;border-radius:999px;font-weight:700;font-size:10.5px;white-space:nowrap}
+                @media print{body{background:#fff}.top{display:none}.pg{margin:0;page-break-after:always}}</style></head><body>';
+            echo '<div class="top"><button id="dl">PDF ফাইল ডাউনলোড</button><button class="p" onclick="window.print()">প্রিন্ট</button><span id="st">PDF তৈরি হচ্ছে… (' . count($pages) . ' পাতা)</span></div>';
+            foreach ($pages as $k => $pg) echo '<div class="pg">' . $pg . '<div class="no">পাতা ' . ($k + 1) . ' / ' . count($pages) . '</div></div>';
+            // কোনো বাইরের লাইব্রেরি ছাড়া: প্রতিটা পাতা SVG (foreignObject) দিয়ে ছবি → ছবিগুলো দিয়ে নিজেই PDF ফাইল বানানো
+            echo '<script>(function(){var st=document.getElementById("st"),btn=document.getElementById("dl"),busy=false,FN=' . json_encode($fname) . ';
+                var css=[].map.call(document.querySelectorAll("style"),function(x){return x.textContent;}).join("\n").replace(/@media print\{[^}]*\{[^}]*\}[^}]*\{[^}]*\}[^}]*\{[^}]*\}\}/,"");
+                function shot(el){return new Promise(function(ok,no){var W=794,H=1123,S=2,cl=el.cloneNode(true);cl.style.margin="0";
+                    var x=new XMLSerializer().serializeToString(cl);
+                    var svg="<svg xmlns=\"http://www.w3.org/2000/svg\" width=\""+W+"\" height=\""+H+"\"><foreignObject x=\"0\" y=\"0\" width=\"100%\" height=\"100%\"><div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"font-family:\x27Hind Siliguri\x27,\x27Nirmala UI\x27,Vrinda,\x27Noto Sans Bengali\x27,Arial,sans-serif\"><style>"+css.replace(/&/g,"&amp;").replace(/</g,"&lt;")+"</style>"+x+"</div></foreignObject></svg>";
+                    var im=new Image();im.onload=function(){var c=document.createElement("canvas");c.width=W*S;c.height=H*S;var g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.scale(S,S);g.drawImage(im,0,0);
+                        try{ok(c.toDataURL("image/jpeg",0.88));}catch(e){no(e);}};im.onerror=no;im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);});}
+                function bytes(d){var b=atob(d.split(",")[1]),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+                function makePdf(imgs){var parts=[],off=[],len=0,enc=new TextEncoder();function put(x){var u=typeof x==="string"?enc.encode(x):x;parts.push(u);len+=u.length;}
+                    var n=imgs.length,W=595.28,H=841.89,kids=[];put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+                    function obj(id,body,stream){off[id]=len;put(id+" 0 obj\n"+body+"\n");if(stream){put("stream\n");put(stream);put("\nendstream\n");}put("endobj\n");}
+                    for(var i=0;i<n;i++)kids.push((3+i*3)+" 0 R");
+                    obj(1,"<< /Type /Catalog /Pages 2 0 R >>");obj(2,"<< /Type /Pages /Kids ["+kids.join(" ")+"] /Count "+n+" >>");
+                    for(var i=0;i<n;i++){var p=3+i*3,im=imgs[i],cs="q "+W+" 0 0 "+H+" 0 0 cm /Im0 Do Q";
+                        obj(p,"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+W+" "+H+"] /Resources << /XObject << /Im0 "+(p+1)+" 0 R >> >> /Contents "+(p+2)+" 0 R >>");
+                        obj(p+1,"<< /Type /XObject /Subtype /Image /Width 1588 /Height 2246 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+im.length+" >>",im);
+                        obj(p+2,"<< /Length "+cs.length+" >>",cs);}
+                    var x=len,cnt=3+n*3;put("xref\n0 "+cnt+"\n0000000000 65535 f \n");for(var k=1;k<cnt;k++)put(String(off[k]).padStart(10,"0")+" 00000 n \n");
+                    put("trailer\n<< /Size "+cnt+" /Root 1 0 R >>\nstartxref\n"+x+"\n%%EOF");return new Blob(parts,{type:"application/pdf"});}
+                async function make(){if(busy)return;busy=true;btn.disabled=true;try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+                    var pgs=document.querySelectorAll(".pg"),imgs=[];
+                    for(var i=0;i<pgs.length;i++){st.textContent="PDF তৈরি হচ্ছে… পাতা "+(i+1)+" / "+pgs.length;imgs.push(bytes(await shot(pgs[i])));}
+                    var a=document.createElement("a");a.href=URL.createObjectURL(makePdf(imgs));a.download=FN;document.body.appendChild(a);a.click();
+                    st.textContent="PDF ডাউনলোড হয়েছে ("+pgs.length+" পাতা) — না এলে বাম পাশের লাল বাটনে আবার চাপুন।";}
+                catch(e){console.error(e);st.textContent="PDF বানানো যায়নি — প্রিন্ট বাটন চেপে Save as PDF বাছাই করুন।";}busy=false;btn.disabled=false;}
+                btn.onclick=make;window.addEventListener("load",function(){setTimeout(make,400);});})();</script></body></html>';
             exit;
         }
 
