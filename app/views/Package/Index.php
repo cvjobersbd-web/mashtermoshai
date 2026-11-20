@@ -345,6 +345,7 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
                     <li><i class="fas fa-check"></i><span><?= t('বিনামূল্যে Account খুলুন', 'Create an account for free') ?></span></li>
                     <li><i class="fas fa-check"></i><span><?= t('Edu Feed দেখুন, পোস্ট ও লাইক করুন', 'View, post and like on the Edu Feed') ?></span></li>
                     <li><i class="fas fa-check"></i><span><?= t('টিচারদের তথ্য, প্রোফাইল ও রিভিউ দেখুন', 'See teachers\' info, profiles and reviews') ?></span></li>
+                    <li><i class="fas fa-check"></i><span><?= t('Tuition Circular এ ফ্রিতে টিউশন পোস্ট করুন', 'Post tuitions on the Tuition Circular for free') ?></span></li>
                     <li><i class="fas fa-check"></i><span><?= t('Notice, Helpdesk ব্যবহার করুন', 'Use Notice and Helpdesk') ?></span></li>
                 </ul>
                 <?php if ($isLoggedIn): ?>

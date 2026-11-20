@@ -58,10 +58,8 @@ class TuitionController extends Controller
             if ($ks !== 'Approved') json_response(['success' => false, 'needPackage' => '/Kyc/Student?next=' . rawurlencode('/Tuition/Circular'), 'needKyc' => true,
                 'message' => $ks === 'Pending' ? 'আপনার Student Verification ফর্ম যাচাই হচ্ছে — অ্যাডমিন Approve করলেই টিউশন পোস্ট করতে পারবেন।' : 'টিউশন পোস্ট করার আগে Student Verification ফর্ম (নাম, বাবা-মা, ঠিকানা, ক্লাস, ID কার্ড) পূরণ করুন।']);
         }
-        // পেমেন্টের নিয়ম চালু থাকলে পোস্ট করতে ক্রেডিট লাগবে (অ্যাডমিন বাদে)
-        $needCredit = session_get('UserRole') !== 'Admin' && $this->db->PaymentRules()['student'];
-        if ($needCredit && $this->db->GetStudentPostCredits($userId) === 0) json_response(['success' => false, 'needPackage' => '/Package?for=student',
-            'message' => 'Tuition Post করতে শিক্ষার্থী প্যাকেজ লাগবে (' . package_price_hint('Student') . ')। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
+        // পোস্ট করা ফ্রি (প্যাকেজ লাগে না) — শুধু Student Verification লাগে। টিচারের আবেদন দেখতে প্যাকেজ লাগে।
+        $needCredit = false;
         // বাধ্যতামূলক: লোকেশন, ক্লাস, বিষয়, বাজেট, মিডিয়াম, টিউশনের ধরন — Special Request (content) ঐচ্ছিক
         foreach (['preferredArea' => 'লোকেশন দিন।', 'classLevel' => 'ক্লাস / লেভেল দিন।', 'subjects' => 'বিষয় দিন।'] as $k => $m) if ($clean($k, 2000) === '') $this->fail($m);
         if ((int)preg_replace('/[^0-9]/', '', (string)input_str('budget', '')) <= 0) $this->fail('বাজেট (৳/মাস) দিন।');
@@ -260,9 +258,16 @@ class TuitionController extends Controller
             case 'ok':
                 if ($useApply) { try { $this->db->ConsumeApplyCredit((int)$teacherId, 'TApply'); } catch (Throwable $e) { error_log('[apply credit] ' . $e->getMessage()); } }
                 $teacherName = session_get('UserFullName') ?? session_get('UserName') ?? 'A teacher';
-                $this->db->CreateNotification($post->UserId, 'New Teacher Application',
-                    "$teacherName আপনার টিউশন পোস্টে Apply করেছেন।", 'success',
+                // শিক্ষার্থীর প্যাকেজ থাকলে টিচারের নাম; না থাকলে শুধু কতজন Apply করেছে + প্যাকেজ কেনার কথা
+                $owner = (int)$post->UserId;
+                $ownerOpen = !student_package_required() || student_has_package($owner) || $this->db->GetUserById($owner)?->Role === 'Admin';
+                $nApp = 0; try { $nApp = (int)$this->db->scalar('SELECT COUNT(*) FROM `TuitionCircularApplications` WHERE `PostId` = :p', ['p' => (int)$post->Id]); } catch (Throwable $e) { }
+                if ($ownerOpen) $this->db->CreateNotification($owner, 'New Teacher Application',
+                    "$teacherName আপনার টিউশন পোস্টে Apply করেছেন।" . ($nApp > 1 ? ' (এই পোস্টে মোট ' . bn_num($nApp) . ' জন)' : ''), 'success',
                     '/User/Dashboard?section=applications', 'fa-chalkboard-teacher');
+                else $this->db->CreateNotification($owner, 'আপনি টিচারের রিকোয়েস্ট পেয়েছেন',
+                    'আপনার টিউশন পোস্টে ' . bn_num(max(1, $nApp)) . ' জন টিচার Apply করেছেন — কোন টিচার Apply করেছেন দেখতে শিক্ষার্থী প্যাকেজ কিনুন।', 'info',
+                    '/Package?for=student', 'fa-chalkboard-teacher');
                 pixel_track('Lead', ['content_name' => 'Tuition Application', 'content_ids' => [(string)$postId]]);
                 json_response(['success' => true, 'message' => 'আপনার অ্যাপ্লিকেশন স্টুডেন্টের কাছে পাঠানো হয়েছে।']);
             case 'exists':

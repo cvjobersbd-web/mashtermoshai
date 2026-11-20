@@ -24,6 +24,8 @@ class UserController extends Controller
             'Stats' => $this->db->GetUserDashboardStats($userId),
             'RecentPosts' => $this->db->GetUserCircularPosts($userId, 10),
             'Applications' => $this->db->GetCircularApplicationsForOwner($userId),
+            // প্যাকেজ না থাকলে টিচারদের আবেদন লক — শুধু কতজন Apply করেছে দেখায়
+            'AppsLocked' => $role !== 'Admin' && student_package_required() && !student_has_package((int)$userId),
             'MyReview' => $this->db->GetReviewByUser($userId),
         ]);
     }
@@ -35,6 +37,8 @@ class UserController extends Controller
         if ($userId === null) json_response(['success' => false, 'message' => 'Please login.']);
         $status = (string)input_str('status', '');
         if (!in_array($status, ['Accepted', 'Rejected', 'Pending'], true)) json_response(['success' => false, 'message' => 'Invalid status.']);
+        if (current_role() !== 'Admin' && student_package_required() && !student_has_package((int)$userId))
+            json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'টিচারের আবেদন দেখতে ও Accept করতে শিক্ষার্থী প্যাকেজ কিনুন।']);
 
         $app = $this->db->UpdateCircularApplicationStatus(input_int('id', 0), $userId, $status);
         if (!$app) json_response(['success' => false, 'message' => 'অ্যাপ্লিকেশনটি পাওয়া যায়নি।']);

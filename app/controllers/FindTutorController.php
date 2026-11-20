@@ -135,9 +135,10 @@ class FindTutorController extends Controller
                                         "{$req->StudentName} ({$req->PhoneNumber}) wants to contact you for {$req->RequiredSubject} tuition. Dashboard থেকে Accept বা Reject করুন।",
                                         'info', '/Teacher/TeacherDashboard?section=direct-requests', 'fa-envelope-open-text');
                                 } else {
-                                    // প্যাকেজ নেই — শিক্ষার্থীর কোনো যোগাযোগের তথ্য না দিয়ে শুধু জানানো
+                                    // প্যাকেজ নেই — শিক্ষার্থীর কোনো তথ্য না দিয়ে শুধু কতজন রিকোয়েস্ট পাঠিয়েছে
+                                    $nReq = 0; try { $nReq = (int)$this->db->scalar("SELECT COUNT(*) FROM `TutorRequests` WHERE `TeacherUserId` = :t AND `Status` = 'Pending'", ['t' => (int)$tr->UserId]); } catch (Throwable $e) { }
                                     $this->db->CreateNotification($tr->UserId, '📩 আপনি টিউশন রিকোয়েস্ট পেয়েছেন',
-                                        'আপনি টিচার হিসেবে টিউশন রিকোয়েস্ট পেয়েছেন' . (!is_blank($req->RequiredSubject) ? " ({$req->RequiredSubject})" : '') . '। টিউশনটি নিতে প্যাকেজ কিনুন।',
+                                        'আপনার কাছে ' . bn_num(max(1, $nReq)) . ' জন শিক্ষার্থী টিউশন রিকোয়েস্ট পাঠিয়েছে — শিক্ষার্থীর পুরো ডিটেইলস দেখতে টিচার প্যাকেজ কিনুন।',
                                         'info', '/Package?for=teacher', 'fa-envelope-open-text');
                                 }
                             }
@@ -196,8 +197,7 @@ class FindTutorController extends Controller
         if ($why = contact_info_error([$content], 'teacher')) json_response(['success' => false, 'contact' => true, 'message' => $why]);
         $userId = current_user_id();
         if ($userId === null) json_response(['success' => false, 'message' => 'Invalid user.']);
-        if (!$this->db->TeacherCanWork($userId)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher',
-            'message' => 'পোস্ট করতে আপনার Subscription চালু থাকতে হবে। প্যাকেজ নিয়ে পেমেন্ট করুন — অ্যাডমিন Accept করলেই পোস্ট করতে পারবেন।']);
+        // "পড়াতে চাই" এ পোস্ট করা ফ্রি — প্যাকেজ লাগে শিক্ষার্থীর রিকোয়েস্টের ডিটেইলস দেখতে
 
         $imageUrl = $image ? $this->saveTeachImage($image) : null;
         $videoUrl = $video ? $this->saveTeachVideo($video) : null;
