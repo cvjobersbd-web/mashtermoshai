@@ -235,7 +235,7 @@ $authImg = $authT['auth_img'];
                             <div class="au-fb"><?= t('শুধু সঠিক Gmail দেওয়া যাবে (যেমন yourname@gmail.com)।', 'Only a valid Gmail address is allowed (e.g. yourname@gmail.com).') ?></div>
                         </div>
                         <div class="au-f">
-                            <label for="regMobile"><?= t('মোবাইল নম্বর', 'Mobile Number') ?></label>
+                            <label for="regMobile"><span><?= t('মোবাইল নম্বর', 'Mobile Number') ?> <b style="color:#DC2626;" title="<?= t('অবশ্যই দিতে হবে', 'Required') ?>">*</b></span></label>
                             <div class="au-in"><i class="fas fa-mobile-screen"></i><input name="mobile" id="regMobile" type="tel" inputmode="numeric" maxlength="14" placeholder="<?= t('01XXXXXXXXX', '01XXXXXXXXX') ?>" autocomplete="off" required /></div>
                             <div class="au-fb"><?= t('সঠিক মোবাইল নম্বর দিন (০১ দিয়ে শুরু, ১১ ডিজিট)।', 'Enter a valid mobile number (11 digits starting with 01).') ?></div>
                         </div>
