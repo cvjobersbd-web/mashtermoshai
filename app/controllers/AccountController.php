@@ -43,6 +43,12 @@ class AccountController extends Controller
             remember_forget();
             if (input_bool('rememberMe')) remember_issue((int)$user->Id);
 
+            // শিক্ষার্থী / টিচার — রোল না বাছলে আগে বাছাই; বাছলে কিন্তু ফর্ম জমা না দিলে সেই ফর্মে (ড্যাশবোর্ড আসে Approve হলে)
+            if ($user->Role === 'User' && account_track((int)$user->Id) === null) {
+                $ir = $this->db->GetIntendedRole((int)$user->Id);
+                if ($ir === null) redirect('/Account/ChooseRole' . (!is_blank($returnUrl) && is_local_url($returnUrl) ? '?next=' . rawurlencode($returnUrl) : ''));
+                if (is_blank($returnUrl) || !is_local_url($returnUrl)) redirect($ir === 'teacher' ? '/Teacher/RequestForm' : '/Kyc/Student');
+            }
             if (!is_blank($returnUrl) && is_local_url($returnUrl)) redirect($returnUrl);
             if ($user->Role === 'Admin') $this->redirectToAction('Dashboard', 'Admin');
             $this->redirectToAction('Index', 'Home');
@@ -50,6 +56,34 @@ class AccountController extends Controller
 
         if ($this->db->LoginAmbiguous) $this->view('Login', null, ['Error' => t('এই ইউজারনেমে একাধিক অ্যাকাউন্ট আছে — দয়া করে ইউজারনেমের বদলে আপনার Gmail দিয়ে লগইন করুন।', 'More than one account uses this username — please log in with your Gmail instead.'), 'ReturnUrl' => $returnUrl]);
         $this->view('Login', null, ['Error' => t('Username/Email অথবা পাসওয়ার্ড ভুল।', 'Wrong username/email or password.'), 'ReturnUrl' => $returnUrl]);
+    }
+
+    /** GET /Account/ChooseRole — আপনি শিক্ষার্থী না টিচার (পুরোনো ইউজার / রোল বদলাতে চাইলে) */
+    public function ChooseRole(): void
+    {
+        $uid = current_user_id();
+        if ($uid === null) $this->redirectToAction('Login', 'Account', ['returnUrl' => '/Account/ChooseRole']);
+        if (current_role() !== 'User') redirect('/');
+        $this->view('ChooseRole', null, ['Current' => $this->db->GetIntendedRole((int)$uid), 'Track' => account_track((int)$uid), 'Next' => (string)input_str('next', '')]);
+    }
+
+    /** POST /Account/ChooseRole (role=student|teacher) — ফর্ম জমা দেওয়ার আগ পর্যন্ত নিজে বদলানো যায় */
+    public function ChooseRole_POST(): void
+    {
+        $uid = current_user_id();
+        if ($uid === null) $this->redirectToAction('Login', 'Account');
+        if (current_role() !== 'User') redirect('/');
+        $role = (string)input_str('role', '');
+        $track = account_track((int)$uid);
+        if ($track !== null) {
+            tempdata_set('Error', $track === 'teacher' ? 'আপনি টিচার হওয়ার ফর্ম জমা দিয়েছেন — রোল বদলাতে Helpdesk-এ অ্যাডমিনের সাথে যোগাযোগ করুন।' : 'আপনি Student Verification ফর্ম জমা দিয়েছেন — রোল বদলাতে Helpdesk-এ অ্যাডমিনের সাথে যোগাযোগ করুন।');
+            redirect('/Account/ChooseRole');
+        }
+        if (!in_array($role, ['student', 'teacher'], true)) { tempdata_set('Error', 'শিক্ষার্থী অথবা টিচার — একটা বাছাই করুন।'); redirect('/Account/ChooseRole'); }
+        $this->db->SetIntendedRole((int)$uid, $role);
+        $next = (string)input_str('next', '');
+        if ($next !== '' && is_local_url($next) && !str_contains($next, 'ChooseRole')) redirect($next);
+        redirect($role === 'teacher' ? '/Teacher/RequestForm' : '/Kyc/Student');
     }
 
     /** GET /Account/Register */
@@ -78,6 +112,13 @@ class AccountController extends Controller
         if (!str_ends_with($email, '@gmail.com')) $fail(t('ইমেইলের শেষে @gmail.com থাকতে হবে (ছোট হাতের অক্ষরে)।', 'Email must end with @gmail.com (all lowercase).'));
         if (!preg_match('/^[A-Za-z0-9._%+-]+@gmail\.com$/', $email)) $fail(t('সঠিক Gmail দিন (যেমন yourname@gmail.com)।', 'Please enter a valid Gmail address (e.g. yourname@gmail.com).'));
         // ✅ ইউজারনেম একাধিক জনের একই হতে পারে (একই নামের অনেক মানুষ) — কিন্তু একটা Gmail এ একটাই অ্যাকাউন্ট
+        // মোবাইল নম্বর (বাধ্যতামূলক) — এক নম্বরে একটাই অ্যাকাউন্ট
+        $mobile = phone_digits((string)input_str('mobile', ''));
+        if (!preg_match('/^01[3-9]\d{8}$/', $mobile)) $fail(t('সঠিক মোবাইল নম্বর দিন (০১ দিয়ে শুরু, ১১ ডিজিট — যেমন 01712345678)।', 'Enter a valid mobile number (11 digits starting with 01, e.g. 01712345678).'));
+        if ($this->db->MobileTaken($mobile)) $fail(t('এই মোবাইল নম্বর দিয়ে আগেই একটা অ্যাকাউন্ট খোলা আছে — একটা নম্বরে একটাই অ্যাকাউন্ট খোলা যায়।', 'An account already exists with this mobile number — one number can have only one account.'));
+        // শিক্ষার্থী না টিচার (বাধ্যতামূলক)
+        $signupRole = (string)input_str('signupRole', '');
+        if (!in_array($signupRole, ['student', 'teacher'], true)) $fail(t('আপনি শিক্ষার্থী না টিচার — একটা বাছাই করুন।', 'Please choose whether you are a student or a teacher.'));
         if ($this->db->EmailExists($email)) $fail(t('এই Gmail দিয়ে আগেই একটা অ্যাকাউন্ট খোলা আছে — একটা Gmail দিয়ে একটাই অ্যাকাউন্ট খোলা যায়। পাসওয়ার্ড ভুলে গেলে "পাসওয়ার্ড ভুলে গেছেন?" চাপুন।', 'An account already exists with this Gmail — one Gmail can have only one account. Forgot your password? Use "Forgot password".'));
         $this->db->AllowDuplicateUsernames();
 
@@ -104,8 +145,9 @@ class AccountController extends Controller
         }
 
         try {
-            if ($this->db->RegisterUser(obj(['UserName' => $username, 'Password' => $password, 'FullName' => $fullName, 'Email' => $email]))) {
+            if ($this->db->RegisterUser(obj(['UserName' => $username, 'Password' => $password, 'FullName' => $fullName, 'Email' => $email, 'MobileNumber' => $mobile]))) {
                 $newId = (int)$this->db->scalar('SELECT `Id` FROM `Users` WHERE LOWER(`Email`) = LOWER(:e) ORDER BY `Id` DESC LIMIT 1', ['e' => $email]);
+                if ($newId) { try { $this->db->SetIntendedRole($newId, $signupRole); } catch (Throwable $e) { error_log('[signupRole] ' . $e->getMessage()); } }
                 $code = $userRef !== '' ? $userRef : (string)($_SESSION['ref_code'] ?? ($_COOKIE['mm_ref'] ?? ''));
                 if (!preg_match('/^MM[A-Z0-9]{6}$/', $code)) $code = '';
                 if ($newId && $how) { try { $this->db->SetUserHowHeard($newId, $how[0], $how[1]); } catch (Throwable $e) { error_log('[howHeard] ' . $e->getMessage()); } }
