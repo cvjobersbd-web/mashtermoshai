@@ -57,6 +57,11 @@ trait FindTutorData
      * Find Tutor পেজের টিউটর তালিকা — সব আসল তথ্য।
      * @return Obj[]
      */
+    /** @var array<int,array> GetTutorDirectory() চলার পর প্রতিটা টিউটরের ফিল্টারের তথ্য (সার্ভার-অনলি) */
+    private array $tutorRaw = [];
+
+    public function GetTutorRawMap(): array { return $this->tutorRaw; }
+
     public function GetTutorDirectory(): array
     {
         try {
@@ -132,6 +137,9 @@ trait FindTutorData
                 'IsVerified' => true, 'IsTopRated' => false, 'IsPremium' => isset($premium[$uid]), 'HasTick' => has_blue_tick($uid),
                 'JoinedAt' => $r->RequestDate ?? $r->UCreated,
             ]);
+            // ফিল্টারের জন্য আসল তথ্য — শুধু সার্ভারে থাকে (ব্রাউজারে / JSON এ যায় না), app/core/tutor_filters.php
+            $this->tutorRaw[$uid] = ['inst' => (string)($r->Institution ?? ''), 'time' => (string)($r->PreferredTime ?? ''), 'days' => (string)($r->AvailableDays ?? ''),
+                'photo' => !is_blank($r->ProfileImageLink ?? ''), 'fee' => $feeMin, 'exp' => $expRaw, 'city' => trim((string)$r->City)];
         }
         // TOP: অন্তত ৩টা রিভিউ আর ৪.৫+ রেটিং, সেরা ৩ জন
         $rank = array_filter($out, fn($t) => $t->TotalReviews >= 3 && $t->Rating >= 4.5);

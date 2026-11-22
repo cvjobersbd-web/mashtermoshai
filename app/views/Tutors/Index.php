@@ -40,6 +40,14 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
     .tl-cities .tl-crow a.on { background: #00CFFF; color: #fff; }
     .tl-sel { margin-top: 14px; background: #E6F9FF; border: 1px solid #A5E9FA; color: #0F172A; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; }
     .tl-sel i { color: #00B5E0; } .tl-sel a { color: #0284C7; font-weight: 700; margin-left: 6px; text-decoration: none; white-space: nowrap; }
+    .tl-findrow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 44px auto 6px; max-width: 600px; }
+    .tl-findrow .tl-find { margin: 0; flex: 1; min-width: 0; max-width: none; }
+    .tl-findrow .tl-find input { width: 100%; }
+    .tl-fbtn { flex-shrink: 0; height: 50px; min-width: 50px; padding: 0 18px; border-radius: 999px; border: none; background: linear-gradient(135deg, #00CFFF, #0284C7); color: #fff; font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 6px 18px rgba(2,132,199,.3); }
+    .tl-fbtn:hover { filter: brightness(1.05); }
+    .tl-fhint { text-align: center; font-size: 13px; color: #64748B; margin: 4px 0 10px; }
+    .tl-fhint i { color: #00B5E0; } .tl-fhint button { border: none; background: none; color: #0369A1; font-weight: 700; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+    @media (max-width: 520px) { .tl-fbtn span { display: none; } .tl-fbtn { padding: 0; width: 50px; } }
     .tl-find { margin: 44px auto 10px; max-width: 520px; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 5px 5px 5px 18px; box-shadow: 0 2px 12px rgba(15,27,45,.08); }
     .tl-find i { color: #6B7280; }
     .tl-find input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14px; font-family: inherit; background: transparent; padding: 8px 0; }
@@ -90,11 +98,15 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
                 <a class="tl-stat" href="/Tutors/All?gender=male<?= $cq ?>"><i class="fas fa-person"></i><div><b><?= number_format((int)$ViewBag->Male) ?></b><span>Male Tutors<?= $city !== '' ? ' · ' . e($city) : '' ?></span></div><em class="fas fa-arrow-right"></em></a>
                 <a class="tl-stat" href="/Tutors/All?gender=female<?= $cq ?>"><i class="fas fa-person-dress"></i><div><b><?= number_format((int)$ViewBag->Female) ?></b><span>Female Tutors<?= $city !== '' ? ' · ' . e($city) : '' ?></span></div><em class="fas fa-arrow-right"></em></a>
             </div>
-            <form class="tl-find" action="/Tutors" method="get" role="search">
-                <i class="fas fa-magnifying-glass"></i>
-                <input type="search" autocomplete="off" name="tid" value="<?= e($ViewBag->Tid) ?>" maxlength="60" placeholder="Tutor ID বা নাম দিয়ে খুঁজুন — যেমন TCH-1024 বা Rahim" aria-label="Tutor ID বা নাম" />
-                <button type="submit">Search</button>
-            </form>
+            <div class="tl-findrow">
+                <form class="tl-find" action="/Tutors" method="get" role="search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="search" autocomplete="off" name="tid" value="<?= e($ViewBag->Tid) ?>" maxlength="60" placeholder="Tutor ID বা নাম দিয়ে খুঁজুন — যেমন TCH-1024 বা Rahim" aria-label="Tutor ID বা নাম" />
+                    <button type="submit">Search</button>
+                </form>
+                <button type="button" class="tl-fbtn" data-tf-open aria-label="ফিল্টার" title="এলাকা, ক্লাস, বেতন, সময়, বিশ্ববিদ্যালয় দিয়ে খুঁজুন"><i class="fas fa-sliders"></i><span>ফিল্টার</span></button>
+            </div>
+            <p class="tl-fhint"><i class="fas fa-wand-magic-sparkles"></i> নিজের দরকার মতো টিচার খুঁজুন — <button type="button" data-tf-open>এলাকা, ক্লাস, বেতন, সময়, বিশ্ববিদ্যালয় দিয়ে ফিল্টার করুন</button></p>
             <?php if ($ViewBag->TidError !== ''): ?><div class="tl-err"><?= e($ViewBag->TidError) ?></div><?php endif; ?>
         </div>
 
@@ -133,6 +145,7 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
     </div>
 </div>
 
+<?php partial('Tutors/_FilterPanel', ['f' => $ViewBag->F, 'counts' => $ViewBag->Counts, 'areaCounts' => [], 'type' => 'all', 'total' => (int)$ViewBag->AllCount]); ?>
 <?php section_start('Scripts'); ?>
 <script>
 // সার্চের ফলাফল: ঠিকানা থেকে ?tid= সরানো (রিলোড দিলে আবার সাধারণ পেজ), আর সার্চ বক্স খালি করলে ফলাফল / ভুলের লেখা সাথে সাথে চলে যায়

@@ -7,6 +7,8 @@
  * "See" চাপলে টিচারের প্রোফাইল (/Profile/Show/{id}) খোলে।
  * ডাটা: Db::GetTutorDirectory() (Find Tutor পেজের মতো একই নিয়ম — সাসপেন্ড / বন্ধ অ্যাকাউন্ট দেখায় না)
  */
+require_once APP_ROOT . '/app/core/tutor_filters.php';
+
 class TutorsController extends Controller
 {
     private const PER_PAGE = 16;
@@ -87,32 +89,53 @@ class TutorsController extends Controller
             $list = array_slice($this->ofType($tutors, $k), 0, 12);
             if ($list) $sections[$k] = ['title' => $label, 'tutors' => $list];
         }
+        $facets = tf_facets($this->db, $all);
         $this->view(null, $sections, [
+            'F' => tf_blank(), 'Counts' => tf_counts($facets, tf_blank()), 'AreaCounts' => [], 'AllCount' => count($facets),
             'Total' => count($tutors), 'Male' => $male, 'Female' => $female, 'Cities' => $cityCounts, 'City' => $city,
             'Tid' => $raw, 'TidError' => $tidError, 'NameHits' => $nameHits,
         ]);
     }
 
-    /** GET /Tutors/All?type=all&city[]=Dhaka&page=2 */
+    /** ফিল্টার চালানো — [ধরন অনুযায়ী সব, facets, ফিল্টার, ফল] */
+    private function filtered(string $type): array
+    {
+        $dir = $this->db->GetTutorDirectory();
+        $facets = tf_facets($this->db, $dir);
+        $base = $this->ofType($dir, $type);
+        $f = tf_read();
+        // "Premium / New / Top" তালিকায় নিজের সাজানো থাকে — অন্য কিছু বাছাই না করলে
+        $res = tf_apply($base, $facets, $type !== 'all' && $f['sort'] === 'rec' ? ['sort' => 'keep'] + $f : $f);
+        if ($type !== 'all' && $f['sort'] === 'rec') { $ids = array_flip(array_map(fn($t) => (int)$t->UserId, $res)); $res = array_values(array_filter($base, fn($t) => isset($ids[(int)$t->UserId]))); }
+        $sub = array_intersect_key($facets, array_flip(array_map(fn($t) => (int)$t->UserId, $base)));
+        return [$sub, $f, $res];
+    }
+
+    /** GET /Tutors/All?type=all&dist[]=Dhaka&cls[]=ssc&sal[]=3to5&page=2 — ফিল্টার সহ সব টিউটর */
     public function All(): void
     {
         $type = (string)input_str('type', 'all');
         if (!isset(self::TYPES[$type])) $type = 'all';
-        $raw = $_GET['city'] ?? [];
-        if (!is_array($raw)) $raw = [$raw];
-        $cities = array_values(array_intersect(self::CITIES, array_map(fn($c) => trim((string)$c), $raw)));
-        // ছেলে / মেয়ে টিউটর (Male / Female) — জেলার সাথে একসাথেও বাছাই করা যায়
-        $gender = strtolower((string)input_str('gender', ''));
-        if (!in_array($gender, ['male', 'female'], true)) $gender = '';
-        $tutors = array_values(array_filter($this->ofType($this->db->GetTutorDirectory(), $type),
-            fn($t) => self::cityMatches($t, $cities) && ($gender === '' || strcasecmp((string)$t->Gender, $gender) === 0)));
+        [$facets, $f, $tutors] = $this->filtered($type);
         $total = count($tutors);
-        if ($cities && input_int('page', 1) <= 1) pixel_track('Search', ['search_string' => implode(', ', $cities), 'content_category' => self::TYPES[$type]]);
+        $active = tf_active_count($f);
+        if ($active && input_int('page', 1) <= 1) pixel_track('Search', ['search_string' => implode(', ', array_merge($f['dist'], $f['area'], $f['sub'])), 'content_category' => self::TYPES[$type]]);
         $pages = max(1, (int)ceil($total / self::PER_PAGE));
         $page = min($pages, max(1, input_int('page', 1)));
+        $title = $f['gender'] !== '' && $type === 'all' && $active === 1 ? ucfirst($f['gender']) . ' Tutors' : self::TYPES[$type];
         $this->view(null, array_slice($tutors, ($page - 1) * self::PER_PAGE, self::PER_PAGE), [
-            'Type' => $type, 'Title' => ($gender !== '' && $type === 'all' ? ucfirst($gender) . ' Tutors' : self::TYPES[$type]), 'Gender' => $gender, 'Cities' => $cities, 'Page' => $page, 'Pages' => $pages, 'Total' => $total,
+            'Type' => $type, 'Title' => $title, 'F' => $f, 'Active' => $active, 'Page' => $page, 'Pages' => $pages, 'Total' => $total,
+            'Counts' => tf_counts($facets, $f), 'AreaCounts' => tf_area_counts($facets, $f, $f['dist']), 'All' => count($facets),
         ]);
+    }
+
+    /** GET /Tutors/Count?...(একই ফিল্টার) — ফিল্টার বদলালে সাথে সাথে কতজন, প্রতিটা অপশনে কতজন, বাছাই করা জেলার এলাকা */
+    public function Count(): void
+    {
+        $type = (string)input_str('type', 'all');
+        if (!isset(self::TYPES[$type])) $type = 'all';
+        [$facets, $f, $tutors] = $this->filtered($type);
+        json_response(['success' => true, 'n' => count($tutors), 'counts' => tf_counts($facets, $f), 'areas' => tf_area_counts($facets, $f, $f['dist'])]);
     }
 
     /** GET /Tutors/Profile/{userId} — টিচারের পূর্ণ ডিটেইলস (লগইন ছাড়াও দেখা যায়; ফোন / ইমেইল / ঠিকানা দেখায় না) */

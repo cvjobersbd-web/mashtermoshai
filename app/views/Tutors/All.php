@@ -8,17 +8,38 @@ $ViewData['SchemaType'] = 'CollectionPage';
 $ViewData['Crumbs'] = [[t('টিউটর লিস্ট', 'Tutor List'), '/Tutors']];
 seo_schema(seo_item_list(t('যাচাই করা টিউটর', 'Verified tutors'), array_map(fn($t) => ['name' => (string)$t->FullName, 'url' => '/Tutors/Profile/' . (int)$t->UserId, 'item' => ['@type' => 'Person', 'jobTitle' => 'Tutor']], $tutors)));
 $type = (string)$ViewBag->Type;
-$sel = is_array($ViewBag->Cities) ? $ViewBag->Cities : [];
-$gender = (string)($ViewBag->Gender ?? '');
+$F = $ViewBag->F;
+$gender = $F['gender'];
 $page = (int)$ViewBag->Page; $pages = (int)$ViewBag->Pages;
 $ViewData['Title'] = (string)$ViewBag->Title;
 $ViewData['Description'] = t('মাষ্টার মশাই এর যাচাই করা টিউটর — ', 'Verified tutors on Mashter Moshai — ') . $ViewBag->Title . t('। জেলা আর প্রতিষ্ঠান দেখে পছন্দের টিউটর বেছে নিন।', '. Choose your tutor by district and institution.');
 $ViewData['FullTitle'] = 'Showing ' . $ViewBag->Title . ($page > 1 ? " — Page $page" : '') . ' | মাষ্টার মশাই';
-$url = function (array $over) use ($type, $sel, $gender) {
-    $q = array_merge(['type' => $type !== 'all' ? $type : null, 'gender' => $gender ?: null, 'city' => $sel ?: null], $over);
-    $q = array_filter($q, fn($v) => $v !== null && $v !== '' && $v !== 1);
+// এখনকার ফিল্টার রেখে URL (পেজ বদল / একটা ফিল্টার সরানো)
+$qs = function (array $over = [], ?array $drop = null) use ($type, $F) {
+    $q = ['type' => $type !== 'all' ? $type : null];
+    foreach (['dist', 'area', 'cls', 'sub', 'med', 'sal', 'slot', 'day', 'uni', 'grp', 'rel'] as $k) $q[$k] = $F[$k] ?: null;
+    foreach (['aq', 'uq', 'gender', 'exp', 'mode'] as $k) $q[$k] = $F[$k] !== '' ? $F[$k] : null;
+    $q['prem'] = $F['prem'] ? 1 : null; $q['photo'] = $F['photo'] ? 1 : null; $q['sort'] = $F['sort'] !== 'rec' ? $F['sort'] : null;
+    if ($drop) { [$dk, $dv] = $drop; if (is_array($q[$dk] ?? null)) { $q[$dk] = array_values(array_diff($q[$dk], [$dv])) ?: null; } else $q[$dk] = null; }
+    $q = array_merge($q, $over);
+    $q = array_filter($q, fn($v) => $v !== null && $v !== '');
+    if (($q['page'] ?? 0) === 1) unset($q['page']);
     return '/Tutors/All' . ($q ? '?' . preg_replace('/%5B\d+%5D/', '%5B%5D', http_build_query($q)) : '');
 };
+$url = fn(array $over) => $qs($over);
+// চালু ফিল্টারের চিপ
+$pills = [];
+$lbl = ['cls' => array_map(fn($x) => $x[0], tf_class_groups()), 'med' => TF_MEDIUMS, 'sal' => array_map(fn($x) => $x[0], TF_SALARY), 'slot' => array_map(fn($x) => $x[0], TF_SLOTS),
+    'day' => TF_DAYS, 'uni' => array_map(fn($x) => $x[0], tf_unis()), 'grp' => TF_GROUPS, 'rel' => TF_RELIGION];
+foreach (['dist' => '📍', 'area' => '🏘️', 'cls' => '🎓', 'sub' => '📚', 'med' => '🏫', 'sal' => '💰', 'slot' => '⏰', 'day' => '📅', 'uni' => '🏛️', 'grp' => '🧪', 'rel' => '🛐'] as $k => $ic)
+    foreach ($F[$k] as $v) $pills[] = [$ic . ' ' . ($lbl[$k][$v] ?? $v), $qs([], [$k, $v])];
+if ($F['aq'] !== '') $pills[] = ['🏘️ “' . $F['aq'] . '”', $qs([], ['aq', ''])];
+if ($F['uq'] !== '') $pills[] = ['🏛️ “' . $F['uq'] . '”', $qs([], ['uq', ''])];
+if ($F['gender'] !== '') $pills[] = [$F['gender'] === 'male' ? '👨 পুরুষ' : '👩 মহিলা', $qs([], ['gender', ''])];
+if ($F['exp'] !== '') $pills[] = ['⭐ ' . TF_EXP[$F['exp']], $qs([], ['exp', ''])];
+if ($F['mode'] !== '') $pills[] = [$F['mode'] === 'home' ? '🏠 বাসায় গিয়ে' : '💻 অনলাইনে', $qs([], ['mode', ''])];
+if ($F['prem']) $pills[] = ['👑 Premium', $qs([], ['prem', ''])];
+if ($F['photo']) $pills[] = ['🖼️ ছবিসহ', $qs([], ['photo', ''])];
 // পেজ নম্বর: 1 2 3 4 5 … শেষ
 $nums = [];
 if ($pages <= 7) $nums = range(1, $pages);
@@ -44,7 +65,14 @@ else {
     .tl-gen label i { color: #00B5E0; }
     .tl-gen label.on { border-color: #00CFFF; background: #00CFFF; color: #fff; } .tl-gen label.on i { color: #fff; }
     .tl-gen input { display: none; }
-    .tl-count { font-size: 13.5px; color: #64748B; margin: -8px 0 18px; }
+    .tl-count { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; color: #475569; margin: 0 0 18px; }
+    .tl-count b { color: #0F172A; font-size: 16px; }
+    .tl-quick { border: 1.5px dashed #7DD3FC; background: #F0F9FF; color: #0369A1; font-weight: 700; font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+    .tl-fn { background: #fff; color: #0284C7; border-radius: 9px; padding: 0 7px; font-size: 12px; margin-left: 3px; }
+    .tl-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+    .tl-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; background: #E6F9FF; border: 1px solid #A5E9FB; color: #075985; font-size: 13px; font-weight: 700; text-decoration: none; }
+    .tl-pill i { font-size: 11px; opacity: .7; } .tl-pill:hover { background: #CFF4FF; color: #075985; }
+    .tl-pill.clr { background: #fff; border-color: #E2E8F0; color: #64748B; }
     .tl-pg { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 36px; flex-wrap: wrap; }
     .tl-pg a, .tl-pg span { min-width: 40px; height: 40px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; text-decoration: none; background: #1F2328; color: #fff; }
     .tl-pg a:hover { background: #00B5E0; color: #fff; }
@@ -63,27 +91,23 @@ else {
             <h1 class="ta-h1">Showing <?= e($ViewBag->Title) ?></h1>
             <div class="tl-acts">
                 <a class="tl-btn light" href="/Tutors">Go Back</a>
-                <button type="submit" form="tlFilter" class="tl-btn"><i class="fas fa-filter"></i> Filter</button>
+                <button type="button" class="tl-btn" data-tf-open><i class="fas fa-sliders"></i> ফিল্টার<?php if ($ViewBag->Active): ?> <b class="tl-fn"><?= bn_num($ViewBag->Active) ?></b><?php endif; ?></button>
             </div>
         </div>
-        <form id="tlFilter" action="/Tutors/All" method="get">
-            <?php if ($type !== 'all'): ?><input type="hidden" name="type" value="<?= e($type) ?>" /><?php endif; ?>
-            <div class="tl-gen" role="radiogroup" aria-label="Gender">
-                <?php foreach (['' => [t('সব টিউটর', 'All Tutors'), 'fa-user-group'], 'male' => ['Male Tutors', 'fa-person'], 'female' => ['Female Tutors', 'fa-person-dress']] as $gk => [$gl, $gi]): ?>
-                    <label class="<?= $gender === $gk ? 'on' : '' ?>"><input type="radio" name="gender" value="<?= $gk ?>" <?= $gender === $gk ? 'checked' : '' ?> /><i class="fas <?= $gi ?>"></i> <?= $gl ?></label>
-                <?php endforeach; ?>
+        <?php if ($pills): ?>
+            <div class="tl-pills">
+                <?php foreach ($pills as [$pl, $pu]): ?><a href="<?= e($pu) ?>" class="tl-pill" title="সরান"><?= e($pl) ?> <i class="fas fa-xmark"></i></a><?php endforeach; ?>
+                <a href="<?= e('/Tutors/All' . ($type !== 'all' ? '?type=' . $type : '')) ?>" class="tl-pill clr"><i class="fas fa-rotate-left"></i> সব মুছুন</a>
             </div>
-            <div class="tl-filters">
-                <label class="<?= !$sel ? 'on' : '' ?>"><input type="checkbox" id="tlAll" <?= !$sel ? 'checked' : '' ?> /> All</label>
-                <?php foreach (TutorsController::CITIES as $c): ?>
-                    <label class="<?= in_array($c, $sel, true) ? 'on' : '' ?>"><input type="checkbox" name="city[]" value="<?= e($c) ?>" <?= in_array($c, $sel, true) ? 'checked' : '' ?> /> <?= e($c) ?></label>
-                <?php endforeach; ?>
-            </div>
-        </form>
-        <div class="tl-count"><?= (int)$ViewBag->Total ?> জন <?= $gender === 'male' ? 'ছেলে (Male) ' : ($gender === 'female' ? 'মেয়ে (Female) ' : '') ?>টিউটর<?= $sel ? ' — ' . e(implode(', ', $sel)) : '' ?></div>
+        <?php endif; ?>
+        <div class="tl-count">
+            <span><b><?= bn_num((int)$ViewBag->Total) ?></b> জন টিউটর পাওয়া গেছে<?= $ViewBag->Active ? ' (মোট ' . bn_num((int)$ViewBag->All) . ' জনের মধ্যে)' : '' ?></span>
+            <button type="button" class="tl-quick" data-tf-open><i class="fas fa-sliders"></i> আপনার দরকার অনুযায়ী খুঁজুন — এলাকা, ক্লাস, বেতন, সময়, বিশ্ববিদ্যালয়</button>
+        </div>
 
         <?php if (!$tutors): ?>
-            <div class="tl-empty"><i class="fas fa-user-slash"></i>এই ফিল্টারে কোনো টিউটর পাওয়া যায়নি। অন্য জেলা বেছে দেখুন।</div>
+            <div class="tl-empty"><i class="fas fa-user-slash"></i>এই ফিল্টারে কোনো টিউটর পাওয়া যায়নি।<br />কিছু ফিল্টার সরিয়ে দেখুন — অথবা <a href="/Tuition/Circular">টিউশন সার্কুলারে "টিচার লাগবে" পোস্ট</a> দিন, টিচাররা নিজেই Apply করবে।
+                <div style="margin-top:14px;"><button type="button" class="tl-btn" data-tf-open><i class="fas fa-sliders"></i> ফিল্টার বদলান</button></div></div>
         <?php else: ?>
             <div class="tl-grid">
                 <?php foreach ($tutors as $t) partial('Tutors/_Card', ['t' => $t]); ?>
@@ -104,17 +128,4 @@ else {
     </div>
 </div>
 
-<?php section_start('Scripts'); ?>
-<script>
-(function () {
-    // "All" চাপলে বাকিগুলো খালি; কোনো জেলা চাপলে "All" খালি — সাথে সাথে ফিল্টার
-    var f = document.getElementById('tlFilter'), all = document.getElementById('tlAll');
-    var boxes = f.querySelectorAll('input[name="city[]"]');
-    function paint() { f.querySelectorAll('.tl-filters label').forEach(function (l) { l.classList.toggle('on', l.querySelector('input').checked); }); }
-    all.addEventListener('change', function () { if (all.checked) boxes.forEach(function (b) { b.checked = false; }); else all.checked = true; paint(); f.submit(); });
-    f.querySelectorAll('input[name="gender"]').forEach(function (r) { r.addEventListener('change', function () { if (r.value === '') r.disabled = true; f.submit(); }); });
-    f.querySelectorAll('.tl-gen input:checked').forEach(function (r) { if (r.value === '') r.disabled = true; });
-    boxes.forEach(function (b) { b.addEventListener('change', function () { var any = Array.prototype.some.call(boxes, function (x) { return x.checked; }); all.checked = !any; paint(); f.submit(); }); });
-})();
-</script>
-<?php section_end(); ?>
+<?php partial('Tutors/_FilterPanel', ['f' => $F, 'counts' => $ViewBag->Counts, 'areaCounts' => $ViewBag->AreaCounts ?: [], 'type' => $type, 'total' => (int)$ViewBag->Total]); ?>
