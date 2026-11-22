@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 22, 2026 at 07:33 AM
+-- Generation Time: Nov 22, 2026 at 09:44 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -36,6 +36,29 @@ CREATE TABLE `friendships` (
   `Status` varchar(20) NOT NULL DEFAULT 'Pending',
   `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
   `RespondedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `gamerounds`
+--
+
+CREATE TABLE `gamerounds` (
+  `Id` int(11) NOT NULL,
+  `UserId` int(11) DEFAULT NULL,
+  `Game` varchar(10) NOT NULL,
+  `Level` varchar(8) NOT NULL,
+  `PoolIdx` int(11) NOT NULL DEFAULT 0,
+  `Puzzle` text NOT NULL,
+  `Token` varchar(40) NOT NULL,
+  `StartedAt` datetime NOT NULL,
+  `FinishedAt` datetime DEFAULT NULL,
+  `Seconds` int(11) DEFAULT NULL,
+  `Points` int(11) NOT NULL DEFAULT 0,
+  `Solved` tinyint(1) NOT NULL DEFAULT 0,
+  `Counted` tinyint(1) NOT NULL DEFAULT 0,
+  `PlayDay` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -889,6 +912,14 @@ ALTER TABLE `friendships`
   ADD KEY `IX_Friendships_Requester` (`RequesterId`,`Status`);
 
 --
+-- Indexes for table `gamerounds`
+--
+ALTER TABLE `gamerounds`
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `IX_Game_Day` (`PlayDay`,`Counted`,`UserId`),
+  ADD KEY `IX_Game_User` (`UserId`,`Solved`);
+
+--
 -- Indexes for table `goaltasks`
 --
 ALTER TABLE `goaltasks`
@@ -1212,6 +1243,12 @@ ALTER TABLE `usersuspensions`
 -- AUTO_INCREMENT for table `friendships`
 --
 ALTER TABLE `friendships`
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `gamerounds`
+--
+ALTER TABLE `gamerounds`
   MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT;
 
 --

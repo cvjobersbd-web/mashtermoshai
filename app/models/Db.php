@@ -26,6 +26,7 @@ require_once __DIR__ . '/ReferenceData.php';
 require_once __DIR__ . '/UserPurgeData.php';
 require_once __DIR__ . '/CourseData.php';
 require_once __DIR__ . '/KycData.php';
+require_once __DIR__ . '/GameData.php';
 
 class Db
 {
@@ -48,6 +49,7 @@ class Db
     use UserPurgeData;
     use CourseData;
     use KycData;
+    use GameData;
 
     private PDO $pdo;
 

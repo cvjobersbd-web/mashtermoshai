@@ -300,6 +300,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
                         <?php if (!is_blank($u->UserName ?? '')): ?><span title="Username"><i class="fas fa-at"></i> <?= e((string)$u->UserName) ?></span><?php endif; ?>
                         <?php if ($location !== ''): ?><span><i class="fas fa-location-dot"></i> <?= e($location) ?></span><?php endif; ?>
                         <span><i class="far fa-calendar"></i> Joined <?= e(fmt_date($u->CreatedAt, 'F Y', '—')) ?></span>
+                        <?php partial('Game/_BrainBadge', ['uid' => (int)$u->Id, 'isOwner' => $isOwner]); ?>
                     </div>
                     <?php if (is_admin()): ?><div class="pf-joined" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:12px;padding:8px 12px;font-size:13px;"><span style="color:#64748B;font-weight:700;"><i class="fas fa-user-shield"></i> কিভাবে এসেছে <small style="font-weight:600;">(শুধু অ্যাডমিন দেখেন)</small>:</span><?= joined_via_full((int)$u->Id) ?></div><?php endif; ?>
                     <?php if ($intro->Bio !== ''): ?>

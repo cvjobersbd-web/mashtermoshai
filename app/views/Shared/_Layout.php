@@ -1184,6 +1184,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <a href="/Course" class="nav-desktop-link<?= $navOn('/Course') ? ' active' : '' ?>"<?= $navOn('/Course') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-book-open-reader"></i><?= t('কোর্স', 'Course') ?>
                     </a>
+                    <a href="/Game" class="nav-desktop-link<?= $navOn('/Game') ? ' active' : '' ?>"<?= $navOn('/Game') ? ' aria-current="page"' : '' ?>>
+                        <i class="fas fa-gamepad"></i><?= t('গেম', 'Game') ?>
+                    </a>
                     <a href="/Helpdesk" class="nav-desktop-link<?= $navOn('/Helpdesk') ? ' active' : '' ?>"<?= $navOn('/Helpdesk') ? ' aria-current="page"' : '' ?>>
                         <i class="fas fa-headset"></i><?= t('হেল্পডেস্ক', 'Helpdesk') ?>
                     </a>
@@ -1433,6 +1436,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span><?= t('টিউশন সার্কুলার', 'Tuition Circular') ?></span></a>
                 <?php if (!$mLoggedIn): ?><a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span><?= t('নোটিশ', 'Notice') ?></span></a><?php endif; ?>
                 <a href="/Course" class="<?= $mActive('/Course') ?>"><i class="fas fa-book-open-reader"></i><span><?= t('কোর্স', 'Course') ?></span></a>
+                <a href="/Game" class="<?= $mActive('/Game') ?>"><i class="fas fa-gamepad"></i><span><?= t('গেম', 'Game') ?></span></a>
                 <a href="/Helpdesk" class="<?= $mActive('/Helpdesk') ?>"><i class="fas fa-headset"></i><span><?= t('হেল্পডেস্ক', 'Helpdesk') ?></span></a>
                 <a href="/Package" class="<?= $mActive('/Package') ?>"><i class="fas fa-tags"></i><span><?= t('প্যাকেজ', 'Package') ?></span></a>
             </nav>
