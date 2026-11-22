@@ -14,15 +14,18 @@ trait GameData
         if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
             $this->pdo->exec('CREATE TABLE IF NOT EXISTS "GameRounds" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "UserId" INTEGER NULL, "Game" TEXT NOT NULL, "Level" TEXT NOT NULL,
                 "PoolIdx" INTEGER NOT NULL DEFAULT 0, "Puzzle" TEXT NOT NULL, "Token" TEXT NOT NULL, "StartedAt" TEXT NOT NULL, "FinishedAt" TEXT NULL,
-                "Seconds" INTEGER NULL, "Points" INTEGER NOT NULL DEFAULT 0, "Solved" INTEGER NOT NULL DEFAULT 0, "Counted" INTEGER NOT NULL DEFAULT 0, "PlayDay" TEXT NULL)');
+                "Seconds" INTEGER NULL, "Points" INTEGER NOT NULL DEFAULT 0, "Solved" INTEGER NOT NULL DEFAULT 0, "Counted" INTEGER NOT NULL DEFAULT 0, "PlayDay" TEXT NULL, "Hints" INTEGER NOT NULL DEFAULT 0)');
             $this->pdo->exec('CREATE INDEX IF NOT EXISTS "IX_Game_Day" ON "GameRounds" ("PlayDay", "Counted", "UserId")');
             $this->pdo->exec('CREATE INDEX IF NOT EXISTS "IX_Game_User" ON "GameRounds" ("UserId", "Solved")');
         } else {
             $this->pdo->exec('CREATE TABLE IF NOT EXISTS `GameRounds` (`Id` INT NOT NULL AUTO_INCREMENT, `UserId` INT NULL, `Game` VARCHAR(10) NOT NULL, `Level` VARCHAR(8) NOT NULL,
                 `PoolIdx` INT NOT NULL DEFAULT 0, `Puzzle` TEXT NOT NULL, `Token` VARCHAR(40) NOT NULL, `StartedAt` DATETIME NOT NULL, `FinishedAt` DATETIME NULL,
-                `Seconds` INT NULL, `Points` INT NOT NULL DEFAULT 0, `Solved` TINYINT(1) NOT NULL DEFAULT 0, `Counted` TINYINT(1) NOT NULL DEFAULT 0, `PlayDay` DATE NULL,
+                `Seconds` INT NULL, `Points` INT NOT NULL DEFAULT 0, `Solved` TINYINT(1) NOT NULL DEFAULT 0, `Counted` TINYINT(1) NOT NULL DEFAULT 0, `PlayDay` DATE NULL, `Hints` INT NOT NULL DEFAULT 0,
                 PRIMARY KEY (`Id`), KEY `IX_Game_Day` (`PlayDay`, `Counted`, `UserId`), KEY `IX_Game_User` (`UserId`, `Solved`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
         }
+        // হিন্টের হিসাব (পরে যোগ হওয়া কলাম — পুরোনো টেবিলে না থাকলে যোগ)
+        try { $this->pdo->query('SELECT `Hints` FROM `GameRounds` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `GameRounds` ADD COLUMN `Hints` INT NOT NULL DEFAULT 0'); } catch (Throwable $e2) { error_log('[GameRounds Hints] ' . $e2->getMessage()); } }
     }
 
     public function GameNewRound(?int $userId, string $game, string $level, int $poolIdx, array $puzzle, string $token): int
@@ -40,8 +43,15 @@ trait GameData
     {
         $this->EnsureGameTables();
         $r = $this->one('SELECT * FROM `GameRounds` WHERE `Id` = :i', ['i' => $id]);
-        if ($r) { $r->Id = (int)$r->Id; $r->UserId = $r->UserId === null ? null : (int)$r->UserId; $r->Solved = (bool)$r->Solved; $r->Counted = (bool)$r->Counted; $r->Points = (int)$r->Points; }
+        if ($r) { $r->Id = (int)$r->Id; $r->UserId = $r->UserId === null ? null : (int)$r->UserId; $r->Solved = (bool)$r->Solved; $r->Counted = (bool)$r->Counted; $r->Points = (int)$r->Points; $r->Hints = (int)($r->Hints ?? 0); }
         return $r;
+    }
+
+    /** হিন্ট নেওয়া হলো (শেষ না হওয়া রাউন্ডে) — মোট কয়টা হলো */
+    public function GameAddHint(int $id): int
+    {
+        $this->exec('UPDATE `GameRounds` SET `Hints` = `Hints` + 1 WHERE `Id` = :i AND `Solved` = 0', ['i' => $id]);
+        return (int)$this->scalar('SELECT `Hints` FROM `GameRounds` WHERE `Id` = :i', ['i' => $id]);
     }
 
     public function GameFinishRound(int $id, int $seconds, int $points, bool $counted): bool

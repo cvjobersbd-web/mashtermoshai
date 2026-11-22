@@ -100,14 +100,14 @@ class GameController extends Controller
             if (!game_check($r->Game, $puzzle, $ans)) json_response(['success' => false, 'wrong' => true, 'message' => 'এখনো মেলেনি — আবার দেখুন!']);
             $seconds = max(1, time() - (int)strtotime((string)$r->StartedAt));
             $rule = game_points_rule($r->Game, $r->Level);
-            $points = game_points($r->Game, $r->Level, $seconds);
+            $points = game_hint_penalty(game_points($r->Game, $r->Level, $seconds), (int)$r->Hints);
             $counted = $r->UserId !== null && current_role() !== 'Admin' && $seconds >= $rule['min'];
             $this->db->GameFinishRound($r->Id, $seconds, $points, $counted);
             $r = $this->db->GameGetRound($r->Id);
         }
         $seconds = (int)$r->Seconds; $points = (int)$r->Points;
         $out = ['success' => true, 'seconds' => $seconds, 'points' => $points, 'counted' => (bool)$r->Counted, 'loggedIn' => $me !== null,
-            'game' => $r->Game, 'level' => $r->Level, 'isAdmin' => current_role() === 'Admin', 'resetIn' => $this->resetIn()];
+            'game' => $r->Game, 'level' => $r->Level, 'isAdmin' => current_role() === 'Admin', 'resetIn' => $this->resetIn(), 'hints' => (int)$r->Hints];
         if ($me !== null) {
             $day = date('Y-m-d'); $grp = $this->group();
             $all = $this->db->GameUserDay($me, $day, 'all');
@@ -121,6 +121,21 @@ class GameController extends Controller
                 'streak' => $st->Streak, 'best' => $best, 'newBest' => $best === $seconds];
         }
         json_response($out);
+    }
+
+    /** POST /Game/Hint (id, token, state JSON) — পরের ধাপ দেখায়; প্রতিটা হিন্টে পয়েন্ট ২০% কমে */
+    public function Hint_POST(): void
+    {
+        $this->guard(true);
+        $me = current_user_id();
+        if ($me === null) json_response(['success' => false, 'login' => true, 'message' => 'আপনি লগআউট হয়ে গেছেন — আবার লগইন করুন।']);
+        $r = $this->db->GameGetRound((int)input_int('id', 0));
+        if (!$r || !hash_equals((string)$r->Token, (string)input_str('token', '')) || $r->UserId !== $me) json_response(['success' => false, 'message' => 'খেলাটা পাওয়া যায়নি।']);
+        if ($r->Solved) json_response(['success' => false, 'message' => 'এই পাজল তো শেষ!']);
+        $hint = game_hint($r->Game, json_decode((string)$r->Puzzle, true) ?: [], json_decode((string)input_str('state', ''), true));
+        if (!$hint) json_response(['success' => false, 'message' => 'সব ঠিক আছে — এখন শুধু শেষ করুন!']);
+        $n = $this->db->GameAddHint($r->Id);
+        json_response(['success' => true, 'hint' => $hint, 'hints' => $n]);
     }
 
     public function Leaderboard(): void

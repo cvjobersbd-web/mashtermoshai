@@ -241,3 +241,57 @@ function game_check(string $game, array $p, $ans): bool
         default => false,
     };
 }
+
+// ============================================================ হিন্ট
+/**
+ * এখনকার অবস্থা ($state) দেখে একটা হিন্ট — উত্তর থেকে পরের এক ধাপ (ভুল থাকলে আগে সেটা ঠিক করে)।
+ *  zip:     state = পথ [cell...]          → ['path' => নতুন পথ, 'fixed' => ভুল কেটে দেওয়া হয়েছে কিনা]
+ *  sudoku:  state = ৩৬টা সংখ্যা            → ['cell' => i, 'value' => v, 'fixed' => ভুল সংখ্যা ছিল কিনা]
+ *  patches: state = [[r,c,h,w], ...]      → ['remove' => rect] অথবা ['add' => rect]
+ */
+function game_hint(string $game, array $p, $state): ?array
+{
+    $sol = $p['sol'] ?? null;
+    if (!$sol) return null;
+    if ($game === 'zip') {
+        $path = is_array($state) ? array_values(array_map('intval', $state)) : [];
+        $k = 0;
+        while ($k < count($path) && $k < count($sol) && $path[$k] === (int)$sol[$k]) $k++;
+        if ($k >= count($sol)) return null;
+        $add = $k === 0 ? 3 : 2;   // পরের কয়েকটা ঘর
+        return ['path' => array_map('intval', array_slice($sol, 0, min(count($sol), $k + $add))), 'fixed' => $k < count($path)];
+    }
+    if ($game === 'sudoku') {
+        $g = is_array($state) && count($state) === 36 ? array_map('intval', array_values($state)) : array_map('intval', $p['grid']);
+        foreach ($g as $i => $v) if ($v && !(int)$p['grid'][$i] && $v !== (int)$sol[$i]) return ['cell' => $i, 'value' => (int)$sol[$i], 'fixed' => true];
+        // খালি ঘরগুলোর মধ্যে যেটার সম্ভাব্য সংখ্যা সবচেয়ে কম — যুক্তি দিয়ে বের করার মতো ঘর
+        $best = -1; $bc = 9;
+        foreach ($g as $i => $v) {
+            if ($v) continue;
+            $r = intdiv($i, 6); $c = $i % 6; $used = [];
+            for ($k = 0; $k < 6; $k++) { $used[$g[$r * 6 + $k]] = 1; $used[$g[$k * 6 + $c]] = 1; }
+            $br = intdiv($r, 2) * 2; $bcl = intdiv($c, 3) * 3;
+            for ($a = 0; $a < 2; $a++) for ($b = 0; $b < 3; $b++) $used[$g[($br + $a) * 6 + $bcl + $b]] = 1;
+            $cnt = 6 - count(array_filter(array_keys($used)));
+            if ($cnt < $bc) { $bc = $cnt; $best = $i; }
+        }
+        return $best < 0 ? null : ['cell' => $best, 'value' => (int)$sol[$best], 'fixed' => false];
+    }
+    // patches
+    $have = [];
+    foreach (is_array($state) ? $state : [] as $r) if (is_array($r) && count($r) === 4) $have[] = array_map('intval', array_values($r));
+    $solSet = array_map(fn($r) => implode(',', array_map('intval', $r)), $sol);
+    foreach ($have as $r) if (!in_array(implode(',', $r), $solSet, true)) return ['remove' => $r];
+    $haveSet = array_map(fn($r) => implode(',', $r), $have);
+    $miss = array_values(array_filter($sol, fn($r) => !in_array(implode(',', array_map('intval', $r)), $haveSet, true)));
+    if (!$miss) return null;
+    usort($miss, fn($a, $b) => $a[2] * $a[3] <=> $b[2] * $b[3]);
+    return ['add' => array_map('intval', $miss[0])];
+}
+
+/** হিন্ট নিলে পয়েন্ট কমে — প্রতিটা হিন্টে ২০%, সর্বনিম্ন ১০% */
+function game_hint_penalty(int $points, int $hints): int
+{
+    if ($hints <= 0) return $points;
+    return max(1, (int)round($points * max(0.1, 1 - 0.2 * $hints)));
+}

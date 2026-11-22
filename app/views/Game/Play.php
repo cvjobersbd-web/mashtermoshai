@@ -22,6 +22,10 @@ partial('Game/_Styles');
     .gp-btn { border: 1.5px solid #E2E8F0; background: #fff; color: #334155; font-weight: 700; font-size: 13.5px; padding: 8px 12px; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
     .gp-btn:hover { border-color: var(--gc); color: var(--gc); }
     .gp-btn:disabled { opacity: .45; cursor: default; }
+    .gp-btn.gp-hint { border-color: #FCD34D; background: #FFFBEB; color: #92400E; }
+    .gp-btn.gp-hint b { background: #F59E0B; color: #fff; border-radius: 9px; font-size: 11px; padding: 0 6px; margin-left: 2px; }
+    .gp-btn.gp-hint b:empty { display: none; }
+    @media (max-width: 420px) { .gp-btn { padding: 8px 9px; font-size: 12.5px; } .gp-timer { font-size: 19px; } }
     .gp-board-wrap { position: relative; }
     .gp-board { position: relative; width: 100%; aspect-ratio: 1; border-radius: 16px; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; background: #1E293B; box-shadow: 0 10px 30px rgba(15, 23, 42, .18); }
     .gp-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #CBD5E1; font-weight: 700; gap: 10px; }
@@ -113,6 +117,7 @@ partial('Game/_Styles');
     <div class="gp-bar">
         <div class="gp-timer"><i class="far fa-clock"></i> <span id="gpTime">0:00</span></div>
         <div class="gp-btns">
+            <button type="button" class="gp-btn gp-hint" id="gpHint"><i class="far fa-lightbulb"></i> <?= t('হিন্ট', 'Hint') ?><b id="gpHintN"></b></button>
             <button type="button" class="gp-btn" id="gpUndo"><i class="fas fa-rotate-left"></i> <?= t('আগের ধাপ', 'Undo') ?></button>
             <button type="button" class="gp-btn" id="gpReset"><i class="fas fa-eraser"></i> <?= t('মুছুন', 'Clear') ?></button>
         </div>
@@ -196,7 +201,7 @@ partial('Game/_Styles');
         board.innerHTML = '<div class="gp-loading"><i class="fas fa-spinner fa-spin"></i> পাজল তৈরি হচ্ছে...</div>';
         post('/Game/New', { game: GAME, level: LEVEL }).then(function (d) {
             if (!d.success) { if (d.login) { location.href = '/Account/Login?returnUrl=' + encodeURIComponent(location.pathname + location.search); return; } board.innerHTML = '<div class="gp-loading">' + (d.message || 'পাজল পাওয়া যায়নি') + '</div>'; return; }
-            round = d; board.innerHTML = '';
+            round = d; board.innerHTML = ''; hintN = 0; document.getElementById('gpHintN').textContent = '';
             api = ({ zip: Zip, sudoku: Sudoku, patches: Patches })[GAME](d.puzzle);
             t0 = Date.now(); clearInterval(timerId); timerId = setInterval(tick, 250); tick();
         }).catch(function () { board.innerHTML = '<div class="gp-loading">ইন্টারনেট সমস্যা — পেজটা আবার লোড করুন।</div>'; });
@@ -214,6 +219,19 @@ partial('Game/_Styles');
         }).catch(function () { busy = false; msg('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন'); });
     }
 
+    var hintN = 0;
+    document.getElementById('gpHint').onclick = function () {
+        if (!api || done || busy || !round) return;
+        var warned = false; try { warned = localStorage.getItem('gm_hint_ok') === '1'; } catch (e) { }
+        if (!warned) { if (!confirm('হিন্ট নিলে এই খেলার পয়েন্ট প্রতিবার ২০% করে কমবে। হিন্ট নেবেন?')) return; try { localStorage.setItem('gm_hint_ok', '1'); } catch (e) { } }
+        var btn = this; btn.disabled = true;
+        post('/Game/Hint', { id: round.id, token: round.token, state: JSON.stringify(api.state()) }).then(function (d) {
+            btn.disabled = false;
+            if (!d.success) { msg(d.message || 'হিন্ট পাওয়া যায়নি'); return; }
+            hintN = d.hints; document.getElementById('gpHintN').textContent = bn(hintN);
+            msg('💡 ' + api.hint(d.hint), true);
+        }).catch(function () { btn.disabled = false; msg('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন'); });
+    };
     document.getElementById('gpUndo').onclick = function () { if (api && !done) api.undo(); };
     document.getElementById('gpReset').onclick = function () { if (api && !done) api.reset(); };
 
@@ -243,49 +261,84 @@ partial('Game/_Styles');
             var on = {}; path.forEach(function (c) { on[c] = 1; });
             cells.forEach(function (c, i) { var b = c.querySelector('.zn'); if (b) b.classList.toggle('on', !!on[i]); });
         }
-        function tryAdd(c) {
+        function tryAdd(c, quiet) {
             if (path.indexOf(c) >= 0) return false;
             var last = path[path.length - 1];
             if (!adj(last, c)) return false;
-            if (nums[c] && nums[c] !== nextNum()) { msg('আগে ' + bn(nextNum()) + ' নম্বরে যান'); return false; }
+            if (nums[c] && nums[c] !== nextNum()) { if (!quiet) msg('আগে ' + bn(nextNum()) + ' নম্বরে যান'); return false; }
             path.push(c); return true;
         }
-        function cellAt(e) {
-            var r = board.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-            if (x < 0 || y < 0 || x >= r.width || y >= r.height) return -1;
-            return Math.floor(y / (r.height / n)) * n + Math.floor(x / (r.width / n));
+        // আঙুল / মাউসের জায়গা → ঘর। ঘরের একদম কিনারায় থাকলে (কোনাকুনি ভুল এড়াতে) -১
+        function cellAt(x, y, strict) {
+            var r = board.getBoundingClientRect(), cw = r.width / n, fx = (x - r.left) / cw, fy = (y - r.top) / cw;
+            if (fx < 0 || fy < 0 || fx >= n || fy >= n) return -1;
+            var cx = Math.floor(fx), cy = Math.floor(fy);
+            if (strict) { var dx = fx - cx - .5, dy = fy - cy - .5; if (Math.abs(dx) > .38 || Math.abs(dy) > .38) return -1; }
+            return cy * n + cx;
         }
-        function moveTo(c) {
-            if (c < 0 || !path.length) return;
-            var last = path[path.length - 1]; if (c === last) return;
-            if (path.length >= 2 && c === path[path.length - 2]) { path.pop(); draw(); return; }
-            var idx = path.indexOf(c); if (idx >= 0) return;
-            // দ্রুত টানলে মাঝের ঘরগুলো (একই সারি / কলামে) একে একে
-            var guard = 0;
-            while (path[path.length - 1] !== c && guard++ < n) {
-                var l = path[path.length - 1], lr = Math.floor(l / n), lc = l % n, cr = Math.floor(c / n), cc = c % n, s;
-                if (lr === cr) s = l + (cc > lc ? 1 : -1); else if (lc === cc) s = l + (cr > lr ? n : -n); else break;
-                if (!tryAdd(s)) break;
+        // last থেকে c পর্যন্ত ছোট পথ (ফাঁকা ঘর দিয়ে) — দ্রুত বা কোনাকুনি টানলে মাঝের ঘরগুলো নিজে থেকে ভরে
+        function bridge(c, hx, hy) {
+            var last = path[path.length - 1], used = {}; path.forEach(function (x) { used[x] = 1; });
+            var prevMap = {}, q = [last], seen = {}; seen[last] = 1;
+            while (q.length) {
+                var x = q.shift(); if (x === c) break;
+                var xr = Math.floor(x / n), xc = x % n, nb = [];
+                if (xr > 0) nb.push(x - n); if (xr < n - 1) nb.push(x + n); if (xc > 0) nb.push(x - 1); if (xc < n - 1) nb.push(x + 1);
+                if (hx !== undefined) nb.sort(function (p1, p2) { var d1 = Math.pow(p1 % n + .5 - hx, 2) + Math.pow(Math.floor(p1 / n) + .5 - hy, 2), d2 = Math.pow(p2 % n + .5 - hx, 2) + Math.pow(Math.floor(p2 / n) + .5 - hy, 2); return d1 - d2; });
+                nb.forEach(function (v) { if (seen[v] || used[v]) return; if (nums[v] && v !== c) return; if (Math.abs(Math.floor(v / n) - Math.floor(c / n)) + Math.abs(v % n - c % n) > 6) return; seen[v] = 1; prevMap[v] = x; q.push(v); });
             }
-            draw(); check();
+            if (!seen[c]) return false;
+            var seq = [], y = c; while (y !== last) { seq.unshift(y); y = prevMap[y]; }
+            if (seq.length > 6) return false;
+            for (var k = 0; k < seq.length; k++) if (!tryAdd(seq[k], k < seq.length - 1)) break;
+            return true;
+        }
+        function moveTo(c, hx, hy) {
+            if (c < 0 || !path.length) return false;
+            var last = path[path.length - 1]; if (c === last) return false;
+            var idx = path.indexOf(c);
+            if (idx >= 0) { path = path.slice(0, idx + 1); return true; }   // পেছনে টানলে মুছে যায়
+            if (adj(last, c)) { tryAdd(c); return true; }
+            return bridge(c, hx, hy);
         }
         function check() {
             if (path.length === L) { if (nums[path[L - 1]] === maxN) submit(path.slice()); else { msg('সব ঘর ভরেছে — কিন্তু শেষ সংখ্যায় শেষ হতে হবে'); shake(); } }
-            else msg('');
+        }
+        var lastX = 0, lastY = 0, raf = 0;
+        function follow(x, y) {
+            // আগের জায়গা থেকে এখন পর্যন্ত রেখা ধরে ছোট ছোট ধাপে — কোনো ঘর বাদ পড়বে না
+            var r = board.getBoundingClientRect(), cw = r.width / n, step = cw / 6, dx = x - lastX, dy = y - lastY, d = Math.sqrt(dx * dx + dy * dy), k = Math.max(1, Math.ceil(d / step)), ch = false, px = lastX, py = lastY;
+            for (var t = 1; t <= k; t++) {
+                var sx = lastX + dx * t / k, sy = lastY + dy * t / k, c = cellAt(sx, sy, true);
+                if (c >= 0 && moveTo(c, ((px + sx) / 2 - r.left) / cw, ((py + sy) / 2 - r.top) / cw)) ch = true;
+                if (c >= 0) { px = sx; py = sy; }
+            }
+            lastX = x; lastY = y;
+            if (ch && !raf) raf = requestAnimationFrame(function () { raf = 0; draw(); });
         }
         board.onpointerdown = function (e) {
             if (done) return;
-            var c = cellAt(e); if (c < 0) return;
-            board.setPointerCapture(e.pointerId); drag = true;
+            var c = cellAt(e.clientX, e.clientY, false); if (c < 0) return;
+            e.preventDefault();
+            try { board.setPointerCapture(e.pointerId); } catch (er) { }
+            lastX = e.clientX; lastY = e.clientY; drag = true;
             if (!path.length) { if (nums[c] === 1) { path = [c]; draw(); msg(''); } else { msg('১ থেকে শুরু করুন'); drag = false; } return; }
             var idx = path.indexOf(c);
             if (idx >= 0) { path = path.slice(0, idx + 1); draw(); msg(''); return; }
-            moveTo(c);
+            if (moveTo(c)) { draw(); msg(''); } else drag = !!path.length;
         };
-        board.onpointermove = function (e) { if (drag && !done) moveTo(cellAt(e)); };
-        board.onpointerup = board.onpointercancel = function () { drag = false; };
+        board.onpointermove = function (e) {
+            if (!drag || done) return;
+            var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
+            evs.forEach(function (ev) { follow(ev.clientX, ev.clientY); });
+        };
+        board.onpointerup = board.onpointercancel = function () { if (!drag) return; drag = false; draw(); check(); };
         draw();
-        return { undo: function () { path.pop(); draw(); msg(''); }, reset: function () { path = []; draw(); msg(''); } };
+        return {
+            undo: function () { path.pop(); draw(); msg(''); }, reset: function () { path = []; draw(); msg(''); },
+            state: function () { return path.slice(); },
+            hint: function (h) { path = h.path.map(Number); draw(); var last = path[path.length - 1]; cells[last].animate([{ background: 'rgba(250,204,21,.65)' }, { background: 'transparent' }], { duration: 1200 }); check(); return h.fixed ? 'ভুল মোড়টা ঠিক করে পরের ঘরগুলো দেখিয়ে দেওয়া হলো' : 'পরের ঘরগুলো দেখিয়ে দেওয়া হলো'; }
+        };
     }
 
     // ============================================================ SUDOKU
@@ -340,7 +393,16 @@ partial('Game/_Styles');
             }
         };
         sel = given.indexOf(0); draw();
-        return { undo: undo, reset: function () { hist = []; val = given.slice(); draw(); msg(''); } };
+        return {
+            undo: undo, reset: function () { hist = []; val = given.slice(); draw(); msg(''); },
+            state: function () { return val.slice(); },
+            hint: function (h) {
+                sel = h.cell; hist.push([h.cell, val[h.cell]]); val[h.cell] = h.value; var ok = draw();
+                cells[h.cell].animate([{ background: '#FDE68A' }, { background: '#BFDBFE' }], { duration: 1400 });
+                if (val.every(function (v) { return v > 0; }) && ok) submit(val.slice());
+                return h.fixed ? 'এই ঘরের সংখ্যাটা ভুল ছিল — ঠিক করে দেওয়া হলো' : 'এই ঘরে ' + bn(h.value) + ' বসবে';
+            }
+        };
     }
 
     // ============================================================ PATCHES
@@ -405,8 +467,9 @@ partial('Game/_Styles');
             var cov = 0; rects.forEach(function (R) { cov += R.h * R.w; });
             if (cov === L && rects.length === clues.length && rects.every(function (R) { return fits(clues[R.k], R); })) submit(rects.map(function (R) { return [R.r, R.c, R.h, R.w]; }));
         }
-        board.onpointerdown = function (e) { if (done) return; a = cellAt(e); prev = box(a, a); board.setPointerCapture(e.pointerId); draw(); };
-        board.onpointermove = function (e) { if (a < 0 || done) return; prev = box(a, cellAt(e)); draw(); };
+        board.onpointerdown = function (e) { if (done) return; e.preventDefault(); a = cellAt(e); prev = box(a, a); try { board.setPointerCapture(e.pointerId); } catch (er) { } draw(); };
+        var praf = 0;
+        board.onpointermove = function (e) { if (a < 0 || done) return; var nb = box(a, cellAt(e)); if (prev && nb.r === prev.r && nb.c === prev.c && nb.h === prev.h && nb.w === prev.w) return; prev = nb; if (!praf) praf = requestAnimationFrame(function () { praf = 0; draw(); }); };
         board.onpointerup = function (e) {
             if (a < 0 || done) return;
             var b = cellAt(e), R = box(a, b); a = -1; prev = null;
@@ -419,7 +482,18 @@ partial('Game/_Styles');
         };
         board.onpointercancel = function () { a = -1; prev = null; draw(); };
         draw();
-        return { undo: function () { var h = hist.pop(); if (h) { rects = h; draw(); msg(''); } }, reset: function () { if (rects.length) hist.push(rects.slice()); rects = []; draw(); msg(''); } };
+        return {
+            undo: function () { var h = hist.pop(); if (h) { rects = h; draw(); msg(''); } }, reset: function () { if (rects.length) hist.push(rects.slice()); rects = []; draw(); msg(''); },
+            state: function () { return rects.map(function (R) { return [R.r, R.c, R.h, R.w]; }); },
+            hint: function (h) {
+                hist.push(rects.slice());
+                if (h.remove) { rects = rects.filter(function (R) { return !(R.r === h.remove[0] && R.c === h.remove[1] && R.h === h.remove[2] && R.w === h.remove[3]); }); draw(); return 'এই জায়গার আয়তটা ভুল ছিল — সরিয়ে দেওয়া হলো'; }
+                var R = { r: h.add[0], c: h.add[1], h: h.add[2], w: h.add[3] }, ins = inside(R);
+                rects = rects.filter(function (X) { return !overlap(X, R) && X.k !== ins[0]; }); R.k = ins[0]; rects.push(R); draw();
+                var el2 = layer.lastChild; if (el2 && el2.animate) el2.animate([{ transform: 'scale(1.06)', boxShadow: '0 0 0 6px rgba(250,204,21,.7)' }, { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(250,204,21,0)' }], { duration: 1200 });
+                check(); return 'একটা আয়ত বসিয়ে দেওয়া হলো';
+            }
+        };
     }
 
     // ============================================================ ফলাফল
@@ -429,7 +503,8 @@ partial('Game/_Styles');
         document.getElementById('gpResTime').textContent = fmt(d.seconds);
         var pts = document.getElementById('gpResPts'), grid = document.getElementById('gpResGrid'), note = document.getElementById('gpResNote');
         var cell = function (b, s) { return '<div><b>' + b + '</b><small>' + s + '</small></div>'; };
-        pts.innerHTML = d.counted ? '<span class="gp-rp">+' + bn(d.points) + ' পয়েন্ট</span>' : '';
+        pts.innerHTML = (d.counted ? '<span class="gp-rp">+' + bn(d.points) + ' পয়েন্ট</span>' : '')
+            + '<div style="margin-top:8px;font-size:13px;font-weight:700;color:rgba(255,255,255,.92);">' + (d.hints ? '💡 ' + bn(d.hints) + 'টা হিন্ট নিয়েছেন (পয়েন্ট −' + bn(Math.min(90, d.hints * 20)) + '%)' : '💪 হিন্ট ছাড়াই!') + '</div>';
         var g = '', nt = '';
         if (d.loggedIn) {
             g += cell(bn(d.todayPts || 0), 'আজকের মোট পয়েন্ট');
