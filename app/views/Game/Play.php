@@ -31,6 +31,11 @@ partial('Game/_Styles');
     .gp-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #CBD5E1; font-weight: 700; gap: 10px; }
     .gp-msg { min-height: 24px; text-align: center; font-size: 14px; font-weight: 700; color: #B45309; margin: 10px 0 0; transition: .2s; }
     .gp-msg.ok { color: #15803D; }
+    .gp-prog { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; font-weight: 700; color: #475569; }
+    .gp-pbar { flex: 1; height: 8px; border-radius: 8px; background: #E2E8F0; overflow: hidden; }
+    .gp-pbar i { display: block; height: 100%; width: 0; border-radius: 8px; background: var(--gc); transition: width .2s; }
+    @keyframes gpEmpty { 0%, 100% { background: transparent; } 50% { background: rgba(250, 204, 21, .55); } }
+    .gp-empty { animation: gpEmpty .7s ease-in-out 3; }
     .gp-shake { animation: gpShake .4s; }
     @keyframes gpShake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
     .gp-rules { margin-top: 16px; background: #fff; border: 1px solid #E2E8F0; border-radius: 16px; overflow: hidden; }
@@ -135,6 +140,7 @@ partial('Game/_Styles');
     <?php elseif ($game === 'patches'): ?>
         <div class="pk-legend" id="pkLegend"></div>
     <?php endif; ?>
+    <div class="gp-prog" id="gpProg"><div class="gp-pbar"><i id="gpPbar"></i></div><span id="gpPtxt"></span></div>
     <div class="gp-msg" id="gpMsg"></div>
 
     <details class="gp-rules" id="gpRules">
@@ -183,6 +189,11 @@ partial('Game/_Styles');
     var token = function () { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ''; };
     var round = null, t0 = 0, timerId = null, done = false, busy = false, api = null;
 
+    function prog(done2, total, label) {
+        document.getElementById('gpPbar').style.width = Math.round(100 * done2 / total) + '%';
+        document.getElementById('gpPtxt').textContent = bn(done2) + ' / ' + bn(total) + ' ' + label;
+    }
+    function flash(els) { els.forEach(function (e) { e.classList.remove('gp-empty'); void e.offsetWidth; e.classList.add('gp-empty'); }); }
     function msg(t, ok) { msgEl.textContent = t || ''; msgEl.className = 'gp-msg' + (ok ? ' ok' : ''); }
     function shake() { board.classList.remove('gp-shake'); void board.offsetWidth; board.classList.add('gp-shake'); }
     function tick() { if (!done) document.getElementById('gpTime').textContent = fmt((Date.now() - t0) / 1000); }
@@ -260,6 +271,7 @@ partial('Game/_Styles');
             if (path.length) { var q = xy(path[path.length - 1]); dot.setAttribute('cx', q[0]); dot.setAttribute('cy', q[1]); dot.style.display = path.length === 1 ? '' : 'none'; } else dot.style.display = 'none';
             var on = {}; path.forEach(function (c) { on[c] = 1; });
             cells.forEach(function (c, i) { var b = c.querySelector('.zn'); if (b) b.classList.toggle('on', !!on[i]); });
+            prog(path.length, L, 'ঘর ভরা হয়েছে');
         }
         function tryAdd(c, quiet) {
             if (path.indexOf(c) >= 0) return false;
@@ -302,7 +314,14 @@ partial('Game/_Styles');
             return bridge(c, hx, hy);
         }
         function check() {
-            if (path.length === L) { if (nums[path[L - 1]] === maxN) submit(path.slice()); else { msg('সব ঘর ভরেছে — কিন্তু শেষ সংখ্যায় শেষ হতে হবে'); shake(); } }
+            if (path.length === L) { if (nums[path[L - 1]] === maxN) submit(path.slice()); else { msg('সব ঘর ভরেছে — কিন্তু শেষ সংখ্যায় (' + bn(maxN) + ') গিয়ে শেষ হতে হবে'); shake(); } return; }
+            if (path.length && nums[path[path.length - 1]] === maxN) {
+                // শেষ সংখ্যায় পৌঁছেছে কিন্তু ঘর ফাঁকা — কোন ঘরগুলো বাকি দেখিয়ে দেওয়া
+                var on = {}; path.forEach(function (c) { on[c] = 1; });
+                var empty = cells.filter(function (c, i) { return !on[i]; });
+                msg('প্রায় হয়ে গেছে! কিন্তু ' + bn(empty.length) + 'টা ঘর এখনো ফাঁকা — সব ঘর পার হয়ে তারপর ' + bn(maxN) + '-এ শেষ করুন (হলুদ ঘরগুলো দেখুন)');
+                flash(empty); shake();
+            }
         }
         var lastX = 0, lastY = 0, raf = 0;
         function follow(x, y) {
@@ -364,6 +383,7 @@ partial('Game/_Styles');
                 c.classList.toggle('same', sel >= 0 && val[sel] > 0 && val[i] === val[sel] && i !== sel);
                 c.classList.toggle('bad', !!bad[i]);
             });
+            prog(val.filter(function (v) { return v > 0; }).length, 36, 'ঘর ভরা হয়েছে');
             return Object.keys(bad).length === 0;
         }
         function put(d) {
@@ -445,6 +465,7 @@ partial('Game/_Styles');
             return d;
         }
         function draw() {
+            var cov = 0; rects.forEach(function (R) { cov += R.h * R.w; }); prog(cov, L, 'ঘর ঢাকা হয়েছে');
             layer.innerHTML = '';
             rects.forEach(function (R) { var cl = clues[R.k]; layer.appendChild(el(R, fits(cl, R) ? '' : 'bad', fits(cl, R) ? cl.col : '#EF4444')); });
             if (prev) { var ins = inside(prev); layer.appendChild(el(prev, 'prev', ins.length === 1 ? clues[ins[0]].col : '#94A3B8')); }
@@ -465,7 +486,13 @@ partial('Game/_Styles');
         }
         function check() {
             var cov = 0; rects.forEach(function (R) { cov += R.h * R.w; });
-            if (cov === L && rects.length === clues.length && rects.every(function (R) { return fits(clues[R.k], R); })) submit(rects.map(function (R) { return [R.r, R.c, R.h, R.w]; }));
+            var bad = rects.filter(function (R) { return !fits(clues[R.k], R); }).length;
+            if (cov === L && rects.length === clues.length && !bad) { submit(rects.map(function (R) { return [R.r, R.c, R.h, R.w]; })); return; }
+            if (rects.length === clues.length) {
+                if (bad) { msg(bn(bad) + 'টা আয়ত চিহ্নের সাথে মেলেনি (লাল দাগ) — ঠিক করুন'); shake(); return; }
+                var empty = []; for (var i = 0; i < L; i++) { var r = Math.floor(i / n), c = i % n; if (!rects.some(function (R) { return r >= R.r && r < R.r + R.h && c >= R.c && c < R.c + R.w; })) empty.push(g.children[i]); }
+                msg('সব চিহ্নে আয়ত হয়েছে, কিন্তু ' + bn(empty.length) + 'টা ঘর ফাঁকা — পুরো গ্রিড ঢাকতে হবে (হলুদ ঘরগুলো দেখুন)'); flash(empty); shake();
+            }
         }
         board.onpointerdown = function (e) { if (done) return; e.preventDefault(); a = cellAt(e); prev = box(a, a); try { board.setPointerCapture(e.pointerId); } catch (er) { } draw(); };
         var praf = 0;
