@@ -299,6 +299,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
     @media (max-width: 1280px) {
         .tc-grid { grid-template-columns: 260px minmax(0, 1fr); }
         .tc-side { grid-column: 1 / -1; position: static; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+        .tc-filter { position: static; }   /* ল্যাপটপে ফিল্টার নিচের "How It Works" বক্সের উপর উঠে যেত */
     }
     @media (max-width: 992px) {
         .tc-wrap { padding: 0 14px; }
@@ -977,6 +978,9 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                                     <?php if (!is_blank($ap->Subjects)): ?><b>Subjects:</b> <?= e($ap->Subjects) ?><br /><?php endif; ?>
                                     <?php if (!is_blank($ap->Area)): ?><b>Area:</b> <?= e($ap->Area) ?><br /><?php endif; ?>
                                     <?php if (!is_blank($ap->Salary)): ?><b style="color:#15803D;">Salary: ৳<?= e($ap->Salary) ?></b><?php endif; ?>
+                                    <?php if (is_blank($ap->StudentClass) && is_blank($ap->Subjects) && is_blank($ap->Area) && is_blank($ap->Salary) && !is_blank($ap->SpecialNote)): ?>
+                                        <span style="white-space:pre-line;display:block;"><?= e(mb_strimwidth(trim((string)$ap->SpecialNote), 0, 260, '…')) ?></span>
+                                    <?php endif; ?>
                                 </p>
                                 <a href="<?= $isLoggedIn ? '/Tuition/Details/' . (int)$ap->Id : e($loginUrl) ?>" class="tc-btn <?= $isLoggedIn ? 'dark' : 'ghost' ?>"><?= $isLoggedIn ? 'View Details' : 'Login to View' ?></a>
                             </div>
@@ -996,7 +1000,7 @@ $loginUrl = '/Account/Login?returnUrl=' . rawurlencode('/Tuition/Circular');
                     <?php if ($payRule && $isLoggedIn && !$isAdmin && !$isTeacher): $cr = db()->GetStudentPostCredits((int)$userId); ?>
                         <a href="<?= $cr === 0 ? '/Package?for=student' : '/Payment/My' ?>" class="tc-pk-link"><i class="fas fa-ticket"></i>
                             <?php $pkEnd = $cr !== 0 ? db()->GetStudentPackageEnd((int)$userId) : null; ?>
-                            <?= $cr === 0 ? 'পোস্ট করতে প্যাকেজ নিন (' . package_price_hint('Student', false, 1) . ' থেকে)' : ($pkEnd ? 'প্যাকেজ চালু — ' . e(date('d M Y', strtotime($pkEnd))) . ' পর্যন্ত' : ($cr === -1 ? 'প্যাকেজ চালু' : 'পোস্ট ক্রেডিট: ' . e(bn_num($cr)) . 'টি বাকি')) ?> <i class="fas fa-arrow-right"></i></a>
+                            <?= $cr === 0 ? 'পোস্ট করা ফ্রি · টিচারের আবেদন দেখতে প্যাকেজ নিন' : ($pkEnd ? 'প্যাকেজ চালু — ' . e(date('d M Y', strtotime($pkEnd))) . ' পর্যন্ত' : ($cr === -1 ? 'প্যাকেজ চালু' : 'পোস্ট ক্রেডিট: ' . e(bn_num($cr)) . 'টি বাকি')) ?> <i class="fas fa-arrow-right"></i></a>
                     <?php elseif (($payRules['studentFree'] ?? false)): ?>
                         <span class="tc-pk-link" style="color:#15803D;"><i class="fas fa-gift"></i> এখন পোস্ট করা সম্পূর্ণ ফ্রি!</span>
                     <?php else: ?>

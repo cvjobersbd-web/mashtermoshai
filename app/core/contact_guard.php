@@ -18,8 +18,8 @@ function contact_rules(): array
         ['email', '/[A-Za-z0-9._%+\-]+\s*@\s*[A-Za-z0-9\-]+(?:\s*\.\s*[A-Za-z]{2,})+/u'],
         ['email', '/' . $nb . '(gmail|g\s*mail|yahoo|hotmail|outlook|proton\s*mail|icloud|জিমেইল|ইয়াহু)/iu'],
         ['link', '/(https?:\/\/|www\s*\.)\S+/iu'],
-        ['link', '/' . $nb . '[A-Za-z0-9\-]+\s*(?:\.|\(dot\)|\[dot\]|\sdot\s|ডট)\s*(?:com|net|org|info|xyz|io|me|bd|link|ly|site|online|page|app|co)' . $ne . '/iu'],
-        ['social', '/' . $nb . '(facebook|face\s*book|fb|f\.b|messenger|whats\s*app|wa\.me|imo|telegram|viber|instagram|insta|linkedin|twitter|tiktok|skype|wechat|signal|youtube|you\s*tube)' . $ne . '/iu'],
+        ['link', '/' . $nb . '[A-Za-z0-9\-]+\s*(?:\.|\(dot\)|\[dot\]|\sdot\s|ডট)\s*(?:com|net|org|info|xyz|io|me|bd|link|ly|site|online|page|app|co|dev|tech|ee|in|us|uk|pro|store|shop|blog|website|live|cc|tv|gg|so|biz|edu|gov|ai|to|im)' . $ne . '/iu'],
+        ['social', '/' . $nb . '(facebook|face\s*book|fb|f\.b|messenger|whats\s*app|wa\.me|imo|telegram|viber|instagram|insta|linkedin|twitter|tiktok|skype|wechat|signal|youtube|you\s*tube|github|gitlab|behance|dribbble|linktree|linktr|pinterest|threads|snapchat|discord|reddit|quora|tiktok|wa\.link)' . $ne . '/iu'],
         ['social', '/(ফেসবুক|ফেইসবুক|ফেবু|মেসেঞ্জার|ম্যাসেঞ্জার|মেসেন্জার|হোয়াটস|হোয়াটস|হুয়াটস|ওয়াটসঅ্যাপ|ওয়াটসঅ্যাপ|টেলিগ্রাম|ভাইবার|ইনস্টাগ্রাম|ইন্সটাগ্রাম|লিংকডইন|লিংকড ইন|টুইটার|টিকটক|স্কাইপ|ইউটিউব)[\p{L}\p{M}]*/u'],
         ['social', '/' . $nb . 'ইমো(?:তে|য়|য়|র|ে)?' . $ne . '/u'],
         // বাসা / রোড / ফ্ল্যাট / হোল্ডিং নম্বর (এলাকার নাম চলবে)

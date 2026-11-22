@@ -517,7 +517,7 @@ $waLink = function (?string $phone): string {
         <?php if ($pendingApps > 0): ?>
             <a href="/User/Dashboard?section=applications" style="display:flex; align-items:center; gap:12px; background:#FFF7E0; border:1px solid #FFB300; border-radius:14px; padding:14px 18px; margin-bottom:20px; text-decoration:none; color:#08224A; font-weight:600;">
                 <i class="fas fa-bell" style="color:#E09A00; font-size:18px;"></i>
-                <span><?= e($pendingApps) ?> জন টিচার আপনার পোস্টে Apply করেছেন — দেখতে ক্লিক করুন</span>
+                <span><?= e($pendingApps) ?> জন টিচার আপনার পোস্টে Apply করেছেন — <?= !empty($ViewBag->AppsLocked) ? 'দেখতে প্যাকেজ কিনুন' : 'দেখতে ক্লিক করুন' ?></span>
                 <i class="fas fa-arrow-right" style="margin-left:auto;"></i>
             </a>
         <?php endif; ?>
@@ -613,7 +613,15 @@ $waLink = function (?string $phone): string {
                 আপনার টিউশন পোস্টে যেসব টিচার Apply করেছেন তারা এখানে দেখাবে। পছন্দ হলে সরাসরি যোগাযোগ করুন এবং Accept করুন।
             </p>
 
-            <?php if (empty($applications)): ?>
+            <?php if (!empty($ViewBag->AppsLocked) && !empty($applications)): ?>
+                <!-- প্যাকেজ নেই — কারা Apply করেছে দেখা যায় না, শুধু সংখ্যা -->
+                <div class="empty-state" style="border:1.5px dashed #F59E0B;background:#FFFBEB;">
+                    <i class="fas fa-lock" style="color:#D97706;"></i>
+                    <h5>আপনার পোস্টে <?= e(bn_num(count($applications))) ?> জন টিচার Apply করেছেন</h5>
+                    <p>কোন টিচার Apply করেছেন, তাঁদের তথ্য দেখতে আর Accept করে চ্যাট করতে শিক্ষার্থী প্যাকেজ কিনুন।</p>
+                    <a href="/Package?for=student" class="btn-new-post" style="margin-top: 15px;"><i class="fas fa-tags"></i> প্যাকেজ দেখুন</a>
+                </div>
+            <?php elseif (empty($applications)): ?>
                 <div class="empty-state">
                     <i class="fas fa-chalkboard-teacher"></i>
                     <h5>এখনো কেউ Apply করেননি</h5>

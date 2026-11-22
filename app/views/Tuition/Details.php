@@ -446,11 +446,15 @@ $isSv = $canSave && db()->IsSaved((int)current_user_id(), 'tuition', (int)$Model
             <!-- ======================
                  STUDENT INFORMATION
                  ====================== -->
+            <?php $hasStu = !is_blank($Model->StudentGender) || !is_blank($Model->StudentClass) || !is_blank($Model->Subjects);
+                  $hasSch = !is_blank($Model->DaysPerWeek) || !is_blank($Model->PreferredTime) || !is_blank($Model->MediaFee) || !is_blank($Model->Salary); ?>
+            <?php if ($hasStu): ?>
             <h3 class="td-section-title">
                 <i class="fas fa-users"></i> Student Information
             </h3>
+            <?php endif; ?>
 
-            <div class="td-info-grid">
+            <div class="td-info-grid"<?= $hasStu ? '' : ' style="display:none"' ?>>
                 <?php if (!is_blank($Model->StudentGender)): ?>
                     <div class="td-info-item">
                         <i class="fas fa-venus-mars"></i>
@@ -476,11 +480,13 @@ $isSv = $canSave && db()->IsSaved((int)current_user_id(), 'tuition', (int)$Model
             <!-- ======================
                  SCHEDULE & PAYMENT
                  ====================== -->
+            <?php if ($hasSch): ?>
             <h3 class="td-section-title">
                 <i class="fas fa-clock"></i> Schedule & Payment
             </h3>
+            <?php endif; ?>
 
-            <div class="td-info-grid">
+            <div class="td-info-grid"<?= $hasSch ? '' : ' style="display:none"' ?>>
                 <?php if (!is_blank($Model->DaysPerWeek)): ?>
                     <div class="td-info-item">
                         <i class="fas fa-calendar-week"></i>
@@ -514,9 +520,9 @@ $isSv = $canSave && db()->IsSaved((int)current_user_id(), 'tuition', (int)$Model
                  SPECIAL NOTE
                  ====================== -->
             <?php if (!is_blank($Model->SpecialNote)): ?>
-                <div class="td-note">
-                    <strong>বিঃদ্রঃ / Special Note</strong>
-                    <?= e($Model->SpecialNote) ?>
+                <div class="td-note" style="white-space:pre-line;">
+                    <strong><?= ($hasStu || $hasSch) ? 'বিঃদ্রঃ / Special Note' : 'টিউশনের বিস্তারিত' ?></strong>
+                    <?= e(trim((string)$Model->SpecialNote)) ?>
                 </div>
             <?php endif; ?>
 

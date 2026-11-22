@@ -519,6 +519,72 @@ class AdminController extends Controller
         json_response(['success' => false, 'message' => 'Failed to update status.']);
     }
 
+    /**
+     * Tutor Request → টিউশন সার্কুলারের পোস্ট (শিরোনাম + লেখা)। অভিভাবকের নাম / নম্বর / ইমেইল থাকে না,
+     * নোটে যোগাযোগের তথ্য থাকলে ঢেকে দেওয়া হয়।
+     */
+    public static function tutorRequestToPost(Obj $r): array
+    {
+        $v = fn($x) => trim((string)($x ?? ''));
+        $area = $v($r->PreferredArea); $cls = $v($r->StudentClass); $subj = $v($r->RequiredSubject);
+        $mode = $v($r->TeachingMode); $budget = $v($r->MonthlyBudget); $days = $v($r->PreferredDays); $time = $v($r->PreferredTime);
+        $notes = $v($r->AdditionalNotes); $gender = '';
+        $subj = preg_replace('/\s*,\s*/u', ', ', $subj);
+        if (preg_match('/Tutor\s*Preference\s*:\s*(Male|Female|Any[^\n,.;]*)/i', $notes, $m)) {
+            $g = strtolower($m[1]);
+            $gender = str_starts_with($g, 'male') ? 'পুরুষ' : (str_starts_with($g, 'female') ? 'মহিলা' : '');
+            $notes = trim(preg_replace('/\s*Tutor\s*Preference\s*:\s*(Male|Female|Any[^\n,.;]*)[,.;]?/i', ' ', $notes));
+        }
+        $notes = trim(contact_mask($notes));
+        $ml = strtolower($mode);
+        $modeBn = $mode === '' ? '' : (str_contains($ml, 'both') ? 'বাসায় গিয়ে বা অনলাইন (দুটোই চলবে)'
+            : (str_contains($ml, 'online') ? 'অনলাইন' : ((str_contains($ml, 'home') || str_contains($ml, 'offline')) ? 'বাসায় গিয়ে' : $mode)));
+        $budgetTxt = $budget === '' ? '' : (preg_match('/^[\d,\s]+$/', $budget) ? '৳' . trim($budget) . ' / মাস' : $budget);
+
+        $title = 'টিচার লাগবে' . ($area !== '' ? ' — ' . $area : '') . ($cls !== '' ? ' (' . $cls . ')' : '');
+        $intro = ($area !== '' ? $area . ' এলাকায় ' : '') . ($cls !== '' ? $cls . ' এর ' : '') . 'একজন শিক্ষার্থীর জন্য '
+            . ($gender !== '' ? $gender . ' ' : '') . 'টিচার লাগবে।';
+        $lines = [];
+        if ($subj !== '') $lines[] = '📚 বিষয়: ' . $subj;
+        if ($cls !== '') $lines[] = '🎓 ক্লাস: ' . $cls;
+        if ($area !== '') $lines[] = '📍 এলাকা: ' . $area;
+        if ($modeBn !== '') $lines[] = '🏠 পড়ানোর ধরন: ' . $modeBn;
+        if ($gender !== '') $lines[] = '👨‍🏫 টিচার: ' . $gender;
+        if ($days !== '') $lines[] = '📅 সপ্তাহে: ' . $days;
+        if ($time !== '') $lines[] = '⏰ সময়: ' . $time;
+        if ($budgetTxt !== '') $lines[] = '💰 বেতন: ' . $budgetTxt;
+        if ($notes !== '') $lines[] = '📝 অন্যান্য: ' . $notes;
+        $body = $intro . "\n\n" . implode("\n", $lines) . "\n\nআগ্রহী টিচাররা Apply করুন।";
+        return ['title' => mb_substr($title, 0, 300), 'body' => $body, 'area' => $area];
+    }
+
+    /** টিউশন কোড — এলাকার নামের ইংরেজি অক্ষর + ৪ অংক, না থাকলে TUITION#### */
+    private function makeTuitionCode(?string $area): string
+    {
+        $p = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', (string)$area), 0, 8));
+        return ($p !== '' ? $p : 'TUITION') . random_int(1000, 9998);
+    }
+
+    /** POST /Admin/QuickTuitionPost — Tutor Request থেকে বানানো পোস্ট সরাসরি টিউশন সার্কুলারে */
+    public function QuickTuitionPost_POST(): void
+    {
+        $this->requireAdminJson();
+        $title = trim((string)input_str('title', '')); $body = trim(str_replace("\r", '', (string)input_str('body', '')));
+        if ($title === '') json_response(['success' => false, 'message' => 'শিরোনাম দিন।']);
+        if ($body === '') json_response(['success' => false, 'message' => 'পোস্টের লেখা খালি রাখা যাবে না।']);
+        if (mb_strlen($title) > 300 || mb_strlen($body) > 4000) json_response(['success' => false, 'message' => 'লেখা অনেক বড় — শিরোনাম ৩০০, বিস্তারিত ৪০০০ অক্ষরের মধ্যে রাখুন।']);
+        $r = input_int('requestId', 0) ? $this->db->GetTutorRequestById((int)input_int('requestId', 0)) : null;
+        try {
+            $m = $this->emptyTuitionPost();
+            $m->Title = $title; $m->SpecialNote = $body; $m->Status = 'Open'; $m->PostedDate = now();
+            $m->TuitionCode = $this->makeTuitionCode($r ? (string)($r->PreferredArea ?? '') : '');
+            $id = $this->db->CreateTuitionPost($m);
+            json_response(['success' => true, 'message' => 'পোস্ট টিউশন সার্কুলারে চলে গেছে (কোড ' . $m->TuitionCode . ')।', 'url' => '/Tuition/Details/' . (int)$id]);
+        } catch (Throwable $e) {
+            json_response(['success' => false, 'message' => 'পোস্ট করা যায়নি: ' . $e->getMessage()]);
+        }
+    }
+
     /** POST /Admin/DeleteTutorRequest */
     public function DeleteTutorRequest_POST(): void
     {
@@ -3102,7 +3168,24 @@ class AdminController extends Controller
         $this->requireAdminPage();
         try {
             $posts = $this->db->GetAllTuitionPostsWithApplications();
+            // শিক্ষার্থীদের "টিচার লাগবে" পোস্ট (টিউশন সার্কুলার) — দেখা আর মুছে ফেলা
+            $tab = input_str('tab', '') === 'students' ? 'students' : 'official';
+            $sq = mb_substr(trim((string)input_str('q', '')), 0, 80); $spage = max(1, (int)input_int('page', 1)); $sper = 20;
+            $stu = []; $stuTotal = 0;
+            try {
+                $this->db->EnsureCircularExtras();
+                $stuTotal = (int)$this->db->scalar('SELECT COUNT(*) FROM `TuitionCircularPosts`');
+                if ($tab === 'students') {
+                    $w = ''; $prm = [];
+                    if ($sq !== '') { $w = ' WHERE (p.`Title` LIKE :q1 OR p.`Content` LIKE :q2 OR p.`PreferredArea` LIKE :q3 OR u.`FullName` LIKE :q4 OR u.`UserName` LIKE :q5)'; foreach (['q1', 'q2', 'q3', 'q4', 'q5'] as $k) $prm[$k] = '%' . $sq . '%'; }
+                    $stuFound = (int)$this->db->scalar('SELECT COUNT(*) FROM `TuitionCircularPosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`' . $w, $prm);
+                    $stu = $this->db->all('SELECT p.`Id`, p.`UserId`, p.`Title`, p.`Content`, p.`PreferredArea`, p.`ClassLevel`, p.`Subjects`, p.`Budget`, p.`CreatedAt`, u.`FullName`, u.`UserName`, u.`Role`
+                        FROM `TuitionCircularPosts` p LEFT JOIN `Users` u ON u.`Id` = p.`UserId`' . $w . ' ORDER BY p.`Id` DESC LIMIT ' . $sper . ' OFFSET ' . (($spage - 1) * $sper), $prm);
+                }
+            } catch (Throwable $e) { error_log('[TuitionPosts students] ' . $e->getMessage()); }
             $this->view(null, $posts, [
+                'Tab' => $tab, 'StudentPosts' => $stu, 'StudentTotal' => $stuTotal, 'SQ' => $sq, 'SPage' => $spage,
+                'SPages' => max(1, (int)ceil(($stuFound ?? 0) / $sper)), 'SFound' => $stuFound ?? 0,
                 'TotalPosts' => count($posts),
                 'OpenPosts' => count(array_filter($posts, fn($p) => $p->Status === 'Open')),
                 'TotalApplications' => $this->db->CountTuitionApplications(),
@@ -3141,6 +3224,8 @@ class AdminController extends Controller
     {
         $errors = [];
         if (trim($m->Title) === '') $errors['Title'] = 'Title is required';
+        if (is_blank($m->SpecialNote)) $errors['SpecialNote'] = 'পোস্টের বিস্তারিত লিখুন';
+        elseif (mb_strlen($m->SpecialNote) > 4000) $errors['SpecialNote'] = 'বিস্তারিত সর্বোচ্চ ৪০০০ অক্ষর';
         $limits = ['Title' => 300, 'StudentGender' => 100, 'StudentClass' => 200, 'Subjects' => 300, 'DaysPerWeek' => 50,
             'PreferredTime' => 200, 'Salary' => 100, 'Area' => 300, 'MediaFee' => 200, 'TuitionCode' => 50,
             'TutorGenderPreference' => 50, 'Status' => 20];
@@ -3167,11 +3252,7 @@ class AdminController extends Controller
         try {
             $m->PostedDate = now();
             $m->Status = is_blank($m->Status) ? 'Open' : $m->Status;
-            if (is_blank($m->TuitionCode)) {
-                $areaPart = is_blank($m->Area) ? 'TUITION' : strtoupper(substr(preg_replace('/[^\p{L}]/u', '', $m->Area), 0, 8));
-                if (is_blank($areaPart)) $areaPart = 'TUITION';
-                $m->TuitionCode = $areaPart . random_int(1000, 9998);
-            }
+            if (is_blank($m->TuitionCode)) $m->TuitionCode = $this->makeTuitionCode($m->Area);
             $this->db->CreateTuitionPost($m);
             tempdata_set('Success', 'Tuition post added successfully!');
             $this->redirectToAction('TuitionPosts');
@@ -3188,6 +3269,13 @@ class AdminController extends Controller
             tempdata_set('Error', 'Tuition post not found.');
             $this->redirectToAction('TuitionPosts');
         }
+        // পুরোনো লম্বা ফর্মের তথ্য লেখার বক্সে বসিয়ে দেওয়া — সেভ করলে সব এক লেখায় থাকবে, কিছু হারাবে না
+        $extra = [];
+        foreach (['TutorGenderPreference' => '👨‍🏫 টিচার', 'StudentGender' => '🧑‍🎓 শিক্ষার্থী', 'StudentClass' => '🎓 ক্লাস', 'Subjects' => '📚 বিষয়',
+                     'Area' => '📍 এলাকা', 'DaysPerWeek' => '📅 সপ্তাহে', 'PreferredTime' => '⏰ সময়', 'Salary' => '💰 বেতন', 'MediaFee' => '🧾 মিডিয়া ফি'] as $f => $lb) {
+            if (!is_blank($p->$f)) $extra[] = $lb . ': ' . ($f === 'Salary' && preg_match('/^[\d,\s]+$/', (string)$p->$f) ? '৳' . trim((string)$p->$f) : trim((string)$p->$f));
+        }
+        if ($extra) $p->SpecialNote = trim(implode("\n", $extra) . (is_blank($p->SpecialNote) ? '' : "\n\n" . trim((string)$p->SpecialNote)));
         $this->view(null, $p);
     }
 

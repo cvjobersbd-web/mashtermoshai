@@ -20,6 +20,7 @@ $examTxt = function ($x, $EX) { if (!$x) return '—'; return ($x['status'] ?? '
 <div class="ky-page">
     <div class="ky-wrap">
         <h1 class="ky-h1"><i class="fas fa-id-card" style="color:#0EA5E9;"></i> Student Verification</h1>
+        <?php if (current_role() === 'User' && account_track((int)current_user_id()) === null): ?><p style="text-align:center;font-size:13px;color:#64748B;margin:-6px 0 14px;"><i class="fas fa-repeat"></i> ভুল বাছাই করেছেন? <a href="/Account/ChooseRole" style="font-weight:700;">টিচার হিসেবে চালিয়ে যান</a></p><?php endif; ?>
         <p class="ky-sub">নতুন অ্যাকাউন্ট প্রথমে <b>User</b> থাকে — এই ফর্ম পূরণ করে অ্যাডমিন Approve করলে অ্যাকাউন্ট <b>Student</b> হয়। শিক্ষার্থী প্যাকেজ কেনার আগে ফর্মটা পূরণ করা বাধ্যতামূলক। Play / Nursery / KG থেকে বিশ্ববিদ্যালয় — সবাই এই ফর্ম পূরণ করতে পারবে। ছোটদের ক্ষেত্রে বাবা / মা পূরণ করে দিন।</p>
 
         <?php if ($teacherAcc && ($st === 'None' || $st === 'Rejected')): ?>

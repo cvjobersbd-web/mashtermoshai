@@ -2204,9 +2204,9 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                         <button class="fb-action-btn fb-apply" onclick="applyTeachPost(<?= (int)$post->UserId ?>)" title="এই টিচারকে টিউশন রিকোয়েস্ট পাঠান">
                                             <i class="fas fa-paper-plane"></i> Apply<?= !$canContactAll ? ' <small>(' . e(bn_num($sApplyLeft)) . 'টা বাকি)</small>' : '' ?>
                                         </button>
-                                    <?php elseif ($sApplyPkg || !$isLoggedIn): ?>
+                                    <?php elseif ($sApplyPkg && $isLoggedIn): /* লগইন না করলে Apply বাটন দেখায় না */ ?>
                                         <a class="fb-action-btn fb-apply-lock" href="<?= e($applyLockUrl) ?>" title="Apply করতে শিক্ষার্থী প্যাকেজ নিন<?= $sApplyPkg ? ' অথবা ৳' . (int)$sApplyPkg->Price . ' দিয়ে ১টা Apply' : '' ?>">
-                                            <i class="fas fa-lock"></i> <?= !$isLoggedIn ? 'লগইন করে Apply' : 'Apply করতে প্যাকেজ / ৳' . (int)($sApplyPkg->Price ?? 20) ?>
+                                            <i class="fas fa-lock"></i> <?= 'Apply করতে প্যাকেজ / ৳' . (int)($sApplyPkg->Price ?? 20) ?>
                                         </a>
                                     <?php endif; ?>
                                 <?php endif; ?>
@@ -3816,7 +3816,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                             <div style="flex:1; min-width:0;">
                                                 <h4 class="tp-name">${escapeHtml(u.fullName)} <i class="fas fa-check-circle" style="color:#2ecc71;"></i></h4>
                                                 <div class="tp-rating-line" style="color:#64748B; font-size:13px;">
-                                                    <span><i class="fas fa-envelope me-1"></i>${escapeHtml(u.email || 'Not provided')}</span>
+                                                    ${u.email ? `<span><i class="fas fa-envelope me-1"></i>${escapeHtml(u.email)}</span>` : ''}
                                                 </div>
                                                 <div style="margin-top:8px;">
                                                     <span style="background:#d4edda; color:#155724; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase;">Verified Teacher</span>

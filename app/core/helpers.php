@@ -1834,7 +1834,7 @@ function admin_action_rule(string $action): string
         $groups = [
             'users' => ['TeacherOverview', 'UserOverview', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock', 'SaveDeviceAuto', 'SaveDeviceMax'],
             'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
-            'tuition' => ['PublicPosts', 'DeletePublicPost', 'TuitionPosts', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
+            'tuition' => ['PublicPosts', 'DeletePublicPost', 'TuitionPosts', 'QuickTuitionPost', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],
             'notices' => ['ManageNotices', 'AddNotice', 'EditNotice', 'DeleteNotice', 'UploadNoticeImage'],
             'edufeed' => ['EduFeed', 'EduFeedStatus', 'ProfilePosts', 'DeleteProfilePost'],

@@ -444,12 +444,37 @@ class Db
         $email = trim((string)$user->Email);
         if ($email === '' || !str_ends_with($email, '@gmail.com')) throw new Exception('Email must end with @gmail.com (all lowercase).');
         if (!preg_match('/^[A-Za-z0-9._%+-]+@gmail\.com$/', $email)) throw new Exception('Invalid Gmail address format.');
-        $this->query("INSERT INTO `Users` (`UserName`, `Password`, `FullName`, `Email`, `Role`, `IsActive`, `CreatedAt`)
-                      VALUES (:u, :p, :f, :e, 'User', 1, :c)", [
+        $this->query("INSERT INTO `Users` (`UserName`, `Password`, `FullName`, `Email`, `MobileNumber`, `Role`, `IsActive`, `CreatedAt`)
+                      VALUES (:u, :p, :f, :e, :m, 'User', 1, :c)", [
             'u' => $user->UserName, 'p' => password_hash((string)$user->Password, PASSWORD_DEFAULT),
-            'f' => $user->FullName, 'e' => $email, 'c' => now(),
+            'f' => $user->FullName, 'e' => $email, 'm' => !empty($user->MobileNumber) ? (string)$user->MobileNumber : null, 'c' => now(),
         ]);
         return true;
+    }
+
+    // ===== সাইনআপে বাছাই করা রোল (শিক্ষার্থী / টিচার) — ড্যাশবোর্ড আসে Verification Approve হলে =====
+    private bool $intendedReady = false;
+    private function EnsureIntendedRoleCol(): void
+    {
+        if ($this->intendedReady) return;
+        $this->intendedReady = true;
+        try { $this->pdo->query('SELECT `IntendedRole` FROM `Users` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `Users` ADD COLUMN `IntendedRole` VARCHAR(10) NULL'); } catch (Throwable $e2) { error_log('[IntendedRole] ' . $e2->getMessage()); } }
+    }
+
+    /** 'student' | 'teacher' | null (এখনো বাছেনি) */
+    public function GetIntendedRole(int $userId): ?string
+    {
+        $this->EnsureIntendedRoleCol();
+        try { $v = (string)$this->scalar('SELECT `IntendedRole` FROM `Users` WHERE `Id` = :i', ['i' => $userId]); } catch (Throwable $e) { return null; }
+        return in_array($v, ['student', 'teacher'], true) ? $v : null;
+    }
+
+    public function SetIntendedRole(int $userId, string $role): void
+    {
+        if (!in_array($role, ['student', 'teacher'], true)) return;
+        $this->EnsureIntendedRoleCol();
+        $this->exec('UPDATE `Users` SET `IntendedRole` = :r WHERE `Id` = :i', ['r' => $role, 'i' => $userId]);
     }
 
     public function DeleteUser(int $userId): bool

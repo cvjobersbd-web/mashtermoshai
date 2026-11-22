@@ -452,6 +452,66 @@ $ViewData['Title'] = 'Tuition Posts - Admin Panel';
         </div>
     <?php endif; ?>
 
+    <?php $tpTab = $ViewBag->Tab ?? 'official'; ?>
+    <style>
+        .tp-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
+        .tp-tabs a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; background: #fff; border: 1px solid #DCE7F0; color: #334155; font-weight: 700; text-decoration: none; font-size: 14px; }
+        .tp-tabs a.on { background: #0F4C5C; border-color: #0F4C5C; color: #fff; }
+        .tp-tabs a b { background: rgba(15, 76, 92, .1); padding: 1px 8px; border-radius: 10px; font-size: 12px; } .tp-tabs a.on b { background: rgba(255, 255, 255, .2); }
+        .sp-card { background: #fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 3px 14px rgba(8, 34, 74, .05); border-left: 4px solid #7C3AED; }
+        .sp-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+        .sp-top h4 { margin: 0 0 4px; font-size: 16px; font-weight: 800; color: #08224A; }
+        .sp-meta { font-size: 12.5px; color: #64748B; } .sp-meta a { color: #0369A1; font-weight: 700; text-decoration: none; }
+        .sp-txt { white-space: pre-line; font-size: 14px; color: #334155; margin: 10px 0 8px; line-height: 1.65; max-height: 160px; overflow: auto; }
+        .sp-tags { display: flex; gap: 6px; flex-wrap: wrap; } .sp-tags span { background: #F1F5F9; border-radius: 8px; padding: 3px 9px; font-size: 12.5px; color: #334155; font-weight: 600; }
+        .sp-act { display: flex; gap: 8px; flex-shrink: 0; }
+        .sp-act a, .sp-act button { border: 1px solid #DCE7F0; background: #fff; border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 700; color: #334155; text-decoration: none; }
+        .sp-act .sp-del { color: #DC2626; border-color: #FCA5A5; }
+        .sp-search { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .sp-search input { flex: 1; min-width: 200px; border: 1.5px solid #DCE7F0; border-radius: 10px; padding: 10px 14px; }
+        .sp-search button { border: none; background: #0F4C5C; color: #fff; border-radius: 10px; padding: 10px 18px; font-weight: 700; }
+        .sp-pg { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; } .sp-pg a { padding: 6px 12px; border-radius: 8px; border: 1px solid #DCE7F0; background: #fff; color: #334155; text-decoration: none; font-weight: 700; } .sp-pg a.on { background: #0F4C5C; color: #fff; }
+        @media (max-width: 600px) { .sp-top { flex-direction: column; } }
+    </style>
+    <div class="tp-tabs">
+        <a href="/Admin/TuitionPosts" class="<?= $tpTab === 'official' ? 'on' : '' ?>"><i class="fas fa-user-shield"></i> অ্যাডমিনের পোস্ট <b><?= (int)($ViewBag->TotalPosts ?? 0) ?></b></a>
+        <a href="/Admin/TuitionPosts?tab=students" class="<?= $tpTab === 'students' ? 'on' : '' ?>"><i class="fas fa-user-graduate"></i> শিক্ষার্থীদের পোস্ট <b><?= (int)($ViewBag->StudentTotal ?? 0) ?></b></a>
+    </div>
+
+    <?php if ($tpTab === 'students'): ?>
+        <?= csrf_field() ?>
+        <form class="sp-search" method="get" action="/Admin/TuitionPosts">
+            <input type="hidden" name="tab" value="students" />
+            <input type="text" name="q" value="<?= e($ViewBag->SQ ?? '') ?>" placeholder="নাম, ইউজারনেম, এলাকা বা লেখা দিয়ে খুঁজুন" />
+            <button type="submit"><i class="fas fa-search"></i> খুঁজুন</button>
+        </form>
+        <?php if (empty($ViewBag->StudentPosts)): ?>
+            <div class="sp-card" style="border-left-color:#CBD5E1;text-align:center;color:#64748B;">কোনো পোস্ট পাওয়া যায়নি।</div>
+        <?php else: foreach ($ViewBag->StudentPosts as $sp):
+            $tags = array_values(array_filter([(string)$sp->PreferredArea, (string)$sp->ClassLevel, (string)$sp->Subjects, $sp->Budget ? '৳' . $sp->Budget : ''])); ?>
+            <div class="sp-card" id="sp-<?= (int)$sp->Id ?>">
+                <div class="sp-top">
+                    <div>
+                        <h4><?= e(($sp->Title ?? '') !== '' ? $sp->Title : 'টিচার লাগবে') ?></h4>
+                        <div class="sp-meta"><i class="fas fa-user"></i> <a href="/Profile/Show/<?= (int)$sp->UserId ?>" target="_blank"><?= e($sp->FullName ?: ('#' . $sp->UserId)) ?></a>
+                            <?= !is_blank($sp->UserName) ? ' · @' . e($sp->UserName) : '' ?> · <i class="far fa-clock"></i> <?= e(fmt_date($sp->CreatedAt, 'd M Y, h:i A')) ?></div>
+                    </div>
+                    <div class="sp-act">
+                        <a href="/Tuition/Circular#circular-post-<?= (int)$sp->Id ?>" target="_blank"><i class="fas fa-eye"></i> দেখুন</a>
+                        <button type="button" class="sp-del" data-id="<?= (int)$sp->Id ?>"><i class="fas fa-trash"></i> ডিলিট</button>
+                    </div>
+                </div>
+                <?php if (!is_blank($sp->Content)): ?><div class="sp-txt"><?= e($sp->Content) ?></div><?php endif; ?>
+                <?php if ($tags): ?><div class="sp-tags"><?php foreach ($tags as $tg): ?><span><?= e($tg) ?></span><?php endforeach; ?></div><?php endif; ?>
+            </div>
+        <?php endforeach; endif; ?>
+        <?php if (($ViewBag->SPages ?? 1) > 1): ?>
+            <div class="sp-pg"><?php for ($i = 1; $i <= $ViewBag->SPages; $i++): ?>
+                <a class="<?= $i === (int)$ViewBag->SPage ? 'on' : '' ?>" href="/Admin/TuitionPosts?tab=students&page=<?= $i ?><?= ($ViewBag->SQ ?? '') !== '' ? '&q=' . rawurlencode($ViewBag->SQ) : '' ?>"><?= $i ?></a>
+            <?php endfor; ?></div>
+        <?php endif; ?>
+    <?php else: ?>
+
     <!-- ======================
          STATS GRID
          ====================== -->
@@ -612,6 +672,7 @@ $ViewData['Title'] = 'Tuition Posts - Admin Panel';
         <?php endforeach; ?>
     <?php endif; ?>
 
+    <?php endif; /* tab */ ?>
 </div>
 
 <!-- ============================================================ -->
@@ -619,6 +680,20 @@ $ViewData['Title'] = 'Tuition Posts - Admin Panel';
 <!-- ============================================================ -->
 <?php section_start('Scripts'); ?>
     <script>
+        // ===== শিক্ষার্থীদের পোস্ট ডিলিট =====
+        document.addEventListener('click', async function (e) {
+            var b = e.target.closest('.sp-del');
+            if (!b || !confirm('এই পোস্টটা মুছে ফেলবেন? পোস্টদাতা নোটিফিকেশন পাবেন।')) return;
+            var fd = new FormData(); fd.append('kind', 'circular'); fd.append('id', b.getAttribute('data-id'));
+            fd.append('__RequestVerificationToken', getToken());
+            b.disabled = true;
+            try {
+                var r = await (await fetch('/Admin/DeletePublicPost', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                if (r.success) { var c = document.getElementById('sp-' + b.getAttribute('data-id')); if (c) c.remove(); }
+                else { alert(r.message || 'মুছা যায়নি'); b.disabled = false; }
+            } catch (err) { alert('মুছা যায়নি — আবার চেষ্টা করুন।'); b.disabled = false; }
+        });
+
         // ===== Anti-Forgery Token Helper =====
         function getToken() {
             const t = document.querySelector('input[name="__RequestVerificationToken"]');

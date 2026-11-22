@@ -468,6 +468,10 @@ $ViewData['Title'] = 'Tutor Requests';
                     <button class="btn-action btn-status" onclick="openStatusModal(<?= (int)$r->Id ?>, <?= e(js((string)$r->Status)) ?>)">
                         <i class="fas fa-edit"></i> Update Status
                     </button>
+                    <?php $cv = AdminController::tutorRequestToPost($r); ?>
+                    <button class="btn-action btn-convert" data-req="<?= (int)$r->Id ?>" data-title="<?= e($cv['title']) ?>" data-body="<?= e($cv['body']) ?>" onclick="openConvert(this)">
+                        <i class="fas fa-wand-magic-sparkles"></i> Convert to Post
+                    </button>
                     <button class="btn-action btn-delete" onclick="deleteRequest(<?= (int)$r->Id ?>, <?= e(js((string)$r->StudentName)) ?>)">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -475,6 +479,43 @@ $ViewData['Title'] = 'Tutor Requests';
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
+</div>
+
+<style>
+    .btn-action.btn-convert { background: linear-gradient(135deg, #7C3AED, #6D28D9); color: #fff; border: none; }
+    .btn-action.btn-convert:hover { background: linear-gradient(135deg, #6D28D9, #5B21B6); color: #fff; }
+    .cv-lbl { font-weight: 700; color: #08224A; font-size: 13px; margin-bottom: 6px; display: block; }
+    .cv-in { width: 100%; border-radius: 10px; padding: 11px 14px; border: 1.5px solid #DCECF5; font-size: 14.5px; }
+    textarea.cv-in { min-height: 300px; line-height: 1.7; resize: vertical; }
+    .cv-tip { font-size: 12.5px; color: #64748B; margin: 6px 0 14px; }
+    .cv-btn { border: none; border-radius: 10px; padding: 10px 18px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; }
+    .cv-copy { background: #E0F2FE; color: #075985; } .cv-pub { background: #16A34A; color: #fff; } .cv-pub:hover { background: #15803D; }
+    .cv-ok { display: none; background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; border-radius: 10px; padding: 10px 14px; margin-top: 4px; font-size: 14px; }
+</style>
+<!-- Convert to Post Modal -->
+<div class="modal fade" id="convertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+            <div class="modal-header" style="background:#6D28D9; color:white; border-radius:16px 16px 0 0;">
+                <h5 class="modal-title"><i class="fas fa-wand-magic-sparkles me-2"></i>Convert to Post</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:22px;">
+                <input type="hidden" id="cvReq" />
+                <label class="cv-lbl" for="cvTitle">শিরোনাম</label>
+                <input type="text" id="cvTitle" class="cv-in" maxlength="300" />
+                <div class="cv-tip">দরকার হলে এখানেই এডিট করুন।</div>
+                <label class="cv-lbl" for="cvBody">পোস্টের লেখা</label>
+                <textarea id="cvBody" class="cv-in" maxlength="4000"></textarea>
+                <div class="cv-tip"><i class="fas fa-shield-halved"></i> অভিভাবকের নাম, মোবাইল আর ইমেইল পোস্টে রাখা হয়নি — নোটে নম্বর / লিংক থাকলে ••• দিয়ে ঢাকা।</div>
+                <div class="cv-ok" id="cvOk"></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid #f0f0f0; padding:14px 22px; gap:8px;">
+                <button type="button" class="cv-btn cv-copy" onclick="copyConvert(this)"><i class="far fa-copy"></i> কপি করুন</button>
+                <button type="button" class="cv-btn cv-pub" id="cvPub" onclick="publishConvert()"><i class="fas fa-paper-plane"></i> Publish করুন</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Status Modal -->
@@ -552,6 +593,42 @@ $ViewData['Title'] = 'Tutor Requests';
                     if (data.success) location.reload();
                 })
                 .catch(() => alert('Error updating status.'));
+        }
+
+        function openConvert(btn) {
+            document.getElementById('cvReq').value = btn.dataset.req;
+            document.getElementById('cvTitle').value = btn.dataset.title;
+            document.getElementById('cvBody').value = btn.dataset.body;
+            var ok = document.getElementById('cvOk'); ok.style.display = 'none'; ok.innerHTML = '';
+            var pb = document.getElementById('cvPub'); pb.disabled = false; pb.innerHTML = '<i class="fas fa-paper-plane"></i> Publish করুন';
+            new bootstrap.Modal(document.getElementById('convertModal')).show();
+        }
+
+        function copyConvert(btn) {
+            var txt = document.getElementById('cvTitle').value.trim() + '\n\n' + document.getElementById('cvBody').value.trim();
+            var done = function () { var h = btn.innerHTML; btn.innerHTML = '<i class="fas fa-check"></i> কপি হয়েছে'; setTimeout(function () { btn.innerHTML = h; }, 1800); };
+            if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+            function fallback() { var t = document.createElement('textarea'); t.value = txt; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) { alert('কপি করা যায়নি — লেখা সিলেক্ট করে কপি করুন।'); } t.remove(); }
+        }
+
+        function publishConvert() {
+            var title = document.getElementById('cvTitle').value.trim(), body = document.getElementById('cvBody').value.trim();
+            if (!title || !body) { alert('শিরোনাম আর লেখা দুটোই লাগবে।'); return; }
+            if (!confirm('পোস্টটা এখনই টিউশন সার্কুলারে Publish করবেন?')) return;
+            var pb = document.getElementById('cvPub'); pb.disabled = true; pb.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publish হচ্ছে...';
+            var fd = new FormData();
+            fd.append('requestId', document.getElementById('cvReq').value);
+            fd.append('title', title); fd.append('body', body);
+            fd.append('__RequestVerificationToken', getToken());
+            fetch('/Admin/QuickTuitionPost', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d.success) { alert(d.message || 'Publish করা যায়নি।'); pb.disabled = false; pb.innerHTML = '<i class="fas fa-paper-plane"></i> Publish করুন'; return; }
+                    var ok = document.getElementById('cvOk');
+                    ok.innerHTML = '<i class="fas fa-circle-check"></i> ' + d.message + ' <a href="' + d.url + '" target="_blank" style="font-weight:700;">পোস্ট দেখুন →</a>';
+                    ok.style.display = 'block'; pb.innerHTML = '<i class="fas fa-check"></i> Publish হয়েছে';
+                })
+                .catch(function () { alert('Publish করা যায়নি — আবার চেষ্টা করুন।'); pb.disabled = false; pb.innerHTML = '<i class="fas fa-paper-plane"></i> Publish করুন'; });
         }
 
         function deleteRequest(id, name) {

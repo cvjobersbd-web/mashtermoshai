@@ -94,6 +94,7 @@ $ViewData['Title'] = 'Become a Tutor';
         <p class="text-center text-muted mb-4">
             Fill in the details below to apply as a tutor. Your application will be reviewed by our admin team.
         </p>
+        <?php if (current_role() === 'User' && account_track((int)current_user_id()) === null): ?><p style="text-align:center;font-size:13px;color:#64748B;margin:-6px 0 14px;"><i class="fas fa-repeat"></i> ভুল বাছাই করেছেন? <a href="/Account/ChooseRole" style="font-weight:700;">শিক্ষার্থী হিসেবে চালিয়ে যান</a></p><?php endif; ?>
 
         <?php if ($ViewBag->Error !== null): ?>
             <div class="alert alert-danger"><?= e($ViewBag->Error) ?></div>

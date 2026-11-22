@@ -67,7 +67,7 @@ $fmtDate = fn($d) => $d ? date('d M Y', strtotime((string)$d)) : '';
             <div class="mp-s <?= $credits !== 0 ? 'on' : 'off' ?>"><span class="ic"><i class="fas fa-pen-to-square"></i></span><div>
                 <small>Tuition Post ক্রেডিট</small>
                 <b><?= $credits === -1 ? 'আনলিমিটেড' : e(bn_num($credits)) . 'টি পোস্ট বাকি' ?></b>
-                <span><?= $credits === 0 ? 'Teacher Needed পোস্ট করতে প্যাকেজ নিন' : 'Tuition Circular-এ পোস্ট করতে পারবেন' ?></span>
+                <span><?= $credits === 0 ? 'পোস্ট করা ফ্রি — টিচারের আবেদন দেখতে প্যাকেজ নিন' : 'Tuition Circular-এ পোস্ট করতে পারবেন' ?></span>
             </div></div>
         <?php endif; ?>
         <?php $apAud = $role === 'Teacher' ? 'TApply' : 'SApply'; $apLeft = db()->GetApplyCredits((int)current_user_id(), $apAud);

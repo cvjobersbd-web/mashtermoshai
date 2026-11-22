@@ -93,6 +93,13 @@ $authImg = $authT['auth_img'];
     .au-eye { position: absolute; right: 8px; width: 36px; height: 36px; border: none; background: none; color: #64748B; cursor: pointer; border-radius: 8px; }
     .au-eye:hover { background: #F1F5F9; }
     .au-fb { display: none; color: #DC2626; font-size: 12.5px; margin-top: 5px; }
+    .au-role { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .au-f .au-role > label { display: block; width: 100%; margin: 0; cursor: pointer; font-weight: 400; }
+    .au-role input { position: absolute; opacity: 0; pointer-events: none; }
+    .au-role span { width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; border: 1.5px solid #DCE7F0; border-radius: 14px; background: #F8FBFF; text-align: center; transition: .15s; }
+    .au-role span i { font-size: 22px; color: #94A3B8; margin-bottom: 3px; } .au-role span b { font-size: 15px; color: var(--au-ink); } .au-role span small { font-size: 12px; color: #64748B; }
+    .au-role input:checked + span { border-color: var(--au-blue); background: #EAF4FF; box-shadow: 0 0 0 3px rgba(22,119,229,.12); } .au-role input:checked + span i { color: var(--au-blue); }
+    .au-role-f.err .au-role span { border-color: #E5484D; }
     .au-in input.is-invalid ~ .au-fb, .au-f .is-invalid + .au-fb { display: block; }
     .au-f.err .au-fb { display: block; }
     .au-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -203,6 +210,15 @@ $authImg = $authT['auth_img'];
                         <!-- ব্রাউজারের সেভ করা পাসওয়ার্ড যেন আসল ঘরে না বসে -->
                         <input type="text" name="fakeUsernameRemembered" autocomplete="off" style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;" tabindex="-1" aria-hidden="true" />
                         <input type="password" name="fakePasswordRemembered" autocomplete="new-password" style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;" tabindex="-1" aria-hidden="true" />
+                        <!-- আপনি কে — শিক্ষার্থী না টিচার (বাধ্যতামূলক) -->
+                        <div class="au-f au-role-f" id="roleField">
+                            <label><?= t('আপনি কে?', 'I am a') ?></label>
+                            <div class="au-role">
+                                <label><input type="radio" name="signupRole" value="student" required /><span><i class="fas fa-user-graduate"></i><b><?= t('শিক্ষার্থী', 'Student') ?></b><small><?= t('টিচার খুঁজব', 'Looking for a tutor') ?></small></span></label>
+                                <label><input type="radio" name="signupRole" value="teacher" /><span><i class="fas fa-chalkboard-teacher"></i><b><?= t('টিচার', 'Teacher') ?></b><small><?= t('পড়াতে চাই', 'I want to teach') ?></small></span></label>
+                            </div>
+                            <div class="au-fb"><?= t('আপনি শিক্ষার্থী না টিচার — একটা বাছাই করুন।', 'Choose whether you are a student or a teacher.') ?></div>
+                        </div>
                         <div class="au-f">
                             <label for="fullName"><?= t('পুরো নাম', 'Full Name') ?></label>
                             <div class="au-in"><i class="far fa-user"></i><input name="fullName" id="fullName" type="text" placeholder="<?= t('আপনার পুরো নাম লিখুন', 'Enter your full name') ?>" autocomplete="off" required /></div>
@@ -217,6 +233,11 @@ $authImg = $authT['auth_img'];
                             <label for="email"><?= t('ইমেইল', 'Email') ?></label>
                             <div class="au-in"><i class="far fa-envelope"></i><input name="email" id="email" type="email" placeholder="<?= t('আপনার ইমেইল লিখুন', 'Enter your email address') ?>" autocomplete="off" required /></div>
                             <div class="au-fb"><?= t('শুধু সঠিক Gmail দেওয়া যাবে (যেমন yourname@gmail.com)।', 'Only a valid Gmail address is allowed (e.g. yourname@gmail.com).') ?></div>
+                        </div>
+                        <div class="au-f">
+                            <label for="regMobile"><span><?= t('মোবাইল নম্বর', 'Mobile Number') ?> <b style="color:#DC2626;" title="<?= t('অবশ্যই দিতে হবে', 'Required') ?>">*</b></span></label>
+                            <div class="au-in"><i class="fas fa-mobile-screen"></i><input name="mobile" id="regMobile" type="tel" inputmode="numeric" maxlength="14" placeholder="<?= t('01XXXXXXXXX', '01XXXXXXXXX') ?>" autocomplete="off" required /></div>
+                            <div class="au-fb"><?= t('সঠিক মোবাইল নম্বর দিন (০১ দিয়ে শুরু, ১১ ডিজিট)।', 'Enter a valid mobile number (11 digits starting with 01).') ?></div>
                         </div>
                         <div class="au-row">
                             <div class="au-f">
@@ -312,12 +333,17 @@ $authImg = $authT['auth_img'];
     function vUser() { var ok = /^[A-Za-z0-9_]{3,20}$/.test(username.value.trim()); setState(username, ok); return ok; }
     function vEmail() { var ok = /^(?=.{6,30}@)[a-z0-9]+(?:\.[a-z0-9]+)*@gmail\.com$/i.test(email.value.trim()); setState(email, ok); return ok; }
     function vPass() { var ok = password.value.length >= 6; setState(password, ok); return ok; }
+    var mobile = document.getElementById('regMobile');
+    function vMob() { var d = mobile.value.replace(/[০-৯]/g, function (c) { return '০১২৩৪৫৬৭৮৯'.indexOf(c); }).replace(/\D/g, ''); if (d.indexOf('880') === 0) d = d.slice(2); var ok = /^01[3-9]\d{8}$/.test(d); setState(mobile, ok); return ok; }
+    function vRole() { var ok = !!rf.querySelector('input[name="signupRole"]:checked'); document.getElementById('roleField').classList.toggle('err', !ok); return ok; }
+    mobile.addEventListener('input', function () { formError.style.display = 'none'; vMob(); fit(); });
+    [].forEach.call(rf.querySelectorAll('input[name="signupRole"]'), function (r) { r.addEventListener('change', function () { vRole(); fit(); }); });
     function vConf() { var ok = confirmPassword.value.length > 0 && confirmPassword.value === password.value; setState(confirmPassword, ok); return ok; }
     [[fullName, vName], [username, vUser], [email, vEmail], [password, function () { vPass(); if (confirmPassword.value) vConf(); }], [confirmPassword, vConf]].forEach(function (p) {
         p[0].addEventListener('input', function () { formError.style.display = 'none'; p[1](); fit(); });
     });
     rf.addEventListener('submit', function (e) {
-        var ok = [vName(), vUser(), vEmail(), vPass(), vConf()].every(Boolean);
+        var ok = [vRole(), vName(), vUser(), vEmail(), vMob(), vPass(), vConf()].every(Boolean);
         if (!ok) { e.preventDefault(); formError.innerHTML = '<i class="fas fa-circle-exclamation"></i><span><?= t('অ্যাকাউন্ট খোলার আগে লাল দাগ দেওয়া ঘরগুলো ঠিক করুন।', 'Please fix the highlighted fields before creating an account.') ?></span>'; formError.style.display = 'flex'; fit(); }
     });
 
