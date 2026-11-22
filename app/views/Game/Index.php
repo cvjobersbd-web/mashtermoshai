@@ -11,6 +11,7 @@ $rs = (int)$ViewBag->ResetIn;
 partial('Game/_Styles');
 ?>
 <div class="gm-page">
+    <?php if (!games_enabled() && is_admin()): ?><div style="background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;border-radius:14px;padding:11px 14px;margin-bottom:14px;font-weight:700;font-size:14px;"><i class="fas fa-eye-slash"></i> গেম এখন বন্ধ — শুধু অ্যাডমিন হিসেবে আপনি দেখছেন। <a href="/Admin/Games">চালু করুন</a></div><?php endif; ?>
     <section class="gm-hero">
         <h1><i class="fas fa-gamepad"></i> <?= t('ব্রেইন গেম', 'Brain Games') ?></h1>
         <p><?= t('মাথা খাটান, সময় বাঁচান, পয়েন্ট জিতুন! যতবার খুশি খেলুন — প্রতিবার নতুন পাজল। আজকের লিডারবোর্ডে নিজের নাম তুলুন।', 'Think fast, save time, win points! Play as often as you like — a fresh puzzle every time.') ?></p>

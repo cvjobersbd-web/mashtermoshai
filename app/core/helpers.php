@@ -1825,6 +1825,16 @@ function admin_permissions(): array
     ];
 }
 
+/** গেম (Zip / Sudoku / Patches) চালু আছে কিনা — Admin → Games থেকে বন্ধ করলে নেভবার থেকে সরে যায় আর পেইজ খোলে না */
+function games_enabled(bool $fresh = false): bool
+{
+    static $v = null;
+    if ($v === null || $fresh) {
+        try { $v = (db()->GetSiteContent(['games_on' => '1'])['games_on'] ?? '1') !== '0'; } catch (Throwable $e) { $v = true; }
+    }
+    return $v;
+}
+
 /** AdminController এর প্রতিটা অ্যাকশন কোন অনুমতির অধীনে — 'always' = সব অ্যাডমিন, 'super' = শুধু Super Admin; তালিকায় না থাকলে 'super' */
 function admin_action_rule(string $action): string
 {
@@ -1844,7 +1854,7 @@ function admin_action_rule(string $action): string
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',
-                'UploadHeroImage', 'SaveContactInfo', 'SaveHeroText', 'SaveAuthPage', 'UploadAuthImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'UploadLogo', 'SaveKeyFeatures'],
+                'UploadHeroImage', 'SaveContactInfo', 'SaveHeroText', 'SaveAuthPage', 'UploadAuthImage', 'UploadTutorSectionImage', 'UploadProfilePromo', 'SaveProfilePromo', 'SaveCircularBanner', 'SaveTuitionOptions', 'Games', 'SaveGames', 'UploadLogo', 'SaveKeyFeatures'],
         ];
         foreach ($groups as $k => $acts) foreach ($acts as $a) $map[$a] = $k;
         // বাকি সব (Admins, ActivityLog, Packages, PaymentMethods, Email, DeleteUser ...) শুধু Super Admin

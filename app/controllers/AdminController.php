@@ -1918,6 +1918,31 @@ class AdminController extends Controller
     // ===== META PIXEL & CONVERSIONS API (শুধু Super Admin) =====
     // ============================================================
     /** GET /Admin/MetaPixel */
+    /** GET /Admin/Games — গেম চালু / বন্ধ আর আজকের হিসাব */
+    public function Games(): void
+    {
+        $this->requireAdminPage();
+        $day = date('Y-m-d'); $st = ['today' => 0, 'players' => 0, 'all' => 0, 'users' => 0]; $top = [];
+        try {
+            $this->db->EnsureGameTables();
+            $st['today'] = (int)$this->db->scalar('SELECT COUNT(*) FROM `GameRounds` WHERE `PlayDay` = :d AND `Solved` = 1', ['d' => $day]);
+            $st['players'] = (int)$this->db->scalar('SELECT COUNT(DISTINCT `UserId`) FROM `GameRounds` WHERE `PlayDay` = :d AND `Solved` = 1', ['d' => $day]);
+            $st['all'] = (int)$this->db->scalar('SELECT COUNT(*) FROM `GameRounds` WHERE `Solved` = 1');
+            $st['users'] = (int)$this->db->scalar('SELECT COUNT(DISTINCT `UserId`) FROM `GameRounds` WHERE `Solved` = 1');
+            $top = $this->db->GameLeaderboard($day, 'all', 10);
+        } catch (Throwable $e) { error_log('[Admin Games] ' . $e->getMessage()); }
+        $this->view(null, null, ['On' => games_enabled(true), 'St' => $st, 'Top' => $top]);
+    }
+
+    /** POST /Admin/SaveGames — enabled=1|0 */
+    public function SaveGames_POST(): void
+    {
+        $this->requireAdminJson();
+        $on = input_bool('enabled');
+        if (!$this->db->SaveSiteContent(['games_on' => $on ? '1' : '0'], $err)) json_response(['success' => false, 'message' => 'সেভ হয়নি: ' . $err]);
+        json_response(['success' => true, 'on' => $on, 'message' => $on ? 'গেম চালু হয়েছে — নেভবারে "গেম" দেখা যাবে।' : 'গেম বন্ধ হয়েছে — নেভবার থেকে সরে গেছে, পেইজও খুলবে না।']);
+    }
+
     public function MetaPixel(): void
     {
         $this->requireAdminPage();

@@ -320,7 +320,7 @@ try {
         'UserOverview' => 'User Overview', 'StudentOverview' => 'Student Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'CouponUsers' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'CourseView' => 'Course Details', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'CouponUsers' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'CourseView' => 'Course Details', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Games' => 'Games', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'ProfilePosts' => 'Profile Posts', 'PublicPosts' => 'পড়াতে চাই ও সার্কুলার পোস্ট', 'PackageDetails' => 'Package Details', 'UserRoles' => 'User Role', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -564,6 +564,13 @@ try {
         <li>
             <a href="/Admin/References" class="<?= in_array($currentAction, ['References', 'Partners', 'Partner'], true) ? 'active' : '' ?>">
                 <i class="fas fa-bullhorn"></i> Reference / Agency
+            </a>
+        </li>
+        <?php endif; ?>
+        <?php if (admin_can(admin_action_rule('Games'))): ?>
+        <li>
+            <a href="/Admin/Games" class="<?= $currentAction === 'Games' ? 'active' : '' ?>">
+                <i class="fas fa-gamepad"></i> Games<?php if (!games_enabled()): ?> <span class="badge-sidebar warning">OFF</span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>

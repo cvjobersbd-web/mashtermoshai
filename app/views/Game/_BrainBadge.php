@@ -1,5 +1,6 @@
 <?php
 /** প্রোফাইলে ব্রেইন স্কোর — $uid, $isOwner */
+if (!games_enabled()) return;
 $bs = null;
 try { $bs = db()->GameBrainScore((int)$uid); } catch (Throwable $e) { $bs = null; }
 if ($bs && $bs->Pct !== null): ?>

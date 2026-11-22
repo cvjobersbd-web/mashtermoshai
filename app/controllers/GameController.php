@@ -11,6 +11,14 @@ require_once APP_ROOT . '/app/core/games.php';
  */
 class GameController extends Controller
 {
+    /** অ্যাডমিন গেম বন্ধ রাখলে — পেইজ খোলে না (অ্যাডমিন নিজে দেখতে পারেন) */
+    private function guard(bool $json = false): void
+    {
+        if (games_enabled() || is_admin()) return;
+        if ($json) json_response(['success' => false, 'message' => 'গেম এখন বন্ধ আছে।']);
+        not_found();
+    }
+
     private function group(?string $role = null): string
     {
         $role ??= (string)current_role();
@@ -25,6 +33,7 @@ class GameController extends Controller
 
     public function Index(): void
     {
+        $this->guard(false);
         $me = current_user_id(); $day = date('Y-m-d');
         $bag = ['Meta' => game_meta(), 'Me' => $me, 'Top' => [], 'Today' => null, 'Brain' => null, 'Streak' => null, 'Vs' => null, 'Best' => [], 'ResetIn' => $this->resetIn()];
         try {
@@ -42,6 +51,7 @@ class GameController extends Controller
 
     public function Play(): void
     {
+        $this->guard(false);
         $game = strtolower((string)($GLOBALS['__route']['id'] ?? input_str('game', '')));
         if (!in_array($game, GAME_LIST, true)) redirect('/Game');
         $level = (string)input_str('level', 'easy');
@@ -56,6 +66,7 @@ class GameController extends Controller
 
     public function New_POST(): void
     {
+        $this->guard(true);
         $game = (string)input_str('game', ''); $level = (string)input_str('level', 'easy');
         if (!in_array($game, GAME_LIST, true) || !in_array($level, GAME_LEVELS, true)) json_response(['success' => false, 'message' => 'ভুল গেম।']);
         $me = current_user_id();
@@ -76,6 +87,7 @@ class GameController extends Controller
 
     public function Submit_POST(): void
     {
+        $this->guard(true);
         $id = (int)input_int('id', 0); $token = (string)input_str('token', '');
         $r = $id > 0 ? $this->db->GameGetRound($id) : null;
         $me = current_user_id();
@@ -113,6 +125,7 @@ class GameController extends Controller
 
     public function Leaderboard(): void
     {
+        $this->guard(false);
         $tab = (string)input_str('tab', 'all');
         if (!in_array($tab, ['all', 'student', 'teacher'], true)) $tab = 'all';
         $me = current_user_id(); $day = date('Y-m-d');
