@@ -84,7 +84,6 @@ $radio = function (string $name, string $val, string $label, bool $on) {
             </div>
             <div class="tf-chips" style="margin-top:8px;">
                 <label class="tf-chip"><input type="checkbox" name="prem" value="1"<?= $f['prem'] ? ' checked' : '' ?> /><span>👑 শুধু Premium</span></label>
-                <label class="tf-chip"><input type="checkbox" name="photo" value="1"<?= $f['photo'] ? ' checked' : '' ?> /><span>🖼️ ছবিসহ প্রোফাইল</span></label>
             </div>
         </div>
 

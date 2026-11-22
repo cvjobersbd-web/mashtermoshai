@@ -211,7 +211,7 @@ function tf_read(): array
         'uni' => $arr('uni', array_keys(tf_unis())), 'uq' => mb_substr(trim((string)($_GET['uq'] ?? '')), 0, 60),
         'gender' => in_array($gender, ['male', 'female'], true) ? $gender : '', 'exp' => isset(TF_EXP[$exp]) ? $exp : '',
         'mode' => in_array($mode, ['home', 'online'], true) ? $mode : '', 'grp' => $arr('grp', array_keys(TF_GROUPS)), 'rel' => $arr('rel', array_keys(TF_RELIGION)),
-        'prem' => !empty($_GET['prem']), 'photo' => !empty($_GET['photo']), 'sort' => isset(TF_SORTS[$sort]) ? $sort : 'rec',
+        'prem' => !empty($_GET['prem']), 'photo' => false, 'sort' => isset(TF_SORTS[$sort]) ? $sort : 'rec',   // "ছবিসহ প্রোফাইল" ফিল্টার বাদ
     ];
 }
 

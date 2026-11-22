@@ -19,7 +19,7 @@ $qs = function (array $over = [], ?array $drop = null) use ($type, $F) {
     $q = ['type' => $type !== 'all' ? $type : null];
     foreach (['dist', 'area', 'cls', 'sub', 'med', 'sal', 'slot', 'day', 'uni', 'grp', 'rel'] as $k) $q[$k] = $F[$k] ?: null;
     foreach (['aq', 'uq', 'gender', 'exp', 'mode'] as $k) $q[$k] = $F[$k] !== '' ? $F[$k] : null;
-    $q['prem'] = $F['prem'] ? 1 : null; $q['photo'] = $F['photo'] ? 1 : null; $q['sort'] = $F['sort'] !== 'rec' ? $F['sort'] : null;
+    $q['prem'] = $F['prem'] ? 1 : null; $q['sort'] = $F['sort'] !== 'rec' ? $F['sort'] : null;
     if ($drop) { [$dk, $dv] = $drop; if (is_array($q[$dk] ?? null)) { $q[$dk] = array_values(array_diff($q[$dk], [$dv])) ?: null; } else $q[$dk] = null; }
     $q = array_merge($q, $over);
     $q = array_filter($q, fn($v) => $v !== null && $v !== '');
@@ -39,7 +39,7 @@ if ($F['gender'] !== '') $pills[] = [$F['gender'] === 'male' ? '👨 পুর�
 if ($F['exp'] !== '') $pills[] = ['⭐ ' . TF_EXP[$F['exp']], $qs([], ['exp', ''])];
 if ($F['mode'] !== '') $pills[] = [$F['mode'] === 'home' ? '🏠 বাসায় গিয়ে' : '💻 অনলাইনে', $qs([], ['mode', ''])];
 if ($F['prem']) $pills[] = ['👑 Premium', $qs([], ['prem', ''])];
-if ($F['photo']) $pills[] = ['🖼️ ছবিসহ', $qs([], ['photo', ''])];
+
 // পেজ নম্বর: 1 2 3 4 5 … শেষ
 $nums = [];
 if ($pages <= 7) $nums = range(1, $pages);
