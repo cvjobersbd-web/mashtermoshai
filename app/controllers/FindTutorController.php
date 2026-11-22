@@ -39,13 +39,21 @@ class FindTutorController extends Controller
     public function GetTeacherProfile(): void
     {
         $user = $this->db->GetUserById(input_int('userId', 0));
-        if (!$user) json_response(['success' => false, 'message' => 'User not found']);
-        $keys = ['Id', 'FullName', 'Email', 'MobileNumber', 'Gender', 'AgeRange', 'EducationLevel', 'ExamDegreeTitle',
-            'InstitutionName', 'PassingYear', 'Country', 'StreetAddress', 'PermanentAddress', 'YearsOfExperience', 'CvLink',
-            'GithubProfile', 'PortfolioLink', 'LinkedInProfile', 'ProfileImageLink'];
+        $me = current_user_id();
+        $full = is_admin() || ($me !== null && $me === (int)($user->Id ?? 0));   // অ্যাডমিন আর টিচার নিজে সব দেখেন
+        // শুধু টিচারের প্রোফাইল দেখা যায় — শিক্ষার্থী / অন্য ইউজারের তথ্য এখান থেকে না
+        if (!$user || (!$full && $user->Role !== 'Teacher')) json_response(['success' => false, 'message' => 'User not found']);
+        // যোগাযোগের তথ্য (ইমেইল, মোবাইল, ঠিকানা, লিংক) কাউকে দেখানো হয় না — যোগাযোগ শুধু রিকোয়েস্ট / চ্যাটে
+        $keys = $full
+            ? ['Id', 'FullName', 'Email', 'MobileNumber', 'Gender', 'AgeRange', 'EducationLevel', 'ExamDegreeTitle',
+                'InstitutionName', 'PassingYear', 'Country', 'StreetAddress', 'PermanentAddress', 'YearsOfExperience', 'CvLink',
+                'GithubProfile', 'PortfolioLink', 'LinkedInProfile', 'ProfileImageLink']
+            : ['Id', 'FullName', 'Gender', 'AgeRange', 'EducationLevel', 'ExamDegreeTitle',
+                'InstitutionName', 'PassingYear', 'Country', 'YearsOfExperience', 'ProfileImageLink'];
         $out = [];
         foreach ($keys as $k) $out[$k] = $user->$k;
-        $me = current_user_id();
+        // প্যাকেজ ছাড়া দর্শক টিচারের আসল ছবি পান না — ছোট থাম্বনেইল
+        if (!$full && !viewer_sees_teacher_photos() && !empty($out['ProfileImageLink'])) $out['ProfileImageLink'] = teacher_thumb_url((int)$user->Id, $out['ProfileImageLink']) ?: null;
         $out['IsSaved'] = $me !== null && $user->Role === 'Teacher' ? $this->db->IsSaved($me, 'tutor', (int)$user->Id) : false;
         $out['CanSave'] = $me !== null && current_role() !== 'Admin' && $user->Role === 'Teacher' && $me !== (int)$user->Id;
         json_camel(['success' => true, 'user' => $out]);

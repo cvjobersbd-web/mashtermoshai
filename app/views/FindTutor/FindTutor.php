@@ -3816,7 +3816,7 @@ $ftLogin = '/Account/Login?returnUrl=' . rawurlencode('/FindTutor');
                                             <div style="flex:1; min-width:0;">
                                                 <h4 class="tp-name">${escapeHtml(u.fullName)} <i class="fas fa-check-circle" style="color:#2ecc71;"></i></h4>
                                                 <div class="tp-rating-line" style="color:#64748B; font-size:13px;">
-                                                    <span><i class="fas fa-envelope me-1"></i>${escapeHtml(u.email || 'Not provided')}</span>
+                                                    ${u.email ? `<span><i class="fas fa-envelope me-1"></i>${escapeHtml(u.email)}</span>` : ''}
                                                 </div>
                                                 <div style="margin-top:8px;">
                                                     <span style="background:#d4edda; color:#155724; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase;">Verified Teacher</span>
