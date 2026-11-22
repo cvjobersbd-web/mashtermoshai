@@ -43,11 +43,19 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
     .tl-findrow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 44px auto 6px; max-width: 600px; }
     .tl-findrow .tl-find { margin: 0; flex: 1; min-width: 0; max-width: none; }
     .tl-findrow .tl-find input { width: 100%; }
-    .tl-fbtn { flex-shrink: 0; height: 50px; min-width: 50px; padding: 0 18px; border-radius: 999px; border: none; background: linear-gradient(135deg, #00CFFF, #0284C7); color: #fff; font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 6px 18px rgba(2,132,199,.3); }
+    .tl-fbtn { flex-shrink: 0; height: 50px; min-width: 50px; padding: 0 18px; border-radius: 999px; border: none; background: linear-gradient(135deg, #00CFFF, #0284C7); color: #fff; font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(2,132,199,.25); line-height: 1; }
+    .tl-fbtn i { font-size: 17px; margin: 0; }
     .tl-fbtn:hover { filter: brightness(1.05); }
     .tl-fhint { text-align: center; font-size: 13px; color: #64748B; margin: 4px 0 10px; }
     .tl-fhint i { color: #00B5E0; } .tl-fhint button { border: none; background: none; color: #0369A1; font-weight: 700; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-    @media (max-width: 520px) { .tl-fbtn span { display: none; } .tl-fbtn { padding: 0; width: 50px; } }
+    @media (max-width: 520px) {
+        .tl-findrow { gap: 8px; margin-top: 30px; }
+        .tl-findrow .tl-find { height: 48px; padding: 4px 4px 4px 14px; }
+        .tl-findrow .tl-find button { height: 40px; padding: 0 16px; }
+        .tl-fbtn { width: 48px; min-width: 48px; height: 48px; padding: 0; border-radius: 50%; }
+        .tl-fbtn span { display: none; }
+        .tl-fhint { font-size: 12.5px; line-height: 1.6; padding: 0 6px; }
+    }
     .tl-find { margin: 44px auto 10px; max-width: 520px; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 5px 5px 5px 18px; box-shadow: 0 2px 12px rgba(15,27,45,.08); }
     .tl-find i { color: #6B7280; }
     .tl-find input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14px; font-family: inherit; background: transparent; padding: 8px 0; }
@@ -145,6 +153,7 @@ $ViewData['Description'] = t('মাষ্টার মশাই এর অন�
     </div>
 </div>
 
+<script>(function () { var i = document.querySelector('.tl-find input[name="tid"]'); if (i && window.innerWidth < 520) i.placeholder = 'Tutor ID বা নাম'; })();</script>
 <?php partial('Tutors/_FilterPanel', ['f' => $ViewBag->F, 'counts' => $ViewBag->Counts, 'areaCounts' => [], 'type' => 'all', 'total' => (int)$ViewBag->AllCount]); ?>
 <?php section_start('Scripts'); ?>
 <script>
