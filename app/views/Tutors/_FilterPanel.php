@@ -158,7 +158,7 @@ $radio = function (string $name, string $val, string $label, bool $on) {
     </form>
     <div class="tf-f">
         <button type="button" class="tf-reset" id="tfReset"><i class="fas fa-rotate-left"></i> রিসেট</button>
-        <button type="submit" form="tfForm" class="tf-go" id="tfGo"><span id="tfN"><?= bn_num($total) ?></span> জন টিচার দেখুন</button>
+        <button type="submit" form="tfForm" class="tf-go" id="tfGo"><i class="fas fa-magnifying-glass"></i> টিচার দেখুন</button>
     </div>
 </aside>
 
@@ -187,7 +187,7 @@ $radio = function (string $name, string $val, string $label, bool $on) {
             var my = ++seq; go.disabled = true;
             fetch('/Tutors/Count?' + query().toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) { return r.json(); }).then(function (d) {
                 if (my !== seq || !d.success) return;
-                document.getElementById('tfN').textContent = bn(d.n); go.disabled = false;
+                go.disabled = false;
                 // প্রতিটা অপশনের সংখ্যা
                 Object.keys(d.counts).forEach(function (g) { Object.keys(d.counts[g]).forEach(function (v) {
                     var em = pn.querySelector('em[data-c="' + CSS.escape(g + '|' + v) + '"]'); if (!em) return;
