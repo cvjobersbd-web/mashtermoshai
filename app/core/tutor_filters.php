@@ -391,3 +391,30 @@ function tf_count_for(array $facets, array $q): int
     $n = 0; foreach ($facets as $x) if (tf_match($x, $f)) $n++;
     return $n;
 }
+
+/**
+ * Categories পেইজে ক্যাটাগরির মতো একই কার্ডে — ব্রিটিশ কারিকুলাম আর জাতীয় শিক্ষাক্রম (বাংলা মিডিয়াম / ইংলিশ ভার্সন)
+ * প্রতিটা কার্ড: [নাম, আইকন, টিউটর ফিল্টার]
+ */
+function tf_curriculum_groups(): array
+{
+    $em = ['med' => ['English Medium']]; $bn = ['med' => ['Bangla Medium']]; $ev = ['med' => ['English Version']];
+    return [
+        ['id' => 'british', 'name' => 'British Curriculum (English Medium)', 'items' => [
+            ['Playgroup – KG', 'fa-shapes', $em + ['cls' => ['early']]], ['Primary (Class 1 – 5)', 'fa-pencil', $em + ['cls' => ['early']]],
+            ['Junior (Class 6 – 8)', 'fa-book-open', $em + ['cls' => ['c68']]], ['O Level / IGCSE', 'fa-award', $em + ['cls' => ['olevel']]],
+            ['A Level (AS)', 'fa-medal', $em + ['cls' => ['olevel']]], ['A Level (A2)', 'fa-trophy', $em + ['cls' => ['olevel']]],
+            ['Cambridge (CAIE)', 'fa-building-columns', $em], ['Pearson Edexcel', 'fa-globe', $em],
+        ]],
+        ['id' => 'national', 'name' => 'National Curriculum — Bangla Medium', 'items' => [
+            ['প্রাক-প্রাথমিক (প্লে – কেজি)', 'fa-child', $bn + ['cls' => ['early']]], ['প্রাথমিক (ক্লাস ১ – ৫)', 'fa-pencil', $bn + ['cls' => ['early']]],
+            ['নিম্ন মাধ্যমিক (ক্লাস ৬ – ৮)', 'fa-book', $bn + ['cls' => ['c68']]], ['মাধ্যমিক — SSC (ক্লাস ৯ – ১০)', 'fa-flask', $bn + ['cls' => ['ssc']]],
+            ['উচ্চ মাধ্যমিক — HSC (ক্লাস ১১ – ১২)', 'fa-atom', $bn + ['cls' => ['hsc']]], ['ভর্তি প্রস্তুতি', 'fa-building-columns', ['cls' => ['adm']]],
+        ]],
+        ['id' => 'version', 'name' => 'National Curriculum — English Version', 'items' => [
+            ['Pre-Primary (Play – KG)', 'fa-child', $ev + ['cls' => ['early']]], ['Primary (Class 1 – 5)', 'fa-pencil', $ev + ['cls' => ['early']]],
+            ['Junior Secondary (Class 6 – 8)', 'fa-book', $ev + ['cls' => ['c68']]], ['SSC (Class 9 – 10)', 'fa-flask', $ev + ['cls' => ['ssc']]],
+            ['HSC (Class 11 – 12)', 'fa-atom', $ev + ['cls' => ['hsc']]],
+        ]],
+    ];
+}

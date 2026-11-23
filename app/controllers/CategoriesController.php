@@ -9,17 +9,7 @@ class CategoriesController extends Controller
     public function Index(): void
     {
         $groups = array_values(array_filter($this->db->GetCategoryGroups(true), fn($g) => $g->Categories));
-        // শিক্ষাব্যবস্থা অনুযায়ী (জাতীয় / ব্রিটিশ / মাদ্রাসা) — প্রতিটা ধাপে কতজন টিউটর
-        $cur = tf_curricula();
-        try {
-            $facets = tf_facets($this->db, $this->db->GetTutorDirectory());
-            foreach ($cur as $k => $c) {
-                foreach ($c['stages'] as $i => $st) $cur[$k]['stages'][$i][3] = tf_count_for($facets, $st[2]);
-                $cur[$k]['subjects'] = array_map(fn($s) => [$s, tf_count_for($facets, ['med' => $c['stages'][0][2]['med'] ?? [], 'sub' => [$s]])], $c['subjects']);
-                $cur[$k]['total'] = tf_count_for($facets, ['med' => $c['stages'][0][2]['med'] ?? []]);
-            }
-        } catch (Throwable $e) { error_log('[Categories curricula] ' . $e->getMessage()); }
-        $this->view(null, $groups, ['Curricula' => $cur]);
+        $this->view(null, $groups);
     }
 
     public function Details(): void
