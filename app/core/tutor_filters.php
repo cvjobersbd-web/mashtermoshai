@@ -74,7 +74,7 @@ function tf_class_groups(): array
 const TF_SALARY = ['lt3' => ['৳৩,০০০ এর কম', 0, 2999], '3to5' => ['৳৩,০০০ – ৫,০০০', 3000, 5000], '5to8' => ['৳৫,০০০ – ৮,০০০', 5001, 8000], 'gt8' => ['৳৮,০০০ এর বেশি', 8001, PHP_INT_MAX]];
 const TF_SLOTS = ['morning' => ['সকাল', '৬টা–১২টা', 360, 720], 'noon' => ['দুপুর', '১২টা–৩টা', 720, 900], 'afternoon' => ['বিকাল', '৩টা–৬টা', 900, 1080], 'evening' => ['সন্ধ্যা', '৬টা–৯টা', 1080, 1260], 'night' => ['রাত', '৯টা–১২টা', 1260, 1440]];
 const TF_DAYS = ['Saturday' => 'শনি', 'Sunday' => 'রবি', 'Monday' => 'সোম', 'Tuesday' => 'মঙ্গল', 'Wednesday' => 'বুধ', 'Thursday' => 'বৃহঃ', 'Friday' => 'শুক্র'];
-const TF_MEDIUMS = ['Bangla Medium' => 'বাংলা মিডিয়াম', 'English Version' => 'ইংলিশ ভার্সন', 'English Medium' => 'ইংলিশ মিডিয়াম', 'Madrasa' => 'মাদ্রাসা'];
+const TF_MEDIUMS = ['Bangla Medium' => 'বাংলা মিডিয়াম', 'English Medium' => 'ইংলিশ মিডিয়াম', 'British Curriculum' => 'ব্রিটিশ কারিকুলাম', 'Madrasa' => 'মাদ্রাসা', 'English Version' => 'ইংলিশ ভার্সন'];
 const TF_EXP = ['new' => 'নতুন (১ বছরের কম)', 'mid' => '১ – ৩ বছর', 'pro' => '৩ বছরের বেশি'];
 const TF_GROUPS = ['sci' => 'বিজ্ঞান', 'com' => 'বাণিজ্য', 'arts' => 'মানবিক'];
 const TF_RELIGION = ['Islam' => 'ইসলাম', 'Hinduism' => 'হিন্দু', 'Christianity' => 'খ্রিস্টান', 'Buddhism' => 'বৌদ্ধ', 'Other' => 'অন্যান্য'];
@@ -316,7 +316,7 @@ function tf_counts(array $facets, array $f): array
         'grp' => fn($x, $v) => $x['grp'] === $v,
         'rel' => fn($x, $v) => $x['rel'] === $v,
     ];
-    $vals = ['dist' => array_keys(tuition_options()['locations'] ?? []), 'cls' => array_keys(tf_class_groups()), 'sub' => tuition_options()['subjects'] ?? default_tuition_subjects(),
+    $vals = ['dist' => array_keys(tuition_options()['locations'] ?? []), 'cls' => array_keys(tf_class_groups()), 'sub' => td_all_subjects(),
         'med' => array_keys(TF_MEDIUMS), 'sal' => array_keys(TF_SALARY), 'slot' => array_keys(TF_SLOTS), 'day' => array_keys(TF_DAYS), 'uni' => array_keys(tf_unis()), 'grp' => array_keys(TF_GROUPS), 'rel' => array_keys(TF_RELIGION)];
     foreach ($groups as $g => $fn) {
         $base = array_filter($facets, fn($x) => tf_match($x, $f, $g));
@@ -398,7 +398,7 @@ function tf_count_for(array $facets, array $q): int
  */
 function tf_curriculum_groups(): array
 {
-    $em = ['med' => ['English Medium']]; $bn = ['med' => ['Bangla Medium']]; $ev = ['med' => ['English Version']];
+    $em = ['med' => ['English Medium', 'British Curriculum']]; $bn = ['med' => ['Bangla Medium']]; $ev = ['med' => ['English Version']];
     return [
         ['id' => 'british', 'name' => 'British Curriculum', 'items' => [
             ['Playgroup – KG', 'fa-shapes', $em + ['cls' => ['early']]], ['Primary (Class 1 – 5)', 'fa-pencil', $em + ['cls' => ['early']]],

@@ -28,7 +28,7 @@ trait TeacherDetailsData
         return $f;
     }
 
-    public const TD_MEDIUMS = ['Bangla Medium', 'English Medium', 'English Version', 'Madrasa'];
+    public const TD_MEDIUMS = ['Bangla Medium', 'English Medium', 'British Curriculum', 'Madrasa'];   // আগের 'English Version' বাছাই করা থাকলে সেটাও দেখায়
     public const TD_METHODS = ['Home Tutoring', 'Online Tutoring', 'Batch Tutoring'];
     public const TD_DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -48,6 +48,12 @@ trait TeacherDetailsData
     public static function cleanTeacherDetails(array $in): array
     {
         $out = [];
+        // জন্মতারিখ তিন ঘরে আসে (দিন / মাস বাছাই + সাল টাইপ) — Y-m-d বানানো
+        if (array_key_exists('dobY', $in)) {
+            $y = (int)preg_replace('/\D/', '', strtr((string)$in['dobY'], ['০' => 0, '১' => 1, '২' => 2, '৩' => 3, '৪' => 4, '৫' => 5, '৬' => 6, '৭' => 7, '৮' => 8, '৯' => 9]));
+            $m = (int)($in['dobM'] ?? 0); $dd = (int)($in['dobD'] ?? 0);
+            $in['dob'] = $y >= 1940 && $y <= (int)date('Y') - 10 && checkdate($m, $dd, $y) ? sprintf('%04d-%02d-%02d', $y, $m, $dd) : '';
+        }
         foreach (self::teacherDetailFields() as $k => [$type, $max]) {
             $v = $in[$k] ?? '';
             if ($type === 'list') {

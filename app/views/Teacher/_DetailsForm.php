@@ -31,7 +31,23 @@ $eduSel = function (string $name, array $list, string $cur, string $ph) {
 };
 // আগে বাছাই করা কিন্তু তালিকায় নেই এমন বিষয় / ক্লাস (পুরোনো তথ্য) হারিয়ে না যায়
 $classList = array_values(array_unique(array_merge($opts['classes'], $d['classes'])));
-$subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subjects'])));
+// মিডিয়াম অনুযায়ী বিষয়ের গ্রুপ — যে মিডিয়াম বাছাই করবে শুধু তার বিষয় দেখায়; সাধারণ (+ অ্যাডমিনের যোগ করা / আগের বাছাই করা অন্য বিষয়) সবসময়
+$medList = array_values(array_unique(array_merge(Db::TD_MEDIUMS, $d['mediums'])));
+$sGroups = td_subject_groups();
+$inGroup = [];
+foreach ($sGroups as $list) foreach ($list as $x) $inGroup[mb_strtolower($x)] = true;
+$sOther = $sGroups['common'];
+foreach (array_merge($opts['subjects'], $d['subjects']) as $x) if (!isset($inGroup[mb_strtolower($x)])) { $sOther[] = $x; $inGroup[mb_strtolower($x)] = true; }
+$selSub = array_map('mb_strtolower', $d['subjects']);
+$medBn = ['Bangla Medium' => 'বাংলা মিডিয়ামের বিষয়', 'English Medium' => 'ইংলিশ মিডিয়ামের বিষয়', 'British Curriculum' => 'British Curriculum (O / A Level) এর বিষয়', 'Madrasa' => 'মাদ্রাসার বিষয়'];
+$subChips = function (array $list) use ($selSub) {
+    $o = '';
+    foreach ($list as $v) {
+        $on = in_array(mb_strtolower($v), $selSub, true);
+        $o .= '<label class="td-chip' . ($on ? ' on' : '') . '"><input type="checkbox" name="td[subjects][]" value="' . e($v) . '"' . ($on ? ' checked' : '') . ' /> ' . e($v) . '</label>';
+    }
+    return $o;
+};
 ?>
 <style>
     .la-box { border: 1.5px solid #DCE7F0; border-radius: 14px; padding: 12px; background: #FBFDFF; }
@@ -68,6 +84,13 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
     .td-edu input { font-size: 13px; padding: 7px 9px; }
     .td-edu tr.edu-off td { opacity: .45; } .td-edu .edu-na { display: none; font-weight: 600; color: #94A3B8; font-size: 11px; margin-left: 6px; }
     .td-edu tr.edu-off .edu-na { display: inline; }
+    .td-subs { border: 1px solid #E5ECF3; border-radius: 12px; padding: 10px 12px; max-height: 420px; overflow-y: auto; }
+    .td-subs-hint { font-size: 12.5px; color: #64748B; margin: 0 0 8px; }
+    .td-sg + .td-sg { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #E2E8F0; }
+    .td-sg-h { font-size: 12.5px; font-weight: 700; color: #0369A1; margin-bottom: 7px; }
+    .td-sg[hidden] { display: none; }
+    .td-dob { display: grid; grid-template-columns: 70px 84px 1fr; gap: 6px; }
+    .td-dob .form-select { padding-right: 22px; background-position: right 6px center; }
     .td-private { font-size: 12.5px; color: #92400E; background: #FEF3C7; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
     @media (max-width: 760px) {
         .td-edu, .td-edu tbody, .td-edu tr, .td-edu td { display: block; width: 100%; }
@@ -128,9 +151,16 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
             </div></div>
         <script>window.TD_AREAS = <?= json_encode($areaMap, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
     </div>
-    <div class="mb-3"><label class="form-label d-block">Preferred Tutoring Category (Medium)</label><div class="td-chips"><?= $chk('mediums', Db::TD_MEDIUMS, $d['mediums']) ?></div></div>
+    <div class="mb-3"><label class="form-label d-block">Preferred Tutoring Category (Medium)</label><div class="td-chips" id="tdMeds"><?= $chk('mediums', $medList, $d['mediums']) ?></div></div>
     <div class="mb-3"><label class="form-label d-block">Preferred Classes & Courses <?= $req ?></label><div class="td-chips scroll"><?= $chk('classes', $classList, $d['classes']) ?></div></div>
-    <div class="mb-3"><label class="form-label d-block">Preferred Subjects <?= $req ?></label><div class="td-chips scroll"><?= $chk('subjects', $subjList, $d['subjects']) ?></div></div>
+    <div class="mb-3"><label class="form-label d-block">Preferred Subjects <?= $req ?></label>
+        <div class="td-subs" id="tdSubs">
+            <p class="td-subs-hint" id="tdSubHint"><i class="fas fa-circle-info"></i> উপরে Medium বাছাই করলে শুধু সেই মিডিয়ামের বিষয় দেখাবে।</p>
+            <?php foreach (Db::TD_MEDIUMS as $m): if (empty($sGroups[$m])) continue; ?>
+                <div class="td-sg" data-med="<?= e($m) ?>"><div class="td-sg-h"><?= e($medBn[$m] ?? $m) ?></div><div class="td-chips"><?= $subChips($sGroups[$m]) ?></div></div>
+            <?php endforeach; ?>
+            <div class="td-sg" data-med=""><div class="td-sg-h">সাধারণ / অন্যান্য</div><div class="td-chips"><?= $subChips($sOther) ?></div></div>
+        </div></div>
     <div class="mb-3"><label class="form-label d-block">Preferred Tutoring Method <?= $req ?></label><div class="td-chips"><?= $chk('methods', Db::TD_METHODS, $d['methods']) ?></div></div>
     <div class="mb-3"><label class="form-label d-block">Availability Days <?= $req ?></label><div class="td-chips"><?= $chk('days', Db::TD_DAYS, $d['days']) ?></div></div>
     <div class="row">
@@ -143,7 +173,7 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
 
 <div class="td-sec">
     <h4><i class="fas fa-graduation-cap"></i> Educational Information</h4>
-    <p class="hint"><b>বাধ্যতামূলক</b> — SSC থেকে শুরু করে যতটুকু পড়েছেন। এখনো শেষ না হলে সালের ঘরে <b>Running</b> দিন: SSC পড়ছেন → SSC তে Running · HSC পড়ছেন → SSC এর রেজাল্ট + HSC তে Running · অনার্স / ডিগ্রি পড়ছেন → SSC, HSC এর রেজাল্ট + Graduation এ Running (বা কত বর্ষ)। Masters ঐচ্ছিক।</p>
+    <p class="hint"><b>বাধ্যতামূলক</b> — SSC থেকে শুরু করে যতটুকু পড়েছেন। এখনো শেষ না হলে সালের ঘরে <b>Running</b> দিন: SSC পড়ছেন → SSC তে Running · HSC পড়ছেন → SSC এর রেজাল্ট + HSC তে Running · অনার্স / ডিগ্রি / ডিপ্লোমা পড়ছেন → SSC, HSC এর রেজাল্ট + Graduation এ Running (বা কত বর্ষ)। Graduation আর Masters ঐচ্ছিক — না থাকলে খালি রাখুন।</p>
     <div style="overflow-x:auto;">
         <table class="td-edu">
             <thead><tr><th></th><th>Exam Title</th><th>Institute</th><th>Board</th><th>Group</th><th>Year</th><th>GPA</th></tr></thead>
@@ -172,7 +202,7 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
             <tbody>
                 <?php foreach (['grad' => ['Graduation / Diploma', 'BSc / BA / Diploma'], 'post' => ['Postgraduate / Masters', 'MSc / MA']] as $k => [$lbl, $ph]): ?>
                     <tr data-edu="<?= $k ?>">
-                        <td><?= e($lbl) ?><?= $k !== 'post' ? ' <span style="color:#e74c3c">*</span>' : '' ?><small class="edu-na">প্রযোজ্য নয়</small></td>
+                        <td><?= e($lbl) ?><small class="edu-na">প্রযোজ্য নয়</small></td>
                         <td data-l="Exam Title"><input name="td[<?= $k ?>Title]" class="form-control" maxlength="40" value="<?= e($d[$k . 'Title']) ?>" placeholder="<?= $ph ?>" /></td>
                         <td data-l="Institute"><input name="td[<?= $k ?>Institute]" class="form-control" maxlength="150" value="<?= e($d[$k . 'Institute']) ?>" /></td>
                         <td data-l="Study Type"><input name="td[<?= $k ?>StudyType]" class="form-control" maxlength="40" value="<?= e($d[$k . 'StudyType']) ?>" placeholder="Engineering" /></td>
@@ -226,7 +256,13 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
         <div class="col-6 col-md-4 mb-3"><label class="form-label">Blood Group</label><?= $sel('bloodGroup', ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], $d['bloodGroup'], 'বাছাই করুন') ?></div>
         <div class="col-6 col-md-4 mb-3"><label class="form-label">Religion</label><?= $sel('religion', ['Islam', 'Hinduism', 'Christianity', 'Buddhism', 'Other'], $d['religion'], 'বাছাই করুন') ?></div>
         <div class="col-6 col-md-4 mb-3"><label class="form-label">Nationality</label><input name="td[nationality]" class="form-control" maxlength="40" value="<?= e($d['nationality'] !== '' ? $d['nationality'] : 'Bangladeshi') ?>" /></div>
-        <div class="col-6 col-md-4 mb-3"><label class="form-label">Date of Birth</label><input type="date" name="td[dob]" class="form-control" value="<?= e($d['dob']) ?>" max="<?= date('Y-m-d', strtotime('-14 years')) ?>" /></div>
+        <?php [$dbY, $dbM, $dbD] = preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', (string)$d['dob'], $dm) ? [$dm[1], (int)$dm[2], (int)$dm[3]] : ['', 0, 0]; ?>
+        <div class="col-12 col-md-4 mb-3"><label class="form-label">Date of Birth <span style="color:#94A3B8;font-weight:400;">(দিন / মাস / সাল)</span></label>
+            <div class="td-dob">
+                <select name="td[dobD]" class="form-select" aria-label="দিন"><option value="">দিন</option><?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>"<?= $i === $dbD ? ' selected' : '' ?>><?= $i ?></option><?php endfor; ?></select>
+                <select name="td[dobM]" class="form-select" aria-label="মাস"><option value="">মাস</option><?php foreach (['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as $i => $mn): ?><option value="<?= $i + 1 ?>"<?= $i + 1 === $dbM ? ' selected' : '' ?>><?= $mn ?></option><?php endforeach; ?></select>
+                <input name="td[dobY]" class="form-control" inputmode="numeric" maxlength="4" pattern="(19|20)[0-9]{2}" placeholder="সাল (যেমন 2001)" value="<?= e($dbY) ?>" aria-label="সাল" />
+            </div></div>
     </div>
     <div class="td-private"><i class="fas fa-lock"></i> নিচের ঠিকানা শুধু আপনি আর অ্যাডমিন দেখতে পাবেন — অন্যরা ডিটেইলস পেজে দেখবে না।</div>
     <div class="row">
@@ -291,4 +327,35 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
 })();
     // চিপ চেক করলে রং বদলায়
     document.querySelectorAll('.td-chip input').forEach(function (i) { i.addEventListener('change', function () { i.parentNode.classList.toggle('on', i.checked); }); });
+    // ===== মিডিয়াম অনুযায়ী বিষয় =====
+    (function () {
+        var meds = document.getElementById('tdMeds'), box = document.getElementById('tdSubs');
+        if (!meds || !box) return;
+        var groups = box.querySelectorAll('.td-sg[data-med]:not([data-med=""])'), hint = document.getElementById('tdSubHint');
+        function chosen() { return Array.prototype.filter.call(meds.querySelectorAll('input'), function (i) { return i.checked; }).map(function (i) { return i.value === 'English Version' ? 'Bangla Medium' : i.value; }); }
+        function same(v) { return box.querySelectorAll('input[value="' + v.replace(/"/g, '\\"') + '"]'); }
+        function show() {
+            var c = chosen();
+            groups.forEach(function (g) { g.hidden = c.length > 0 && c.indexOf(g.dataset.med) === -1; });
+            hint.hidden = c.length > 0;
+        }
+        // একই বিষয় দুই মিডিয়ামে থাকলে একসাথে চেক / আনচেক
+        box.addEventListener('change', function (e) {
+            var i = e.target; if (!i.matches('input')) return;
+            same(i.value).forEach(function (x) { x.checked = i.checked; x.parentNode.classList.toggle('on', i.checked); });
+        });
+        // মিডিয়াম বাদ দিলে শুধু ওই মিডিয়ামের বিষয়গুলো আনচেক (অন্য দেখানো গ্রুপেও থাকলে থাকে)
+        meds.addEventListener('change', function () {
+            var was = Array.prototype.map.call(groups, function (g) { return g.hidden; });
+            show();
+            groups.forEach(function (g, n) {
+                if (was[n] || !g.hidden) return;   // এইমাত্র লুকানো গ্রুপ
+                g.querySelectorAll('input:checked').forEach(function (i) {
+                    var keep = Array.prototype.some.call(same(i.value), function (x) { return !x.closest('.td-sg').hidden; });
+                    if (!keep) same(i.value).forEach(function (x) { x.checked = false; x.parentNode.classList.remove('on'); });
+                });
+            });
+        });
+        show();
+    })();
 </script>

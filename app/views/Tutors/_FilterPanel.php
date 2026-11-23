@@ -5,7 +5,7 @@
  * যেকোনো বাটন [data-tf-open] চাপলে খোলে।
  */
 $locs = tuition_options()['locations'] ?? [];
-$subjects = tuition_options()['subjects'] ?? default_tuition_subjects();
+$subjects = td_all_subjects();
 $c = $counts;
 $chk = fn(string $k, string $v) => in_array($v, $f[$k] ?? [], true) ? ' checked' : '';
 // জেলা: যাদের টিউটর আছে আগে (বেশি থেকে কম), বাছাই করা গুলো সবসময় সামনে

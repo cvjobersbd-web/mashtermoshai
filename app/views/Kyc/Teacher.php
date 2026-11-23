@@ -20,8 +20,8 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
             <div class="ky-state no"><i class="fas fa-circle-xmark"></i><div><b>তথ্য গ্রহণ করা হয়নি</b><p><?= !is_blank($k->AdminNote) ? 'কারণ: ' . e($k->AdminNote) . '<br>' : '' ?>নিচে ঠিক করে আবার জমা দিন।</p></div></div>
         <?php endif; ?>
 
-        <?php $isUni = !empty($D['uniCard']); $reuse = $k && $isUni;
-            $imgs = $isUni ? ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => 'NID · পেছনে'] : []) : ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে']; ?>
+        <?php $isUni = !empty($D['uniCard']); $reuse = $k && $isUni; $isBirth = ($D['idType'] ?? '') === 'birth';
+            $imgs = $isUni ? ['front' => 'Academic ID · সামনে', 'back' => 'Academic ID · পেছনে'] + (!empty($D['nidFront']) ? ['nidfront' => $isBirth ? 'জন্ম নিবন্ধন সনদ' : 'NID · সামনে'] : []) + (!empty($D['nidBack']) ? ['nidback' => $isBirth ? 'জন্ম নিবন্ধন · ২য় পাতা' : 'NID · পেছনে'] : []) : ['front' => 'NID · সামনে', 'back' => 'NID · পেছনে']; ?>
         <?php if (!$showForm): ?>
             <div class="ky-card">
                 <div class="ky-sum">
@@ -41,11 +41,14 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
                 <div class="ky-f" data-f="kycUniversity"><label class="l" for="kycUniversity">শিক্ষা প্রতিষ্ঠান <span class="r">*</span></label><input type="text" id="kycUniversity" name="kycUniversity" maxlength="150" placeholder="বিশ্ববিদ্যালয় / কলেজ / স্কুলের নাম" value="<?= e((string)($D['university'] ?? '')) ?>" /></div>
             </div>
             <div class="ky-lock"><i class="fas fa-lock"></i> ছবিগুলো শুধু অ্যাডমিন যাচাইয়ের জন্য দেখবেন — সাইটে কোথাও দেখানো হবে না।</div>
+            <div class="ky-idt"><span><i class="fas fa-circle-info"></i> <b>NID কার্ড নেই?</b> বয়স ১৮ এর কম বা এখনো NID হয়নি — তাহলে “জন্ম নিবন্ধন সনদ” বাছাই করে Birth Certificate এর ছবি দিন।</span>
+                <label><input type="radio" name="kycIdType" value="nid"<?= $isBirth ? '' : ' checked' ?> /> NID কার্ড</label>
+                <label><input type="radio" name="kycIdType" value="birth"<?= $isBirth ? ' checked' : '' ?> /> জন্ম নিবন্ধন সনদ (Birth Certificate)</label></div>
             <div class="ky-g2">
-                <?php foreach (['UniFront' => ['front', 'Academic ID Card — সামনে', true], 'UniBack' => ['back', 'Academic ID Card — পেছনে', true], 'FileFront' => ['nidfront', 'NID — সামনে', true], 'FileBack' => ['nidback', 'NID — পেছনে', true]] as $nm => [$sd, $lbl, $req]):
+                <?php foreach (['UniFront' => ['front', 'Academic ID Card — সামনে', true], 'UniBack' => ['back', 'Academic ID Card — পেছনে', true], 'FileFront' => ['nidfront', $isBirth ? 'জন্ম নিবন্ধন সনদ' : 'NID — সামনে', true], 'FileBack' => ['nidback', $isBirth ? 'জন্ম নিবন্ধন — ২য় পাতা' : 'NID — পেছনে', !$isBirth]] as $nm => [$sd, $lbl, $req]):
                     $oldName = $reuse ? ($sd === 'front' ? $k->FileFront : ($sd === 'back' ? $k->FileBack : ($D[$sd === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
                     $has = $oldName && kyc_file_path($oldName); ?>
-                    <div class="ky-f" data-f="kyc<?= $nm ?>"><label class="l"><?= $lbl ?> <?= $req ? '<span class="r">*</span>' : '<small>(ঐচ্ছিক)</small>' ?></label>
+                    <div class="ky-f" data-f="kyc<?= $nm ?>"><label class="l"><span class="ky-lb"><?= $lbl ?></span> <span class="r"<?= $req ? '' : ' hidden' ?>>*</span><small<?= $req ? ' hidden' : '' ?>>(ঐচ্ছিক)</small></label>
                         <label class="ky-drop" id="kyDrop<?= $nm ?>" for="kyc<?= $nm ?>">
                             <img alt="<?= e(strip_tags((string)$lbl)) ?>"<?= $has ? ' src="/Kyc/File/' . (int)$k->Id . '?side=' . $sd . '"' : ' hidden' ?> />
                             <span<?= $has ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে</small></span>
@@ -64,6 +67,14 @@ $showForm = $st === 'None' || $st === 'Rejected' || $st === 'Pending';  // য�
         (function () {
             var s = document.getElementById('kySameWa'), m = document.getElementById('kycMobile'), w = document.getElementById('kycWhatsapp');
             s.addEventListener('change', function () { if (s.checked) w.value = m.value; });
+            (function () {
+                var L = { nid: ['NID — সামনে', 'NID — পেছনে'], birth: ['জন্ম নিবন্ধন সনদ', 'জন্ম নিবন্ধন — ২য় পাতা'] };
+                document.querySelectorAll('input[name="kycIdType"]').forEach(function (r) { r.addEventListener('change', function () {
+                    var t = r.value, f = document.querySelector('[data-f="kycFileFront"]'), b = document.querySelector('[data-f="kycFileBack"]');
+                    f.querySelector('.ky-lb').textContent = L[t][0]; b.querySelector('.ky-lb').textContent = L[t][1];
+                    b.querySelector('.r').hidden = t === 'birth'; b.querySelector('small').hidden = t !== 'birth';
+                }); });
+            })();
             kyBind(document.getElementById('kyForm'), '/Kyc/Teacher', document.getElementById('kyBtn'), document.getElementById('kyMsg'));
         })();
         </script>

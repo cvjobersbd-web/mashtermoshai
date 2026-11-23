@@ -63,7 +63,7 @@ class TeacherController extends Controller
 
     /**
      * Educational Information বাধ্যতামূলক — শেষ না হলে Running:
-     *  SSC সবসময় (পড়ছে হলে Running) · SSC পাস হলে HSC (পাস / Running) · HSC পাস হলে Graduation (পাস / Running / কত বর্ষ) · Masters ঐচ্ছিক
+     *  SSC সবসময় (পড়ছে হলে Running) · SSC পাস হলে HSC (পাস / Running) · Graduation ঐচ্ছিক (দিলে পাস / Running / কত বর্ষ) · Masters ঐচ্ছিক
      */
     public static function checkEducation(array &$d, array &$errors): void
     {
@@ -86,6 +86,7 @@ class TeacherController extends Controller
         $hsc = $need('hsc', 'HSC', 5);
         if ($hsc === 'running') { $clear(['grad', 'post']); return; }
         if ($hsc === 'bad') return;
+        if (trim((string)($d['gradYear'] ?? '')) === '') { $clear(['post']); return; }   // Graduation ঐচ্ছিক (পড়লে Running / কত বর্ষ)
         $grad = $need('grad', 'Graduation / Diploma', 5, true);
         if ($grad !== 'passed') { $clear(['post']); return; }
         if (trim((string)($d['postYear'] ?? '')) !== '') $need('post', 'Postgraduate / Masters', 5, true);
@@ -108,6 +109,8 @@ class TeacherController extends Controller
         $model->Status = 'Pending';
 
         $errors = [];
+        // আপলোড করা ID কার্ডের ছবি আগে রেখে দেওয়া — অন্য ঘরে ভুল থাকলে আবার আপলোড করতে হয় না
+        if ($userId > 0) KycController::stashDrafts($userId, $errors);
         $d = $this->readDetails($errors);
         // পুরোনো ঘরগুলো ডিটেইলস থেকে (অ্যাডমিনের Teacher Requests পেজ আর Find Tutor এ আগের মতোই দেখায়)
         $model->Institution = $d['university'];
@@ -128,7 +131,7 @@ class TeacherController extends Controller
         if (!$errors) {
             try {
                 $oldKyc = $this->db->GetKyc($userId, 'teacher');
-                $kyc = KycController::readTeacherKyc($this->db, $userId, $oldKyc && $oldKyc->Status !== 'Approved' ? $oldKyc : null, function ($m) { throw new InvalidArgumentException($m); });
+                $kyc = KycController::readTeacherKyc($this->db, $userId, $oldKyc && $oldKyc->Status !== 'Approved' ? $oldKyc : null, function ($m) { throw new InvalidArgumentException($m); }, true);
                 $model->MobileNumber = $kyc[0]['mobile'];
             } catch (InvalidArgumentException $e) { $errors[] = $e->getMessage(); }
         }
@@ -140,6 +143,7 @@ class TeacherController extends Controller
                 if ($kyc) {
                     try {
                         $this->db->SaveKyc($userId, 'teacher', $kyc[0], $kyc[1], $kyc[2], (int)$model->Id ?: null);
+                        KycController::forgetDrafts($userId, [$kyc[1], $kyc[2], $kyc[0]['nidFront'] ?? '', $kyc[0]['nidBack'] ?? '']);
                         if (is_blank($user->MobileNumber ?? '')) $this->db->exec('UPDATE `Users` SET `MobileNumber` = :m WHERE `Id` = :u', ['m' => $kyc[0]['mobile'], 'u' => $userId]);
                     } catch (Throwable $e) { error_log('[teacher kyc] ' . $e->getMessage()); }
                 }

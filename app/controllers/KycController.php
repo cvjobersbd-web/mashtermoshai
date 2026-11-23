@@ -139,7 +139,65 @@ class KycController extends Controller
     }
 
     /** NID + WhatsApp + মোবাইল যাচাই — RequestForm থেকেও ব্যবহার হয়। [data, front, back] */
-    public static function readTeacherKyc(Db $db, int $me, ?Obj $old, callable $fail): array
+    /** Become a Tutor ফর্মের ছবির ঘর => ফাইলের নামের ট্যাগ */
+    public const DRAFT_FIELDS = ['kycUniFront' => 'unifront', 'kycUniBack' => 'uniback', 'kycFileFront' => 'nidfront', 'kycFileBack' => 'nidback'];
+
+    /**
+     * Become a Tutor ফর্মে অন্য কোনো ঘরে ভুল থাকলে আবার ছবি আপলোড করতে না হয় — আপলোড হওয়া ছবি সাথে সাথে
+     * ব্যক্তিগত ফোল্ডারে (storage/kyc) রেখে সেশনে খসড়া হিসেবে মনে রাখা। ছবিতেই সমস্যা থাকলে সেই বার্তা $errors এ।
+     */
+    public static function stashDrafts(int $me, array &$errors): void
+    {
+        $dr = $_SESSION['kycDraft'] ?? null;
+        if (!is_array($dr) || (int)($dr['_u'] ?? 0) !== $me) $dr = ['_u' => $me];
+        $bn = ['kycUniFront' => 'Academic ID Card এর সামনের', 'kycUniBack' => 'Academic ID Card এর পেছনের', 'kycFileFront' => 'NID / জন্ম নিবন্ধনের প্রথম', 'kycFileBack' => 'NID / জন্ম নিবন্ধনের দ্বিতীয়'];
+        foreach (self::DRAFT_FIELDS as $field => $tag) {
+            $f = upload_file($field);
+            if (!$f) continue;
+            $err = null;
+            $name = kyc_store_image($f, $me, $tag, $err);
+            if (!$name) { $errors[] = $bn[$field] . ' ছবি: ' . $err; continue; }
+            if (!empty($dr[$field]) && $dr[$field] !== $name) kyc_delete_file($dr[$field]);   // একই ঘরে নতুন ছবি দিলে আগের খসড়া মুছে
+            $dr[$field] = $name;
+        }
+        foreach (self::DRAFT_FIELDS as $field => $tag) unset($_FILES[$field]);   // এরপর খসড়া থেকেই পড়া হয়
+        $_SESSION['kycDraft'] = $dr;
+    }
+
+    /** খসড়া ছবির নাম (শুধু নিজের) */
+    public static function draftName(int $me, string $field): ?string
+    {
+        $dr = $_SESSION['kycDraft'] ?? null;
+        $n = is_array($dr) && (int)($dr['_u'] ?? 0) === $me ? ($dr[$field] ?? null) : null;
+        return kyc_file_path($n) ? (string)$n : null;
+    }
+
+    /** আবেদন জমা হলে খসড়া ভুলে যাওয়া — $unused = যে খসড়া ছবি কাজে লাগেনি (মুছে দেওয়া হয়) */
+    public static function forgetDrafts(int $me, array $used): void
+    {
+        foreach (array_keys(self::DRAFT_FIELDS) as $field) { $n = self::draftName($me, $field); if ($n && !in_array($n, $used, true)) kyc_delete_file($n); }
+        unset($_SESSION['kycDraft']);
+    }
+
+    /** GET /Kyc/Draft?f=kycUniFront — নিজের খসড়া ছবি দেখা (ফর্মে আগের আপলোডের প্রিভিউ) */
+    public function Draft(): void
+    {
+        $me = $this->me();
+        $field = (string)input_str('f', '');
+        $path = isset(self::DRAFT_FIELDS[$field]) ? kyc_file_path(self::draftName($me, $field)) : null;
+        if (!$path) not_found('পাওয়া যায়নি।');
+        $mime = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][strtolower(pathinfo($path, PATHINFO_EXTENSION))] ?? 'application/octet-stream';
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, no-store');
+        header('X-Content-Type-Options: nosniff');
+        header('X-Robots-Tag: noindex');
+        readfile($path);
+        exit;
+    }
+
+    public static function readTeacherKyc(Db $db, int $me, ?Obj $old, callable $fail, bool $useDraft = false): array
     {
         $d = [];
         $d['mobile'] = self::cleanMobile((string)input_str('kycMobile', '')) ?? $fail('মোবাইল নম্বর ঠিক নেই — 01XXXXXXXXX (১১ ডিজিট) লিখুন।', 'kycMobile');
@@ -154,6 +212,11 @@ class KycController extends Controller
         $d['nid'] = $nid;
         $d['uniCard'] = 1;
         $oldD = $old && !empty($old->D['uniCard']) ? $old->D : null;   // আগের জমা নতুন ধরনের হলে তার ছবি আবার ব্যবহার করা যায়
+        // NID না থাকলে জন্ম নিবন্ধন সনদ (Birth Certificate) — এক পাতা হলে দ্বিতীয় ছবি লাগে না
+        $it = (string)input_str('kycIdType', '');
+        $d['idType'] = $it === 'birth' || ($it === '' && ($oldD['idType'] ?? '') === 'birth') ? 'birth' : 'nid';
+        $isBirth = $d['idType'] === 'birth';
+        $draft = fn(string $field) => $useDraft ? self::draftName($me, $field) : null;
         $new = [];
         $cleanup = function () use (&$new) { foreach ($new as $n) kyc_delete_file($n); };
         // বিশ্ববিদ্যালয়ের ID কার্ড — বাধ্যতামূলক
@@ -161,19 +224,21 @@ class KycController extends Controller
         foreach (['Front' => 'Academic ID Card এর সামনের', 'Back' => 'Academic ID Card এর পেছনের'] as $side => $bn) {
             $f = upload_file('kycUni' . $side);
             $prop = 'File' . $side;
+            if (!$f && ($dn = $draft('kycUni' . $side))) { $uniFiles[] = $dn; continue; }
             if (!$f && $oldD && kyc_file_path($old->$prop)) { $uniFiles[] = (string)$old->$prop; continue; }
             $err = null;
             $name = kyc_store_image($f, $me, 'uni' . strtolower($side), $err);
             if (!$name) { $cleanup(); $fail("$bn ছবি: " . $err, 'kycUni' . $side); }
             $uniFiles[] = $new[] = $name;
         }
-        // NID কার্ডের ছবি — বাধ্যতামূলক (সামনে + পেছনে)
-        foreach (['Front' => 'NID এর সামনের', 'Back' => 'NID এর পেছনের'] as $side => $bn) {
+        // NID কার্ডের ছবি — বাধ্যতামূলক (সামনে + পেছনে) · জন্ম নিবন্ধন হলে প্রথম পাতা বাধ্যতামূলক, দ্বিতীয়টা ঐচ্ছিক
+        $idBn = $isBirth ? ['Front' => 'জন্ম নিবন্ধন সনদের', 'Back' => 'জন্ম নিবন্ধন সনদের দ্বিতীয়'] : ['Front' => 'NID এর সামনের', 'Back' => 'NID এর পেছনের'];
+        foreach ($idBn as $side => $bn) {
             $key = 'nid' . $side;
             $f = upload_file('kycFile' . $side);
             if (!$f) {
-                $d[$key] = $oldD && kyc_file_path($oldD[$key] ?? null) ? (string)$oldD[$key] : '';
-                if ($d[$key] === '') { $cleanup(); $fail("$bn ছবি দিন — NID কার্ডের সামনে আর পেছনে দুটো ছবিই লাগবে।", 'kycFile' . $side); }
+                $d[$key] = ($dn = $draft('kycFile' . $side)) ? $dn : ($oldD && kyc_file_path($oldD[$key] ?? null) ? (string)$oldD[$key] : '');
+                if ($d[$key] === '' && !($isBirth && $side === 'Back')) { $cleanup(); $fail($isBirth ? 'জন্ম নিবন্ধন সনদের (Birth Certificate) ছবি দিন।' : "$bn ছবি দিন — NID কার্ডের সামনে আর পেছনে দুটো ছবিই লাগবে।", 'kycFile' . $side); }
                 continue;
             }
             $err = null;

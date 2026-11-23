@@ -47,6 +47,9 @@
     .ky-ids { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
     .ky-ids img { width: 100%; max-height: 200px; object-fit: contain; background: #F1F5F9; border-radius: 12px; border: 1px solid #E2E8F0; }
     .ky-lock { font-size: 13px; color: #475569; background: #F1F5F9; border-radius: 10px; padding: 9px 12px; margin-bottom: 14px; }
+    .ky-idt { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: #075985; }
+    .ky-idt > span { flex-basis: 100%; }
+    .ky-idt label { font-weight: 600; color: #0F172A; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: 14px; }
     @media (max-width: 720px) { .ky-g2, .ky-g3, .ky-sum, .ky-ids { grid-template-columns: minmax(0, 1fr); } .ky-card { padding: 18px 16px; } }
 </style>
 <script>

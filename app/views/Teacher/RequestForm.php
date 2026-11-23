@@ -131,23 +131,38 @@ $ViewData['Title'] = 'Become a Tutor';
                     <div class="col-md-4 mb-3"><label for="kycUniversity" class="form-label fw-bold">শিক্ষা প্রতিষ্ঠান <span class="required-star">*</span></label><input type="text" name="kycUniversity" id="kycUniversity" class="form-control" maxlength="150" placeholder="বিশ্ববিদ্যালয় / কলেজ / স্কুলের নাম" value="<?= e((string)input_str('kycUniversity', $kD['university'] ?? '')) ?>" required /></div>
                 </div>
                 <div class="kyc-h"><i class="fas fa-building-columns"></i> Academic ID Card <span class="required-star">*</span> <small>— যে বিশ্ববিদ্যালয় / কলেজ / স্কুলে পড়ছেন বা পড়েছেন</small></div>
+                <?php
+                $me = (int)$Model->UserId;
+                $idType = (string)input_str('kycIdType', $kD['idType'] ?? 'nid') === 'birth' ? 'birth' : 'nid';
+                $idLbl = ['nid' => ['FileFront' => 'NID এর সামনের ছবি', 'FileBack' => 'NID এর পেছনের ছবি'], 'birth' => ['FileFront' => 'জন্ম নিবন্ধন সনদের ছবি', 'FileBack' => 'দ্বিতীয় পাতা / অন্য পাশ']];
+                ?>
                 <div class="row">
-                    <?php foreach (['UniFront' => ['front', 'Academic ID Card এর সামনের ছবি', true], 'UniBack' => ['back', 'Academic ID Card এর পেছনের ছবি', true], 'FileFront' => ['nidfront', 'NID এর সামনের ছবি', true], 'FileBack' => ['nidback', 'NID এর পেছনের ছবি', true]] as $nm => [$side, $lbl, $req]):
+                    <?php foreach (['UniFront' => ['front', 'Academic ID Card এর সামনের ছবি'], 'UniBack' => ['back', 'Academic ID Card এর পেছনের ছবি'], 'FileFront' => ['nidfront', $idLbl[$idType]['FileFront']], 'FileBack' => ['nidback', $idLbl[$idType]['FileBack']]] as $nm => [$side, $lbl]):
+                        // আগে দেওয়া ছবি: এই ফর্মে ভুলের কারণে ফেরত আসলে খসড়া, নইলে আগের (যাচাই বাকি / বাতিল) আবেদনের ছবি
+                        $draft = KycController::draftName($me, 'kyc' . $nm);
                         $oldName = $kReuse ? ($side === 'front' ? $kOld->FileFront : ($side === 'back' ? $kOld->FileBack : ($kD[$side === 'nidfront' ? 'nidFront' : 'nidBack'] ?? null))) : null;
-                        $has = $oldName && kyc_file_path($oldName); ?>
-                        <?php if ($nm === 'FileFront'): ?></div><div class="kyc-h" style="margin-top:6px;"><i class="fas fa-id-card"></i> NID কার্ড <span class="required-star">*</span> <small>— জাতীয় পরিচয়পত্রের সামনে ও পেছনের ছবি</small></div><div class="row"><?php endif; ?>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold"><?= $lbl ?><?= $req ? ' <span class="required-star">*</span>' : '' ?></label>
+                        $src = $draft ? '/Kyc/Draft?f=kyc' . $nm . '&v=' . substr(md5($draft), 0, 8) : ($oldName && kyc_file_path($oldName) ? '/Kyc/File/' . (int)$kOld->Id . '?side=' . $side : null);
+                        $optional = $nm === 'FileBack' && $idType === 'birth'; ?>
+                        <?php if ($nm === 'FileFront'): ?></div>
+                            <div class="kyc-h" style="margin-top:6px;"><i class="fas fa-id-card"></i> NID কার্ড <span class="required-star">*</span> <small>— জাতীয় পরিচয়পত্রের সামনে ও পেছনের ছবি</small></div>
+                            <div class="kyc-idt">
+                                <div class="kyc-idt-note"><i class="fas fa-circle-info"></i> <span><b>NID কার্ড নেই?</b> বয়স ১৮ এর কম বা এখনো NID হয়নি — তাহলে নিচে <b>“জন্ম নিবন্ধন সনদ”</b> বাছাই করে আপনার <b>Birth Certificate</b> এর ছবি দিন।</span></div>
+                                <label><input type="radio" name="kycIdType" value="nid"<?= $idType === 'nid' ? ' checked' : '' ?> /> NID কার্ড</label>
+                                <label><input type="radio" name="kycIdType" value="birth"<?= $idType === 'birth' ? ' checked' : '' ?> /> জন্ম নিবন্ধন সনদ (Birth Certificate)</label>
+                            </div>
+                            <div class="row"><?php endif; ?>
+                        <div class="col-md-6 mb-3" id="kycBox<?= $nm ?>">
+                            <label class="form-label fw-bold"><span id="kycLbl<?= $nm ?>"><?= e($lbl) ?></span> <span class="required-star" id="kycStar<?= $nm ?>"<?= $optional ? ' hidden' : '' ?>>*</span><small class="text-muted" id="kycOpt<?= $nm ?>"<?= $optional ? '' : ' hidden' ?>>(ঐচ্ছিক)</small></label>
                             <label class="kyc-drop" for="kyc<?= $nm ?>">
-                                <img alt="<?= e(strip_tags((string)$lbl)) ?>" id="kycPrev<?= $nm ?>"<?= $has ? ' src="/Kyc/File/' . (int)$kOld->Id . '?side=' . $side . '"' : ' hidden' ?> />
-                                <span id="kycPh<?= $nm ?>"<?= $has ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
+                                <img alt="<?= e($lbl) ?>" id="kycPrev<?= $nm ?>"<?= $src ? ' src="' . e($src) . '"' : ' hidden' ?> />
+                                <span id="kycPh<?= $nm ?>"<?= $src ? ' hidden' : '' ?>><i class="fas <?= str_starts_with($nm, 'Uni') ? 'fa-building-columns' : 'fa-id-card' ?>"></i><b>ছবি বাছাই করুন</b><small>JPG / PNG · ৬ MB এর মধ্যে · চার কোণা যেন দেখা যায়</small></span>
                             </label>
-                            <input type="file" name="kyc<?= $nm ?>" id="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" hidden data-kyc-req="<?= $req && !$has ? '1' : '0' ?>" />
-                            <?php if ($has): ?><small class="text-muted">আগের ছবিটাই থাকবে — বদলাতে চাইলে উপরে চাপুন।</small><?php endif; ?>
+                            <input type="file" name="kyc<?= $nm ?>" id="kyc<?= $nm ?>" accept="image/jpeg,image/png,image/webp" hidden data-kyc-has="<?= $src ? '1' : '0' ?>" />
+                            <?php if ($src): ?><small class="text-muted"><i class="fas fa-check" style="color:#16A34A;"></i> আগে দেওয়া ছবিটাই থাকবে — বদলাতে চাইলে ছবিতে চাপুন।</small><?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <div class="row"><div class="col-md-4 mb-2"><label for="kycNid" class="form-label fw-bold">NID নম্বর <span style="color:#94A3B8;font-weight:500;">(ঐচ্ছিক)</span></label><input type="text" name="kycNid" id="kycNid" class="form-control" maxlength="20" inputmode="numeric" placeholder="১০ / ১৩ / ১৭ ডিজিট" value="<?= e((string)input_str('kycNid', $kD['nid'] ?? '')) ?>" /></div></div>
+                <div class="row"><div class="col-md-4 mb-2"><label for="kycNid" class="form-label fw-bold"><span id="kycNidLbl"><?= $idType === 'birth' ? 'জন্ম নিবন্ধন নম্বর' : 'NID নম্বর' ?></span> <span style="color:#94A3B8;font-weight:500;">(ঐচ্ছিক)</span></label><input type="text" name="kycNid" id="kycNid" class="form-control" maxlength="20" inputmode="numeric" placeholder="১০ / ১৩ / ১৭ ডিজিট" value="<?= e((string)input_str('kycNid', $kD['nid'] ?? '')) ?>" /></div></div>
             </div>
             <style>
                 .kyc-h { font-weight: 800; color: #08224A; font-size: 15px; margin: 4px 0 10px; } .kyc-h i { color: #028EA5; margin-right: 6px; } .kyc-h small { font-weight: 500; color: #64748B; font-size: 13px; }
@@ -156,6 +171,9 @@ $ViewData['Title'] = 'Become a Tutor';
                 .kyc-drop img { max-width: 100%; max-height: 220px; border-radius: 10px; }
                 .kyc-drop span { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #475569; }
                 .kyc-drop span i { font-size: 30px; color: #028EA5; } .kyc-drop small { color: #94A3B8; }
+                .kyc-idt { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+                .kyc-idt-note { flex-basis: 100%; font-size: 13px; color: #075985; display: flex; gap: 7px; } .kyc-idt-note i { margin-top: 3px; }
+                .kyc-idt label { font-weight: 600; font-size: 14px; color: #0F172A; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin: 0; }
             </style>
             <script>
             (function () {
@@ -168,10 +186,22 @@ $ViewData['Title'] = 'Become a Tutor';
                 m.addEventListener('input', function () { if (same.checked) w.value = m.value; });
                 var uni = document.getElementById('kycUniversity'), tdUni = document.querySelector('input[name="td[university]"]');
                 if (tdUni && uni && !uni.value) { uni.value = tdUni.value; tdUni.addEventListener('input', function () { if (!uni.dataset.touched) uni.value = tdUni.value; }); uni.addEventListener('input', function () { uni.dataset.touched = '1'; }); }
+                // NID / জন্ম নিবন্ধন — লেখা বদলায়; জন্ম নিবন্ধনে দ্বিতীয় ছবি ঐচ্ছিক
+                var LB = { nid: { FileFront: 'NID এর সামনের ছবি', FileBack: 'NID এর পেছনের ছবি', no: 'NID নম্বর' }, birth: { FileFront: 'জন্ম নিবন্ধন সনদের ছবি', FileBack: 'দ্বিতীয় পাতা / অন্য পাশ', no: 'জন্ম নিবন্ধন নম্বর' } };
+                function idType() { var r = document.querySelector('input[name="kycIdType"]:checked'); return r ? r.value : 'nid'; }
+                function setIdType() {
+                    var t = idType(), L = LB[t] || LB.nid;
+                    ['FileFront', 'FileBack'].forEach(function (s) { document.getElementById('kycLbl' + s).textContent = L[s]; });
+                    document.getElementById('kycStarFileBack').hidden = t === 'birth';
+                    document.getElementById('kycOptFileBack').hidden = t !== 'birth';
+                    var nl = document.getElementById('kycNidLbl'); if (nl) nl.textContent = L.no;
+                }
+                document.querySelectorAll('input[name="kycIdType"]').forEach(function (r) { r.addEventListener('change', setIdType); });
                 document.getElementById('teacherForm').addEventListener('submit', function (e) {
-                    var lbl = { UniFront: 'Academic ID Card এর সামনের', UniBack: 'Academic ID Card এর পেছনের', FileFront: 'NID এর সামনের', FileBack: 'NID এর পেছনের' };
-                    var miss = ['UniFront', 'UniBack', 'FileFront', 'FileBack'].filter(function (s) { var f = document.getElementById('kyc' + s); return f.dataset.kycReq === '1' && !f.files.length; });
-                    if (miss.length) { e.preventDefault(); alert(miss.map(function (s) { return lbl[s]; }).join(', ') + ' ছবি দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
+                    var t = idType(), L = LB[t] || LB.nid;
+                    var lbl = { UniFront: 'Academic ID Card এর সামনের ছবি', UniBack: 'Academic ID Card এর পেছনের ছবি', FileFront: L.FileFront, FileBack: L.FileBack };
+                    var miss = ['UniFront', 'UniBack', 'FileFront', 'FileBack'].filter(function (s) { var f = document.getElementById('kyc' + s); if (s === 'FileBack' && t === 'birth') return false; return f.dataset.kycHas !== '1' && !f.files.length; });
+                    if (miss.length) { e.preventDefault(); alert(miss.map(function (s) { return lbl[s]; }).join(', ') + ' দিন।'); document.querySelector('.kyc-sec').scrollIntoView({ behavior: 'smooth' }); }
                 });
             })();
             </script>

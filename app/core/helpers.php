@@ -1186,6 +1186,37 @@ function default_tuition_subjects(): array
         'Drawing', 'Music'];
 }
 
+/**
+ * মিডিয়াম অনুযায়ী বিষয় — টিচারের ফর্মে যে মিডিয়াম বাছাই করবে শুধু সেই বিষয়গুলো দেখায়।
+ * 'common' = সব মিডিয়ামেই দেখায়।
+ */
+function td_subject_groups(): array
+{
+    return [
+        'Bangla Medium' => ['Bangla', 'English', 'Mathematics', 'General Math', 'Higher Math', 'Science', 'Physics', 'Chemistry', 'Biology', 'ICT',
+            'Bangladesh & Global Studies', 'Islam Studies', 'Hindu Religion', 'Accounting', 'Finance & Banking', 'Business Studies', 'Economics',
+            'Agriculture', 'Geography', 'History', 'Civics', 'Statistics', 'Logic', 'Sociology', 'Psychology'],
+        'English Medium' => ['English', 'Bangla', 'Mathematics', 'Science', 'Social Studies', 'ICT', 'Islam Studies', 'Hindu Religion', 'Arabic',
+            'General Knowledge', 'Art & Craft', 'Physics', 'Chemistry', 'Biology', 'Accounting', 'Economics', 'Business Studies'],
+        'British Curriculum' => ['English Language', 'English Literature', 'Mathematics', 'Additional Mathematics', 'Further Mathematics', 'Physics',
+            'Chemistry', 'Biology', 'Combined Science', 'Computer Science', 'ICT', 'Accounting', 'Economics', 'Business Studies', 'Commerce',
+            'Bengali', 'Islamiyat', 'Sociology', 'Psychology', 'Law', 'Statistics', 'Geography', 'History', 'Global Perspectives'],
+        'Madrasa' => ['Quran', 'Hadith', 'Fiqh', 'Aqaid', 'Tafsir', 'Arabic', 'Islamic History', 'Bangla', 'English', 'Mathematics', 'General Math',
+            'Science', 'Physics', 'Chemistry', 'Biology', 'ICT', 'Bangladesh & Global Studies'],
+        'common' => ['All Subjects', 'Spoken English', 'IELTS', 'Programming', 'Drawing', 'Music'],
+    ];
+}
+
+/** সব মিডিয়ামের বিষয় একসাথে (অ্যাডমিনের তালিকা + মিডিয়ামের বিষয়) — ফিল্টারের জন্য */
+function td_all_subjects(): array
+{
+    $all = tuition_options()['subjects'] ?? default_tuition_subjects();
+    foreach (td_subject_groups() as $list) $all = array_merge($all, $list);
+    $out = [];
+    foreach ($all as $x) if (!isset($out[mb_strtolower($x)])) $out[mb_strtolower($x)] = $x;
+    return array_values($out);
+}
+
 /** বাংলাদেশের ৬৪ জেলার উপজেলা (app/data/bd_upazilas.json — bangladesh-geocode, MIT) */
 function bd_upazilas(): array
 {
