@@ -400,7 +400,7 @@ function tf_curriculum_groups(): array
 {
     $em = ['med' => ['English Medium']]; $bn = ['med' => ['Bangla Medium']]; $ev = ['med' => ['English Version']];
     return [
-        ['id' => 'british', 'name' => 'British Curriculum (English Medium)', 'items' => [
+        ['id' => 'british', 'name' => 'British Curriculum', 'items' => [
             ['Playgroup – KG', 'fa-shapes', $em + ['cls' => ['early']]], ['Primary (Class 1 – 5)', 'fa-pencil', $em + ['cls' => ['early']]],
             ['Junior (Class 6 – 8)', 'fa-book-open', $em + ['cls' => ['c68']]], ['O Level / IGCSE', 'fa-award', $em + ['cls' => ['olevel']]],
             ['A Level (AS)', 'fa-medal', $em + ['cls' => ['olevel']]], ['A Level (A2)', 'fa-trophy', $em + ['cls' => ['olevel']]],
