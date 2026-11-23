@@ -222,7 +222,7 @@ $jsMethods = array_map(function ($m) {
                             <?php if ($m->Kind === 'agent'): ?>
                                 <button type="button" class="co-m agent" style="--wc:<?= e($m->Color) ?>;" role="radio" aria-checked="false" data-method="<?= (int)$m->Id ?>" title="<?= e($m->Name) ?>">
                                     <span class="lg"><?php if (!is_blank($m->LogoUrl ?? null)): ?><img src="<?= e($m->LogoUrl) ?>" alt="<?= e($m->Name) ?>" loading="lazy" onerror="this.parentNode.innerHTML='<?= e(addslashes(strip_tags($m->Name))) ?>'" /><?php else: ?><?= payment_logo_html($m, 30) ?><?php endif; ?></span>
-                                    <span class="num"><?= e(bn_num((string)($acc0->AccountNumber ?? ''))) ?></span><small>এজেন্ট নম্বর</small>
+                                    <span class="num"><?= e((string)($acc0->AccountNumber ?? '')) ?></span><small>এজেন্ট নম্বর</small>
                                 </button>
                             <?php else: ?>
                                 <button type="button" class="co-m<?= $hasAgent ? ' plain' : '' ?>" role="radio" aria-checked="false" data-method="<?= (int)$m->Id ?>" title="<?= e($m->Name) ?>"><?= payment_logo_html($m, 36) ?><?= $hasAgent && $m->Kind === 'bank' ? '<small style="margin-left:10px;color:#64748B;font-size:12.5px;">QR স্ক্যান করে</small>' : '' ?></button>
@@ -368,7 +368,7 @@ $jsMethods = array_map(function ($m) {
         var agentBox = document.getElementById('coAgent'), qrBox = document.getElementById('coPayQr');
         if (cur.kind === 'agent') {
             // এজেন্ট নম্বর + ধাপগুলো (অ্যাডমিনের লেখা নিয়ম, প্রতি লাইন একটা ধাপ)
-            var num = curAcc.accountNumber || '', bnNum = toBn(num);
+            var num = curAcc.accountNumber || '', bnNum = num;
             var steps = (cur.instructions || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
             agentBox.innerHTML = '<div class="lg">' + (cur.logo ? '<img src="' + esc(cur.logo) + '" alt="' + esc(cur.name) + '" />' : '<b>' + esc(cur.name) + '</b>') + '</div>'
                 + '<div class="lbl">' + esc(cur.name) + ' এজেন্ট নম্বর</div>'
