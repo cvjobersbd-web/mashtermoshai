@@ -66,7 +66,8 @@ class ChatController extends Controller
     public function Index(): void
     {
         $me = $this->me();
-        if (current_role() === 'Admin') redirect('/Admin/Dashboard');
+        // অ্যাডমিনদের মধ্যে শুধু Super Admin চ্যাট খুলতে পারেন (যেকোনো ইউজারকে লাইভ ক্লাস পাঠানো — প্র্যাকটিস)
+        if (current_role() === 'Admin' && !admin_is_super()) redirect('/Admin/Dashboard');
         $threads = $this->db->GetChatThreads($me);
         $cid = trim((string)input_str('c', ''));
         $current = $cid !== '' ? $this->db->GetChatThread($cid, $me) : null;
@@ -83,7 +84,34 @@ class ChatController extends Controller
             'ThreadJson' => $this->packThreads($threads),
             'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false, 'LiveOk' => teacher_live_enabled($me) && bbb_ready(),
             'Contacts' => current_role() === 'Teacher' ? array_values($this->db->TeacherChatContacts($me)) : [],
+            'IsSuper' => is_admin() && admin_is_super(),
         ]);
+    }
+
+    /** GET /Chat/AdminFind?q= — Super Admin: চ্যাট শুরু করতে যেকোনো ইউজার খোঁজা (নাম / ইউজারনেম / ইমেইল / মোবাইল) */
+    public function AdminFind(): void
+    {
+        $this->me(true);
+        if (!is_admin() || !admin_is_super()) json_response(['success' => false, 'message' => 'শুধু Super Admin।']);
+        $q = trim((string)input_str('q', ''));
+        if (mb_strlen($q) < 2) json_response(['success' => true, 'users' => []]);
+        $like = '%' . $q . '%';
+        $rows = $this->db->all("SELECT `Id`, `FullName`, `UserName`, `Role`, `ProfileImageLink` FROM `Users` WHERE `Role` <> 'Admin' AND `IsActive` = 1
+            AND (`FullName` LIKE :a OR `UserName` LIKE :b OR `Email` LIKE :c OR `MobileNumber` LIKE :d) ORDER BY `Id` DESC LIMIT 12", ['a' => $like, 'b' => $like, 'c' => $like, 'd' => $like]);
+        json_response(['success' => true, 'users' => array_map(function ($u) {
+            $n = !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName;
+            return ['id' => (int)$u->Id, 'name' => $n, 'user' => (string)$u->UserName, 'role' => (string)$u->Role === 'Teacher' ? 'Teacher' : 'Student', 'photo' => (string)($u->ProfileImageLink ?? ''), 'initials' => initials($n, 'U')];
+        }, $rows)]);
+    }
+
+    /** POST /Chat/AdminStart (userId) — Super Admin যেকোনো ইউজারের সাথে চ্যাট খোলে (প্যাকেজ লাগে না) */
+    public function AdminStart_POST(): void
+    {
+        $me = $this->me();
+        if (!is_admin() || !admin_is_super()) redirect('/Admin/Dashboard');
+        $u = $this->db->GetUserById(input_int('userId', 0));
+        if (!$u || $u->Role === 'Admin' || (int)$u->Id === $me) { tempdata_set('Error', 'ইউজার পাওয়া যায়নি।'); redirect('/Chat'); }
+        redirect('/Chat?c=' . $this->db->OpenDirectChat((int)$u->Id, $me));
     }
 
     /** GET /Chat/Messages?c=&after=&before=&read=1 */
@@ -110,7 +138,7 @@ class ChatController extends Controller
     public function Unread(): void
     {
         $me = current_user_id();
-        json_response(['success' => true, 'count' => $me === null || current_role() === 'Admin' ? 0 : $this->db->CountUnreadChats((int)$me)]);
+        json_response(['success' => true, 'count' => $me === null || (current_role() === 'Admin' && !admin_is_super()) ? 0 : $this->db->CountUnreadChats((int)$me)]);
     }
 
     /**
@@ -139,7 +167,7 @@ class ChatController extends Controller
         $t = $this->db->GetChatThread(trim((string)input_str('c', '')), $me);
         if (!$t) json_response(['success' => false, 'closed' => true, 'message' => 'এই চ্যাটটি বন্ধ হয়ে গেছে — আর মেসেজ পাঠানো যাবে না।']);
         // সরাসরি চ্যাট: শিক্ষার্থীর প্যাকেজের মেয়াদ শেষ হলে শিক্ষার্থী আর মেসেজ পাঠাতে পারবে না (টিচার উত্তর দিতে পারবে)
-        if ($t->Kind === 'dir' && $t->StudentId === $me && !viewer_can_contact_teachers()) {
+        if ($t->Kind === 'dir' && empty($t->AdminChat) && $t->StudentId === $me && !viewer_can_contact_teachers()) {
             json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'আপনার প্যাকেজের মেয়াদ শেষ — টিচারকে মেসেজ পাঠাতে আবার প্যাকেজ নিন।']);
         }
         $body = trim(str_replace(["\r\n", "\r"], "\n", (string)input_str('body', '')));

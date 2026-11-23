@@ -131,6 +131,8 @@ function bbb_recordings(array $meetingIds): array
 function teacher_live_enabled(?int $userId): bool
 {
     if (!$userId) return false;
+    // Super Admin — প্যাকেজ ছাড়াই চ্যাট থেকে লাইভ ক্লাস (প্র্যাকটিস / ডেমো)
+    if ($userId === current_user_id() && is_admin() && admin_is_super()) return true;
     static $c = [];
     if (isset($c[$userId])) return $c[$userId];
     try { return $c[$userId] = db()->TeacherHasLivePackage($userId); } catch (Throwable $e) { return $c[$userId] = false; }

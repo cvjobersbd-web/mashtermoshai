@@ -240,7 +240,7 @@ trait ChatData
         INNER JOIN `Users` s ON s.`Id` = r.`StudentUserId`";
 
     private const CHAT_DIR_SELECT = "SELECT 'dir' AS Kind, d.`Id` AS RefId, d.`TeacherId`, d.`StudentId`, d.`CreatedAt` AS AcceptedAt, d.`CreatedAt` AS StartedAt,
-            '' AS Subj, '' AS Cls, 'সরাসরি চ্যাট' AS Extra,
+            '' AS Subj, '' AS Cls, 'সরাসরি চ্যাট' AS Extra, t.`Role` AS TeacherRole, s.`Role` AS StudentRole,
             t.`FullName` AS TeacherName, t.`UserName` AS TeacherUser, t.`ProfileImageLink` AS TeacherPhoto,
             s.`FullName` AS StudentName, s.`UserName` AS StudentUser, s.`ProfileImageLink` AS StudentPhoto
         FROM `ChatDirect` d
@@ -258,6 +258,9 @@ trait ChatData
         $r->OtherName = !is_blank($name) ? (string)$name : 'User';
         $r->OtherPhoto = (string)(($iAmTeacher ? $r->StudentPhoto : $r->TeacherPhoto) ?? '');
         $r->OtherRole = $iAmTeacher ? 'Student' : 'Teacher';
+        // Super Admin এর চ্যাট (লাইভ ক্লাস প্র্যাকটিস) — টিচারের জায়গায় অ্যাডমিন থাকে
+        $r->AdminChat = ($r->TeacherRole ?? '') === 'Admin';
+        if ($r->AdminChat) $r->OtherRole = $iAmTeacher ? (($r->StudentRole ?? '') === 'Teacher' ? 'Teacher' : 'Student') : 'Admin';
         $r->Initials = initials($r->OtherName, 'U');
         $topic = array_filter([(string)($r->Subj ?? ''), (string)($r->Cls ?? '')], fn($v) => trim($v) !== '');
         $r->Topic = $topic ? implode(' · ', $topic) : str_preview((string)($r->Extra ?? ''), 60);

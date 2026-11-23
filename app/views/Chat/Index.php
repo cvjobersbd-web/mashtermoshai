@@ -10,6 +10,8 @@ $ViewData['Title'] = 'Messages';
 $ViewData['FullTitle'] = ($cur ? $cur->OtherName . ' — ' : '') . 'Messages | মাষ্টার মশাই';
 $ViewData['Robots'] = 'noindex, nofollow';
 $role = current_role();
+$isSuper = !empty($ViewBag->IsSuper);
+$adminChat = $cur && !empty($cur->AdminChat);
 ?>
 <style>
     .ch { background: #EEF3F8; padding: 18px 0 26px; }
@@ -158,6 +160,15 @@ $role = current_role();
         .ch-msgs { padding: 14px 10px 6px; }
         .ch-form { padding: 10px; }
     }
+    .sa-box { margin-top: 10px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 10px; }
+    .sa-h { font-size: 12.5px; font-weight: 800; color: #92400E; margin-bottom: 7px; } .sa-h i { color: #F59E0B; }
+    .sa-box input { width: 100%; border: 1px solid #E2E8F0; border-radius: 9px; padding: 8px 10px; font-size: 13.5px; }
+    .sa-res { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 240px; overflow-y: auto; }
+    .sa-res button { display: flex; align-items: center; gap: 9px; border: 1px solid #F1F5F9; background: #fff; border-radius: 10px; padding: 6px 8px; text-align: left; cursor: pointer; font-size: 13px; }
+    .sa-res button:hover { border-color: #00B5E0; background: #F0FBFF; }
+    .sa-res .ch-av { width: 32px; height: 32px; font-size: 12px; flex-shrink: 0; }
+    .sa-res small { display: block; color: #64748B; font-size: 11.5px; }
+    .sa-res .none { font-size: 12.5px; color: #94A3B8; padding: 4px 2px; }
 </style>
 
 <div class="ch">
@@ -166,15 +177,25 @@ $role = current_role();
             <aside class="ch-list">
                 <div class="ch-lh">
                     <h1>Messages</h1>
-                    <p><?= $role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'টিচারের অ্যাপ্লিকেশন Accept করলে বা টিচারের প্রোফাইল থেকে চ্যাট আনলক করলে এখানে চ্যাট খোলে।' ?></p>
+                    <p><?= $isSuper ? 'যেকোনো টিচার বা শিক্ষার্থীকে খুঁজে চ্যাট খুলুন — তারপর উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে ক্লাস পাঠান। প্যাকেজ লাগবে না।' : ($role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'টিচারের অ্যাপ্লিকেশন Accept করলে বা টিচারের প্রোফাইল থেকে চ্যাট আনলক করলে এখানে চ্যাট খোলে।') ?></p>
                     <?php if ($role === 'Teacher'): ?><button type="button" class="grp-new" id="grpNewBtn"><i class="fas fa-users"></i> নতুন গ্রুপ তৈরি করুন</button><?php endif; ?>
+                    <?php if ($isSuper): ?>
+                        <div class="sa-box">
+                            <div class="sa-h"><i class="fas fa-crown"></i> Super Admin — লাইভ ক্লাস প্র্যাকটিস</div>
+                            <input type="search" id="saFind" placeholder="নাম / ইউজারনেম / ইমেইল / মোবাইল দিয়ে খুঁজুন" autocomplete="off" />
+                            <div class="sa-res" id="saRes"></div>
+                            <form method="post" action="/Chat/AdminStart" id="saForm" hidden><?= csrf_field() ?><input type="hidden" name="userId" id="saUser" /></form>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="ch-threads" id="chThreads">
                     <?php if (!$threads): ?>
                         <div class="ch-none">
                             <i class="fas fa-comments"></i>
                             এখনো কোনো চ্যাট নেই।<br>
-                            <?php if ($role === 'Teacher'): ?>
+                            <?php if ($isSuper): ?>
+                                উপরের ঘরে ইউজার খুঁজে চ্যাট শুরু করুন।
+                            <?php elseif ($role === 'Teacher'): ?>
                                 <a href="/Tuition/Circular">Tuition Circular</a> থেকে স্টুডেন্টের পোস্টে Apply করুন — স্টুডেন্ট Accept করলে এখানে কথা বলতে পারবেন।
                             <?php else: ?>
                                 <a href="/Tuition/Circular?post=1">টিউশন পোস্ট দিন</a> — টিচাররা Apply করবে। <a href="/User/Dashboard?section=applications">Applications</a> থেকে পছন্দের টিচারকে Accept করলে এখানে কথা বলতে পারবেন।
@@ -202,20 +223,21 @@ $role = current_role();
                         <?php $isGrp = $cur->Kind === 'grp'; ?>
                         <span class="ch-av sm<?= $isGrp ? ' grp' : '' ?>"><?= $isGrp ? '<i class="fas fa-users"></i>' : e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="<?= e(($cur->Name ?? 'চ্যাট') . ' এর ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
                         <div class="who">
-                            <?php if ($isGrp): ?><b id="grpTitle"><?= e($cur->OtherName) ?></b><?php else: ?><a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a><?php endif; ?>
+                            <?php if ($isGrp): ?><b id="grpTitle"><?= e($cur->OtherName) ?></b><?php elseif ($adminChat && !$isSuper): ?><b><?= e($cur->OtherName) ?></b><?php else: ?><a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a><?php endif; ?>
                             <div><?= $isGrp ? 'গ্রুপ' : e($cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
                         </div>
                         <?php if (!empty($ViewBag->IsTeacher)): ?><button type="button" class="cls-btn" id="chClsBtn" title="সাইট থেকেই লাইভ ক্লাস সেট করুন"><i class="fas fa-video"></i><span>লাইভ ক্লাস</span></button><?php endif; ?>
                         <?php if ($isGrp): ?><button type="button" class="mem-btn" id="grpMemBtn"><i class="fas fa-users"></i><span>সদস্য</span></button>
-                        <?php else: ?><a class="prof" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i><span>প্রোফাইল</span></a><?php endif; ?>
+                        <?php elseif (!($adminChat && !$isSuper)): ?><a class="prof" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i><span>প্রোফাইল</span></a><?php endif; ?>
                     </header>
                     <div class="ch-next" id="chNext" hidden></div>
                     <div class="ch-msgs" id="chMsgs" aria-live="polite">
                         <div class="ch-intro">
                             <?php if ($cur->Kind === 'grp'): ?><b><?= e($cur->OtherName) ?></b> গ্রুপ — <?= !empty($ViewBag->IsTeacher) ? 'এখানে মেসেজ দিলে গ্রুপের সব স্টুডেন্ট পাবে।' : 'টিচার এখানে ক্লাসের মেসেজ আর অনলাইন ক্লাসের লিংক দেবেন।' ?><br>
+                            <?php elseif ($adminChat): ?><?= $isSuper ? '<b>' . e($cur->OtherName) . '</b> এর সাথে চ্যাট (Super Admin) — উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে প্যাকেজ ছাড়াই লাইভ ক্লাস পাঠাতে পারবেন।<br>' : '<b>মাষ্টার মশাই অ্যাডমিন</b> এর সাথে চ্যাট — অ্যাডমিন লাইভ ক্লাস পাঠালে এখানে <b>Join Class</b> বাটন আসবে।<br>' ?>
                             <?php elseif ($cur->Kind === 'dir'): ?><b><?= e($cur->OtherName) ?></b> এর সাথে সরাসরি চ্যাট — <?= $role === 'Teacher' ? 'শিক্ষার্থী আপনার প্রোফাইল থেকে চ্যাট শুরু করেছেন।' : 'টিউশনের বিষয়, সময় আর বেতন নিয়ে কথা বলুন।' ?><br>
                             <?php else: ?><b><?= e($cur->OtherName) ?></b> এর সাথে আপনার টিউশন ঠিক হয়েছে<?= $cur->Topic !== '' ? ' (' . e($cur->Topic) . ')' : '' ?>।<br><?php endif; ?>
-                            <?= !empty($ViewBag->IsTeacher) ? 'উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে সাইট থেকেই ক্লাস সেট করুন (Premium প্যাকেজ) — স্টুডেন্ট Join বাটন পাবে।' : 'টিচার লাইভ ক্লাস সেট করলে এখানে <b>Join Class</b> বাটন আসবে।' ?> কেউ খারাপ আচরণ করলে <a href="/Helpdesk">Helpdesk</a> এ জানান।
+                            <?php if (!$adminChat): ?><?= !empty($ViewBag->IsTeacher) ? 'উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে সাইট থেকেই ক্লাস সেট করুন (Premium প্যাকেজ) — স্টুডেন্ট Join বাটন পাবে।' : 'টিচার লাইভ ক্লাস সেট করলে এখানে <b>Join Class</b> বাটন আসবে।' ?> কেউ খারাপ আচরণ করলে <a href="/Helpdesk">Helpdesk</a> এ জানান।<?php endif; ?>
                         </div>
                     </div>
                     <div class="ch-closedbar" id="chClosedBar" hidden><i class="fas fa-lock"></i> এই চ্যাটটি বন্ধ হয়ে গেছে — অ্যাপ্লিকেশনটি আর Accepted নেই।</div>
@@ -227,7 +249,9 @@ $role = current_role();
                     <div class="ch-dlg" id="chDlg" role="dialog" aria-modal="true" aria-labelledby="chDlgT">
                         <form id="chClsForm" autocomplete="off" novalidate>
                             <h3 id="chDlgT"><i class="fas fa-video"></i> লাইভ ক্লাস সেট করুন</h3>
-                            <?php if (empty($ViewBag->LiveOk)): ?>
+                            <?php if (empty($ViewBag->LiveOk) && $isSuper): ?>
+                                <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-tower-broadcast"></i> লাইভ ক্লাসের সার্ভার (BigBlueButton) এখনো চালু নেই — সার্ভার চালু হলে এখান থেকেই লাইভ ক্লাস চলবে।</p>
+                            <?php elseif (empty($ViewBag->LiveOk)): ?>
                                 <p class="sub" style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;"><i class="fas fa-tower-broadcast"></i> এখানে ক্লাসের সময়সূচি রাখতে পারবেন। <b>লাইভ (অনলাইন) ক্লাস</b> নিতে <a href="/Package?for=teacher">Premium প্যাকেজ</a> লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — নিলে এখান থেকেই এক ক্লিকে লাইভ ক্লাস শুরু করতে পারবেন।</p>
                             <?php else: ?>
                                 <p class="sub">মাষ্টার মশাই এর নিজের লাইভ ক্লাস — আলাদা কোনো অ্যাপ লাগবে না। সময় হলে কার্ডের <b>লাইভ শুরু করুন</b> চাপুন, <?= e($cur->OtherName) ?> <b>Join Class</b> চেপে যোগ দেবে।</p>
@@ -295,6 +319,35 @@ $role = current_role();
 <?php endif; ?>
 
 <?php section_start('Scripts'); ?>
+<?php if ($isSuper): ?>
+<script>
+(function () {
+    // Super Admin — ইউজার খুঁজে চ্যাট খোলা
+    var f = document.getElementById('saFind'), res = document.getElementById('saRes'), tm = null, seq = 0;
+    if (!f) return;
+    var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    f.addEventListener('input', function () {
+        clearTimeout(tm);
+        var q = f.value.trim();
+        if (q.length < 2) { res.innerHTML = ''; return; }
+        tm = setTimeout(function () {
+            var my = ++seq;
+            fetch('/Chat/AdminFind?q=' + encodeURIComponent(q), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+                if (my !== seq) return;
+                var u = (d && d.users) || [];
+                res.innerHTML = u.length ? u.map(function (x) {
+                    return '<button type="button" data-id="' + x.id + '"><span class="ch-av">' + esc(x.initials) + (x.photo ? '<img src="' + esc(x.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span><span><b>' + esc(x.name) + '</b><small>@' + esc(x.user) + ' · ' + esc(x.role) + '</small></span></button>';
+                }).join('') : '<div class="none">কাউকে পাওয়া যায়নি।</div>';
+            }).catch(function () { res.innerHTML = '<div class="none">খোঁজা যায়নি — আবার চেষ্টা করুন।</div>'; });
+        }, 250);
+    });
+    res.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-id]'); if (!b) return;
+        document.getElementById('saUser').value = b.dataset.id; document.getElementById('saForm').submit();
+    });
+})();
+</script>
+<?php endif; ?>
 <script>
 (function () {
     var token = function () { var i = document.querySelector('input[name="__RequestVerificationToken"]'); return i ? i.value : ''; };

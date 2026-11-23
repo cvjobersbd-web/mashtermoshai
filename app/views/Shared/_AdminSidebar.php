@@ -611,6 +611,11 @@ try {
         <?php endif; ?>
         <?php if (admin_is_super()): ?>
         <li>
+            <a href="/Chat" title="যেকোনো ইউজারের সাথে চ্যাট আর লাইভ ক্লাস (প্র্যাকটিস) — শুধু Super Admin">
+                <i class="fas fa-video"></i> চ্যাট ও লাইভ ক্লাস
+            </a>
+        </li>
+        <li>
             <a href="/Admin/Admins" class="<?= $currentAction === 'Admins' ? 'active' : '' ?>">
                 <i class="fas fa-user-shield"></i> Admins
             </a>
