@@ -47,10 +47,13 @@ $total = array_sum(array_map(fn($g) => count($g->Categories), $groups));
             <?php endif; ?>
         </div>
 
+        <?php if (!empty($ViewBag->Curricula)) partial('Categories/_Curricula', ['cur' => $ViewBag->Curricula]); ?>
+
         <?php if (!$groups): ?>
             <div class="ct-empty"><i class="fas fa-layer-group fa-2x" style="color:#B9D6E6;"></i><p style="margin:10px 0 0;">এখনো কোনো ক্যাটাগরি যোগ করা হয়নি।</p></div>
         <?php else: ?>
             <nav class="ct-chips" aria-label="Category groups">
+                <a href="#curriculum">🎓 শিক্ষাব্যবস্থা</a>
                 <?php foreach ($groups as $g): ?><a href="#grp-<?= (int)$g->Id ?>"><?= e($g->Name) ?></a><?php endforeach; ?>
             </nav>
 

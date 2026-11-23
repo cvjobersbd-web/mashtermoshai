@@ -233,7 +233,7 @@ function tf_match(array $x, array $f, ?string $skip = null): bool
         foreach ($f['dist'] as $D) {
             foreach (tf_district_aliases($D) as $al) if ($al !== '' && (str_contains($x['city'], tf_norm($al)) || str_contains($x['areas'], tf_norm($al)))) { $ok = true; break 2; }
             if ($D === 'Online' && $x['online']) { $ok = true; break; }
-            foreach ($locs[$D] ?? [] as $ar) { $a = tf_norm(preg_replace('/\s*\(.*\)$/u', '', $ar)); if ($a !== '' && mb_strlen($a) > 3 && str_contains($x['areas'], $a)) { $ok = true; break 2; } }
+            foreach (bd_district_areas($D) as $ar) { $a = tf_norm(preg_replace('/\s*\(.*\)$/u', '', $ar['v'])); if ($a !== '' && mb_strlen($a) > 3 && str_contains($x['areas'], $a)) { $ok = true; break 2; } }
         }
         if (!$ok) return false;
     }
@@ -337,10 +337,57 @@ function tf_area_counts(array $facets, array $f, array $districts): array
     $locs = tuition_options()['locations'] ?? [];
     $base = array_filter($facets, fn($x) => tf_match($x, $f, 'area'));
     $out = [];
-    foreach ($districts as $D) foreach ($locs[$D] ?? [] as $ar) {
+    foreach ($districts as $D) foreach (array_column(bd_district_areas($D), 'v') as $ar) {
         $a = tf_norm(preg_replace('/\s*\(.*\)$/u', '', $ar)); $n = 0;
         if ($a !== '') foreach ($base as $x) if (str_contains($x['areas'], $a)) $n++;
         $out[$D][$ar] = $n;
     }
     return $out;
+}
+
+/**
+ * Categories পেইজের "শিক্ষাব্যবস্থা অনুযায়ী" অংশ — বাংলাদেশের পড়াশোনার ধাপ, প্রতিটা ধাপ টিউটর ফিল্টারে যায়
+ * stages: [নাম, ছোট বর্ণনা, ফিল্টার (query)]
+ */
+function tf_curricula(): array
+{
+    $bn = 'Bangla Medium'; $ev = 'English Version'; $em = 'English Medium'; $md = 'Madrasa';
+    return [
+        'bangla' => ['short' => 'বাংলা মিডিয়াম', 'title' => 'জাতীয় শিক্ষাক্রম — বাংলা মিডিয়াম', 'en' => 'National Curriculum (NCTB) · Bangla Medium', 'icon' => 'fa-book-open', 'color' => '#16A34A', 'bg' => '#ECFDF5',
+            'note' => 'সরকারি NCTB-এর বই, শিক্ষা বোর্ডের SSC আর HSC পরীক্ষা।', 'badge' => 'SSC · HSC',
+            'stages' => [['প্রাথমিক', 'প্লে – ক্লাস ৫', ['med' => [$bn], 'cls' => ['early']]], ['নিম্ন মাধ্যমিক', 'ক্লাস ৬ – ৮', ['med' => [$bn], 'cls' => ['c68']]],
+                ['মাধ্যমিক (SSC)', 'ক্লাস ৯ – ১০', ['med' => [$bn], 'cls' => ['ssc']]], ['উচ্চ মাধ্যমিক (HSC)', 'ক্লাস ১১ – ১২', ['med' => [$bn], 'cls' => ['hsc']]],
+                ['ভর্তি প্রস্তুতি', 'বিশ্ববিদ্যালয় / মেডিকেল / প্রকৌশল', ['cls' => ['adm']]]],
+            'subjects' => []],
+        'version' => ['short' => 'ইংলিশ ভার্সন', 'title' => 'জাতীয় শিক্ষাক্রম — ইংলিশ ভার্সন', 'en' => 'National Curriculum (NCTB) · English Version', 'icon' => 'fa-language', 'color' => '#0284C7', 'bg' => '#F0F9FF',
+            'note' => 'বাংলা মিডিয়ামের একই সিলেবাস আর একই পরীক্ষা (SSC / HSC) — শুধু বই আর পড়াশোনা ইংরেজিতে।', 'badge' => 'SSC · HSC',
+            'stages' => [['Primary', 'প্লে – ক্লাস ৫', ['med' => [$ev], 'cls' => ['early']]], ['Junior Secondary', 'ক্লাস ৬ – ৮', ['med' => [$ev], 'cls' => ['c68']]],
+                ['Secondary (SSC)', 'ক্লাস ৯ – ১০', ['med' => [$ev], 'cls' => ['ssc']]], ['Higher Secondary (HSC)', 'ক্লাস ১১ – ১২', ['med' => [$ev], 'cls' => ['hsc']]]],
+            'subjects' => []],
+        'british' => ['short' => 'ইংলিশ মিডিয়াম', 'title' => 'ব্রিটিশ কারিকুলাম — ইংলিশ মিডিয়াম', 'en' => 'British Curriculum · Cambridge / Edexcel', 'icon' => 'fa-globe', 'color' => '#7C3AED', 'bg' => '#F5F3FF',
+            'note' => 'Cambridge (CAIE) বা Pearson Edexcel-এর সিলেবাস — O Level (SSC-এর সমমান) আর A Level (HSC-এর সমমান)।', 'badge' => 'O Level · A Level',
+            'stages' => [['Playgroup – Primary', 'Playgroup, KG, Class 1 – 5', ['med' => [$em], 'cls' => ['early']]], ['Junior / Lower Secondary', 'Class 6 – 8', ['med' => [$em], 'cls' => ['c68']]],
+                ['O Level', 'Class 9 – 10 (IGCSE / O Level)', ['med' => [$em], 'cls' => ['olevel']]], ['A Level', 'AS + A2 (দুই বছর)', ['med' => [$em], 'cls' => ['olevel']]]],
+            'subjects' => ['English', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Accounting', 'Economics', 'Computer Science']],
+        'madrasa' => ['short' => 'মাদ্রাসা', 'title' => 'মাদ্রাসা শিক্ষা', 'en' => 'Madrasah Education (Alia)', 'icon' => 'fa-book-quran', 'color' => '#B45309', 'bg' => '#FFFBEB',
+            'note' => 'মাদ্রাসা শিক্ষা বোর্ডের সিলেবাস — দাখিল (SSC-এর সমমান) আর আলিম (HSC-এর সমমান)।', 'badge' => 'দাখিল · আলিম',
+            'stages' => [['ইবতেদায়ি', 'ক্লাস ১ – ৫', ['med' => [$md], 'cls' => ['early']]], ['দাখিল', 'ক্লাস ৬ – ১০ (SSC সমমান)', ['med' => [$md], 'cls' => ['c68', 'ssc']]],
+                ['আলিম', 'ক্লাস ১১ – ১২ (HSC সমমান)', ['med' => [$md], 'cls' => ['hsc']]]],
+            'subjects' => ['Arabic', 'Quran', 'Islam Studies']],
+    ];
+}
+
+/** ফিল্টারের query → /Tutors/All লিংক */
+function tf_link(array $q): string
+{
+    $q = array_filter($q, fn($v) => $v !== [] && $v !== '' && $v !== null);
+    return '/Tutors/All' . ($q ? '?' . preg_replace('/%5B\d+%5D/', '%5B%5D', http_build_query($q)) : '');
+}
+
+/** একটা ফিল্টারে কতজন টিউটর */
+function tf_count_for(array $facets, array $q): int
+{
+    $f = $q + tf_blank();
+    $n = 0; foreach ($facets as $x) if (tf_match($x, $f)) $n++;
+    return $n;
 }

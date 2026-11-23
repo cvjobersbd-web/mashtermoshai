@@ -1186,6 +1186,60 @@ function default_tuition_subjects(): array
         'Drawing', 'Music'];
 }
 
+/** বাংলাদেশের ৬৪ জেলার উপজেলা (app/data/bd_upazilas.json — bangladesh-geocode, MIT) */
+function bd_upazilas(): array
+{
+    static $c = null;
+    if ($c === null) {
+        $j = json_decode((string)@file_get_contents(dirname(__DIR__) . '/data/bd_upazilas.json'), true);
+        $c = is_array($j['districts'] ?? null) ? $j['districts'] : [];
+    }
+    return $c;
+}
+
+/** জেলার বাংলা নাম */
+function bd_district_bn(string $d): string
+{
+    return (string)(bd_upazilas()[$d]['bn'] ?? '');
+}
+
+/**
+ * একটা জেলার সব এলাকা — আগে শহরের পরিচিত এলাকা (Admin → Tuition Options), তারপর সরকারি উপজেলা
+ * @return array<int,array{v:string,bn:string}>
+ */
+function bd_district_areas(string $d): array
+{
+    static $cache = [];
+    if (isset($cache[$d])) return $cache[$d];
+    $out = []; $seen = [];
+    $key = fn($s) => mb_strtolower(trim(preg_replace('/\s*\(.*\)$/u', '', (string)$s)));
+    foreach (tuition_options()['locations'][$d] ?? [] as $a) { $k = $key($a); if ($k === '' || isset($seen[$k])) continue; $seen[$k] = 1; $out[] = ['v' => (string)$a, 'bn' => '']; }
+    foreach (bd_upazilas()[$d]['up'] ?? [] as [$en, $bn]) { $k = $key($en); if ($k === '' || isset($seen[$k])) continue; $seen[$k] = 1; $out[] = ['v' => (string)$en, 'bn' => (string)$bn]; }
+    return $cache[$d] = $out;
+}
+
+/** লেখা জেলার নাম (Chittagong, Comilla, যশোর ...) → তালিকার জেলা; না মিললে '' */
+function bd_match_district(string $raw): string
+{
+    $r = mb_strtolower(trim($raw));
+    if ($r === '') return '';
+    $alias = ['chittagong' => 'Chattogram', 'ctg' => 'Chattogram', 'comilla' => 'Cumilla', 'barisal' => 'Barishal', 'jessore' => 'Jashore', 'bogra' => 'Bogura',
+        'coxs bazar' => "Cox's Bazar", 'cox bazar' => "Cox's Bazar", 'chapai nawabganj' => 'Chapainawabganj', 'chapainababganj' => 'Chapainawabganj', 'jhalokati' => 'Jhalokathi',
+        'netrakona' => 'Netrokona', 'maulvibazar' => 'Moulvibazar', 'narayangonj' => 'Narayanganj', 'kishorganj' => 'Kishoreganj'];
+    if (isset($alias[$r])) return $alias[$r];
+    foreach (bd_upazilas() as $d => $info) if (strcasecmp($d, $r) === 0 || ($info['bn'] ?? '') === trim($raw)) return $d;
+    foreach (array_keys(tuition_options()['locations']) as $d) if (strcasecmp($d, $r) === 0) return $d;
+    return '';
+}
+
+/** সব জেলা (বিভাগ অনুযায়ী সাজানো, "Online" বাদ) */
+function bd_districts(): array
+{
+    $l = array_values(array_filter(array_keys(tuition_options()['locations']), fn($x) => $x !== 'Online'));
+    foreach (array_keys(bd_upazilas()) as $d) if (!in_array($d, $l, true)) $l[] = $d;
+    return $l;
+}
+
 /** @return array{locations: array<string,string[]>, classes: string[], subjects: string[]} */
 function tuition_options(): array
 {

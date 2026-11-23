@@ -34,6 +34,22 @@ $classList = array_values(array_unique(array_merge($opts['classes'], $d['classes
 $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subjects'])));
 ?>
 <style>
+    .la-box { border: 1.5px solid #DCE7F0; border-radius: 14px; padding: 12px; background: #FBFDFF; }
+    .la-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; align-items: center; padding-bottom: 10px; border-bottom: 1px dashed #E2E8F0; margin-bottom: 10px; }
+    .la-tags .la-empty { color: #94A3B8; font-size: 13px; font-style: normal; }
+    .la-tags .la-tag ~ .la-empty { display: none; }
+    .la-tag { display: inline-flex; align-items: center; gap: 6px; background: #00B5E0; color: #fff; border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 13px; font-weight: 600; }
+    .la-tag button { border: none; background: rgba(255,255,255,.25); color: #fff; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; line-height: 1; cursor: pointer; padding: 0; }
+    .la-ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .la-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 210px; overflow-y: auto; padding: 2px; }
+    .la-chip { border: 1.5px solid #DCEFF7; background: #fff; color: #1E293B; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .la-chip small { color: #64748B; font-weight: 500; margin-left: 3px; }
+    .la-chip.on { background: #E0F7FF; border-color: #00B5E0; color: #075985; }
+    .la-chip.on::before { content: '✓ '; }
+    .la-add { display: flex; gap: 8px; margin-top: 10px; }
+    .la-add input { flex: 1; }
+    .la-note { font-size: 12px; color: #64748B; margin-top: 8px; }
+    @media (max-width: 576px) { .la-ctl { grid-template-columns: 1fr; } }
     .td-sec { margin-bottom: 26px; padding-bottom: 22px; border-bottom: 2px solid #F1F7FC; }
     .td-sec:last-of-type { border-bottom: none; }
     .td-sec h4 { font-size: 17px; font-weight: 700; color: #08224A; margin: 0 0 4px; display: flex; align-items: center; gap: 9px; }
@@ -82,11 +98,35 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
     <h4><i class="fas fa-chalkboard-user"></i> Tutoring Information</h4>
     <div class="row">
         <div class="col-md-4 mb-3"><label class="form-label">Living Country</label><input name="td[livingCountry]" class="form-control" maxlength="60" value="<?= e($d['livingCountry'] !== '' ? $d['livingCountry'] : 'Bangladesh') ?>" /></div>
+<?php
+        // জেলা আর এলাকা — টাইপ না করে তালিকা থেকে বাছাই (৬৪ জেলা, শহরের এলাকা + সব উপজেলা)
+        $bdD = bd_districts();
+        $curCity = bd_match_district((string)$d['livingCity']);
+        $areaMap = [];
+        foreach ($bdD as $x) $areaMap[$x] = array_map(fn($a) => [$a['v'], $a['bn']], bd_district_areas($x));
+        $dLabel = fn($x) => $x . (bd_district_bn($x) !== '' ? ' — ' . bd_district_bn($x) : '');
+        ?>
         <div class="col-md-4 mb-3"><label class="form-label">Living City (জেলা) <?= $req ?></label>
-            <input name="td[livingCity]" class="form-control" list="tdDists" maxlength="60" value="<?= e($d['livingCity']) ?>" required placeholder="যেমন: Dhaka" />
-            <datalist id="tdDists"><?php foreach ($dists as $x): ?><option value="<?= e($x) ?>"></option><?php endforeach; ?></datalist></div>
-        <div class="col-md-4 mb-3"><label class="form-label">Living Location (এলাকা)</label><input name="td[livingArea]" class="form-control" maxlength="80" value="<?= e($d['livingArea']) ?>" placeholder="যেমন: Mirpur" /></div>
-        <div class="col-12 mb-3"><label class="form-label">Preferred Tutoring Locations <span style="color:#94A3B8; font-weight:400;">(কমা দিয়ে আলাদা করুন)</span></label><input name="td[preferredAreas]" class="form-control" maxlength="400" value="<?= e(implode(', ', $d['preferredAreas'])) ?>" placeholder="যেমন: Mirpur, Pallabi, Kafrul" /></div>
+            <select name="td[livingCity]" id="tdCity" class="form-select" required>
+                <option value="">— জেলা বাছাই করুন —</option>
+                <?php foreach ($bdD as $x): ?><option value="<?= e($x) ?>"<?= $x === $curCity ? ' selected' : '' ?>><?= e($dLabel($x)) ?></option><?php endforeach; ?>
+                <?php if ($curCity === '' && trim($d['livingCity']) !== ''): ?><option value="<?= e($d['livingCity']) ?>" selected><?= e($d['livingCity']) ?></option><?php endif; ?>
+            </select></div>
+        <div class="col-md-4 mb-3"><label class="form-label">Living Location (এলাকা)</label>
+            <select id="tdAreaSel" class="form-select"><option value="">— আগে জেলা বাছাই করুন —</option></select>
+            <input name="td[livingArea]" id="tdArea" class="form-control mt-2" maxlength="80" value="<?= e($d['livingArea']) ?>" placeholder="এলাকার নাম লিখুন" style="display:none;" /></div>
+        <div class="col-12 mb-3"><label class="form-label">Preferred Tutoring Locations <span style="color:#94A3B8; font-weight:400;">(যেসব এলাকায় পড়াতে পারবেন — একাধিক বাছাই করুন)</span></label>
+            <div class="la-box" id="laBox">
+                <div class="la-tags" id="laTags"><?php foreach ($d['preferredAreas'] as $pa): ?><span class="la-tag"><?= e($pa) ?><input type="hidden" name="td[preferredAreas][]" value="<?= e($pa) ?>" /><button type="button" aria-label="সরান">✕</button></span><?php endforeach; ?><em class="la-empty">এখনো কোনো এলাকা বাছাই করা হয়নি</em></div>
+                <div class="la-ctl">
+                    <select id="laDist" class="form-select"><?php foreach ($bdD as $x): ?><option value="<?= e($x) ?>"<?= $x === ($curCity ?: 'Dhaka') ? ' selected' : '' ?>><?= e($dLabel($x)) ?></option><?php endforeach; ?></select>
+                    <input type="search" id="laFind" class="form-control" placeholder="এলাকা খুঁজুন..." autocomplete="off" />
+                </div>
+                <div class="la-chips" id="laChips"></div>
+                <div class="la-add"><input type="text" id="laOwn" class="form-control" maxlength="60" placeholder="তালিকায় নেই? এলাকার নাম লিখুন" /><button type="button" id="laOwnBtn" class="btn btn-outline-secondary btn-sm">যোগ করুন</button></div>
+                <div class="la-note">জেলা বদলে অন্য জেলার এলাকাও যোগ করা যায় · সর্বোচ্চ ৩০টা</div>
+            </div></div>
+        <script>window.TD_AREAS = <?= json_encode($areaMap, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
     </div>
     <div class="mb-3"><label class="form-label d-block">Preferred Tutoring Category (Medium)</label><div class="td-chips"><?= $chk('mediums', Db::TD_MEDIUMS, $d['mediums']) ?></div></div>
     <div class="mb-3"><label class="form-label d-block">Preferred Classes & Courses <?= $req ?></label><div class="td-chips scroll"><?= $chk('classes', $classList, $d['classes']) ?></div></div>
@@ -196,6 +236,59 @@ $subjList = array_values(array_unique(array_merge($opts['subjects'], $d['subject
 </div>
 
 <script>
+(function () {
+    // ===== জেলা → নিজের এলাকা =====
+    var A = window.TD_AREAS || {}, city = document.getElementById('tdCity'), aSel = document.getElementById('tdAreaSel'), aIn = document.getElementById('tdArea');
+    if (city && aSel && aIn) {
+        var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+        function fillArea(keep) {
+            var list = A[city.value] || [], cur = keep ? aIn.value.trim() : '', found = false, h = '<option value="">— এলাকা বাছাই করুন —</option>';
+            list.forEach(function (x) { var on = cur !== '' && x[0].toLowerCase() === cur.toLowerCase(); if (on) found = true; h += '<option value="' + esc(x[0]) + '"' + (on ? ' selected' : '') + '>' + esc(x[0]) + (x[1] ? ' (' + esc(x[1]) + ')' : '') + '</option>'; });
+            h += '<option value="__other"' + (cur !== '' && !found ? ' selected' : '') + '>অন্য এলাকা (নিজে লিখুন)</option>';
+            aSel.innerHTML = city.value ? h : '<option value="">— আগে জেলা বাছাই করুন —</option>';
+            aIn.style.display = cur !== '' && !found ? '' : 'none';
+            if (!keep) aIn.value = '';
+        }
+        aSel.addEventListener('change', function () { if (aSel.value === '__other') { aIn.style.display = ''; aIn.value = ''; aIn.focus(); } else { aIn.style.display = 'none'; aIn.value = aSel.value; } });
+        city.addEventListener('change', function () { fillArea(false); var ld = document.getElementById('laDist'); if (ld && A[city.value]) { ld.value = city.value; drawChips(); } });
+        fillArea(true);
+    }
+
+    // ===== পড়াতে চাওয়া এলাকা — জেলা বাছাই করে চিপে চাপ =====
+    var tags = document.getElementById('laTags'), dist = document.getElementById('laDist'), chips = document.getElementById('laChips'), find = document.getElementById('laFind');
+    if (!tags || !dist) return;
+    var MAX = 30;
+    function chosen() { return Array.prototype.map.call(tags.querySelectorAll('input'), function (i) { return i.value; }); }
+    function has(v) { return chosen().some(function (x) { return x.toLowerCase() === v.toLowerCase(); }); }
+    function addTag(v) {
+        v = v.trim(); if (!v || has(v)) return;
+        if (chosen().length >= MAX) { alert('সর্বোচ্চ ' + MAX + 'টা এলাকা বাছাই করা যায়।'); return; }
+        var s = document.createElement('span'); s.className = 'la-tag';
+        s.appendChild(document.createTextNode(v));
+        var h = document.createElement('input'); h.type = 'hidden'; h.name = 'td[preferredAreas][]'; h.value = v; s.appendChild(h);
+        var b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'সরান'); b.textContent = '✕'; s.appendChild(b);
+        tags.insertBefore(s, tags.querySelector('.la-empty'));
+    }
+    function removeTag(v) { tags.querySelectorAll('.la-tag').forEach(function (t) { if (t.querySelector('input').value.toLowerCase() === v.toLowerCase()) t.remove(); }); }
+    function drawChips() {
+        var q = (find.value || '').trim().toLowerCase(), h = '';
+        (A[dist.value] || []).forEach(function (x) {
+            if (q && x[0].toLowerCase().indexOf(q) === -1 && (x[1] || '').indexOf(q) === -1) return;
+            h += '<button type="button" class="la-chip' + (has(x[0]) ? ' on' : '') + '" data-v="' + esc(x[0]) + '">' + esc(x[0]) + (x[1] ? '<small>' + esc(x[1]) + '</small>' : '') + '</button>';
+        });
+        chips.innerHTML = h || '<span style="color:#94A3B8;font-size:13px;">এই নামে কোনো এলাকা নেই — নিচে নিজে লিখে যোগ করুন</span>';
+    }
+    var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    chips.addEventListener('click', function (e) { var b = e.target.closest('.la-chip'); if (!b) return; var v = b.getAttribute('data-v'); if (has(v)) removeTag(v); else addTag(v); drawChips(); });
+    tags.addEventListener('click', function (e) { var b = e.target.closest('.la-tag button'); if (!b) return; b.parentNode.remove(); drawChips(); });
+    dist.addEventListener('change', function () { find.value = ''; drawChips(); });
+    find.addEventListener('input', drawChips);
+    var own = document.getElementById('laOwn');
+    function addOwn() { var v = own.value.replace(/,/g, ' ').trim(); if (v) { addTag(v); own.value = ''; drawChips(); } }
+    document.getElementById('laOwnBtn').addEventListener('click', addOwn);
+    own.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addOwn(); } });
+    drawChips();
+})();
     // চিপ চেক করলে রং বদলায়
     document.querySelectorAll('.td-chip input').forEach(function (i) { i.addEventListener('change', function () { i.parentNode.classList.toggle('on', i.checked); }); });
 </script>
