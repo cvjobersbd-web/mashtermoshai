@@ -1935,7 +1935,7 @@ function admin_action_rule(string $action): string
             'edufeed' => ['EduFeed', 'EduFeedStatus', 'ProfilePosts', 'DeleteProfilePost'],
             'reviews' => ['Reviews', 'UpdateReviewStatus', 'DeleteReview'],
             'payments' => ['Payments', 'TeacherPayments', 'StudentPayments', 'CoursePayments', 'ApprovePayment', 'RejectPayment', 'DeletePayment', 'Subscriptions', 'SubscriptionsCsv', 'SaveSubAlertDays', 'Referrals', 'NoBonusReferralsExcel', 'RefLinkCheck', 'RefKindReport', 'ReferralUser', 'RefUserSearch', 'SetRefNoBonus', 'SaveReferralSettings', 'Withdrawals', 'Courses', 'LiveClasses', 'LivePayments', 'ToggleCourse', 'CourseView', 'BlockCourse', 'AddCoursePayout', 'SaveCourseSettings', 'SavePublishFee', 'ProcessWithdrawal', 'SetReferralStatus',
-                'References', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
+                'References', 'ReferencesExcel', 'SaveReferenceOptions', 'Partners', 'Partner', 'SavePartner', 'TogglePartner', 'DeletePartner', 'PartnerCsv', 'ResetPartnerToken'],
             'categories' => ['Categories', 'EditCategory', 'SaveCategory', 'DeleteCategory', 'ToggleCategory', 'ReorderCategories', 'SaveCategoryGroup',
                 'DeleteCategoryGroup', 'ReorderCategoryGroups', 'UploadCategoryImage', 'CategoryDefaultText'],
             'settings' => ['Settings', 'SaveSettings', 'SaveBecomeTutorSection', 'SaveHomeFaqs', 'SaveHomeSections', 'SaveHomeCategories', 'SaveSocialLinks',

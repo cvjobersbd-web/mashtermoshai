@@ -73,6 +73,7 @@ $chip = function (?string $k) use ($db) { $o = $db->ReferenceInfo($k); return '<
             <div><label for="fTo">শেষ</label><input type="date" id="fTo" name="to" value="<?= e($to ?? '') ?>" max="<?= $today ?>" /></div>
             <button type="submit" class="rf-btn"><i class="fas fa-magnifying-glass"></i> দেখুন</button>
             <a class="rf-btn ghost" href="/Admin/References">সব সময়</a>
+            <a class="rf-btn ok" href="/Admin/ReferencesExcel<?= $from || $to ? '?' . e(http_build_query(array_filter(['from' => $from, 'to' => $to]))) : '' ?>" title="<?= $from || $to ? 'এই তারিখের' : 'সব ইউজারের' ?> রেফারেন্স (Facebook, Instagram, TikTok ...) Excel এ"><i class="fas fa-file-excel"></i> Excel ডাউনলোড<?= $from || $to ? '' : ' (সব ইউজার)' ?></a>
         </form>
         <div class="rf-quick"><?php foreach ($quick as $lbl => [$a, $b]): ?><a class="<?= $from === $a && $to === $b ? 'on' : '' ?>" href="/Admin/References?from=<?= $a ?>&to=<?= $b ?>"><?= $lbl ?></a><?php endforeach; ?></div>
     </div>

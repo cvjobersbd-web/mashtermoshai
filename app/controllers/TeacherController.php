@@ -52,7 +52,7 @@ class TeacherController extends Controller
     {
         $raw = $_POST['td'] ?? [];
         $d = Db::cleanTeacherDetails(is_array($raw) ? $raw : []);
-        $need = ['whyHire' => 'Reasons to be Hired', 'university' => 'University / College', 'livingCity' => 'Living City', 'subjects' => 'Subjects',
+        $need = ['university' => 'University / College', 'livingCity' => 'Living City', 'subjects' => 'Subjects',
             'classes' => 'Classes', 'methods' => 'Tutoring Method', 'days' => 'Availability Days', 'experienceYears' => 'Tutoring Experience',
             'expectedSalary' => 'Expected Salary', 'gender' => 'Gender'];
         foreach ($need as $k => $label) if ($d[$k] === '' || $d[$k] === []) $errors[] = "$label দিন।";

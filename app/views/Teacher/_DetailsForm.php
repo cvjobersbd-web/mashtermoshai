@@ -106,7 +106,7 @@ $subChips = function (array $list) use ($selSub) {
     <p class="hint">স্টুডেন্ট আর অভিভাবকরা আপনার ডিটেইলস পেজে এগুলো প্রথমে দেখবে।</p>
     <div class="mb-3"><label class="form-label">Preface — নিজের পরিচয়</label><textarea name="td[preface]" class="form-control" rows="3" maxlength="1500" placeholder="যেমন: আমি ঢাকা বিশ্ববিদ্যালয়ে পদার্থবিজ্ঞানে পড়ছি..."><?= e($d['preface']) ?></textarea></div>
     <div class="mb-3"><label class="form-label">Tuition Job Experience — পড়ানোর অভিজ্ঞতা</label><textarea name="td[tuitionExperience]" class="form-control" rows="3" maxlength="1500" placeholder="কোন ক্লাস, কত বছর, কেমন ফলাফল..."><?= e($d['tuitionExperience']) ?></textarea></div>
-    <div><label class="form-label">Reasons to be Hired — কেন আপনাকে নেবে <?= $req ?></label><textarea name="td[whyHire]" class="form-control" rows="3" maxlength="1500" required placeholder="আপনার পড়ানোর ধরন আর বিশেষত্ব..."><?= e($d['whyHire']) ?></textarea></div>
+    <div><label class="form-label">Reasons to be Hired — কেন আপনাকে নেবে <span style="color:#94A3B8;font-weight:400;">(ঐচ্ছিক)</span></label><textarea name="td[whyHire]" class="form-control" rows="3" maxlength="1500" placeholder="আপনার পড়ানোর ধরন আর বিশেষত্ব..."><?= e($d['whyHire']) ?></textarea></div>
 </div>
 
 <div class="td-sec">

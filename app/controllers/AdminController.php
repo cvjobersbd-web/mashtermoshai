@@ -1531,6 +1531,69 @@ class AdminController extends Controller
         $this->view(null, $this->db->GetReferenceReport($from, $to), ['Options' => $this->db->ReferenceOptions(), 'From' => $from, 'To' => $to]);
     }
 
+    /**
+     * GET /Admin/ReferencesExcel?from=&to= — সব ইউজার কোথা থেকে জেনে এসেছে (Facebook, Instagram, TikTok ...) — Excel (.xlsx)
+     * তারিখ না দিলে শুরু থেকে আজ পর্যন্ত সবার। শিট: সারাংশ · সব ইউজার · প্যাকেজ কেনা
+     */
+    public function ReferencesExcel(): void
+    {
+        $this->requireAdminPage();
+        [$from, $to] = $this->partnerDates();
+        require_once APP_ROOT . '/app/core/xlsx.php';
+        $R = $this->db->GetReferenceReport($from, $to);
+        $lbl = fn(?string $k) => $this->db->ReferenceInfo((string)$k)['label'];
+        $inRange = fn(string $d) => !(($from && substr($d, 0, 10) < $from) || ($to && substr($d, 0, 10) > $to));
+        $fd = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
+
+        // প্যাকেজ কেনা (Approve) — ইউজার অনুযায়ী
+        $pays = $this->db->all("SELECT pr.`Id`, pr.`UserId`, pr.`Amount`, pr.`Status`, pr.`PackageName`, pr.`Audience`, pr.`Reference`, pr.`ReferenceNote`, pr.`CreatedAt`, pr.`ReviewedAt`,
+            u.`FullName`, u.`UserName`, u.`MobileNumber` FROM `PaymentRequests` pr LEFT JOIN `Users` u ON u.`Id` = pr.`UserId` WHERE pr.`Status` IN ('Approved', 'Pending') ORDER BY pr.`Id` DESC");
+        $bought = [];
+        foreach ($pays as $p) if ($p->Status === 'Approved') { $bought[(int)$p->UserId] = ($bought[(int)$p->UserId] ?? 0) + (int)$p->Amount; }
+
+        // সারাংশ — রেফারেন্স অনুযায়ী টিচার / শিক্ষার্থী আলাদা
+        $users = array_values(array_filter($this->db->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `CreatedAt`, `HowHeard`, `HowHeardNote` FROM `Users` WHERE `Role` <> 'Admin' ORDER BY `Id` DESC"),
+            fn($u) => $inRange((string)$u->CreatedAt)));
+        $split = [];
+        foreach ($users as $u) { $k = (string)($u->HowHeard ?? ''); $split[$k][$u->Role === 'Teacher' ? 't' : 's'] = ($split[$k][$u->Role === 'Teacher' ? 't' : 's'] ?? 0) + 1; }
+        $period = ($from || $to) ? (($from ?: 'শুরু') . ' থেকে ' . ($to ?: date('Y-m-d'))) : 'শুরু থেকে আজ পর্যন্ত (সব ইউজার)';
+        $s1 = [['রেফারেন্স রিপোর্ট — কোথা থেকে জেনে এসেছে'], ['সময়', $period], ['তৈরি', date('d M Y, h:i A')], [],
+            ['রেফারেন্স (কোথা থেকে)', 'টিচার সাইনআপ', 'শিক্ষার্থী সাইনআপ', 'মোট সাইনআপ', 'প্যাকেজ কিনেছে (জন)', 'প্যাকেজ (টা)', 'বিক্রি (৳)', 'পেমেন্ট অপেক্ষমাণ', '"অন্যান্য" তে যা লিখেছে']];
+        $hdr = count($s1) - 1;
+        foreach ($R['rows'] as $k => $r) {
+            $notes = implode(', ', array_map(fn($n, $c) => $n . ($c > 1 ? " ×$c" : ''), array_keys($r['notes']), $r['notes']));
+            $s1[] = [$lbl((string)$k) . ($k === '' ? ' (এই অপশন চালুর আগের)' : ''), $split[$k]['t'] ?? 0, $split[$k]['s'] ?? 0, $r['signups'], $r['buyers'], $r['orders'], $r['revenue'], $r['pending'], $notes];
+        }
+        $T = $R['totals'];
+        $s1[] = ['মোট', array_sum(array_map(fn($x) => $x['t'] ?? 0, $split)), array_sum(array_map(fn($x) => $x['s'] ?? 0, $split)), $T['signups'], $T['buyers'], $T['orders'], $T['revenue'], $T['pending'], ''];
+
+        // সব ইউজার
+        $s2 = [['#', 'নাম', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'টিচার / শিক্ষার্থী', 'সাইনআপের তারিখ', 'কোথা থেকে জেনেছে (সাইনআপে)', '"অন্যান্য" তে যা লিখেছে', 'প্যাকেজ কিনেছে?', 'মোট কেনা (৳)']];
+        $i = 0;
+        foreach ($users as $u) {
+            $s2[] = [++$i, (string)($u->FullName ?: $u->UserName), '@' . $u->UserName, (string)($u->Email ?? ''), (string)($u->MobileNumber ?? ''), $u->Role === 'Teacher' ? 'Teacher' : 'Student',
+                $fd($u->CreatedAt), $lbl($u->HowHeard), $u->HowHeard === 'other' ? (string)($u->HowHeardNote ?? '') : '', isset($bought[(int)$u->Id]) ? 'হ্যাঁ' : 'না', $bought[(int)$u->Id] ?? 0];
+        }
+        if ($i === 0) $s2[] = ['এই সময়ে কোনো সাইনআপ নেই'];
+
+        // প্যাকেজ কেনা — কেনার সময় যে রেফারেন্স বেছেছে
+        $s3 = [['#', 'তারিখ', 'নাম', 'ইউজারনেম', 'মোবাইল', 'প্যাকেজ', 'কার জন্য', 'টাকা (৳)', 'অবস্থা', 'কোথা থেকে জেনেছে (কেনার সময়)', '"অন্যান্য" তে যা লিখেছে']];
+        $j = 0;
+        foreach ($pays as $p) {
+            $when = (string)($p->Status === 'Approved' ? ($p->ReviewedAt ?: $p->CreatedAt) : $p->CreatedAt);
+            if (!$inRange($when)) continue;
+            $s3[] = [++$j, $fd($when), (string)($p->FullName ?: $p->UserName ?: 'Deleted user'), $p->UserName ? '@' . $p->UserName : '', (string)($p->MobileNumber ?? ''), (string)($p->PackageName ?? ''),
+                (string)($p->Audience ?? ''), (int)$p->Amount, $p->Status === 'Approved' ? 'Approved' : 'অপেক্ষমাণ', $lbl($p->Reference), $p->Reference === 'other' ? (string)($p->ReferenceNote ?? '') : ''];
+        }
+        if ($j === 0) $s3[] = ['এই সময়ে কোনো প্যাকেজ কেনা নেই'];
+
+        xlsx_send('reference-report-' . ($from || $to ? ($from ?: 'start') . '-to-' . ($to ?: date('Y-m-d')) : 'all-users-' . date('Y-m-d')), [
+            ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, $hdr, count($s1) - 1], 'widths' => [34, 14, 16, 13, 18, 12, 12, 16, 40], 'freeze' => $hdr + 1],
+            ['name' => 'সব ইউজার', 'rows' => $s2, 'bold' => [0], 'widths' => [6, 26, 20, 30, 16, 16, 22, 28, 26, 14, 14], 'freeze' => 1],
+            ['name' => 'প্যাকেজ কেনা', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 26, 20, 16, 26, 12, 12, 12, 30, 26], 'freeze' => 1],
+        ]);
+    }
+
     /** POST /Admin/SaveReferenceOptions — off[] = বন্ধ অপশন, custom = JSON {key: label}, add = নতুন অপশনের নাম */
     public function SaveReferenceOptions_POST(): void
     {
