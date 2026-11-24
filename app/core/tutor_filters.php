@@ -407,9 +407,9 @@ function tf_curriculum_groups(): array
             ['Cambridge (CAIE)', 'fa-building-columns', $em], ['Pearson Edexcel', 'fa-globe', $em],
         ]],
         ['id' => 'national', 'name' => 'National Curriculum — Bangla Medium', 'items' => [
-            ['প্রাক-প্রাথমিক (প্লে – কেজি)', 'fa-child', $bn + ['cls' => ['early']]], ['প্রাথমিক (ক্লাস ১ – ৫)', 'fa-pencil', $bn + ['cls' => ['early']]],
-            ['নিম্ন মাধ্যমিক (ক্লাস ৬ – ৮)', 'fa-book', $bn + ['cls' => ['c68']]], ['মাধ্যমিক — SSC (ক্লাস ৯ – ১০)', 'fa-flask', $bn + ['cls' => ['ssc']]],
-            ['উচ্চ মাধ্যমিক — HSC (ক্লাস ১১ – ১২)', 'fa-atom', $bn + ['cls' => ['hsc']]], ['ভর্তি প্রস্তুতি', 'fa-building-columns', ['cls' => ['adm']]],
+            [t('প্রাক-প্রাথমিক (প্লে – কেজি)', 'Pre-Primary (Play – KG)'), 'fa-child', $bn + ['cls' => ['early']]], [t('প্রাথমিক (ক্লাস ১ – ৫)', 'Primary (Class 1 – 5)'), 'fa-pencil', $bn + ['cls' => ['early']]],
+            [t('নিম্ন মাধ্যমিক (ক্লাস ৬ – ৮)', 'Junior Secondary (Class 6 – 8)'), 'fa-book', $bn + ['cls' => ['c68']]], [t('মাধ্যমিক — SSC (ক্লাস ৯ – ১০)', 'SSC (Class 9 – 10)'), 'fa-flask', $bn + ['cls' => ['ssc']]],
+            [t('উচ্চ মাধ্যমিক — HSC (ক্লাস ১১ – ১২)', 'HSC (Class 11 – 12)'), 'fa-atom', $bn + ['cls' => ['hsc']]], [t('ভর্তি প্রস্তুতি', 'Admission Preparation'), 'fa-building-columns', ['cls' => ['adm']]],
         ]],
         ['id' => 'version', 'name' => 'National Curriculum — English Version', 'items' => [
             ['Pre-Primary (Play – KG)', 'fa-child', $ev + ['cls' => ['early']]], ['Primary (Class 1 – 5)', 'fa-pencil', $ev + ['cls' => ['early']]],
@@ -418,11 +418,16 @@ function tf_curriculum_groups(): array
         ]],
     ];
     // অনার্স / মাস্টার্স — অনুষদ অনুযায়ী বিষয় (বাংলাদেশের বিশ্ববিদ্যালয় / ন্যাশনাল ইউনিভার্সিটি)
+    // ইংরেজিতে কার্ডে লম্বা নাম কেটে যায় — ছোট নাম
+    $short = ['Computer Science & Engineering' => 'CSE', 'Electrical & Electronic Engineering' => 'EEE', 'Civil Engineering' => 'Civil Engineering', 'Mechanical Engineering' => 'Mechanical Eng.',
+        'Islamic History & Culture' => 'Islamic History', 'Mass Communication & Journalism' => 'Journalism', 'Geography & Environment' => 'Geography', 'BBA (All Subjects)' => 'BBA',
+        'International Relations' => 'Int. Relations', 'Public Administration' => 'Public Admin.'];
+    $gEn = ['science' => 'Honours / Masters — Science & Engineering', 'business' => 'Honours / Masters — Business Studies', 'arts' => 'Honours / Masters — Arts & Social Science'];
     $first = true;
     foreach (honours_subjects() as $id => [$name, $list]) {
-        $items = $first ? [['সব বিষয় — অনার্স / মাস্টার্স', 'fa-graduation-cap', ['cls' => ['uni']]]] : [];
-        foreach ($list as $sub => [$bnName, $icon]) $items[] = [$bnName, $icon, ['cls' => ['uni'], 'sub' => [$sub]], $sub];   // কার্ডে বাংলা নাম, খোঁজায় ইংরেজিও
-        $groups[] = ['id' => 'hons-' . $id, 'name' => $name, 'items' => $items];
+        $items = $first ? [[t('সব বিষয় — অনার্স / মাস্টার্স', 'All Subjects — Honours / Masters'), 'fa-graduation-cap', ['cls' => ['uni']], 'honours masters অনার্স মাস্টার্স']] : [];
+        foreach ($list as $sub => [$bnName, $icon]) $items[] = [t($bnName, $short[$sub] ?? $sub), $icon, ['cls' => ['uni'], 'sub' => [$sub]], $sub . ' ' . $bnName];   // খোঁজা যায় দুই ভাষাতেই
+        $groups[] = ['id' => 'hons-' . $id, 'name' => t($name, $gEn[$id] ?? $name), 'items' => $items];
         $first = false;
     }
     return $groups;
