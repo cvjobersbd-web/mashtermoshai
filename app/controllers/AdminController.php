@@ -1117,7 +1117,9 @@ class AdminController extends Controller
         $okd = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : date('Y-m-d');
         $nbF = $okd(input_str('from', '')); $nbT = $okd(input_str('to', ''));
         if ($nbF > $nbT) [$nbF, $nbT] = [$nbT, $nbF];
-        $this->view(null, null, ['Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
+        [$sf, $stt] = $this->socialDates();
+        $this->view(null, null, ['Social' => $this->db->SocialRefSignups($sf, $stt), 'SocFrom' => $sf, 'SocTo' => $stt,
+            'Settings' => $this->db->ReferralSettings(), 'Stats' => $this->db->ReferralAdminStats(), 'Tab' => $w,
             'Withdrawals' => [], 'Referrals' => $this->db->GetReferralsAdmin(), 'Overview' => $this->db->GetReferrerOverview(), 'NoBonus' => $this->db->GetRefNoBonusUsers(), 'NoBonusRange' => $this->db->NoBonusRangeCounts($nbF, $nbT), 'NbFrom' => $nbF, 'NbTo' => $nbT]);
     }
 
@@ -1531,66 +1533,40 @@ class AdminController extends Controller
         $this->view(null, $this->db->GetReferenceReport($from, $to), ['Options' => $this->db->ReferenceOptions(), 'From' => $from, 'To' => $to]);
     }
 
+    /** Referrals পেজ — সোশ্যাল মিডিয়া সেকশনের তারিখ (sf / st); না দিলে শুরু থেকে আজ পর্যন্ত */
+    private function socialDates(): array
+    {
+        $ok = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : null;
+        $f = $ok(input_str('sf', '')); $t = $ok(input_str('st', ''));
+        if ($f && $t && $f > $t) [$f, $t] = [$t, $f];
+        return [$f, $t];
+    }
+
     /**
-     * GET /Admin/ReferencesExcel?from=&to= — সব ইউজার কোথা থেকে জেনে এসেছে (Facebook, Instagram, TikTok ...) — Excel (.xlsx)
-     * তারিখ না দিলে শুরু থেকে আজ পর্যন্ত সবার। শিট: সারাংশ · সব ইউজার · প্যাকেজ কেনা
+     * GET /Admin/SocialReferralsExcel?sf=&st= — কে কোন সোশ্যাল মিডিয়া (Facebook, Instagram, LinkedIn ...) থেকে জেনে সাইনআপ করেছে — Excel (.xlsx)
+     * তারিখ না দিলে শুরু থেকে আজ পর্যন্ত সবাই।
      */
-    public function ReferencesExcel(): void
+    public function SocialReferralsExcel(): void
     {
         $this->requireAdminPage();
-        [$from, $to] = $this->partnerDates();
+        [$from, $to] = $this->socialDates();
         require_once APP_ROOT . '/app/core/xlsx.php';
-        $R = $this->db->GetReferenceReport($from, $to);
-        $lbl = fn(?string $k) => $this->db->ReferenceInfo((string)$k)['label'];
-        $inRange = fn(string $d) => !(($from && substr($d, 0, 10) < $from) || ($to && substr($d, 0, 10) > $to));
-        $fd = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
-
-        // প্যাকেজ কেনা (Approve) — ইউজার অনুযায়ী
-        $pays = $this->db->all("SELECT pr.`Id`, pr.`UserId`, pr.`Amount`, pr.`Status`, pr.`PackageName`, pr.`Audience`, pr.`Reference`, pr.`ReferenceNote`, pr.`CreatedAt`, pr.`ReviewedAt`,
-            u.`FullName`, u.`UserName`, u.`MobileNumber` FROM `PaymentRequests` pr LEFT JOIN `Users` u ON u.`Id` = pr.`UserId` WHERE pr.`Status` IN ('Approved', 'Pending') ORDER BY pr.`Id` DESC");
-        $bought = [];
-        foreach ($pays as $p) if ($p->Status === 'Approved') { $bought[(int)$p->UserId] = ($bought[(int)$p->UserId] ?? 0) + (int)$p->Amount; }
-
-        // সারাংশ — রেফারেন্স অনুযায়ী টিচার / শিক্ষার্থী আলাদা
-        $users = array_values(array_filter($this->db->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `CreatedAt`, `HowHeard`, `HowHeardNote` FROM `Users` WHERE `Role` <> 'Admin' ORDER BY `Id` DESC"),
-            fn($u) => $inRange((string)$u->CreatedAt)));
-        $split = [];
-        foreach ($users as $u) { $k = (string)($u->HowHeard ?? ''); $split[$k][$u->Role === 'Teacher' ? 't' : 's'] = ($split[$k][$u->Role === 'Teacher' ? 't' : 's'] ?? 0) + 1; }
-        $period = ($from || $to) ? (($from ?: 'শুরু') . ' থেকে ' . ($to ?: date('Y-m-d'))) : 'শুরু থেকে আজ পর্যন্ত (সব ইউজার)';
-        $s1 = [['রেফারেন্স রিপোর্ট — কোথা থেকে জেনে এসেছে'], ['সময়', $period], ['তৈরি', date('d M Y, h:i A')], [],
-            ['রেফারেন্স (কোথা থেকে)', 'টিচার সাইনআপ', 'শিক্ষার্থী সাইনআপ', 'মোট সাইনআপ', 'প্যাকেজ কিনেছে (জন)', 'প্যাকেজ (টা)', 'বিক্রি (৳)', 'পেমেন্ট অপেক্ষমাণ', '"অন্যান্য" তে যা লিখেছে']];
+        $S = $this->db->SocialRefSignups($from, $to);
+        $period = ($from || $to) ? date('d M Y', strtotime($from ?: '2000-01-01')) . ' — ' . date('d M Y', strtotime($to ?: date('Y-m-d'))) : 'শুরু থেকে আজ পর্যন্ত (সবাই)';
+        if (!$from && $to) $period = 'শুরু থেকে ' . date('d M Y', strtotime($to));
+        $s1 = [['সোশ্যাল মিডিয়া থেকে আসা ইউজার'], ['সময়', $period], ['তৈরি', date('d M Y, h:i A')], [],
+            ['সোশ্যাল মিডিয়া', 'টিচার', 'শিক্ষার্থী', 'মোট সাইনআপ', 'প্যাকেজ কিনেছে (জন)', 'মোট কেনা (৳)']];
         $hdr = count($s1) - 1;
-        foreach ($R['rows'] as $k => $r) {
-            $notes = implode(', ', array_map(fn($n, $c) => $n . ($c > 1 ? " ×$c" : ''), array_keys($r['notes']), $r['notes']));
-            $s1[] = [$lbl((string)$k) . ($k === '' ? ' (এই অপশন চালুর আগের)' : ''), $split[$k]['t'] ?? 0, $split[$k]['s'] ?? 0, $r['signups'], $r['buyers'], $r['orders'], $r['revenue'], $r['pending'], $notes];
-        }
-        $T = $R['totals'];
-        $s1[] = ['মোট', array_sum(array_map(fn($x) => $x['t'] ?? 0, $split)), array_sum(array_map(fn($x) => $x['s'] ?? 0, $split)), $T['signups'], $T['buyers'], $T['orders'], $T['revenue'], $T['pending'], ''];
-
-        // সব ইউজার
-        $s2 = [['#', 'নাম', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'টিচার / শিক্ষার্থী', 'সাইনআপের তারিখ', 'কোথা থেকে জেনেছে (সাইনআপে)', '"অন্যান্য" তে যা লিখেছে', 'প্যাকেজ কিনেছে?', 'মোট কেনা (৳)']];
+        foreach ($S['summary'] as $k => $x) $s1[] = [$x['label'], $x['t'], $x['s'], $x['t'] + $x['s'], $x['buyers'], $x['revenue']];
+        $s1[] = ['মোট', array_sum(array_column($S['summary'], 't')), array_sum(array_column($S['summary'], 's')), count($S['users']), array_sum(array_column($S['summary'], 'buyers')), array_sum(array_column($S['summary'], 'revenue'))];
+        $s2 = [['#', 'সাইনআপের তারিখ', 'নাম', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'টিচার / শিক্ষার্থী', 'কোন সোশ্যাল মিডিয়া থেকে', 'প্যাকেজ কিনেছে?', 'মোট কেনা (৳)']];
         $i = 0;
-        foreach ($users as $u) {
-            $s2[] = [++$i, (string)($u->FullName ?: $u->UserName), '@' . $u->UserName, (string)($u->Email ?? ''), (string)($u->MobileNumber ?? ''), $u->Role === 'Teacher' ? 'Teacher' : 'Student',
-                $fd($u->CreatedAt), $lbl($u->HowHeard), $u->HowHeard === 'other' ? (string)($u->HowHeardNote ?? '') : '', isset($bought[(int)$u->Id]) ? 'হ্যাঁ' : 'না', $bought[(int)$u->Id] ?? 0];
-        }
-        if ($i === 0) $s2[] = ['এই সময়ে কোনো সাইনআপ নেই'];
-
-        // প্যাকেজ কেনা — কেনার সময় যে রেফারেন্স বেছেছে
-        $s3 = [['#', 'তারিখ', 'নাম', 'ইউজারনেম', 'মোবাইল', 'প্যাকেজ', 'কার জন্য', 'টাকা (৳)', 'অবস্থা', 'কোথা থেকে জেনেছে (কেনার সময়)', '"অন্যান্য" তে যা লিখেছে']];
-        $j = 0;
-        foreach ($pays as $p) {
-            $when = (string)($p->Status === 'Approved' ? ($p->ReviewedAt ?: $p->CreatedAt) : $p->CreatedAt);
-            if (!$inRange($when)) continue;
-            $s3[] = [++$j, $fd($when), (string)($p->FullName ?: $p->UserName ?: 'Deleted user'), $p->UserName ? '@' . $p->UserName : '', (string)($p->MobileNumber ?? ''), (string)($p->PackageName ?? ''),
-                (string)($p->Audience ?? ''), (int)$p->Amount, $p->Status === 'Approved' ? 'Approved' : 'অপেক্ষমাণ', $lbl($p->Reference), $p->Reference === 'other' ? (string)($p->ReferenceNote ?? '') : ''];
-        }
-        if ($j === 0) $s3[] = ['এই সময়ে কোনো প্যাকেজ কেনা নেই'];
-
-        xlsx_send('reference-report-' . ($from || $to ? ($from ?: 'start') . '-to-' . ($to ?: date('Y-m-d')) : 'all-users-' . date('Y-m-d')), [
-            ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, $hdr, count($s1) - 1], 'widths' => [34, 14, 16, 13, 18, 12, 12, 16, 40], 'freeze' => $hdr + 1],
-            ['name' => 'সব ইউজার', 'rows' => $s2, 'bold' => [0], 'widths' => [6, 26, 20, 30, 16, 16, 22, 28, 26, 14, 14], 'freeze' => 1],
-            ['name' => 'প্যাকেজ কেনা', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 26, 20, 16, 26, 12, 12, 12, 30, 26], 'freeze' => 1],
+        foreach ($S['users'] as $u) $s2[] = [++$i, date('d M Y, h:i A', strtotime((string)$u->CreatedAt)), (string)($u->FullName ?: $u->UserName), '@' . $u->UserName, (string)($u->Email ?? ''),
+            (string)($u->MobileNumber ?? ''), $u->Role === 'Teacher' ? 'Teacher' : 'Student', $u->Platform, $u->Bought > 0 ? 'হ্যাঁ' : 'না', $u->Bought];
+        if ($i === 0) $s2[] = ['এই সময়ে সোশ্যাল মিডিয়া থেকে কেউ সাইনআপ করেনি'];
+        xlsx_send('social-media-signups-' . ($from || $to ? ($from ?: 'start') . '-to-' . ($to ?: date('Y-m-d')) : 'all-' . date('Y-m-d')), [
+            ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, $hdr, count($s1) - 1], 'widths' => [24, 12, 12, 14, 20, 16], 'freeze' => $hdr + 1],
+            ['name' => 'কে কোথা থেকে', 'rows' => $s2, 'bold' => [0], 'widths' => [6, 22, 26, 20, 30, 16, 16, 24, 14, 14], 'freeze' => 1],
         ]);
     }
 

@@ -112,6 +112,41 @@ trait ReferenceData
         } catch (Throwable $e) { return []; }
     }
 
+    /** সোশ্যাল মিডিয়া (Google সার্চ বাদে ডিফল্ট সব অপশন) */
+    public const SOCIAL_KEYS = ['facebook', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp', 'telegram'];
+
+    /**
+     * Referrals পেজ: যারা সোশ্যাল মিডিয়া থেকে জেনে সাইনআপ করেছে (তারিখ না দিলে সবাই)
+     * রিটার্ন: ['summary' => [key => label, t, s, buyers, revenue], 'users' => Obj[] (+ Platform, Bought ৳)]
+     */
+    public function SocialRefSignups(?string $from, ?string $to): array
+    {
+        $this->EnsureReferenceCols();
+        $keys = self::SOCIAL_KEYS;
+        $in = implode(',', array_map(fn($k) => "'$k'", $keys));
+        $p = [];
+        $w = "`Role` <> 'Admin' AND `HowHeard` IN ($in)";
+        if ($from) { $w .= ' AND `CreatedAt` >= :f'; $p['f'] = $from . ' 00:00:00'; }
+        if ($to) { $w .= ' AND `CreatedAt` <= :t'; $p['t'] = $to . ' 23:59:59'; }
+        $users = $this->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `CreatedAt`, `HowHeard` FROM `Users` WHERE $w ORDER BY `CreatedAt` DESC, `Id` DESC", $p);
+        $bought = [];
+        if ($users) {
+            $ids = implode(',', array_map(fn($u) => (int)$u->Id, $users));
+            try { foreach ($this->all("SELECT `UserId`, SUM(`Amount`) AS S FROM `PaymentRequests` WHERE `Status` = 'Approved' AND `UserId` IN ($ids) GROUP BY `UserId`") as $r) $bought[(int)$r->UserId] = (int)$r->S; } catch (Throwable $e) { }
+        }
+        $sum = [];
+        foreach ($keys as $k) { $o = $this->ReferenceInfo($k); $sum[$k] = ['label' => $o['label'], 'icon' => $o['icon'], 'color' => $o['color'], 't' => 0, 's' => 0, 'buyers' => 0, 'revenue' => 0]; }
+        foreach ($users as $u) {
+            $k = (string)$u->HowHeard;
+            $u->Platform = $sum[$k]['label'];
+            $u->Bought = $bought[(int)$u->Id] ?? 0;
+            $sum[$k][$u->Role === 'Teacher' ? 't' : 's']++;
+            if ($u->Bought > 0) { $sum[$k]['buyers']++; $sum[$k]['revenue'] += $u->Bought; }
+        }
+        uasort($sum, fn($a, $b) => ($b['t'] + $b['s']) <=> ($a['t'] + $a['s']));
+        return ['summary' => $sum, 'users' => $users];
+    }
+
     /** অ্যাডমিন অপশন সেভ: $off = বন্ধ key গুলো, $custom = [key => label] */
     public function SaveReferenceOptions(array $off, array $custom): void
     {

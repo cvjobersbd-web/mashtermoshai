@@ -81,6 +81,48 @@ $sc = ['Pending' => 'p', 'Paid' => 'ok', 'Rejected' => 'no'];
     </a>
     <?php endif; ?>
 
+    <?php // ===== সোশ্যাল মিডিয়া থেকে আসা ইউজার =====
+    $soc = $ViewBag->Social ?? ['summary' => [], 'users' => []]; $sF = $ViewBag->SocFrom ?? null; $sT = $ViewBag->SocTo ?? null;
+    $sTot = count($soc['users']); $sQ = array_filter(['sf' => $sF, 'st' => $sT]); $td2 = date('Y-m-d');
+    $sQuick = ['আজ' => [$td2, $td2], 'গত ৭ দিন' => [date('Y-m-d', strtotime('-6 days')), $td2], 'গত ৩০ দিন' => [date('Y-m-d', strtotime('-29 days')), $td2], 'এই মাস' => [date('Y-m-01'), $td2]]; ?>
+    <div class="rfa-card" id="socialRef">
+        <h3><i class="fas fa-share-nodes" style="color:#1877F2;"></i> সোশ্যাল মিডিয়া থেকে আসা ইউজার <span class="rfa-pill" style="background:#DBEAFE;color:#1E40AF;"><?= number_format($sTot) ?> জন</span></h3>
+        <p style="font-size:13px;color:#64748B;margin:0 0 12px;">সাইনআপের সময় যারা বলেছে Facebook, Instagram, LinkedIn, YouTube, TikTok, WhatsApp বা Telegram থেকে জেনে এসেছে — শুধু তারা। তারিখ না দিলে <b>শুরু থেকে এখন পর্যন্ত</b> সবাই।</p>
+        <form class="sm-flt" method="get" action="/Admin/Referrals#socialRef">
+            <label>শুরু <input type="date" name="sf" value="<?= e($sF ?? '') ?>" max="<?= $td2 ?>" /></label>
+            <label>শেষ <input type="date" name="st" value="<?= e($sT ?? '') ?>" max="<?= $td2 ?>" /></label>
+            <button type="submit" class="sm-go"><i class="fas fa-magnifying-glass"></i> দেখুন</button>
+            <a class="sm-all<?= !$sF && !$sT ? ' on' : '' ?>" href="/Admin/Referrals#socialRef">শুরু থেকে এখন পর্যন্ত</a>
+            <?php foreach ($sQuick as $ql => [$qa, $qb]): ?><a class="sm-all<?= $sF === $qa && $sT === $qb ? ' on' : '' ?>" href="/Admin/Referrals?sf=<?= $qa ?>&st=<?= $qb ?>#socialRef"><?= $ql ?></a><?php endforeach; ?>
+            <a class="sm-xl" href="/Admin/SocialReferralsExcel<?= $sQ ? '?' . e(http_build_query($sQ)) : '' ?>"><i class="fas fa-file-excel"></i> Excel ডাউনলোড</a>
+        </form>
+        <div class="sm-grid">
+            <?php foreach ($soc['summary'] as $k => $x): $n = $x['t'] + $x['s']; ?>
+                <div class="sm-c<?= $n ? '' : ' zero' ?>"><i class="<?= e($x['icon']) ?>" style="color:<?= e($x['color']) ?>;"></i><div><b><?= e($x['label']) ?></b><span><?= number_format($n) ?> জন</span><small>টিচার <?= $x['t'] ?> · শিক্ষার্থী <?= $x['s'] ?><?= $x['buyers'] ? ' · কিনেছে ' . $x['buyers'] : '' ?></small></div></div>
+            <?php endforeach; ?>
+        </div>
+        <?php if ($soc['users']): ?>
+            <div class="sm-list"><?php foreach (array_slice($soc['users'], 0, 8) as $u): ?><span><b><?= e((string)($u->FullName ?: $u->UserName)) ?></b> — <?= e($u->Platform) ?> <small><?= e(date('d M Y', strtotime((string)$u->CreatedAt))) ?></small></span><?php endforeach; ?>
+                <?php if ($sTot > 8): ?><em>… আরো <?= number_format($sTot - 8) ?> জন — পুরো তালিকা Excel এ</em><?php endif; ?></div>
+        <?php else: ?><p style="color:#94A3B8;text-align:center;margin:10px 0 0;">এই সময়ে সোশ্যাল মিডিয়া থেকে কেউ সাইনআপ করেনি।</p><?php endif; ?>
+        <style>
+            .sm-flt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
+            .sm-flt label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #334155; margin: 0; }
+            .sm-flt input { height: 36px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 0 8px; font-family: inherit; font-size: 13px; }
+            .sm-go, .sm-xl { height: 36px; border: none; border-radius: 8px; color: #fff; font-weight: 700; padding: 0 14px; cursor: pointer; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+            .sm-go { background: #0284C7; } .sm-xl { background: #16A34A; margin-left: auto; } .sm-xl:hover { background: #15803D; color: #fff; }
+            .sm-all { font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; background: #EFF6FF; color: #1D4ED8; text-decoration: none; }
+            .sm-all.on { background: #1D4ED8; color: #fff; }
+            .sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+            .sm-c { display: flex; gap: 10px; align-items: center; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; }
+            .sm-c.zero { opacity: .55; } .sm-c > i { font-size: 24px; width: 28px; text-align: center; }
+            .sm-c b { display: block; font-size: 13.5px; color: #0F172A; } .sm-c span { display: block; font-size: 18px; font-weight: 800; color: #08224A; } .sm-c small { color: #64748B; font-size: 11.5px; }
+            .sm-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font-size: 12.5px; }
+            .sm-list span { background: #F1F5F9; border-radius: 999px; padding: 3px 10px; color: #334155; } .sm-list small { color: #94A3B8; } .sm-list em { color: #64748B; }
+            @media (max-width: 640px) { .sm-xl { margin-left: 0; } }
+        </style>
+    </div>
+
     <?php $nb = $ViewBag->NoBonus ?? []; ?>
     <div class="rfa-card" id="noBonus">
         <h3><i class="fas fa-user-slash" style="color:#DC2626;"></i> বোনাস ছাড়া রেফারার <span class="rfa-pill" style="background:#FEE2E2;color:#991B1B;"><?= count($nb) ?> জন</span></h3>
