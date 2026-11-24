@@ -113,7 +113,8 @@ class AdminController extends Controller
     {
         $this->requireAdminPage();
         $all = $this->db->GetAllNonAdminUsers();
-        $bag = ['AllUsers' => $all];
+        [$nf, $nt, $nr, $nm] = $this->newUserFilter();
+        $bag = ['AllUsers' => $all, 'NewUsers' => $this->db->GetNewUsers($nf, $nt, $nr, $nm), 'NewF' => [$nf, $nt, $nr, $nm], 'NewOpen' => isset($_GET['nf']) || isset($_GET['new'])];
         $id = input_int('id', null);
         if ($id !== null) {
             foreach ($all as $u) {
@@ -129,6 +130,36 @@ class AdminController extends Controller
             }
         }
         $this->view(null, null, $bag);
+    }
+
+    /** User Overview → নতুন ইউজার ফিল্টার: [from, to, role, mobileOnly] — ডিফল্ট গত ৭ দিন */
+    private function newUserFilter(): array
+    {
+        $ok = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime((string)$v) ? (string)$v : null;
+        $f = $ok(input_str('nf', '')) ?? date('Y-m-d', strtotime('-6 days'));
+        $t = $ok(input_str('nt', '')) ?? date('Y-m-d');
+        if ($f > $t) [$f, $t] = [$t, $f];
+        $r = (string)input_str('nr', '');
+        return [$f, $t, in_array($r, ['teacher', 'student'], true) ? $r : '', input_str('nm', '') === '1'];
+    }
+
+    /** GET /Admin/NewUsersExcel?nf=&nt=&nr=&nm= — নতুন ইউজারদের মোবাইল নম্বর সহ তালিকা (Excel .xlsx) */
+    public function NewUsersExcel(): void
+    {
+        $this->requireAdminPage();
+        [$f, $t, $r, $m] = $this->newUserFilter();
+        require_once APP_ROOT . '/app/core/xlsx.php';
+        $rows = [['নতুন ইউজার — ' . date('d M Y', strtotime($f)) . ($f !== $t ? ' থেকে ' . date('d M Y', strtotime($t)) : '')
+            . ($r === 'teacher' ? ' · শুধু টিচার' : ($r === 'student' ? ' · শুধু শিক্ষার্থী' : '')) . ($m ? ' · শুধু যাদের মোবাইল আছে' : '')], [],
+            ['#', 'সাইনআপের তারিখ', 'নাম', 'ইউজারনেম', 'মোবাইল নম্বর', 'ইমেইল', 'টিচার / শিক্ষার্থী', 'ইমেইল ভেরিফাই', 'অ্যাকাউন্ট']];
+        $i = 0;
+        foreach ($this->db->GetNewUsers($f, $t, $r, $m) as $u) {
+            $rows[] = [++$i, date('d M Y, h:i A', strtotime((string)$u->CreatedAt)), (string)($u->FullName ?: $u->UserName), '@' . $u->UserName, (string)($u->MobileNumber ?? ''),
+                (string)($u->Email ?? ''), $u->Role === 'Teacher' ? 'Teacher' : 'Student', !empty($u->EmailVerified) ? 'হ্যাঁ' : 'না', (int)$u->IsActive ? 'চালু' : 'বন্ধ'];
+        }
+        if ($i === 0) $rows[] = ['এই সময়ে কোনো নতুন ইউজার নেই'];
+        $rows[] = []; $rows[] = ['মোট', $i . ' জন'];
+        xlsx_send('new-users-' . $f . ($f !== $t ? '-to-' . $t : ''), [['name' => 'নতুন ইউজার', 'rows' => $rows, 'bold' => [0, 2, count($rows) - 1], 'widths' => [6, 22, 26, 20, 16, 30, 16, 14, 11], 'freeze' => 3]]);
     }
 
     /** GET /Admin/StudentOverview/{id?} — শুধু ভেরিফাইড শিক্ষার্থীদের অ্যাক্টিভিটি */

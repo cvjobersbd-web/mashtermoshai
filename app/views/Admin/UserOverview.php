@@ -317,6 +317,80 @@ $apps = $ViewBag->UserTuitionApps ?? [];
         </div>
     </div>
 
+    <?php if (!$isStu && isset($ViewBag->NewUsers)):
+        $NU = $ViewBag->NewUsers; [$nf, $nt, $nr, $nm] = $ViewBag->NewF; $td = date('Y-m-d');
+        $nq = ['nf' => $nf, 'nt' => $nt] + ($nr !== '' ? ['nr' => $nr] : []) + ($nm ? ['nm' => '1'] : []);
+        $nQuick = ['আজ' => [$td, $td], 'গতকাল' => [date('Y-m-d', strtotime('-1 day')), date('Y-m-d', strtotime('-1 day'))], 'গত ৭ দিন' => [date('Y-m-d', strtotime('-6 days')), $td], 'গত ৩০ দিন' => [date('Y-m-d', strtotime('-29 days')), $td], 'এই মাস' => [date('Y-m-01'), $td]];
+        $withMob = count(array_filter($NU, fn($u) => trim((string)($u->MobileNumber ?? '')) !== '')); ?>
+    <details class="nu" id="newUsers"<?= !empty($ViewBag->NewOpen) ? ' open' : '' ?>>
+        <summary><i class="fas fa-mobile-screen-button"></i> নতুন ইউজারদের মোবাইল নম্বর <span class="nu-pill"><?= count($NU) ?> জন · মোবাইল আছে <?= $withMob ?></span><small><?= e(date('d M', strtotime($nf)) . ($nf !== $nt ? ' – ' . date('d M Y', strtotime($nt)) : ', ' . date('Y', strtotime($nt)))) ?></small><i class="fas fa-chevron-down nu-ch"></i></summary>
+        <form class="nu-flt" method="get" action="/Admin/UserOverview#newUsers">
+            <label>শুরু <input type="date" name="nf" value="<?= e($nf) ?>" max="<?= $td ?>" /></label>
+            <label>শেষ <input type="date" name="nt" value="<?= e($nt) ?>" max="<?= $td ?>" /></label>
+            <select name="nr" aria-label="কারা"><option value="">সবাই</option><option value="teacher"<?= $nr === 'teacher' ? ' selected' : '' ?>>শুধু টিচার</option><option value="student"<?= $nr === 'student' ? ' selected' : '' ?>>শুধু শিক্ষার্থী</option></select>
+            <label class="nu-ck"><input type="checkbox" name="nm" value="1"<?= $nm ? ' checked' : '' ?> /> শুধু যাদের মোবাইল আছে</label>
+            <button type="submit" class="nu-go"><i class="fas fa-magnifying-glass"></i> দেখুন</button>
+            <a class="nu-xl" href="/Admin/NewUsersExcel?<?= e(http_build_query($nq)) ?>"><i class="fas fa-file-excel"></i> Excel ডাউনলোড</a>
+            <div class="nu-q"><?php foreach ($nQuick as $ql => [$qa, $qb]): ?><a class="<?= $nf === $qa && $nt === $qb ? 'on' : '' ?>" href="/Admin/UserOverview?<?= e(http_build_query(['nf' => $qa, 'nt' => $qb] + ($nr !== '' ? ['nr' => $nr] : []) + ($nm ? ['nm' => '1'] : []))) ?>#newUsers"><?= $ql ?></a><?php endforeach; ?></div>
+        </form>
+        <?php if (!$NU): ?>
+            <div class="nu-empty">এই সময়ে কোনো নতুন ইউজার নেই।</div>
+        <?php else: ?>
+        <div class="nu-tw"><table class="nu-tbl">
+            <thead><tr><th>#</th><th>সাইনআপ</th><th>নাম</th><th>মোবাইল নম্বর</th><th>ইমেইল</th><th>ধরন</th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($NU as $i => $u): $mob = trim((string)($u->MobileNumber ?? '')); ?>
+                <tr>
+                    <td><?= $i + 1 ?></td>
+                    <td><?= e(date('d M Y', strtotime((string)$u->CreatedAt))) ?><small><?= e(date('h:i A', strtotime((string)$u->CreatedAt))) ?></small></td>
+                    <td><b><?= e((string)($u->FullName ?: $u->UserName)) ?></b><small>@<?= e((string)$u->UserName) ?></small></td>
+                    <td><?php if ($mob !== ''): ?><a class="nu-mob" href="tel:<?= e($mob) ?>"><?= e($mob) ?></a> <button type="button" class="nu-cp" data-cp="<?= e($mob) ?>" title="কপি"><i class="far fa-copy"></i></button>
+                        <a class="nu-wa" href="https://wa.me/<?= e('88' . ltrim(preg_replace('/\D/', '', $mob), '8')) ?>" target="_blank" rel="noopener" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                        <?php else: ?><span class="nu-none">দেয়নি</span><?php endif; ?></td>
+                    <td><?= e((string)$u->Email) ?><?= !empty($u->EmailVerified) ? ' <i class="fas fa-circle-check" style="color:#16A34A;" title="ইমেইল ভেরিফাই করা"></i>' : '' ?></td>
+                    <td><span class="u-role-badge <?= $u->Role === 'Teacher' ? 'teacher' : 'user' ?>"><?= $u->Role === 'Teacher' ? 'Teacher' : 'Student' ?></span></td>
+                    <td><a class="nu-see" href="/Admin/UserOverview?id=<?= (int)$u->Id ?>">দেখুন</a></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
+        <?php endif; ?>
+        <style>
+            .nu { background: #fff; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.05); margin-bottom: 20px; border: 1.5px solid #BAE6FD; }
+            .nu summary { list-style: none; cursor: pointer; padding: 14px 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 800; color: #08224A; font-size: 16px; }
+            .nu summary::-webkit-details-marker { display: none; } .nu summary > i:first-child { color: #0284C7; }
+            .nu summary small { color: #64748B; font-weight: 600; font-size: 12.5px; } .nu-ch { margin-left: auto; color: #94A3B8; transition: transform .2s; } .nu[open] .nu-ch { transform: rotate(180deg); }
+            .nu-pill { font-size: 12px; background: #E0F2FE; color: #075985; border-radius: 999px; padding: 3px 10px; }
+            .nu-flt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 0 18px 12px; }
+            .nu-flt label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #334155; margin: 0; }
+            .nu-flt input[type=date], .nu-flt select { height: 36px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 0 8px; font-size: 13px; font-family: inherit; }
+            .nu-ck input { width: 16px; height: 16px; }
+            .nu-go, .nu-xl { height: 36px; border: none; border-radius: 8px; color: #fff; font-weight: 700; padding: 0 14px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; cursor: pointer; }
+            .nu-go { background: #0284C7; } .nu-xl { background: #16A34A; margin-left: auto; } .nu-xl:hover { background: #15803D; color: #fff; }
+            .nu-q { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; }
+            .nu-q a { font-size: 12.5px; font-weight: 700; padding: 4px 11px; border-radius: 999px; background: #EFF6FF; color: #1D4ED8; text-decoration: none; } .nu-q a.on { background: #1D4ED8; color: #fff; }
+            .nu-tw { overflow: auto; max-height: 460px; border-top: 1px solid #E5ECF3; }
+            .nu-tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
+            .nu-tbl th { position: sticky; top: 0; background: #F8FAFC; text-align: left; font-size: 11.5px; color: #64748B; padding: 9px 12px; text-transform: uppercase; }
+            .nu-tbl td { padding: 9px 12px; border-top: 1px solid #F1F5F9; color: #334155; vertical-align: middle; }
+            .nu-tbl small { display: block; color: #94A3B8; font-size: 11.5px; }
+            .nu-mob { font-weight: 800; color: #0F172A; text-decoration: none; font-size: 14px; letter-spacing: .3px; }
+            .nu-cp { border: 1px solid #E2E8F0; background: #fff; border-radius: 6px; width: 26px; height: 26px; color: #475569; cursor: pointer; } .nu-cp.ok { color: #16A34A; border-color: #16A34A; }
+            .nu-wa { color: #25D366; font-size: 18px; margin-left: 4px; vertical-align: middle; }
+            .nu-none { color: #CBD5E1; font-size: 12.5px; } .nu-see { font-weight: 700; font-size: 12.5px; color: #0284C7; text-decoration: none; }
+            .nu-empty { text-align: center; color: #94A3B8; padding: 18px; border-top: 1px solid #E5ECF3; }
+            @media (max-width: 640px) { .nu-xl { margin-left: 0; } }
+        </style>
+        <script>
+        document.addEventListener('click', function (e) {
+            var b = e.target.closest('.nu-cp'); if (!b) return;
+            var v = b.getAttribute('data-cp'), done = function () { b.classList.add('ok'); setTimeout(function () { b.classList.remove('ok'); }, 1200); };
+            if (navigator.clipboard) navigator.clipboard.writeText(v).then(done, done); else { var t = document.createElement('textarea'); t.value = v; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (x) { } t.remove(); done(); }
+        });
+        </script>
+    </details>
+    <?php endif; ?>
+
     <div class="row g-4">
 
         <!-- ===== Left Sidebar: User List ===== -->

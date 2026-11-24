@@ -583,6 +583,25 @@ class Db
         } catch (Throwable $e) { return []; }
     }
 
+    /**
+     * User Overview → নতুন ইউজার: এই সময়ে যারা সাইনআপ করেছে (মোবাইল নম্বর সহ) — নতুনরা আগে
+     * $role: '' | 'teacher' | 'student'; $mobileOnly = শুধু যাদের মোবাইল নম্বর আছে
+     */
+    public function GetNewUsers(string $from, string $to, string $role = '', bool $mobileOnly = false): array
+    {
+        $w = "`Role` <> 'Admin' AND `CreatedAt` >= :f AND `CreatedAt` <= :t";
+        $p = ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'];
+        if ($role === 'teacher') $w .= " AND `Role` = 'Teacher'";
+        elseif ($role === 'student') $w .= " AND `Role` <> 'Teacher'";
+        if ($mobileOnly) $w .= " AND `MobileNumber` IS NOT NULL AND TRIM(`MobileNumber`) <> ''";
+        try { $this->EnsureEmailVerify(); } catch (Throwable $e) { }
+        try {
+            return $this->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `CreatedAt`, `IsActive`, `EmailVerified`, `IntendedRole` FROM `Users` WHERE $w ORDER BY `CreatedAt` DESC, `Id` DESC", $p);
+        } catch (Throwable $e) {
+            return $this->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `MobileNumber`, `Role`, `CreatedAt`, `IsActive` FROM `Users` WHERE $w ORDER BY `CreatedAt` DESC, `Id` DESC", $p);
+        }
+    }
+
     /** @return Obj[] সব অ্যাডমিন */
     public function GetAdmins(): array
     {
