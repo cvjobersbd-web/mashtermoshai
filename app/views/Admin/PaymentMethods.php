@@ -170,7 +170,7 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
                             <div style="min-width:0;flex:1;">
                                 <div class="pm-a-t"><?= e($a->Title) ?></div>
                                 <?php if ($a->BankName): ?><div class="pm-a-s"><i class="fas fa-building-columns"></i> <?= e($a->BankName) ?><?= $a->Branch ? ', ' . e($a->Branch) : '' ?></div><?php endif; ?>
-                                <?php if ($a->AccountName || $a->AccountNumber): ?><div class="pm-a-s"><?= e(trim($a->AccountName . ' · ' . $a->AccountNumber, ' ·')) ?></div><?php endif; ?>
+                                <?php if ($a->AccountName || $a->AccountNumber || !empty($a->MobileNumber)): ?><div class="pm-a-s"><?= e(trim($a->AccountName . ' · ' . $a->AccountNumber . (!empty($a->MobileNumber) ? ' · মোবাইল ' . $a->MobileNumber : ''), ' ·')) ?></div><?php endif; ?>
                                 <?php if (!$a->IsActive): ?><div class="pm-a-s" style="color:#B91C1C;font-weight:700;">বন্ধ</div><?php endif; ?>
                                 <div class="pm-a-acts">
                                     <button type="button" class="pm-btn out sm" data-edit-acc="<?= (int)$a->Id ?>" data-m="<?= (int)$m->Id ?>"><i class="fas fa-pen"></i> Edit</button>
@@ -218,7 +218,8 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
             <div data-bank-only><label>ব্যাংকের নাম</label><input type="text" name="bankName" maxlength="100" placeholder="Pubali Bank PLC" /></div>
             <div data-bank-only><label>Branch</label><input type="text" name="branch" maxlength="100" /></div>
             <div><label>Account name / নাম</label><input type="text" name="accountName" maxlength="100" /></div>
-            <div><label>Account number / মোবাইল নম্বর</label><input type="text" name="accountNumber" maxlength="40" /></div>
+            <div><label id="aNumLbl">Account number</label><input type="text" name="accountNumber" maxlength="40" /></div>
+            <div data-bank-only><label>মোবাইল নম্বর</label><input type="text" name="mobileNumber" maxlength="20" inputmode="numeric" placeholder="01XXXXXXXXX" /></div>
             <div data-bank-only><label>Routing number</label><input type="text" name="routingNumber" maxlength="20" /></div>
             <div><label>ধরন <small>— যেমন: Personal, Merchant, Savings</small></label><input type="text" name="accountType" maxlength="40" /></div>
             <div class="full"><label>স্ক্যান করার QR ছবি <small>— PNG/JPG/WEBP, ৩ MB এর কম</small></label>
@@ -284,13 +285,14 @@ $kindBn = ['bank' => 'ব্যাংক', 'mobile' => 'মোবাইল ব�
         var m = findM(methodId);
         aForm.reset(); aForm.querySelector('.pm-err').hidden = true;
         aForm.id.value = a ? a.Id : 0; aForm.methodId.value = methodId;
-        ['title', 'bankName', 'branch', 'accountName', 'accountNumber', 'routingNumber', 'accountType'].forEach(function (k) {
+        ['title', 'bankName', 'branch', 'accountName', 'accountNumber', 'mobileNumber', 'routingNumber', 'accountType'].forEach(function (k) {
             var key = k.charAt(0).toUpperCase() + k.slice(1); aForm[k].value = a && a[key] ? a[key] : '';
         });
         aForm.isActive.checked = a ? !!a.IsActive : true;
         aForm.qrUrl.value = a && a.QrImageUrl ? a.QrImageUrl : '';
         pv(document.getElementById('aQrPv'), a && a.QrImageUrl, 'fa-qrcode');
         document.querySelectorAll('[data-bank-only]').forEach(function (x) { x.hidden = m.Kind !== 'bank'; });
+        document.getElementById('aNumLbl').textContent = m.Kind === 'bank' ? 'Account number' : 'মোবাইল নম্বর / Account number';   // bKash, Nagad ... তে অ্যাকাউন্ট নম্বরই মোবাইল নম্বর
         document.getElementById('aTitle').textContent = (a ? 'অ্যাকাউন্ট এডিট' : 'নতুন অ্যাকাউন্ট') + ' — ' + m.Name;
         aModal.hidden = false; aForm.title.focus();
     }

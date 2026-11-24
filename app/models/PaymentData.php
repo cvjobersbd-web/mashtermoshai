@@ -65,6 +65,9 @@ trait PaymentData
                 `PackageName` VARCHAR(80) NOT NULL, `Audience` VARCHAR(10) NOT NULL, `StartsAt` DATETIME NOT NULL, `EndsAt` DATETIME NULL, `PostsTotal` INT NOT NULL DEFAULT 0,
                 `PostsUsed` INT NOT NULL DEFAULT 0, `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`Id`), KEY `IX_US_User` (`UserId`, `Audience`)) $e");
         }
+        // ব্যাংক অ্যাকাউন্টে Account number আর মোবাইল নম্বর আলাদা — পুরোনো টেবিলে কলাম না থাকলে যোগ
+        try { $this->pdo->query('SELECT `MobileNumber` FROM `PaymentAccounts` LIMIT 1'); }
+        catch (Throwable $e) { try { $this->pdo->exec('ALTER TABLE `PaymentAccounts` ADD COLUMN `MobileNumber` VARCHAR(20) NULL'); } catch (Throwable $e2) { error_log('[PaymentAccounts.MobileNumber] ' . $e2->getMessage()); } }
         $this->paymentReady = true;
         try {
             $seeded = $this->GetSiteContent(['pay_seeded' => ''])['pay_seeded'] ?? '';
@@ -241,7 +244,7 @@ trait PaymentData
     public function SavePaymentAccount(int $id, array $d): int
     {
         $this->EnsurePaymentTables();
-        $cols = ['Title', 'AccountName', 'AccountNumber', 'BankName', 'Branch', 'RoutingNumber', 'AccountType'];
+        $cols = ['Title', 'AccountName', 'AccountNumber', 'MobileNumber', 'BankName', 'Branch', 'RoutingNumber', 'AccountType'];
         $args = [];
         foreach ($cols as $c) $args[$c] = ($d[$c] ?? '') !== '' ? $d[$c] : null;
         $args['IsActive'] = (int)$d['IsActive'];

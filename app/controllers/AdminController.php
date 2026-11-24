@@ -3185,7 +3185,7 @@ class AdminController extends Controller
         if (!$this->db->GetPaymentMethod($mid)) json_response(['success' => false, 'message' => 'মেথড পাওয়া যায়নি।']);
         $c = fn($k, $max) => mb_substr(trim(strip_tags((string)input_str($k, ''))), 0, $max);
         $d = [
-            'MethodId' => $mid, 'Title' => $c('title', 80), 'AccountName' => $c('accountName', 100), 'AccountNumber' => $c('accountNumber', 40),
+            'MethodId' => $mid, 'Title' => $c('title', 80), 'AccountName' => $c('accountName', 100), 'AccountNumber' => $c('accountNumber', 40), 'MobileNumber' => $c('mobileNumber', 20),
             'BankName' => $c('bankName', 100), 'Branch' => $c('branch', 100), 'RoutingNumber' => $c('routingNumber', 20), 'AccountType' => $c('accountType', 40),
             'IsActive' => input_bool('isActive', true) ? 1 : 0,
         ];
