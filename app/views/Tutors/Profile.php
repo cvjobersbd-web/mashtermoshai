@@ -22,7 +22,7 @@ $methods = $d['methods'] ?: ($t->TeachingMode === 'Online' ? ['Online Tutoring']
 $city = $d['livingCity'] !== '' ? $d['livingCity'] : $t->City;
 $salary = $d['expectedSalary'] !== '' ? $d['expectedSalary'] : ($t->MonthlyFee ? (string)$t->MonthlyFee : '');
 $exp = $d['experienceYears'] !== '' ? $d['experienceYears'] : ($t->ExperienceYears ? $t->ExperienceYears . ' Year(s)' : '');
-$preface = $d['preface'] !== '' ? $d['preface'] : ($d['whyHire'] === '' ? (string)$t->About : '');
+$preface = td_preface($d) ?: (string)$t->About;
 $gender = $d['gender'] !== '' ? $d['gender'] : (in_array($t->Gender, ['Male', 'Female'], true) ? $t->Gender : '');
 $reqHref = '/FindTutor?req=' . (int)$t->UserId;
 $canRequest = !$isOwner && $role !== 'Teacher' && $role !== 'Admin' && $t->TutorId !== '';
@@ -176,9 +176,8 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
                 <div class="tp-about"><div class="tp-lockbox"><i class="fas fa-lock"></i><p><?= $lockMsg ?></p></div></div>
                 <?php else: ?>
                 <div class="tp-about">
-                    <h3>Preface</h3><p><?= $preface !== '' ? e($preface) : $na ?></p>
+                    <h3>Preface</h3><p style="white-space:pre-line;"><?= $preface !== '' ? e($preface) : $na ?></p>
                     <h3>Tuition Job Experience</h3><p><?= $val($d['tuitionExperience']) ?></p>
-                    <h3>Reasons to be Getting Hired</h3><p><?= $val($d['whyHire']) ?></p>
                 </div>
                 <?php endif; ?>
             </div>

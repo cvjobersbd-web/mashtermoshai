@@ -399,7 +399,7 @@ function tf_count_for(array $facets, array $q): int
 function tf_curriculum_groups(): array
 {
     $em = ['med' => ['English Medium', 'British Curriculum']]; $bn = ['med' => ['Bangla Medium']]; $ev = ['med' => ['English Version']];
-    return [
+    $groups = [
         ['id' => 'british', 'name' => 'British Curriculum', 'items' => [
             ['Playgroup – KG', 'fa-shapes', $em + ['cls' => ['early']]], ['Primary (Class 1 – 5)', 'fa-pencil', $em + ['cls' => ['early']]],
             ['Junior (Class 6 – 8)', 'fa-book-open', $em + ['cls' => ['c68']]], ['O Level / IGCSE', 'fa-award', $em + ['cls' => ['olevel']]],
@@ -417,4 +417,13 @@ function tf_curriculum_groups(): array
             ['HSC (Class 11 – 12)', 'fa-atom', $ev + ['cls' => ['hsc']]],
         ]],
     ];
+    // অনার্স / মাস্টার্স — অনুষদ অনুযায়ী বিষয় (বাংলাদেশের বিশ্ববিদ্যালয় / ন্যাশনাল ইউনিভার্সিটি)
+    $first = true;
+    foreach (honours_subjects() as $id => [$name, $list]) {
+        $items = $first ? [['সব বিষয় — অনার্স / মাস্টার্স', 'fa-graduation-cap', ['cls' => ['uni']]]] : [];
+        foreach ($list as $sub => [$bnName, $icon]) $items[] = [$bnName, $icon, ['cls' => ['uni'], 'sub' => [$sub]], $sub];   // কার্ডে বাংলা নাম, খোঁজায় ইংরেজিও
+        $groups[] = ['id' => 'hons-' . $id, 'name' => $name, 'items' => $items];
+        $first = false;
+    }
+    return $groups;
 }

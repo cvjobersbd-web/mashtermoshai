@@ -1207,11 +1207,51 @@ function td_subject_groups(): array
     ];
 }
 
+/** টিচারের "নিজের পরিচয়" আর "কেন আপনাকে নেবে" এখন একটাই ঘর — পুরোনো দুই লেখা একসাথে */
+function td_preface(array $d): string
+{
+    $p = trim((string)($d['preface'] ?? '')); $w = trim((string)($d['whyHire'] ?? ''));
+    if ($w === '' || ($p !== '' && mb_strpos($p, $w) !== false)) return $p;
+    return $p === '' ? $w : $p . "\n\n" . $w;
+}
+
+/**
+ * অনার্স / মাস্টার্স (বাংলাদেশের বিশ্ববিদ্যালয় ও ন্যাশনাল ইউনিভার্সিটি) — অনুষদ => [বিষয় => [বাংলা নাম, আইকন]]
+ * টিচারের ফর্মে আর Categories পেইজে একই নাম, তাই ফিল্টার মেলে।
+ */
+function honours_subjects(): array
+{
+    return [
+        'science' => ['অনার্স / মাস্টার্স — বিজ্ঞান ও ইঞ্জিনিয়ারিং', [
+            'Mathematics' => ['গণিত', 'fa-square-root-variable'], 'Physics' => ['পদার্থবিজ্ঞান', 'fa-atom'], 'Chemistry' => ['রসায়ন', 'fa-flask'],
+            'Botany' => ['উদ্ভিদবিজ্ঞান', 'fa-leaf'], 'Zoology' => ['প্রাণিবিজ্ঞান', 'fa-paw'], 'Statistics' => ['পরিসংখ্যান', 'fa-chart-column'],
+            'Microbiology' => ['অণুজীববিজ্ঞান', 'fa-bacteria'], 'Biochemistry' => ['প্রাণরসায়ন', 'fa-dna'], 'Pharmacy' => ['ফার্মেসি', 'fa-pills'],
+            'Geography & Environment' => ['ভূগোল ও পরিবেশ', 'fa-earth-asia'], 'Psychology' => ['মনোবিজ্ঞান', 'fa-brain'],
+            'Computer Science & Engineering' => ['কম্পিউটার সায়েন্স (CSE)', 'fa-laptop-code'], 'Electrical & Electronic Engineering' => ['ইলেকট্রিক্যাল (EEE)', 'fa-bolt'],
+            'Civil Engineering' => ['সিভিল ইঞ্জিনিয়ারিং', 'fa-helmet-safety'], 'Mechanical Engineering' => ['মেকানিক্যাল ইঞ্জিনিয়ারিং', 'fa-gears'],
+        ]],
+        'business' => ['অনার্স / মাস্টার্স — ব্যবসায় শিক্ষা', [
+            'Accounting' => ['হিসাববিজ্ঞান', 'fa-calculator'], 'Management' => ['ব্যবস্থাপনা', 'fa-people-roof'], 'Marketing' => ['মার্কেটিং', 'fa-bullhorn'],
+            'Finance & Banking' => ['ফিন্যান্স ও ব্যাংকিং', 'fa-building-columns'], 'Economics' => ['অর্থনীতি', 'fa-chart-line'],
+            'BBA (All Subjects)' => ['বিবিএ (BBA)', 'fa-briefcase'],
+        ]],
+        'arts' => ['অনার্স / মাস্টার্স — কলা ও সামাজিক বিজ্ঞান', [
+            'Bangla' => ['বাংলা', 'fa-book'], 'English' => ['ইংরেজি', 'fa-language'], 'History' => ['ইতিহাস', 'fa-landmark'],
+            'Islamic History & Culture' => ['ইসলামের ইতিহাস', 'fa-mosque'], 'Islamic Studies' => ['ইসলামিক স্টাডিজ', 'fa-book-quran'],
+            'Philosophy' => ['দর্শন', 'fa-lightbulb'], 'Political Science' => ['রাষ্ট্রবিজ্ঞান', 'fa-scale-balanced'], 'Sociology' => ['সমাজবিজ্ঞান', 'fa-users'],
+            'Social Work' => ['সমাজকর্ম', 'fa-hand-holding-heart'], 'Public Administration' => ['লোকপ্রশাসন', 'fa-sitemap'],
+            'International Relations' => ['আন্তর্জাতিক সম্পর্ক', 'fa-globe'], 'Anthropology' => ['নৃবিজ্ঞান', 'fa-people-group'],
+            'Mass Communication & Journalism' => ['সাংবাদিকতা', 'fa-newspaper'], 'Law' => ['আইন', 'fa-gavel'],
+        ]],
+    ];
+}
+
 /** সব মিডিয়ামের বিষয় একসাথে (অ্যাডমিনের তালিকা + মিডিয়ামের বিষয়) — ফিল্টারের জন্য */
 function td_all_subjects(): array
 {
     $all = tuition_options()['subjects'] ?? default_tuition_subjects();
     foreach (td_subject_groups() as $list) $all = array_merge($all, $list);
+    foreach (honours_subjects() as [, $list]) $all = array_merge($all, array_keys($list));
     $out = [];
     foreach ($all as $x) if (!isset($out[mb_strtolower($x)])) $out[mb_strtolower($x)] = $x;
     return array_values($out);

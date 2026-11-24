@@ -52,6 +52,7 @@ class TeacherController extends Controller
     {
         $raw = $_POST['td'] ?? [];
         $d = Db::cleanTeacherDetails(is_array($raw) ? $raw : []);
+        $d['whyHire'] = '';   // "কেন আপনাকে নেবে" এখন Preface এর সাথে একই ঘরে
         $need = ['university' => 'University / College', 'livingCity' => 'Living City', 'subjects' => 'Subjects',
             'classes' => 'Classes', 'methods' => 'Tutoring Method', 'days' => 'Availability Days', 'experienceYears' => 'Tutoring Experience',
             'expectedSalary' => 'Expected Salary', 'gender' => 'Gender'];
@@ -119,7 +120,7 @@ class TeacherController extends Controller
         $model->HourlyRate = $d['expectedSalary'];
         $model->AvailableDays = implode(', ', $d['days']);
         $model->PreferredTime = $d['timeFrom'] !== '' && $d['timeTo'] !== '' ? date('h:i A', strtotime($d['timeFrom'])) . ' - ' . date('h:i A', strtotime($d['timeTo'])) : '';
-        $model->WhyTeach = $d['whyHire'];
+        $model->WhyTeach = mb_substr($d['preface'], 0, 1500);
         if ($model->Education === '') $errors[] = 'Highest Education দিন।';
         if ($model->CvLink !== '' && !preg_match('#^https?://#i', $model->CvLink)) $errors[] = 'CV Link https:// দিয়ে শুরু হতে হবে।';
         if (in_array($this->db->GetUserTeacherRequestStatus($userId), ['Pending', 'AwaitingPayment', 'Approved'], true)) $errors[] = 'আপনার আগের আবেদন এখনো চালু আছে।';

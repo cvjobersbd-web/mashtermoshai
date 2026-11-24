@@ -13,7 +13,7 @@ trait TeacherDetailsData
     public static function teacherDetailFields(): array
     {
         $f = [
-            'preface' => ['long', 1500], 'tuitionExperience' => ['long', 1500], 'whyHire' => ['long', 1500],
+            'preface' => ['long', 3000], 'tuitionExperience' => ['long', 1500], 'whyHire' => ['long', 1500],
             'university' => ['text', 150], 'department' => ['text', 120],
             'livingCountry' => ['text', 60], 'livingCity' => ['text', 60], 'livingArea' => ['text', 80],
             'preferredAreas' => ['list', 400], 'mediums' => ['list', 200], 'classes' => ['list', 600], 'subjects' => ['list', 600],

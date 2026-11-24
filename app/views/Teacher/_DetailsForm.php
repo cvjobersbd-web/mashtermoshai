@@ -36,6 +36,8 @@ $medList = array_values(array_unique(array_merge(Db::TD_MEDIUMS, $d['mediums']))
 $sGroups = td_subject_groups();
 $inGroup = [];
 foreach ($sGroups as $list) foreach ($list as $x) $inGroup[mb_strtolower($x)] = true;
+$hons = [];   // অনার্স / মাস্টার্সের বিষয় (অনুষদ অনুযায়ী)
+foreach (honours_subjects() as [$hn, $hl]) foreach ($hl as $x => $_) { $hons[] = $x; $inGroup[mb_strtolower($x)] = true; }
 $sOther = $sGroups['common'];
 foreach (array_merge($opts['subjects'], $d['subjects']) as $x) if (!isset($inGroup[mb_strtolower($x)])) { $sOther[] = $x; $inGroup[mb_strtolower($x)] = true; }
 $selSub = array_map('mb_strtolower', $d['subjects']);
@@ -104,9 +106,8 @@ $subChips = function (array $list) use ($selSub) {
 <div class="td-sec">
     <h4><i class="fas fa-user-pen"></i> নিজের সম্পর্কে (Preface)</h4>
     <p class="hint">স্টুডেন্ট আর অভিভাবকরা আপনার ডিটেইলস পেজে এগুলো প্রথমে দেখবে।</p>
-    <div class="mb-3"><label class="form-label">Preface — নিজের পরিচয়</label><textarea name="td[preface]" class="form-control" rows="3" maxlength="1500" placeholder="যেমন: আমি ঢাকা বিশ্ববিদ্যালয়ে পদার্থবিজ্ঞানে পড়ছি..."><?= e($d['preface']) ?></textarea></div>
-    <div class="mb-3"><label class="form-label">Tuition Job Experience — পড়ানোর অভিজ্ঞতা</label><textarea name="td[tuitionExperience]" class="form-control" rows="3" maxlength="1500" placeholder="কোন ক্লাস, কত বছর, কেমন ফলাফল..."><?= e($d['tuitionExperience']) ?></textarea></div>
-    <div><label class="form-label">Reasons to be Hired — কেন আপনাকে নেবে <span style="color:#94A3B8;font-weight:400;">(ঐচ্ছিক)</span></label><textarea name="td[whyHire]" class="form-control" rows="3" maxlength="1500" placeholder="আপনার পড়ানোর ধরন আর বিশেষত্ব..."><?= e($d['whyHire']) ?></textarea></div>
+    <div class="mb-3"><label class="form-label">Preface — নিজের পরিচয় ও কেন আপনাকে নেবে <span style="color:#94A3B8;font-weight:400;">(ঐচ্ছিক)</span></label><textarea name="td[preface]" class="form-control" rows="5" maxlength="3000" placeholder="যেমন: আমি ঢাকা বিশ্ববিদ্যালয়ে পদার্থবিজ্ঞানে পড়ছি। ধৈর্য নিয়ে বেসিক থেকে বুঝিয়ে পড়াই, নিয়মিত পরীক্ষা নিই..."><?= e(td_preface($d)) ?></textarea></div>
+    <div><label class="form-label">Tuition Job Experience — পড়ানোর অভিজ্ঞতা</label><textarea name="td[tuitionExperience]" class="form-control" rows="3" maxlength="1500" placeholder="কোন ক্লাস, কত বছর, কেমন ফলাফল..."><?= e($d['tuitionExperience']) ?></textarea></div>
 </div>
 
 <div class="td-sec">
@@ -159,6 +160,7 @@ $subChips = function (array $list) use ($selSub) {
             <?php foreach (Db::TD_MEDIUMS as $m): if (empty($sGroups[$m])) continue; ?>
                 <div class="td-sg" data-med="<?= e($m) ?>"><div class="td-sg-h"><?= e($medBn[$m] ?? $m) ?></div><div class="td-chips"><?= $subChips($sGroups[$m]) ?></div></div>
             <?php endforeach; ?>
+            <div class="td-sg" data-uni="1"><div class="td-sg-h">অনার্স / মাস্টার্সের বিষয় <span style="font-weight:500;color:#64748B;">— Classes এ University (Honours) / Masters / Diploma বাছাই করলে দেখাবে</span></div><div class="td-chips"><?= $subChips($hons) ?></div></div>
             <div class="td-sg" data-med=""><div class="td-sg-h">সাধারণ / অন্যান্য</div><div class="td-chips"><?= $subChips($sOther) ?></div></div>
         </div></div>
     <div class="mb-3"><label class="form-label d-block">Preferred Tutoring Method <?= $req ?></label><div class="td-chips"><?= $chk('methods', Db::TD_METHODS, $d['methods']) ?></div></div>
@@ -334,11 +336,16 @@ $subChips = function (array $list) use ($selSub) {
         var groups = box.querySelectorAll('.td-sg[data-med]:not([data-med=""])'), hint = document.getElementById('tdSubHint');
         function chosen() { return Array.prototype.filter.call(meds.querySelectorAll('input'), function (i) { return i.checked; }).map(function (i) { return i.value === 'English Version' ? 'Bangla Medium' : i.value; }); }
         function same(v) { return box.querySelectorAll('input[value="' + v.replace(/"/g, '\\"') + '"]'); }
+        var uniG = box.querySelector('.td-sg[data-uni]'), UNI = ['University (Honours)', 'Masters', 'Diploma'];
+        function uniOn() { return Array.prototype.some.call(document.querySelectorAll('input[name="td[classes][]"]'), function (i) { return i.checked && UNI.indexOf(i.value) !== -1; }); }
         function show() {
             var c = chosen();
             groups.forEach(function (g) { g.hidden = c.length > 0 && c.indexOf(g.dataset.med) === -1; });
             hint.hidden = c.length > 0;
+            // অনার্স / মাস্টার্স: Classes এ University (Honours) / Masters / Diploma বাছাই করলে
+            if (uniG) uniG.hidden = !uniOn();
         }
+        document.querySelectorAll('input[name="td[classes][]"]').forEach(function (i) { i.addEventListener('change', show); });
         // একই বিষয় দুই মিডিয়ামে থাকলে একসাথে চেক / আনচেক
         box.addEventListener('change', function (e) {
             var i = e.target; if (!i.matches('input')) return;
