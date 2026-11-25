@@ -60,6 +60,13 @@ $benefitGrid = function (array $list, string $title) { if (!$list) return; ?>
     @media (max-width: 640px) { .pk-apply { flex-wrap: wrap; } .pk-apply .pk-btn { width: 100%; justify-content: center; } }
     .pk-offer i { font-size: 18px; margin-top: 2px; color: #7C3AED; }
     .pk-offer b { display: block; font-size: 13.5px; } .pk-offer b.p { display: inline; font-size: 16px; color: #15803D; }
+    .pk-offer > div { min-width: 0; flex: 1; }
+    .pk-until { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #6D28D9; }
+    .pk-cd { display: flex; gap: 5px; margin-top: 6px; }
+    .pk-cd > span { flex: 1; min-width: 0; background: #fff; border: 1px solid #DDD6FE; border-radius: 8px; padding: 4px 2px; text-align: center; line-height: 1.1; }
+    .pk-cd b { display: block; font-size: 16px; color: #4C1D95; font-variant-numeric: tabular-nums; }
+    .pk-cd small { font-size: 10.5px; color: #7C3AED; font-weight: 600; }
+    .pk-cd.done { display: block; font-weight: 700; color: #B91C1C; }
 </style>
 <?php
 // ৳২০ এর "১টা Apply" — প্যাকেজ ছাড়া একটা পোস্টে Apply
@@ -96,7 +103,12 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
         <?php elseif ($p->PostLimit > 1 && $p->Price > 0): ?><span class="pk-pill"><?= t('প্রতি পোস্ট মাত্র', 'Only') ?> <?= e(taka((int)round($p->Price / $p->PostLimit))) ?><?= t('', ' per post') ?></span>
         <?php else: ?><span class="pk-pill green"><?= e($p->DurationLabel) ?></span><?php endif; ?>
         <?php if ($cpo): ?>
-            <div class="pk-offer"><i class="fas fa-ticket"></i><div><b><?= t('স্পেশাল অফার · সীমিত সময়', 'Special offer · limited time') ?></b><?= t('কুপন কোড দিলে মাত্র', 'With a coupon code, only') ?> <b class="p"><?= e(taka((int)$cpo->Price)) ?></b><?= $cpo->EndsAt ? ' — ' . t('', 'until ') . e(date('d M Y', strtotime((string)$cpo->EndsAt))) . t(' পর্যন্ত', '') : '' ?></div></div>
+            <?php $cpEnd = $cpo->EndsAt ? strtotime((string)$cpo->EndsAt) : 0; ?>
+            <div class="pk-offer"><i class="fas fa-ticket"></i><div><b><?= t('স্পেশাল অফার · সীমিত সময়', 'Special offer · limited time') ?></b><?= t('কুপন কোড দিলে মাত্র', 'With a coupon code, only') ?> <b class="p"><?= e(taka((int)$cpo->Price)) ?></b>
+                <?php if ($cpEnd): ?>
+                    <span class="pk-until"><i class="far fa-calendar"></i> <?= t(bn_num((int)date('j', $cpEnd)) . ' ' . ['', 'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'][(int)date('n', $cpEnd)] . ' ' . bn_num((int)date('Y', $cpEnd)) . ' পর্যন্ত', 'Until ' . date('j F Y', $cpEnd)) ?></span>
+                    <span class="pk-cd" data-end="<?= $cpEnd * 1000 ?>" aria-label="<?= e(t('অফার শেষ হতে বাকি', 'Offer ends in')) ?>"><span><b>--</b><small><?= t('দিন', 'days') ?></small></span><span><b>--</b><small><?= t('ঘণ্টা', 'hrs') ?></small></span><span><b>--</b><small><?= t('মিনিট', 'min') ?></small></span><span><b>--</b><small><?= t('সেকেন্ড', 'sec') ?></small></span></span>
+                <?php endif; ?></div></div>
         <?php endif; ?>
         <?php if ($p->FeatureList): ?>
             <ul class="pk-feat">
@@ -385,3 +397,22 @@ $card = function (Obj $p, string $cta) use ($studentFree) { $free = $studentFree
 })();
 </script>
 <?php section_end(); ?>
+<script>
+// স্পেশাল অফারের কাউন্টডাউন (কুপনের শেষ তারিখ পর্যন্ত)
+(function () {
+    var els = document.querySelectorAll('.pk-cd[data-end]'); if (!els.length) return;
+    var BN = <?= site_lang() === 'en' ? 'false' : 'true' ?>, dg = '০১২৩৪৫৬৭৮৯';
+    var f = function (n) { var s = String(n).padStart(2, '0'); return BN ? s.replace(/\d/g, function (d) { return dg[d]; }) : s; };
+    function tick() {
+        var now = Date.now();
+        els.forEach(function (el) {
+            var left = Math.floor((+el.dataset.end - now) / 1000);
+            if (left <= 0) { el.classList.add('done'); el.textContent = <?= js(t('অফার শেষ হয়ে গেছে', 'This offer has ended')) ?>; return; }
+            var b = el.querySelectorAll('b');
+            b[0].textContent = f(Math.floor(left / 86400)); b[1].textContent = f(Math.floor(left % 86400 / 3600));
+            b[2].textContent = f(Math.floor(left % 3600 / 60)); b[3].textContent = f(left % 60);
+        });
+    }
+    tick(); setInterval(tick, 1000);
+})();
+</script>

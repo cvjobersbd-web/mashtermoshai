@@ -222,6 +222,13 @@ trait PackageData
                 $this->SaveSiteContent(['cpn_v2' => '1']);
             }
         } catch (Throwable $e) { error_log('[coupon v2] ' . $e->getMessage()); }
+        // একবারই: স্পেশাল অফার (৬ মাসের কুপন) ৩১ ডিসেম্বর ২০২৬ পর্যন্ত — শেষ তারিখ না দেওয়া থাকলে বসে; পরে Admin → Coupons থেকে বদলানো যায়
+        try {
+            if (($this->GetSiteContent(['cpn_end_2026' => ''])['cpn_end_2026'] ?? '') === '') {
+                $this->exec("UPDATE `Coupons` SET `EndsAt` = '2026-12-31 23:59:59' WHERE `EndsAt` IS NULL AND `DurationMonths` = 6 AND `IsActive` = 1");
+                $this->SaveSiteContent(['cpn_end_2026' => '1']);
+            }
+        } catch (Throwable $e) { error_log('[coupon end 2026] ' . $e->getMessage()); }
     }
 
     public function SetCouponImage(int $id, ?string $url): void
