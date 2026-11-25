@@ -1178,6 +1178,20 @@ function default_tuition_classes(): array
         'University (Honours)', 'Masters', 'IELTS', 'Job Preparation'];
 }
 
+/** Admission Help গ্রুপের নতুন ক্যাটাগরি (মেডিকেল, ইঞ্জিনিয়ারিং, ঢাবি-রাবি-চবি-জাবি-জবি, গুচ্ছ ...) — [নাম, আইকন, ধরন, কিওয়ার্ড] */
+function admission_extra_items(): array
+{
+    return [
+        ['Medical & Dental', 'fa-tooth', 'class', ['Medical Admission', 'Dental Admission', 'Medical & Dental']],
+        ['Engineering', 'fa-gears', 'class', ['Engineering Admission', 'BUET', 'CKRUET']],
+        ['Dhaka, Rajshahi, Chittagong, Jahangirnagar and Jagannath', 'fa-building-columns', 'class', ['University Admission', 'DU', 'RU', 'CU', 'JU', 'JnU']],
+        ['Other General Universities', 'fa-landmark', 'class', ['University Admission', 'General University']],
+        ['GST Cluster (Guccho)', 'fa-layer-group', 'class', ['University Admission', 'GST', 'Guccho']],
+        ['Science & Technology Universities', 'fa-microscope', 'class', ['University Admission', 'Science & Technology']],
+        ['Subject Practice', 'fa-pen-to-square', 'class', ['University Admission', 'Medical Admission', 'Engineering Admission', 'Subject Practice']],
+    ];
+}
+
 function default_tuition_subjects(): array
 {
     return ['All Subjects', 'Bangla', 'English', 'Mathematics', 'General Math', 'Higher Math', 'Science', 'Physics', 'Chemistry', 'Biology', 'ICT',
@@ -1742,7 +1756,7 @@ function category_seed_data(): array
             ['IBA Admission Test', 'fa-chart-line', 'class', ['IBA Admission', 'IBA']],
             ['MBA Admission Help', 'fa-briefcase', 'class', ['MBA Admission', 'MBA']],
             ['Cadet Admission Help', 'fa-person-military-rifle', 'class', ['Cadet Admission', 'Cadet College']],
-        ],
+        ] + admission_extra_items(),
         'Int. Exam Preparation' => [
             ['IELTS', 'fa-language', 'class', ['IELTS']],
             ['TOEFL', 'fa-comments', 'class', ['TOEFL']],

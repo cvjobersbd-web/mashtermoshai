@@ -48,6 +48,29 @@ trait CategoryData
                 if ((int)$this->scalar("SELECT COUNT(*) FROM `CategoryGroups` WHERE LOWER(`Name`) IN ('madrasa', 'madrasah')") === 0) $this->addMadrasaGroup();
             }
         } catch (Throwable $e) { error_log('[categories madrasa] ' . $e->getMessage()); }
+        // নতুন: Admission Help এ মেডিকেল, ইঞ্জিনিয়ারিং, বিশ্ববিদ্যালয়, গুচ্ছ ... — একবারই; একই নামে আগে থাকলে বাদ
+        try {
+            if (($this->GetSiteContent(['cat_admission_v2' => ''])['cat_admission_v2'] ?? '') === '') {
+                $this->SaveSiteContent(['cat_admission_v2' => '1']);
+                $this->addAdmissionExtras();
+            }
+        } catch (Throwable $e) { error_log('[categories admission] ' . $e->getMessage()); }
+    }
+
+    private function addAdmissionExtras(): void
+    {
+        $gid = (int)$this->scalar("SELECT `Id` FROM `CategoryGroups` WHERE LOWER(`Name`) = 'admission help' ORDER BY `Id` LIMIT 1");
+        if (!$gid) return;   // অ্যাডমিন গ্রুপটা মুছে দিলে আবার বানায় না
+        $have = array_map(fn($r) => mb_strtolower((string)$r->Name), $this->all('SELECT `Name` FROM `Categories` WHERE `GroupId` = :g', ['g' => $gid]));
+        $sort = (int)$this->scalar('SELECT COALESCE(MAX(`SortOrder`), 0) FROM `Categories` WHERE `GroupId` = :g', ['g' => $gid]);
+        foreach (admission_extra_items() as [$name, $icon, $type, $keywords]) {
+            if (in_array(mb_strtolower($name), $have, true)) continue;
+            $this->insertCategory([
+                'GroupId' => $gid, 'Name' => $name, 'Slug' => $this->uniqueCategorySlug($name, 'Admission', 0), 'Icon' => $icon,
+                'ImageUrl' => '', 'BannerUrl' => '', 'Highlights' => '', 'About' => '', 'WhyChoose' => '',
+                'MatchType' => $type, 'Keywords' => implode(', ', $keywords), 'IsActive' => 1, 'SortOrder' => ++$sort,
+            ]);
+        }
     }
 
     private function addMadrasaGroup(): void

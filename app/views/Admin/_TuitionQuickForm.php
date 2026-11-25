@@ -6,7 +6,9 @@
 $errs = $GLOBALS['__ModelErrors'] ?? [];
 ?>
 <style>
-    .tq-wrap { max-width: 860px; }
+    .admin-main-content.tq-main { margin-left: 250px; padding: 24px 20px; min-height: calc(100vh - 80px); }
+    .tq-wrap { max-width: 860px; margin: 0 auto; }
+    @media (max-width: 992px) { .admin-main-content.tq-main { margin-left: 0; padding: 14px; } }
     .tq-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
     .tq-head h2 { margin: 0; font-size: 26px; font-weight: 800; color: #08224A; display: flex; align-items: center; gap: 10px; }
     .tq-head h2 i { width: 34px; height: 34px; border-radius: 50%; background: #0F8FB5; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
@@ -30,6 +32,8 @@ $errs = $GLOBALS['__ModelErrors'] ?? [];
     @media (max-width: 640px) { .tq-row { grid-template-columns: 1fr; } .tq-card { padding: 18px; } }
 </style>
 
+<?php partial('Shared/_AdminSidebar'); ?>
+<div class="admin-main-content tq-main">
 <div class="tq-wrap">
     <div class="tq-head">
         <div>
@@ -88,6 +92,7 @@ $errs = $GLOBALS['__ModelErrors'] ?? [];
         </form>
     </div>
 </div>
+</div><!-- /admin-main-content -->
 <script>
     document.getElementById('tqForm').addEventListener('submit', function () {
         var b = document.getElementById('tqSave'); b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> অপেক্ষা করুন...';
