@@ -32,7 +32,45 @@ class HelpdeskController extends Controller
     /** GET /Helpdesk/Contact — মাষ্টার মশাই এর মোবাইল নম্বর, WhatsApp, ইমেইল (লগইন ছাড়াই দেখা যায়) */
     public function Contact(): void
     {
-        $this->view('Contact', null, ['Info' => contact_info()]);
+        $me = current_user_id();
+        $pays = []; $refs = [];
+        if ($me !== null && !is_admin()) {
+            // রিফান্ড আবেদন: পেমেন্টের ৭ দিনের মধ্যে (রিফান্ড নীতি ৫)
+            $pays = array_values(array_filter($this->db->GetUserPayments((int)$me), fn($p) => in_array($p->Status, ['Approved', 'Pending'], true) && strtotime((string)$p->CreatedAt) >= time() - 7 * 86400));
+            $refs = $this->db->GetUserRefundRequests((int)$me);
+        }
+        $this->view('Contact', null, ['Info' => contact_info(), 'RefundPays' => $pays, 'MyRefunds' => $refs]);
+    }
+
+    /** POST /Helpdesk/RefundRequest (paymentId | txnId, reason, details) — রিফান্ড আবেদন, Transaction ID সহ (ব্যক্তিগত, শুধু অ্যাডমিন দেখেন) */
+    public function RefundRequest_POST(): void
+    {
+        $this->requireAjaxLogin();
+        $me = (int)(current_user_id() ?? 0);
+        if ($me === 0 || is_admin()) json_response(['success' => false, 'message' => 'আগে লগইন করুন।']);
+        $reason = (string)input_str('reason', '');
+        if (!isset(Db::REFUND_REASONS[$reason])) json_response(['success' => false, 'message' => 'রিফান্ডের কারণ বাছাই করুন।']);
+        $details = mb_substr(trim(strip_tags(str_replace("\r", '', (string)input_str('details', '')))), 0, 1500);
+        if ($reason === 'other' && mb_strlen($details) < 10) json_response(['success' => false, 'message' => 'কারণটা একটু বিস্তারিত লিখুন।']);
+        $pid = input_int('paymentId', 0);
+        $pay = null;
+        if ($pid > 0) {
+            foreach ($this->db->GetUserPayments($me) as $p) if ((int)$p->Id === $pid) $pay = $p;
+            if (!$pay) json_response(['success' => false, 'message' => 'পেমেন্টটা পাওয়া যায়নি।']);
+            if (strtotime((string)$pay->CreatedAt) < time() - 7 * 86400) json_response(['success' => false, 'message' => 'এই পেমেন্টের ৭ দিন পার হয়ে গেছে — রিফান্ড নীতি অনুযায়ী আবেদন করা যাবে না।']);
+            $txn = trim((string)($pay->TxnId ?? '')) ?: ('PAY-' . $pay->Id);
+        } else {
+            $txn = mb_substr(trim(preg_replace('/\s+/', '', (string)input_str('txnId', ''))), 0, 60);
+            if (mb_strlen($txn) < 4) json_response(['success' => false, 'message' => 'পেমেন্ট বাছাই করুন, অথবা Transaction ID লিখুন।']);
+        }
+        if ($this->db->HasPendingRefund($me, $txn)) json_response(['success' => false, 'message' => 'এই পেমেন্টের রিফান্ড আবেদন আগেই জমা আছে — অ্যাডমিন দেখছেন।']);
+        if (count(array_filter($this->db->GetUserRefundRequests($me), fn($r) => $r->Status === 'Pending')) >= 5) json_response(['success' => false, 'message' => 'আপনার অনেকগুলো আবেদন অপেক্ষায় আছে — আগে সেগুলোর উত্তর আসুক।']);
+        $id = $this->db->CreateRefundRequest(['UserId' => $me, 'PaymentId' => $pay ? (int)$pay->Id : null, 'TxnId' => $txn,
+            'PackageName' => $pay ? (string)$pay->PackageName : '', 'Amount' => $pay ? (int)$pay->Amount : null, 'Reason' => $reason, 'Details' => $details]);
+        $who = (string)(session_get('UserFullName') ?: session_get('UserName'));
+        foreach ($this->db->GetAdmins() as $a) { try { $this->db->CreateNotification((int)$a->Id, '↩️ নতুন রিফান্ড আবেদন', "$who রিফান্ডের আবেদন করেছেন" . ($pay ? " ({$pay->PackageName}, ৳{$pay->Amount})" : '') . ' — কারণ: ' . Db::REFUND_REASONS[$reason][0], 'warning', '/Admin/Refunds', 'fa-rotate-left'); } catch (Throwable $e) { } }
+        try { tg_notify_post('↩️ নতুন রিফান্ড আবেদন', tg_who() . ' — ' . Db::REFUND_REASONS[$reason][0] . ($pay ? " ({$pay->PackageName}, ৳{$pay->Amount})" : ''), '/Admin/Refunds'); } catch (Throwable $e) { }
+        json_response(['success' => true, 'id' => $id, 'message' => 'আবেদন জমা হয়েছে! ৩ কর্মদিবসের মধ্যে উত্তর পাবেন — নোটিফিকেশনে জানানো হবে।']);
     }
 
     /** GET /Helpdesk/GetPostComments?postId= */

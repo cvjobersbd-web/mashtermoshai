@@ -12,6 +12,7 @@ require_once __DIR__ . '/CircularData.php';
 require_once __DIR__ . '/FindTutorData.php';
 require_once __DIR__ . '/PackageData.php';
 require_once __DIR__ . '/PaymentData.php';
+require_once __DIR__ . '/RefundData.php';
 require_once __DIR__ . '/CategoryData.php';
 require_once __DIR__ . '/EduFeedData.php';
 require_once __DIR__ . '/ProfileViewData.php';
@@ -35,6 +36,7 @@ class Db
     use FindTutorData;
     use PackageData;
     use PaymentData;
+    use RefundData;
     use CategoryData;
     use EduFeedData;
     use ProfileViewData;

@@ -1529,6 +1529,35 @@ class AdminController extends Controller
     }
 
     /** GET /Admin/Withdrawals?w=Pending|Paid|Rejected|all — রেফারেল বোনাসের উইথড্র আবেদন: দেখে টাকা পাঠিয়ে Paid / বাতিল */
+    /** GET /Admin/Refunds?s=Pending|Approved|Rejected|all — Help Desk থেকে আসা রিফান্ড আবেদন */
+    public function Refunds(): void
+    {
+        $this->requireAdminPage();
+        $s = (string)input_str('s', 'Pending');
+        if (!in_array($s, ['Pending', 'Approved', 'Rejected', 'all'], true)) $s = 'Pending';
+        $this->view(null, $this->db->GetRefundRequests($s), ['S' => $s, 'PendingCount' => $this->db->CountPendingRefunds()]);
+    }
+
+    /** POST /Admin/DecideRefund (id, status = Approved|Rejected, note) — ইউজারকে নোটিফিকেশন যায়; টাকা ফেরত হাতে পাঠাতে হয় */
+    public function DecideRefund_POST(): void
+    {
+        $this->requireAdminJson();
+        $r = $this->db->GetRefundRequest(input_int('id', 0));
+        if (!$r) json_response(['success' => false, 'message' => 'আবেদনটা পাওয়া যায়নি।']);
+        $st = (string)input_str('status', '');
+        if (!in_array($st, ['Approved', 'Rejected'], true)) json_response(['success' => false, 'message' => 'Approve না Reject বাছাই করুন।']);
+        $note = mb_substr(trim(strip_tags((string)input_str('note', ''))), 0, 500);
+        if ($st === 'Rejected' && $note === '') json_response(['success' => false, 'message' => 'বাতিলের কারণ লিখুন — ইউজার দেখবেন।']);
+        $this->db->DecideRefund((int)$r->Id, $st, $note, (int)current_user_id());
+        $pk = $r->PackageName ?: ('TxnID ' . $r->TxnId);
+        try {
+            $this->db->CreateNotification((int)$r->UserId, $st === 'Approved' ? 'রিফান্ড অনুমোদিত ✅' : 'রিফান্ড আবেদন বাতিল',
+                $st === 'Approved' ? "আপনার “{$pk}” এর রিফান্ড অনুমোদিত হয়েছে — ৭–১০ কর্মদিবসের মধ্যে যে মাধ্যমে পেমেন্ট করেছিলেন সেখানে টাকা ফেরত যাবে।" . ($note !== '' ? " ($note)" : '')
+                    : "আপনার “{$pk}” এর রিফান্ড আবেদন গ্রহণ করা হয়নি — কারণ: $note", $st === 'Approved' ? 'success' : 'warning', '/Helpdesk/Contact#refundReq', 'fa-rotate-left');
+        } catch (Throwable $e) { }
+        json_response(['success' => true]);
+    }
+
     public function Withdrawals(): void
     {
         $this->requireAdminPage();

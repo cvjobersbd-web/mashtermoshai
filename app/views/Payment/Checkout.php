@@ -130,6 +130,7 @@ $jsMethods = array_map(function ($m) {
     .co-err.show { display: block; }
     .co-submit { margin-top: 18px; width: 100%; border: none; border-radius: 14px; padding: 14px; font-size: 16px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #1D7FE5, #02B8F5); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; box-shadow: 0 10px 24px rgba(29,127,229,.25); }
     .co-submit:disabled { opacity: .65; cursor: default; }
+    .co-agree { margin: 10px 0 0; text-align: center; font-size: 12.5px; color: #64748B; } .co-agree a { color: #0284C7; font-weight: 700; }
 
     .co-sum { position: sticky; top: 96px; }
     .co-sum h3 { font-size: 15px; font-weight: 800; color: #08224A; margin: 0 0 12px; }
@@ -298,6 +299,7 @@ $jsMethods = array_map(function ($m) {
                     </div>
                     <div class="co-err" id="coErr" role="alert"></div>
                     <button type="submit" class="co-submit" id="coSubmit"<?= $block ? ' disabled' : '' ?>><i class="fas fa-paper-plane"></i> Submit payment request</button>
+                    <p class="co-agree"><?= t('পেমেন্ট করে আপনি আমাদের <a href="/Home/Terms" target="_blank">শর্তাবলি</a> আর <a href="/Home/Refund" target="_blank">রিফান্ড নীতি</a> মেনে নিচ্ছেন।', 'By paying you agree to the <a href="/Home/Terms" target="_blank">Terms</a> and the <a href="/Home/Refund" target="_blank">Refund Policy</a>.') ?></p>
                 </div>
             </form>
             <?php endif; ?>

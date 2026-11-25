@@ -50,7 +50,7 @@ class SeoController extends Controller
         $add('/', null, 'daily', '1.0');
         foreach ([['/Tutors', 'daily', '0.9'], ['/Tuition/Circular', 'daily', '0.9'], ['/Categories', 'weekly', '0.8'], ['/FindTutor', 'daily', '0.8'],
                   ['/Feed', 'daily', '0.7'], ['/Course', 'weekly', '0.7'], ['/Package', 'monthly', '0.7'], ['/Notice', 'weekly', '0.5'],
-                  ['/Helpdesk/Contact', 'monthly', '0.4'], ['/Account/Register', 'monthly', '0.4'], ['/Account/Login', 'yearly', '0.3'], ['/Home/Privacy', 'yearly', '0.3'], ['/Home/Terms', 'yearly', '0.3'], ] as [$p, $f, $r]) $add($p, null, $f, $r);
+                  ['/Helpdesk/Contact', 'monthly', '0.4'], ['/Account/Register', 'monthly', '0.4'], ['/Account/Login', 'yearly', '0.3'], ['/Home/Privacy', 'yearly', '0.3'], ['/Home/Terms', 'yearly', '0.3'], ['/Home/Refund', 'yearly', '0.3'], ] as [$p, $f, $r]) $add($p, null, $f, $r);
 
         $db = $this->db;
         try { $db->EnsureCategoryTables(); $db->EnsureEduFeedTables(); } catch (Throwable $e) { }

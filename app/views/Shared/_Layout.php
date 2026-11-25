@@ -1587,7 +1587,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         t('টিউটর খুঁজুন', 'Find a Tutor') => [[t('টিউটর খুঁজুন', 'Find Tutors'), '/FindTutor'], [t('গণিতের টিউটর', 'Mathematics Tutors'), '/FindTutor?subject=mathematics'], [t('ইংরেজির টিউটর', 'English Tutors'), '/FindTutor?subject=english'],
                                            [t('SSC টিউটর', 'SSC Tutors'), '/FindTutor?class=ssc'], [t('HSC টিউটর', 'HSC Tutors'), '/FindTutor?class=hsc']],
                         t('টিউশন', 'Tuition') => [[t('টিউশন সার্কুলার', 'Tuition Circular'), '/Tuition/Circular'], [t('টিউশন পোস্ট করুন', 'Post Tuition Requirement'), $__postReq], [t('টিউটর হোন', 'Become a Tutor'), '/Teacher/RequestForm'], [t('প্যাকেজ', 'Packages'), '/Package']],
-                        t('সহায়তা', 'Support') => array_values(array_filter([[t('হেল্পডেস্ক', 'Helpdesk'), '/Helpdesk'], [t('যোগাযোগ', 'Contact'), '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? [t('সাধারণ প্রশ্ন', 'FAQ'), '/#faq'] : null, [t('নোটিশ', 'Notice'), '/Notice'], [t('গোপনীয়তা নীতি', 'Privacy Policy'), '/Home/Privacy'], [t('শর্তাবলি', 'Terms of Service'), '/Home/Terms']])),
+                        t('সহায়তা', 'Support') => array_values(array_filter([[t('হেল্পডেস্ক', 'Helpdesk'), '/Helpdesk'], [t('যোগাযোগ', 'Contact'), '/Helpdesk/Contact'], (function_exists('home_faqs') && home_faqs()) ? [t('সাধারণ প্রশ্ন', 'FAQ'), '/#faq'] : null, [t('নোটিশ', 'Notice'), '/Notice'], [t('গোপনীয়তা নীতি', 'Privacy Policy'), '/Home/Privacy'], [t('শর্তাবলি', 'Terms of Service'), '/Home/Terms'], [t('রিফান্ড নীতি', 'Refund Policy'), '/Home/Refund']])),
                     ];
                 ?>
                 <nav class="footer-nav" aria-label="Footer">

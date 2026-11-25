@@ -320,7 +320,7 @@ try {
         'UserOverview' => 'User Overview', 'StudentOverview' => 'Student Overview', 'TuitionPosts' => 'Tuition Posts', 'AddTuitionPost' => 'Add Tuition Post',
         'EditTuitionPost' => 'Edit Tuition Post', 'TuitionApplications' => 'Tuition Applications', 'TutorRequests' => 'Tutor Requests',
         'ManageNotices' => 'News & Announcements', 'AddNotice' => 'Add Notice', 'EditNotice' => 'Edit Notice', 'Settings' => 'Settings',
-        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'CouponUsers' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Courses' => 'Courses', 'CourseView' => 'Course Details', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Games' => 'Games', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
+        'Reviews' => 'Reviews', 'Packages' => 'Packages', 'Coupons' => 'Coupons', 'CouponUsers' => 'Coupons', 'Payments' => 'Payments', 'PaymentMethods' => 'Payment Methods', 'Referrals' => 'Referrals', 'ReferralUser' => 'Referrals', 'Withdrawals' => 'Withdraw', 'Refunds' => 'Refund Requests', 'Courses' => 'Courses', 'CourseView' => 'Course Details', 'LiveSettings' => 'Live Class Server', 'DeleteUsers' => 'Delete User', 'References' => 'Reference / Agency', 'Partners' => 'Agency Link & Code', 'Partner' => 'Agency Link & Code', 'MetaPixel' => 'Meta Pixel', 'Games' => 'Games', 'Subscriptions' => 'Subscriptions', 'Devices' => 'Devices',
         'Categories' => 'Categories', 'EditCategory' => 'Edit Category', 'EduFeed' => 'Educational Feed', 'ProfilePosts' => 'Profile Posts', 'PublicPosts' => 'পড়াতে চাই ও সার্কুলার পোস্ট', 'PackageDetails' => 'Package Details', 'UserRoles' => 'User Role', 'Settings' => 'Settings', 'Admins' => 'Admins', 'ActivityLog' => 'Activity Log',
     ];
     $adminPageTitle = $adminPages[$currentAction] ?? 'Admin';
@@ -396,6 +396,13 @@ try {
             <a href="/Admin/LivePayments" class="<?= $currentAction === 'LivePayments' ? 'active' : '' ?>">
                 <i class="fas fa-tower-broadcast"></i> Live Class Payment Requests
                 <?php if ($payPend['Live'] > 0): ?><span class="badge-sidebar warning"><?= (int)$payPend['Live'] ?></span><?php endif; ?>
+            </a>
+        </li>
+        <?php $rfPend = 0; try { $rfPend = db()->CountPendingRefunds(); } catch (Throwable $e) { } ?>
+        <li>
+            <a href="/Admin/Refunds" class="<?= $currentAction === 'Refunds' ? 'active' : '' ?>">
+                <i class="fas fa-rotate-left"></i> Refund Requests
+                <?php if ($rfPend > 0): ?><span class="badge-sidebar warning"><?= (int)$rfPend ?></span><?php endif; ?>
             </a>
         </li>
         <?php endif; ?>

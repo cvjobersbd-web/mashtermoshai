@@ -79,6 +79,74 @@ $ViewData['Description'] = 'মাষ্টার মশাই এর সাথ�
         </div>
         <?php endif; ?>
 
+        <?php // ===== রিফান্ড আবেদন (Transaction ID সহ, ব্যক্তিগত) =====
+        $rPays = $ViewBag->RefundPays ?? []; $myRef = $ViewBag->MyRefunds ?? []; $logged = current_user_id() !== null && !is_admin(); ?>
+        <div class="rf-box" id="refundReq">
+            <h2><i class="fas fa-rotate-left"></i> <?= t('রিফান্ড আবেদন', 'Refund request') ?></h2>
+            <p class="rf-sub"><?= t('পেমেন্টের ৭ দিনের মধ্যে আবেদন করুন। কখন টাকা ফেরত পাবেন জানতে', 'Apply within 7 days of the payment. To see when refunds are given, read the') ?> <a href="/Home/Refund"><?= t('রিফান্ড নীতি', 'Refund Policy') ?></a> <?= t('পড়ুন। আবেদনটা শুধু অ্যাডমিন দেখবেন।', '. Only the admin sees your request.') ?></p>
+            <?php if (!$logged): ?>
+                <p class="rf-login"><a href="/Account/Login?returnUrl=<?= rawurlencode('/Helpdesk/Contact#refundReq') ?>"><i class="fas fa-right-to-bracket"></i> <?= t('লগইন করুন', 'Log in') ?></a> <?= t('— তাহলে আপনার পেমেন্ট বাছাই করে আবেদন করতে পারবেন। অথবা উপরের WhatsApp / ইমেইলে Transaction ID সহ জানান।', 'to choose your payment and apply, or send the Transaction ID by WhatsApp / email above.') ?></p>
+            <?php else: ?>
+            <form id="rfForm" autocomplete="off">
+                <?= csrf_field() ?>
+                <label for="rfPay"><?= t('কোন পেমেন্টের রিফান্ড চান', 'Which payment') ?> *</label>
+                <select id="rfPay" name="paymentId">
+                    <option value=""><?= t('— পেমেন্ট বাছাই করুন —', '— Choose a payment —') ?></option>
+                    <?php foreach ($rPays as $p): ?><option value="<?= (int)$p->Id ?>"><?= e($p->PackageName . ' · ৳' . number_format((int)$p->Amount) . ' · ' . date('d M Y', strtotime((string)$p->CreatedAt)) . ' · TxnID ' . ($p->TxnId ?: '—') . ($p->Status === 'Pending' ? ' · ' . t('যাচাই বাকি', 'pending') : '')) ?></option><?php endforeach; ?>
+                    <option value="0"><?= t('তালিকায় নেই — Transaction ID নিজে লিখব', 'Not listed — I will type the Transaction ID') ?></option>
+                </select>
+                <?php if (!$rPays): ?><small class="rf-note"><?= t('গত ৭ দিনে আপনার কোনো পেমেন্ট পাওয়া যায়নি।', 'No payment found in the last 7 days.') ?></small><?php endif; ?>
+                <div id="rfTxnWrap" hidden><label for="rfTxn">Transaction ID *</label><input id="rfTxn" name="txnId" maxlength="60" placeholder="যেমন: 9K7A1B2C3D" /></div>
+                <label for="rfReason"><?= t('কারণ', 'Reason') ?> *</label>
+                <select id="rfReason" name="reason"><option value=""><?= t('— কারণ বাছাই করুন —', '— Choose a reason —') ?></option><?php foreach (Db::REFUND_REASONS as $k => [$bn, $enR]): ?><option value="<?= e($k) ?>"><?= e(t($bn, $enR)) ?></option><?php endforeach; ?></select>
+                <label for="rfDetails"><?= t('বিস্তারিত', 'Details') ?></label>
+                <textarea id="rfDetails" name="details" rows="3" maxlength="1500" placeholder="<?= e(t('কী হয়েছে সংক্ষেপে লিখুন', 'Briefly describe what happened')) ?>"></textarea>
+                <div class="rf-msg" id="rfMsg"></div>
+                <button type="submit" class="ct-btn" id="rfBtn" style="--c:#0EA5E9;"><i class="fas fa-paper-plane"></i> <?= t('আবেদন জমা দিন', 'Submit request') ?></button>
+            </form>
+            <?php if ($myRef): ?>
+                <div class="rf-mine"><b><?= t('আপনার আবেদন', 'Your requests') ?></b>
+                    <?php foreach ($myRef as $r): $cls = ['Pending' => 'p', 'Approved' => 'ok', 'Rejected' => 'no'][$r->Status] ?? 'p'; ?>
+                        <div><span class="rf-st <?= $cls ?>"><?= e(['Pending' => t('অপেক্ষমাণ', 'Pending'), 'Approved' => t('অনুমোদিত', 'Approved'), 'Rejected' => t('বাতিল', 'Rejected')][$r->Status] ?? $r->Status) ?></span>
+                            <?= e(($r->PackageName ?: 'TxnID ' . $r->TxnId) . ' · ' . date('d M Y', strtotime((string)$r->CreatedAt))) ?><?= !is_blank($r->AdminNote) ? '<small>' . e($r->AdminNote) . '</small>' : '' ?></div>
+                    <?php endforeach; ?></div>
+            <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <style>
+            .rf-box { margin-top: 20px; background: #fff; border-radius: 18px; padding: 22px; border: 1px solid #E3ECF6; box-shadow: 0 10px 30px rgba(15,52,103,.06); }
+            .rf-box h2 { margin: 0 0 4px; font-size: 19px; font-weight: 800; color: #0B1F44; } .rf-box h2 i { color: #0EA5E9; }
+            .rf-sub { color: #64748B; font-size: 14px; margin: 0 0 14px; } .rf-sub a, .rf-login a { color: #0284C7; font-weight: 700; }
+            .rf-login { margin: 0; font-size: 14.5px; color: #334155; }
+            #rfForm { display: grid; gap: 6px; max-width: 620px; }
+            #rfForm label { font-weight: 700; font-size: 13.5px; color: #334155; margin-top: 6px; }
+            #rfForm select, #rfForm input, #rfForm textarea { width: 100%; border: 1.5px solid #DCE7F0; border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: inherit; background: #F8FBFF; }
+            #rfForm .ct-btn { justify-self: start; margin-top: 8px; }
+            .rf-note { color: #94A3B8; font-size: 12.5px; }
+            .rf-msg { font-size: 14px; font-weight: 600; } .rf-msg.ok { color: #15803D; } .rf-msg.err { color: #B91C1C; }
+            .rf-mine { margin-top: 18px; border-top: 1px solid #EEF2F7; padding-top: 12px; display: grid; gap: 6px; font-size: 13.5px; color: #334155; }
+            .rf-mine small { display: block; color: #64748B; margin-top: 2px; }
+            .rf-st { display: inline-block; font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 2px 9px; margin-right: 6px; }
+            .rf-st.p { background: #FEF3C7; color: #92400E; } .rf-st.ok { background: #DCFCE7; color: #166534; } .rf-st.no { background: #FEE2E2; color: #991B1B; }
+        </style>
+        <script>
+        (function () {
+            var f = document.getElementById('rfForm'); if (!f) return;
+            var pay = document.getElementById('rfPay'), tw = document.getElementById('rfTxnWrap'), msg = document.getElementById('rfMsg'), btn = document.getElementById('rfBtn');
+            pay.addEventListener('change', function () { tw.hidden = pay.value !== '0'; });
+            f.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (pay.value === '') { msg.className = 'rf-msg err'; msg.textContent = 'পেমেন্ট বাছাই করুন।'; return; }
+                btn.disabled = true; msg.className = 'rf-msg'; msg.textContent = '';
+                fetch('/Helpdesk/RefundRequest', { method: 'POST', body: new FormData(f), credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+                    msg.className = 'rf-msg ' + (d.success ? 'ok' : 'err'); msg.textContent = d.message || (d.success ? 'জমা হয়েছে।' : 'জমা দেওয়া যায়নি।');
+                    if (d.success) setTimeout(function () { location.reload(); }, 1600); else btn.disabled = false;
+                }).catch(function () { msg.className = 'rf-msg err'; msg.textContent = 'জমা দেওয়া যায়নি — আবার চেষ্টা করুন।'; btn.disabled = false; });
+            });
+            if (location.hash === '#refundReq') document.getElementById('refundReq').scrollIntoView();
+        })();
+        </script>
+
         <div class="ct-help">
             <p><b>লিখে জানাতে চান?</b>Help Desk এ পোস্ট করুন — আমাদের টিম আর কমিউনিটি উত্তর দেবে।</p>
             <a href="/Helpdesk"><i class="fas fa-headset"></i> Help Desk এ যান</a>

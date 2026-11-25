@@ -113,5 +113,5 @@ partial('Home/_PolicyStyles');
     <h2>9. Contact</h2>
     <p>For any privacy question, use the <a href="/Helpdesk/Contact">Contact page</a> or the Helpdesk<?= $ct['ct_phone'] !== '' ? ', or call ' . e($ct['ct_phone']) : '' ?><?= $ct['ct_email'] !== '' ? ', email: ' . e($ct['ct_email']) : '' ?>.</p>
 <?php endif; ?>
-    <p class="pol-links"><a href="/Home/Terms"><?= t('শর্তাবলি দেখুন', 'Read the Terms of Service') ?> →</a></p>
+    <p class="pol-links"><a href="/Home/Terms"><?= t('শর্তাবলি দেখুন', 'Read the Terms of Service') ?> →</a> &nbsp;·&nbsp; <a href="/Home/Refund"><?= t('রিফান্ড নীতি দেখুন', 'Read the Refund Policy') ?> →</a></p>
 </div>

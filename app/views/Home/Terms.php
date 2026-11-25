@@ -32,7 +32,7 @@ partial('Home/_PolicyStyles');
         <li>পেমেন্ট পেজে দেখানো নম্বরে টাকা পাঠিয়ে সঠিক Transaction ID আর রসিদের ছবি জমা দিতে হবে।</li>
         <li>অ্যাডমিন পেমেন্ট যাচাই করে Accept করলে প্যাকেজ চালু হয়; মেয়াদ শেষ হলে সুবিধাগুলো বন্ধ হয়ে যায়।</li>
         <li>ভুল বা ভুয়া পেমেন্টের তথ্য দিলে অনুরোধ বাতিল হবে।</li>
-        <li>রিফান্ড নিয়ে জানতে Helpdesk এ যোগাযোগ করুন।</li>
+        <li>কখন টাকা ফেরত পাবেন আর কিভাবে আবেদন করবেন — <a href="/Home/Refund">রিফান্ড নীতি</a> দেখুন।</li>
     </ul>
 
     <h2>৪. যোগাযোগ ও আচরণ</h2>
@@ -84,7 +84,7 @@ partial('Home/_PolicyStyles');
         <li>Send money to the number shown on the payment page and submit the correct Transaction ID and receipt image.</li>
         <li>A package starts when the admin verifies and accepts the payment; its benefits stop when it expires.</li>
         <li>Requests with wrong or fake payment details will be rejected.</li>
-        <li>For refunds, please contact the Helpdesk.</li>
+        <li>For when payments are refunded and how to request a refund, see the <a href="/Home/Refund">Refund Policy</a>.</li>
     </ul>
 
     <h2>4. Communication and conduct</h2>
@@ -115,5 +115,5 @@ partial('Home/_PolicyStyles');
     <h2>9. Changes</h2>
     <p>These terms may be updated when needed. Using the site after a change means you accept the new terms.</p>
 <?php endif; ?>
-    <p class="pol-links"><a href="/Home/Privacy"><?= t('গোপনীয়তা নীতি দেখুন', 'Read the Privacy Policy') ?> →</a></p>
+    <p class="pol-links"><a href="/Home/Privacy"><?= t('গোপনীয়তা নীতি দেখুন', 'Read the Privacy Policy') ?> →</a> &nbsp;·&nbsp; <a href="/Home/Refund"><?= t('রিফান্ড নীতি দেখুন', 'Read the Refund Policy') ?> →</a></p>
 </div>

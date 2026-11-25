@@ -66,6 +66,9 @@ class HomeController extends Controller
     /** শর্তাবলি (Terms of Service) */
     public function Terms(): void { $this->view(); }
 
+    /** রিফান্ড নীতি (Refund Policy) */
+    public function Refund(): void { $this->view(); }
+
     // আগে এই দুইটা Privacy পেজই দেখাত (একই লেখা দুই ঠিকানায় — SEO তে খারাপ) — এখন সঠিক পেজে পাঠায়
     public function About(): void { header('Location: /', true, 301); exit; }
 
