@@ -1611,8 +1611,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 ?>
                 <div class="mt-8" style="display:flex;justify-content:center;">
                     <picture>
-                        <source media="(max-width: 640px)" srcset="/uploads/eps/footer-mobile-<?= $__epsTone ?>.webp" width="1000" height="<?= $__epsTone === 'light' ? 180 : 176 ?>" />
-                        <img src="/uploads/eps/footer-desktop-<?= $__epsTone ?>.webp" width="2000" height="103" loading="lazy" alt="Pay with Visa, Mastercard, American Express, DBBL Nexus, bKash, Nagad, Rocket, Upay and more — Verified by EPS (Easy Payment System)" style="display:block;width:100%;max-width:1100px;height:auto;border-radius:10px;" />
+                        <?php /* সাদা (Light) ভার্সন — ফুটারের রং যাই হোক, সাদা কার্ডের মতো দেখায় */ ?>
+                        <source media="(max-width: 640px)" srcset="/uploads/eps/footer-mobile-light.webp" width="1000" height="180" />
+                        <img src="/uploads/eps/footer-desktop-v2.webp" width="2400" height="123" loading="lazy" alt="Pay with Visa, Mastercard, American Express, DBBL Nexus, bKash, Nagad, Rocket, Upay and more — Verified by EPS (Easy Payment System)" style="display:block;width:100%;max-width:1100px;height:auto;border-radius:12px;background:#fff;" />
                     </picture>
                 </div>
 
