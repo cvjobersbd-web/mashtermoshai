@@ -12,6 +12,9 @@ $pending = (int)($ViewBag->PendingCount ?? 0);
 $today = date('Y-m-d');
 // EPS অনলাইন পেমেন্ট — config এ চালু থাকলেই দেখায়
 $epsOn = (function () { try { require_once APP_ROOT . '/app/core/Eps.php'; return Eps::availableFor(current_user_id() === null ? null : (int)current_user_id()); } catch (Throwable $e) { return false; } })();
+// EPS চালু থাকলে শুধু EPS — নিজে টাকা পাঠিয়ে রিসিট জমা দেওয়ার মেথড (bKash / Nagad / Rocket / Upay এজেন্ট, Bank Transfer) দেখায় না।
+// EPS বন্ধ থাকলে (বা এই ইউজারের জন্য চালু না থাকলে) আগের মতো এগুলো দেখায়, যাতে পেমেন্ট আটকে না যায়।
+if ($epsOn) $methods = [];
 $jsMethods = array_map(function ($m) {
     return ['id' => $m->Id, 'name' => $m->Name, 'kind' => $m->Kind, 'txnRequired' => $m->TxnRequired, 'instructions' => (string)$m->Instructions,
         'logo' => (string)($m->LogoUrl ?? ''), 'color' => (string)$m->Color,
