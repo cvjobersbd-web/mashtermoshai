@@ -1603,6 +1603,19 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                     <?php endforeach; ?>
                 </nav>
 
+                <?php
+                // EPS পেমেন্ট গেটওয়ের লোগো স্ট্রিপ (EPS এর শর্ত) — ফুটারের রং গাঢ় হলে Dark, হালকা হলে Light ভার্সন; মোবাইলে ছোট ভার্সন
+                $__fb = ltrim((string)$layoutSettings->FooterBgColor, '#');
+                if (strlen($__fb) === 3) $__fb = $__fb[0] . $__fb[0] . $__fb[1] . $__fb[1] . $__fb[2] . $__fb[2];
+                $__epsTone = (ctype_xdigit($__fb) && strlen($__fb) === 6 && (0.299 * hexdec(substr($__fb, 0, 2)) + 0.587 * hexdec(substr($__fb, 2, 2)) + 0.114 * hexdec(substr($__fb, 4, 2))) > 150) ? 'light' : 'dark';
+                ?>
+                <div class="mt-8" style="display:flex;justify-content:center;">
+                    <picture>
+                        <source media="(max-width: 640px)" srcset="/uploads/eps/footer-mobile-<?= $__epsTone ?>.webp" width="1000" height="<?= $__epsTone === 'light' ? 180 : 176 ?>" />
+                        <img src="/uploads/eps/footer-desktop-<?= $__epsTone ?>.webp" width="2000" height="103" loading="lazy" alt="Pay with Visa, Mastercard, American Express, DBBL Nexus, bKash, Nagad, Rocket, Upay and more — Verified by EPS (Easy Payment System)" style="display:block;width:100%;max-width:1100px;height:auto;border-radius:10px;" />
+                    </picture>
+                </div>
+
                 <div class="border-t border-white/15 mt-8 pt-6 text-center">
                     <p class="text-xs sm:text-sm" style="color:var(--footer-muted);">
                         &copy; <?= date('Y') ?> <?= e($safeSiteName) ?>. <?= t('সর্বস্বত্ব সংরক্ষিত।', 'All Rights Reserved.') ?>

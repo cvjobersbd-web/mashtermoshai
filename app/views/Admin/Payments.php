@@ -130,7 +130,9 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 
     <?php foreach ($list as $p): ?>
         <div class="ap-item <?= e($p->Status) ?>" id="ap-<?= (int)$p->Id ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$p->FullName, (string)$p->UserName, '@' . $p->UserName, (string)$p->Email, (string)($p->MobileNumber ?? ''), (string)$p->TxnId, (string)$p->PackageName, (string)($p->RefCode ?? '')]))) ?>">
-            <?php if ((string)$p->ReceiptUrl === ''): ?>
+            <?php if ((string)$p->ReceiptUrl === '' && (string)$p->MethodName === 'EPS'): ?>
+                <span class="ap-rc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#F0FDF4;color:#166534;font-weight:700;font-size:12.5px;text-align:center;padding:8px;"><i class="fas fa-shield-halved" style="font-size:26px;color:#15803D;"></i>EPS-এ পরিশোধিত ও যাচাই করা — রিসিট লাগেনি<?php if (str_contains((string)$p->Note, 'SANDBOX')): ?><b style="color:#B45309;">SANDBOX টেস্ট</b><?php endif; ?></span>
+            <?php elseif ((string)$p->ReceiptUrl === ''): ?>
                 <span class="ap-rc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#FFFBEB;color:#92400E;font-weight:700;font-size:12.5px;text-align:center;padding:8px;"><i class="fas fa-gift" style="font-size:26px;color:#F59E0B;"></i>রিসিট লাগেনি — পুরো দাম রেফারেল ব্যালেন্স থেকে</span>
             <?php elseif ($p->IsPdf): ?>
                 <a class="ap-rc" href="<?= e($p->ReceiptUrl) ?>" target="_blank" rel="noopener"><span class="pdf"><i class="fas fa-file-pdf"></i> PDF রিসিট খুলুন</span></a>

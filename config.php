@@ -26,4 +26,18 @@ return [
 
     // সেশন কতক্ষণ থাকবে (মিনিট)
     'session_minutes' => 60,
+
+    // EPS অনলাইন পেমেন্ট — key গুলো EPS এর Credentials ফাইলে আছে। এখানে (GitHub এ) আসল key রাখবে না:
+    // লোকালে config.local.php তে, লাইভে সার্ভারের config.php তে বসাবে। enabled = false থাকলে চেকআউটে EPS দেখায় না।
+    'eps' => [
+        'enabled'     => false,
+        'mode'        => 'sandbox',   // 'sandbox' (টেস্ট) বা 'live' (আসল টাকা)
+        'merchant_id' => '',
+        'store_id'    => '',
+        'username'    => '',
+        'password'    => '',
+        'hash_key'    => '',
+        'return_base' => '',          // ঐচ্ছিক, যেমন 'https://mashtermoshai.com'
+        'only_users'  => [],          // ঐচ্ছিক: শুধু এই ইউজার Id গুলো EPS দেখবে (টেস্টের জন্য) — খালি = সবাই
+    ],
 ];

@@ -10,6 +10,8 @@ $methods = $ViewBag->Methods ?? [];
 $block = $ViewBag->BlockReason;
 $pending = (int)($ViewBag->PendingCount ?? 0);
 $today = date('Y-m-d');
+// EPS অনলাইন পেমেন্ট — config এ চালু থাকলেই দেখায়
+$epsOn = (function () { try { require_once APP_ROOT . '/app/core/Eps.php'; return Eps::availableFor(current_user_id() === null ? null : (int)current_user_id()); } catch (Throwable $e) { return false; } })();
 $jsMethods = array_map(function ($m) {
     return ['id' => $m->Id, 'name' => $m->Name, 'kind' => $m->Kind, 'txnRequired' => $m->TxnRequired, 'instructions' => (string)$m->Instructions,
         'logo' => (string)($m->LogoUrl ?? ''), 'color' => (string)$m->Color,
@@ -149,6 +151,16 @@ $jsMethods = array_map(function ($m) {
     .co-alert.info { background: #EFF6FF; border: 1px solid #CFE0FB; color: #1E3A8A; }
     .co-alert a { font-weight: 700; }
 
+    .co-eps { display: block; width: 100%; border: 2px solid #E2E8F0; background: #fff; border-radius: 16px; padding: 12px 14px 12px; cursor: pointer; text-align: left; position: relative; font-family: inherit; transition: border-color .2s, box-shadow .2s; }
+    .co-eps:hover { border-color: #9EC2FA; }
+    .co-eps.on { border-color: #15803D; box-shadow: 0 0 0 4px rgba(21,128,61,.12); }
+    .co-eps.on::after { content: '\f00c'; font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free'; font-weight: 900; position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: #15803D; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+    .co-eps img { display: block; width: 100%; max-width: 520px; height: auto; }
+    .co-eps span { display: block; margin-top: 8px; font-size: 13px; color: #334155; font-weight: 600; line-height: 1.5; }
+    .co-eps span b { color: #15803D; }
+    .co-or { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; color: #94A3B8; font-size: 12.5px; font-weight: 700; }
+    .co-or::before, .co-or::after { content: ''; flex: 1; height: 1px; background: #E2E8F0; }
+    .co-how[hidden] { display: none; }
     .co-lb { position: fixed; inset: 0; z-index: 3000; background: rgba(2,6,23,.82); display: flex; align-items: center; justify-content: center; padding: 18px; cursor: zoom-out; }
     .co-lb[hidden] { display: none; }
     .co-lb img { max-width: min(520px, 100%); max-height: 90vh; border-radius: 16px; background: #fff; padding: 10px; }
@@ -184,7 +196,7 @@ $jsMethods = array_map(function ($m) {
 
     <div class="co-grid">
         <div>
-            <?php if (!$methods): ?>
+            <?php if (!$methods && !$epsOn): ?>
                 <div class="co-card" style="text-align:center;color:#64748B;"><i class="fas fa-wallet fa-2x"></i><p style="margin:10px 0 0;">এখনো কোনো পেমেন্ট মেথড যোগ করা হয়নি। Helpdesk-এ যোগাযোগ করুন।</p></div>
             <?php else: ?>
             <form id="coForm" novalidate>
@@ -217,6 +229,14 @@ $jsMethods = array_map(function ($m) {
 
                 <div class="co-card">
                     <h2 class="co-step"><b>1</b> পেমেন্ট মেথড বাছাই করুন</h2>
+                    <?php if ($epsOn): ?>
+                    <button type="button" class="co-eps" id="coEpsBtn" role="radio" aria-checked="false">
+                        <img src="/uploads/eps/pay-with-eps.png" alt="Pay with EPS — Visa, Mastercard, American Express, bKash, Nagad, Rocket ও আরও" width="900" height="155" />
+                        <span>কার্ড, bKash, Nagad, Rocket সহ অনলাইনে পেমেন্ট — <b>সাথে সাথে যাচাই, রিসিট বা Transaction ID লাগবে না</b></span>
+                    </button>
+                    <?php if ($methods): ?><div class="co-or">অথবা নিজে টাকা পাঠিয়ে রিসিট জমা দিন</div><?php endif; ?>
+                    <?php endif; ?>
+                    <?php if ($methods): ?>
                     <?php $hasAgent = (bool)array_filter($methods, fn($m) => $m->Kind === 'agent'); ?>
                     <div class="co-methods<?= $hasAgent ? ' has-agent' : '' ?>" role="radiogroup" aria-label="Payment method">
                         <?php foreach ($methods as $i => $m): $acc0 = $m->Accounts[0] ?? null; ?>
@@ -230,6 +250,7 @@ $jsMethods = array_map(function ($m) {
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="co-card" id="coPayCard" hidden>
@@ -248,7 +269,7 @@ $jsMethods = array_map(function ($m) {
                 </div>
 
                 <div class="co-card" id="coDetails" hidden>
-                    <h2 class="co-step"><b>3</b> Payment details</h2>
+                    <h2 class="co-step"><b id="coDetNum">3</b> Payment details</h2>
                     <div class="co-f">
                         <div class="full" data-f="txnId">
                             <label for="coTxn">Transaction ID<span class="req" id="coTxnReq">*</span></label>
@@ -319,7 +340,14 @@ $jsMethods = array_map(function ($m) {
             <div class="co-line" id="coSumCp" hidden><span><i class="fas fa-ticket" style="color:#7C3AED;"></i> কুপন <b id="coSumCpC"></b></span><span style="color:#157347;" id="coSumCpV"></span></div>
             <div class="co-line" id="coSumDisc" hidden><span><i class="fas fa-gift" style="color:#F59E0B;"></i> রেফারেল ব্যালেন্স থেকে ছাড়</span><span style="color:#157347;" id="coSumDiscV"></span></div>
             <div class="co-line tot"><span id="coSumTotL">মোট</span><span id="coSumTot"><?= e(taka($pkg->Price)) ?></span></div>
-            <ul class="co-how">
+            <?php if ($epsOn): ?>
+            <ul class="co-how" id="coHowEps" hidden>
+                <li><i class="fas fa-lock"></i><span>“Pay with EPS” চাপলে EPS এর নিরাপদ পেমেন্ট পেজ খুলবে</span></li>
+                <li><i class="fas fa-credit-card"></i><span>কার্ড, bKash, Nagad, Rocket বা অন্য যেকোনো মাধ্যমে পরিশোধ করুন</span></li>
+                <li><i class="fas fa-circle-check"></i><span>পেমেন্ট সাথে সাথে যাচাই হয় — অ্যাডমিন Accept করলেই চালু, নোটিফিকেশন পাবেন</span></li>
+            </ul>
+            <?php endif; ?>
+            <ul class="co-how" id="coHowManual">
                 <li><i class="fas fa-mobile-screen-button"></i><span>এজেন্ট নম্বরে Cash Out করে (বা Bank QR স্ক্যান করে) ঠিক <span id="coHowAmt"><?= e(taka($pkg->Price)) ?></span> পাঠান</span></li>
                 <li><i class="fas fa-camera"></i><span>পেমেন্ট সফল হওয়ার স্ক্রিনশট নিন</span></li>
                 <li><i class="fas fa-file-arrow-up"></i><span>যে নম্বর থেকে পাঠিয়েছেন আর স্ক্রিনশট জমা দিন</span></li>
@@ -336,12 +364,33 @@ $jsMethods = array_map(function ($m) {
 (function () {
     var form = document.getElementById('coForm'); if (!form) return;
     var METHODS = <?= js($jsMethods) ?>;
+    var EPS = <?= $epsOn ? 'true' : 'false' ?>, epsMode = false, epsBtn = document.getElementById('coEpsBtn'), subBtn = document.getElementById('coSubmit'), subHtml = subBtn.innerHTML;
     var cur = null, curAcc = null, file = null, AMOUNT = <?= js(taka($pkg->Price)) ?>, PRICE = <?= (int)$pkg->Price ?>, FULL = false;
     function toBn(s) { return String(s).replace(/[0-9]/g, function (d) { return '০১২৩৪৫৬৭৮৯'[d]; }); }
     function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+    // EPS বাছাই করলে: টাকা পাঠানোর ধাপ, Transaction ID, তারিখ, রিসিট লাগে না
+    function applyMode() {
+        var hide = FULL || epsMode;
+        ['txnId', 'sender', 'payDate', 'receipt'].forEach(function (f) { var x = form.querySelector('[data-f="' + f + '"]'); if (x) x.style.display = hide ? 'none' : ''; });
+        var dn = document.getElementById('coDetNum'); if (dn) dn.textContent = hide ? '2' : '3';
+        if (epsBtn) { epsBtn.classList.toggle('on', epsMode); epsBtn.setAttribute('aria-checked', epsMode ? 'true' : 'false'); }
+        var he = document.getElementById('coHowEps'), hm = document.getElementById('coHowManual');
+        if (he) { he.hidden = !(epsMode && !FULL); hm.hidden = epsMode && !FULL; }
+        if (!subBtn.disabled) subBtn.innerHTML = epsMode && !FULL ? '<i class="fas fa-lock"></i> Pay with EPS — ' + esc(AMOUNT) : subHtml;
+    }
+    function pickEps() {
+        epsMode = true; cur = null; curAcc = null;
+        document.querySelectorAll('.co-m').forEach(function (b) { b.classList.remove('on'); b.setAttribute('aria-checked', 'false'); });
+        document.getElementById('coMethodId').value = ''; document.getElementById('coAccountId').value = '';
+        document.getElementById('coPayCard').hidden = true; document.getElementById('coDetails').hidden = false;
+        applyMode();
+    }
+    if (epsBtn) epsBtn.addEventListener('click', pickEps);
+
     function pickMethod(id) {
         cur = METHODS.find(function (m) { return m.id === id; }); if (!cur) return;
+        epsMode = false;
         document.querySelectorAll('.co-m').forEach(function (b) { var on = +b.getAttribute('data-method') === id; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
         document.getElementById('coMethodId').value = id;
         var sel = document.getElementById('coAccSel');
@@ -358,6 +407,7 @@ $jsMethods = array_map(function ($m) {
         document.getElementById('coSenderBox').hidden = !agent;
         document.querySelector('label[for="coTxn"]').firstChild.textContent = agent ? 'Transaction ID (ঐচ্ছিক)' : 'Transaction ID';
         document.getElementById('coPayCard').hidden = false; document.getElementById('coDetails').hidden = false;
+        applyMode();
     }
     function row(label, val) {
         if (!val) return '';
@@ -451,8 +501,9 @@ $jsMethods = array_map(function ($m) {
         document.getElementById('coSumTot').textContent = AMOUNT; document.getElementById('coSumTotL').textContent = d > 0 ? 'পাঠাতে হবে' : 'মোট';
         var first = form.querySelector('.co-card:not(#coBalCard):not(#coCpCard)');
         if (first) first.hidden = FULL;
-        ['txnId', 'sender', 'payDate', 'receipt'].forEach(function (f) { var x = form.querySelector('[data-f="' + f + '"]'); if (x) x.style.display = FULL ? 'none' : ''; });
+        applyMode();
         if (FULL) { document.getElementById('coPayCard').hidden = true; document.getElementById('coDetails').hidden = false; }
+        else if (epsMode) { document.getElementById('coPayCard').hidden = true; document.getElementById('coDetails').hidden = false; }
         else if (cur) { document.getElementById('coPayCard').hidden = false; pickAccount(curAcc ? curAcc.id : cur.accounts[0].id); }
         else document.getElementById('coDetails').hidden = true;
     }
@@ -498,6 +549,15 @@ $jsMethods = array_map(function ($m) {
             } catch (x) { showErr('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); b0.disabled = false; b0.innerHTML = h0; }
             return;
         }
+        if (epsMode) {
+            var fe = new FormData(form); fe.delete('receipt');
+            var be = document.getElementById('coSubmit'); be.disabled = true; var hE = be.innerHTML; be.innerHTML = '<i class="fas fa-spinner fa-spin"></i> EPS পেজে নেওয়া হচ্ছে...';
+            try { var de = await (await fetch('/Payment/EpsStart', { method: 'POST', body: fe, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                if (!de.success) { showErr(de.message || 'পেমেন্ট শুরু করা যায়নি।', de.field); be.disabled = false; be.innerHTML = hE; return; }
+                location.href = de.redirect;
+            } catch (x) { showErr('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); be.disabled = false; be.innerHTML = hE; }
+            return;
+        }
         if (!cur) return showErr('পেমেন্ট মেথড বাছাই করুন।');
         var txn = form.txnId.value.trim();
         if (cur.txnRequired && !txn) return showErr('Transaction ID দিন।', 'txnId');
@@ -530,7 +590,7 @@ $jsMethods = array_map(function ($m) {
     if (rc) { rc.addEventListener('input', function () { clearTimeout(rcT); rcT = setTimeout(rcCheck, 450); }); if (rc.value) rcCheck(); }
     var coRef = document.getElementById('coRef');
     if (coRef) coRef.addEventListener('change', function () { markBad(null); });
-    if (METHODS.length) pickMethod(METHODS[0].id);
+    if (EPS) pickEps(); else if (METHODS.length) pickMethod(METHODS[0].id);
 })();
 </script>
 <?php section_end(); ?>

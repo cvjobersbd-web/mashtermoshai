@@ -3,3 +3,6 @@
 
 # KYC এর NID / ID কার্ডের ছবি — কখনো GitHub-এ যাবে না
 app/storage/
+
+# লোকাল কনফিগ (EPS key, লোকাল ডাটাবেস) — কখনো GitHub-এ যাবে না
+config.local.php
