@@ -57,6 +57,9 @@ if (empty($_SESSION['UserId']) && !empty($_COOKIE[REMEMBER_COOKIE])) remember_re
 // TempData লোড (আগের রিকোয়েস্ট থেকে)
 $GLOBALS['__TempData'] = new Bag($_SESSION['_tempdata'] ?? []);
 
+// ✅ Telegram ডেইলি রিপোর্ট (রাত ১১টা) — পাওনা থাকলে পেজের উত্তরের পরে একবারই যায় (app/core/telegram.php)
+if (function_exists('tg_daily_tick')) tg_daily_tick();
+
 // ✅ লগইন থাকা ইউজার Suspend হলে সাথে সাথে লগআউট (প্রতি ২০ সেকেন্ডে একবার যাচাই)
 if (!empty($_SESSION['UserId']) && ($_SESSION['UserRole'] ?? '') !== 'Admin'
     && (time() - (int)($_SESSION['_susp_chk'] ?? 0)) >= 20) {

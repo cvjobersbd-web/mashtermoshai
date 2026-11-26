@@ -12,7 +12,93 @@ const TG_EVENTS = [
     'withdraw' => ['💸 Withdraw আবেদন', 'রেফারেল বোনাসের টাকা তোলার আবেদন'],
     'post'    => ['📝 নতুন পোস্ট', 'Helpdesk এ প্রশ্ন, পড়াতে চাই, Tuition Circular এর পোস্ট'],
     'other'   => ['🔔 অন্যান্য', 'Helpdesk, রিভিউ, টিউশন, Edu Feed, ডিভাইস ইত্যাদি'],
+    'daily'   => ['📊 ডেইলি রিপোর্ট (রাত ১১টা)', 'প্রতিদিন রাত ১১টায় — কতজন রেজিস্ট্রেশন করেছে, কতজন শিক্ষার্থী, কতজন টিচার'],
 ];
+
+// ============================================================
+// ডেইলি রিপোর্ট — প্রতিদিন রাত ১১টায় (Asia/Dhaka) Telegram এ
+// আলাদা cron লাগে না: রাত ১১টার পর সাইটে প্রথম যেকোনো ভিজিটে (পেজের উত্তর দেওয়ার পরে) একবারই পাঠায়।
+// সময় ঠিক ১১টায় চাইলে cPanel → Cron Jobs এ রাত ১১টায় সাইটের হোম পেজ খোলার একটা cron দিন (Admin → Telegram পেজে লেখা আছে)।
+// হিসাবের সময়: আগের দিন রাত ১১টা → এই দিন রাত ১১টা (কোনো রেজিস্ট্রেশন বাদ পড়ে না)।
+// ============================================================
+const TG_DAILY_HOUR = 23;
+
+/** এই মুহূর্তে কোন দিনের রিপোর্ট পাওনা (Y-m-d) — রাত ১১টার আগে হলে গতকালের */
+function tg_daily_due_day(): string
+{
+    return (int)date('G') >= TG_DAILY_HOUR ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day'));
+}
+
+/** একটা দিনের হিসাব: [from, to, total, student, teacher, undecided, kycStudent, kycTeacher, allUsers] */
+function tg_daily_stats(string $day): array
+{
+    $to = $day . ' ' . sprintf('%02d', TG_DAILY_HOUR) . ':00:00';
+    $from = date('Y-m-d H:i:s', strtotime($to . ' -1 day'));
+    $db = db();
+    $r = ['from' => $from, 'to' => $to, 'total' => 0, 'student' => 0, 'teacher' => 0, 'undecided' => 0, 'kycS' => null, 'kycT' => null, 'all' => 0];
+    $role = "COALESCE(`IntendedRole`, '')";
+    try { $db->GetIntendedRole(0); } catch (Throwable $e) { }   // কলাম না থাকলে তৈরি
+    foreach ($db->all("SELECT CASE WHEN `Role` = 'Teacher' OR $role = 'teacher' THEN 't' WHEN $role = 'student' THEN 's' ELSE 'u' END AS K, COUNT(*) AS N
+        FROM `Users` WHERE `Role` <> 'Admin' AND `CreatedAt` >= :f AND `CreatedAt` < :t GROUP BY K", ['f' => $from, 't' => $to]) as $x) {
+        $n = (int)$x->N; $r['total'] += $n;
+        if ($x->K === 't') $r['teacher'] += $n; elseif ($x->K === 's') $r['student'] += $n; else $r['undecided'] += $n;
+    }
+    // এই সময়ে Verification Approve হয়ে যারা শিক্ষার্থী / টিচার হয়েছে
+    try {
+        foreach ($db->all("SELECT `Kind`, COUNT(*) AS N FROM `KycRequests` WHERE `Status` = 'Approved' AND `ReviewedAt` >= :f AND `ReviewedAt` < :t GROUP BY `Kind`", ['f' => $from, 't' => $to]) as $x) {
+            if ($x->Kind === 'student') $r['kycS'] = (int)$x->N; elseif ($x->Kind === 'teacher') $r['kycT'] = (int)$x->N;
+        }
+        $r['kycS'] ??= 0; $r['kycT'] ??= 0;
+    } catch (Throwable $e) { }
+    try { $r['all'] = (int)$db->scalar("SELECT COUNT(*) FROM `Users` WHERE `Role` <> 'Admin'"); } catch (Throwable $e) { }
+    return $r;
+}
+
+function tg_daily_text(string $day): string
+{
+    $s = tg_daily_stats($day);
+    $bn = fn($n) => bn_num((string)$n);
+    $mon = ['', 'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+    $ts = strtotime($day);
+    $date = $bn((int)date('j', $ts)) . ' ' . $mon[(int)date('n', $ts)] . ' ' . $bn(date('Y', $ts));
+    $t = "<b>📊 ডেইলি রিপোর্ট — $date</b>\n<i>(গতকাল রাত ১১টা থেকে আজ রাত ১১টা)</i>\n\n"
+        . "🆕 মোট রেজিস্ট্রেশন: <b>" . $bn($s['total']) . " জন</b>\n"
+        . "🎓 শিক্ষার্থী: <b>" . $bn($s['student']) . " জন</b>\n"
+        . "👨‍🏫 টিচার: <b>" . $bn($s['teacher']) . " জন</b>";
+    if ($s['undecided']) $t .= "\n❔ শিক্ষার্থী / টিচার বাছাই করেনি: <b>" . $bn($s['undecided']) . " জন</b>";
+    if ($s['kycS'] !== null) $t .= "\n\n✅ Verification Approve হয়েছে — শিক্ষার্থী: <b>" . $bn($s['kycS']) . "</b> · টিচার: <b>" . $bn($s['kycT']) . "</b>";
+    if ($s['all']) $t .= "\n\n👥 এ পর্যন্ত মোট ইউজার: <b>" . $bn($s['all']) . " জন</b>";
+    $t .= "\n\n👉 <a href=\"" . htmlspecialchars(site_public_url() . '/Admin/UserOverview?nf=' . $day . '&nt=' . $day . '#newUsers', ENT_QUOTES) . "\">নতুন ইউজারদের তালিকা দেখুন</a>";
+    return $t;
+}
+
+/** সব চ্যাটে পাঠানো — কতটা চ্যাটে গেছে */
+function tg_send_all(string $html): int
+{
+    $s = tg_settings();
+    $ok = 0;
+    foreach ($s['chats'] as $c) { $err = null; if (tg_call($s['token'], 'sendMessage', ['chat_id' => (string)$c['id'], 'text' => $html, 'parse_mode' => 'HTML', 'disable_web_page_preview' => true], $err, 6)) $ok++; elseif ($err) error_log('[telegram daily] ' . $err); }
+    return $ok;
+}
+
+/** প্রতি রিকোয়েস্টে (index.php) — রিপোর্ট পাওনা থাকলে পেজের উত্তরের পরে একবারই পাঠায় (একসাথে দুইটা রিকোয়েস্ট এলেও দুইবার যায় না) */
+function tg_daily_tick(): void
+{
+    try {
+        $s = tg_settings();
+        if (!$s['on'] || in_array('daily', $s['off'], true)) return;
+        $due = tg_daily_due_day();
+        $last = (string)(db()->GetSiteContent(['tg_daily_last' => ''])['tg_daily_last'] ?? '');
+        if ($last === '') { db()->SaveSiteContent(['tg_daily_last' => $due]); return; }   // প্রথমবার: আজ রাত থেকে শুরু
+        if ($last >= $due) return;
+        // যে রিকোয়েস্ট আগে মান বদলাতে পারবে শুধু সে-ই পাঠাবে
+        if (db()->exec('UPDATE `SiteContents` SET `ContentValue` = :n, `UpdatedAt` = :t WHERE `ContentKey` = \'tg_daily_last\' AND `ContentValue` = :o', ['n' => $due, 'o' => $last, 't' => now()]) !== 1) return;
+        register_shutdown_function(function () use ($due) {
+            if (function_exists('fastcgi_finish_request')) @fastcgi_finish_request();
+            try { tg_send_all(tg_daily_text($due)); } catch (Throwable $e) { error_log('[telegram daily] ' . $e->getMessage()); }
+        });
+    } catch (Throwable $e) { error_log('[telegram daily tick] ' . $e->getMessage()); }
+}
 
 function tg_api_base(): string
 {

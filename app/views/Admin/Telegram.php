@@ -77,6 +77,13 @@ $on = $has && $S['chats'] && empty($bot['error']);
         <?php endforeach; ?>
         <div class="tg-a"><button type="submit" class="tg-btn d"><i class="fas fa-floppy-disk"></i> সেভ করুন</button><button type="button" class="tg-btn r" id="tgOff"><i class="fas fa-power-off"></i> পুরোপুরি বন্ধ করুন</button><span class="tg-msg" data-m></span></div>
     </form>
+
+    <div class="tg-card">
+        <h3><i class="fas fa-chart-column" style="color:#229ED9;"></i> ডেইলি রিপোর্ট (রাত ১১টা)</h3>
+        <p style="color:#475569;margin:0 0 10px;font-size:14px;">প্রতিদিন রাত ১১টায় উপরের চ্যাটগুলোতে যাবে: মোট রেজিস্ট্রেশন, কতজন শিক্ষার্থী, কতজন টিচার (আগের দিন রাত ১১টা থেকে ঐ দিন রাত ১১টা)। উপরে "📊 ডেইলি রিপোর্ট" টিক না থাকলে যাবে না।</p>
+        <div class="tg-a"><button type="button" class="tg-btn l" id="tgDaily"><i class="fas fa-paper-plane"></i> আজকের রিপোর্ট এখনই পাঠান (পরীক্ষা)</button><span class="tg-msg" id="tgMsg3"></span></div>
+        <p style="font-size:12.5px;color:#64748B;margin:12px 0 0;"><i class="fas fa-circle-info"></i> রাত ১১টার পর সাইটে প্রথম কেউ ঢুকলেই রিপোর্ট চলে যায়। একদম ঠিক ১১টায় চাইলে cPanel → <b>Cron Jobs</b> এ নতুন cron যোগ করুন — Minute <code>0</code>, Hour <code>23</code>, বাকি সব <code>*</code>, Command:<br><code style="user-select:all;">curl -s <?= e(site_public_url()) ?>/ > /dev/null</code></p>
+    </div>
     <?php endif; ?>
 
     <div class="tg-card">
@@ -105,6 +112,7 @@ $on = $has && $S['chats'] && empty($bot['error']);
     var m2 = document.getElementById('tgMsg2');
     var fd = document.getElementById('tgFind'); if (fd) fd.addEventListener('click', async function () { var d = await post('/Admin/TelegramFindChats', null, m2); if (d.success && /যোগ হয়েছে/.test(d.message)) setTimeout(function () { location.reload(); }, 1400); });
     var ts = document.getElementById('tgTest'); if (ts) ts.addEventListener('click', function () { post('/Admin/TelegramTest', null, m2); });
+    var dl = document.getElementById('tgDaily'); if (dl) dl.addEventListener('click', function () { post('/Admin/TelegramDailyNow', null, document.getElementById('tgMsg3')); });
     document.querySelectorAll('[data-rm]').forEach(function (b) { b.addEventListener('click', async function () { if (!confirm('এই চ্যাটে আর নোটিফিকেশন যাবে না। সরাবেন?')) return; var x = new FormData(); x.append('id', b.dataset.rm); var d = await post('/Admin/TelegramRemoveChat', x, m2); if (d.success) location.reload(); }); });
     var ev = document.getElementById('tgEv'); if (ev) ev.addEventListener('submit', function (e) { e.preventDefault(); post('/Admin/SaveTelegramEvents', new FormData(ev), ev.querySelector('[data-m]')); });
     var off = document.getElementById('tgOff'); if (off) off.addEventListener('click', async function () { if (!confirm('Telegram নোটিফিকেশন পুরোপুরি বন্ধ করবেন? (token মুছে যাবে)')) return; var x = new FormData(); x.append('clear', '1'); var d = await post('/Admin/SaveTelegramEvents', x, ev.querySelector('[data-m]')); if (d.success) setTimeout(function () { location.reload(); }, 900); });

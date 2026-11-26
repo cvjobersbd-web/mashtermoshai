@@ -2001,6 +2001,17 @@ class AdminController extends Controller
         json_response(['success' => $ok > 0, 'message' => $ok ? "{$ok}টা চ্যাটে পাঠানো হয়েছে — মোবাইলে দেখুন।" : ($last ?: 'পাঠানো যায়নি।')]);
     }
 
+    /** POST /Admin/TelegramDailyNow — আজকের ডেইলি রিপোর্ট এখনই (পরীক্ষা; রাত ১১টার রিপোর্ট আগের মতোই যাবে) */
+    public function TelegramDailyNow_POST(): void
+    {
+        $this->requireAdminJson();
+        $s = tg_settings(true);
+        if (!$s['on']) json_response(['success' => false, 'message' => 'আগে token আর অন্তত একটা চ্যাট যোগ করুন।']);
+        $day = (int)date('G') >= TG_DAILY_HOUR ? date('Y-m-d', strtotime('+1 day')) : date('Y-m-d');   // এখন পর্যন্ত চলমান দিনের হিসাব
+        $ok = tg_send_all(tg_daily_text($day));
+        json_response(['success' => $ok > 0, 'message' => $ok ? "{$ok}টা চ্যাটে রিপোর্ট পাঠানো হয়েছে — মোবাইলে দেখুন।" : 'পাঠানো যায়নি।']);
+    }
+
     /** POST /Admin/SaveTelegramEvents (on[] = payment, verify ...) — কোন ঘটনাগুলো Telegram এ যাবে; clear=1 হলে token মুছে বন্ধ */
     public function SaveTelegramEvents_POST(): void
     {
