@@ -861,7 +861,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             @media (max-width: 1599px) and (min-width: 1280px) { .chat-nav-wrap { margin-right: 0; } }
             /* মেসেজ: নেভবারে আইকন না — চিঠি মুখে কবুতর (ডানা ঝাপটায়, মাউস / আঙুল দিয়ে টেনে যেকোনো জায়গায় সরানো যায়) */
             .chat-nav-wrap { display: none !important; }
-            .chat-fab { display: block; position: fixed; right: 22px; bottom: 18px; z-index: 1030; width: 116px; height: 92px; text-decoration: none; touch-action: none; cursor: grab;
+            .chat-fab { display: block; position: fixed; right: 22px; bottom: 18px; z-index: 1060; width: 116px; height: 92px; text-decoration: none; touch-action: none; cursor: grab;
                 -webkit-user-drag: none; user-select: none; -webkit-tap-highlight-color: transparent;
                 filter: drop-shadow(0 8px 14px rgba(8,34,74,.22)); animation: doveBob 1.8s ease-in-out infinite; transition: filter .2s; }
             .chat-fab.drag { cursor: grabbing; animation: none; filter: drop-shadow(0 16px 24px rgba(8,34,74,.32)); }
