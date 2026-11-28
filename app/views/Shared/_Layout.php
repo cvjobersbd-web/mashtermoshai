@@ -670,6 +670,15 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 }
             }
 
+            /* ===== মোবাইলে দ্রুত আর মসৃণ: পেজ বদলের ভারী অ্যানিমেশন আর হেডারের blur বন্ধ (কম দামি ফোনে এগুলোই ল্যাগ করে) ===== */
+            html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+            @media (max-width: 1023px) {
+                @view-transition { navigation: none; }
+                html.no-vt main { animation: none !important; transition: none !important; }
+                .site-header, .site-header.scrolled, .site-header.is-home.scrolled { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+                .site-header.scrolled, .site-header.is-home.scrolled { background: #fff; }
+            }
+
             ::view-transition-old(root),
             ::view-transition-new(root) {
                 animation-duration: 0.3s;
@@ -863,11 +872,12 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .chat-nav-wrap { display: none !important; }
             .chat-fab { display: block; position: fixed; right: 22px; bottom: 18px; z-index: 1060; width: 116px; height: 92px; text-decoration: none; touch-action: none; cursor: grab;
                 -webkit-user-drag: none; user-select: none; -webkit-tap-highlight-color: transparent;
-                filter: drop-shadow(0 8px 14px rgba(8,34,74,.22)); animation: doveBob 1.8s ease-in-out infinite; transition: filter .2s; }
-            .chat-fab.drag { cursor: grabbing; animation: none; filter: drop-shadow(0 16px 24px rgba(8,34,74,.32)); }
+                animation: doveBob 1.8s ease-in-out infinite; will-change: transform; }
+            .chat-fab.drag { cursor: grabbing; animation: none; }
+            /* ছায়া শুধু স্থির শরীরের ছবিতে — নড়তে থাকা ডানায় filter থাকলে প্রতি ফ্রেমে নতুন করে আঁকতে হয় (ল্যাগ) */
+            .chat-fab .dv-body { filter: drop-shadow(0 8px 10px rgba(8,34,74,.2)); }
             .chat-fab img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-            .chat-fab .dv-wing { transform-origin: 52% 58%; animation: doveFlap .42s ease-in-out infinite alternate; }
-            .chat-fab:hover { filter: drop-shadow(0 12px 20px rgba(2,132,199,.4)); }
+            .chat-fab .dv-wing { transform-origin: 52% 58%; animation: doveFlap .42s ease-in-out infinite alternate; will-change: transform; }
             .chat-fab:hover .dv-wing, .chat-fab.drag .dv-wing { animation-duration: .22s; }
             @keyframes doveFlap { from { transform: scaleY(1) rotate(0deg); } to { transform: scaleY(.45) rotate(-4deg); } }
             @keyframes doveBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -1649,7 +1659,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             </div>
         </footer>
         <?php if (isset($chatUnread) && stripos(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/chat') !== 0): ?>
-        <a class="chat-fab" href="/Chat" title="Messages" aria-label="Messages"><img class="dv-wing" src="/uploads/chat/dove-wing.webp" alt="" width="116" height="92" /><img src="/uploads/chat/dove-body.webp" alt="" width="116" height="92" /><span class="fab-badge<?= $chatUnread ? ' show' : '' ?>" id="chatFabBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span></a>
+        <a class="chat-fab" href="/Chat" title="Messages" aria-label="Messages"><img class="dv-wing" src="/uploads/chat/dove-wing.webp" alt="" width="116" height="92" /><img class="dv-body" src="/uploads/chat/dove-body.webp" alt="" width="116" height="92" /><span class="fab-badge<?= $chatUnread ? ' show' : '' ?>" id="chatFabBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span></a>
         <?php endif; ?>
         <?php
         // ===== মোবাইলের নিচের আইকন বার (Facebook এর মতো) — শুধু দরকারি আইকন; চ্যাট পেজ আর অ্যাডমিনে দেখায় না =====
@@ -1689,13 +1699,13 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 .bnav a i, .bnav a span, .bnav a .bn-me { transition: color .35s, transform .35s; }
                 .bnav a.on { color: #0284C7; }
                 .bnav a.on i { transform: scale(1.08); }
-                .bn-pill { position: absolute; z-index: 0; top: 6px; bottom: calc(6px + env(safe-area-inset-bottom)); left: 0; right: 100%; border-radius: 24px; pointer-events: none; opacity: 0;
-                    background: linear-gradient(135deg, rgba(0,207,255,.20), rgba(2,132,199,.16)); box-shadow: inset 0 0 0 1px rgba(0,207,255,.18), 0 4px 14px rgba(0,168,214,.12);
-                    transition: left .5s cubic-bezier(.65,0,.35,1), right .5s cubic-bezier(.65,0,.35,1), opacity .3s; }
+                /* শুধু transform দিয়ে নড়ে (GPU) — তাই লেআউট / রি-পেইন্ট হয় না, ল্যাগ করে না */
+                .bn-pill { position: absolute; z-index: 0; top: 6px; bottom: calc(6px + env(safe-area-inset-bottom)); left: 0; width: 60px; border-radius: 24px; pointer-events: none; opacity: 0;
+                    background: linear-gradient(135deg, rgba(0,207,255,.20), rgba(2,132,199,.16)); box-shadow: inset 0 0 0 1px rgba(0,207,255,.18);
+                    transform-origin: 0 50%; will-change: transform; transition: opacity .2s; }
                 .bn-pill.ready { opacity: 1; }
                 .bn-drop { position: absolute; z-index: 0; top: 50%; left: 0; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; pointer-events: none; opacity: 0;
-                    background: rgba(0,207,255,.25); transition: left .75s cubic-bezier(.65,0,.35,1), opacity .75s ease-in, transform .75s; }
-                @media (prefers-reduced-motion: reduce) { .bn-pill, .bn-drop { transition: none; } }
+                    background: rgba(0,207,255,.25); will-change: transform, opacity; }
                 .bnav .bn-badge { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #EF4444; color: #fff; font-size: 10px; font-weight: 800; font-style: normal;
                     display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; box-sizing: border-box; }
                 .bnav .bn-badge.show { display: inline-flex; }
@@ -1710,38 +1720,39 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         </style>
         <script>
             (function () {
-                // ===== তরল হাইলাইট: চাপা বাটনে গড়িয়ে যায় (সামনের দিক আগে, পেছনের দিক পরে), তারপর পেজ খোলে =====
+                // ===== তরল হাইলাইট: চাপা বাটনে গড়িয়ে যায় (সামনের দিক আগে, পেছনের দিক পরে) — শুধু transform, তাই মসৃণ =====
                 var nav = document.getElementById('bNav'), pill = document.getElementById('bnPill'), drop = document.getElementById('bnDrop');
                 if (nav && pill) {
-                    var items = Array.prototype.slice.call(nav.querySelectorAll('a')), PAD = 6, last = null;
-                    var edges = function (a) { return [a.offsetLeft + PAD, nav.clientWidth - (a.offsetLeft + a.offsetWidth - PAD)]; };
+                    var items = Array.prototype.slice.call(nav.querySelectorAll('a')), PAD = 6, lastX = null, W = 0;
+                    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    var geo = function (a) { W = a.offsetWidth - PAD * 2; pill.style.width = W + 'px'; return a.offsetLeft + PAD; };
+                    var tf = function (x, sx) { return 'translate3d(' + x + 'px,0,0) scaleX(' + sx + ')'; };
                     var place = function (a, animate) {
-                        var e = edges(a);
-                        if (!animate || !last) {
-                            pill.style.transition = 'none'; pill.style.left = e[0] + 'px'; pill.style.right = e[1] + 'px'; void pill.offsetWidth; pill.style.transition = '';
-                        } else {
-                            var right = a.offsetLeft > last.offsetLeft, fast = '.28s', slow = '.62s', ease = 'cubic-bezier(.65,0,.35,1)';
-                            // যেদিকে যাচ্ছে সেই দিকটা আগে ছোটে, অন্য দিকটা পরে টেনে আসে — পানির মতো লম্বা হয়ে আবার গুটিয়ে যায়
-                            pill.style.transition = 'left ' + (right ? slow : fast) + ' ' + ease + ', right ' + (right ? fast : slow) + ' ' + ease + ', opacity .3s';
-                            pill.style.left = e[0] + 'px'; pill.style.right = e[1] + 'px';
-                            if (drop) {   // পেছনে ছোট্ট একটা ফোঁটা থেকে যায়, তারপর মিলিয়ে যায়
-                                var from = last.offsetLeft + last.offsetWidth / 2 - 7, to = a.offsetLeft + a.offsetWidth / 2 - 7;
-                                drop.style.transition = 'none'; drop.style.left = from + 'px'; drop.style.opacity = '1'; drop.style.transform = 'scale(1)'; void drop.offsetWidth;
-                                drop.style.transition = ''; drop.style.left = (from + (to - from) * .55) + 'px'; drop.style.opacity = '0'; drop.style.transform = 'scale(.4)';
+                        var x = geo(a);
+                        if (animate && lastX !== null && !reduce && pill.animate && x !== lastX) {
+                            var dx = x - lastX, mid;
+                            // যেদিকে যাচ্ছে সেই দিক আগে পৌঁছায়, পেছনের দিক পরে — পানির মতো লম্বা হয়ে গুটিয়ে যায়
+                            if (dx > 0) { var bx = lastX + dx * .22; mid = tf(bx, (x + W - bx) / W); }
+                            else { var re = lastX + W + dx * .22; mid = tf(x, (re - x) / W); }
+                            pill.animate([{ transform: tf(lastX, 1) }, { transform: mid, offset: .45 }, { transform: tf(x, 1) }], { duration: 480, easing: 'cubic-bezier(.65,0,.35,1)' });
+                            if (drop && drop.animate) {
+                                var c0 = lastX + W / 2 - 7, c1 = c0 + dx * .55;
+                                drop.animate([{ transform: 'translate3d(' + c0 + 'px,0,0) scale(1)', opacity: 1 }, { transform: 'translate3d(' + c1 + 'px,0,0) scale(.35)', opacity: 0 }], { duration: 620, easing: 'cubic-bezier(.65,0,.35,1)' });
                             }
                         }
-                        pill.classList.add('ready'); last = a;
+                        pill.style.transform = tf(x, 1); pill.classList.add('ready'); lastX = x;
                     };
                     var cur = nav.querySelector('a.on'); if (cur) place(cur, false);
-                    window.addEventListener('resize', function () { var c = nav.querySelector('a.on'); if (c) { last = null; place(c, false); } });
-                    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.addEventListener('resize', function () { var c = nav.querySelector('a.on'); if (c) { lastX = null; place(c, false); } });
                     items.forEach(function (a) {
+                        // আঙুল রাখতেই পরের পেজ আগে থেকে লোড শুরু — ছাড়লে প্রায় সাথে সাথে খোলে
+                        a.addEventListener('touchstart', function () { if (a.id !== 'bnBell' && window.mmPrefetch) window.mmPrefetch(a.href); }, { passive: true });
                         a.addEventListener('click', function (e) {
                             if (a.id === 'bnBell' || a.classList.contains('on') || e.ctrlKey || e.metaKey) return;
                             e.preventDefault();
                             var old = nav.querySelector('a.on'); if (old) old.classList.remove('on');
                             a.classList.add('on'); place(a, true);
-                            setTimeout(function () { location.href = a.href; }, reduce ? 0 : 520);
+                            setTimeout(function () { location.href = a.href; }, reduce ? 0 : 300);
                         });
                     });
                 }
@@ -1764,11 +1775,30 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <!-- JAVASCRIPT -->
     <!-- ========================================= -->
     <script>
+            // ===== আগে থেকে লোড (prefetch): আঙুল রাখলে / মাউস একটু থামলে পরের পেজ ব্যাকগ্রাউন্ডে আনা শুরু — ক্লিক করলে দ্রুত খোলে =====
+            (function () {
+                var done = {}, n = 0, SKIP = /(logout|signout|delete|remove|toggle|mark|clear|\/chat|\/live|\/payment|\/account|\/admin|download|export|excel)/i;
+                var conn = navigator.connection || {};
+                if (conn.saveData || /2g/.test(conn.effectiveType || '')) { window.mmPrefetch = function () { }; return; }
+                window.mmPrefetch = function (href) {
+                    try {
+                        var u = new URL(href, location.href);
+                        if (u.origin !== location.origin || SKIP.test(u.pathname) || (u.pathname === location.pathname && u.search === location.search)) return;
+                        u.hash = ''; var k = u.href; if (done[k] || n >= 25) return; done[k] = 1; n++;
+                        var l = document.createElement('link'); l.rel = 'prefetch'; l.href = k; l.as = 'document'; document.head.appendChild(l);
+                    } catch (e) { }
+                };
+                var pick = function (e) { var a = e.target.closest && e.target.closest('a[href]'); if (!a || a.target === '_blank' || a.hasAttribute('download') || a.hasAttribute('data-no-prefetch')) return null; var h = a.getAttribute('href'); return !h || h.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(h) ? null : a; };
+                document.addEventListener('touchstart', function (e) { var a = pick(e); if (a) window.mmPrefetch(a.href); }, { passive: true, capture: true });
+                var tm = null;
+                document.addEventListener('mouseover', function (e) { var a = pick(e); clearTimeout(tm); if (a) tm = setTimeout(function () { window.mmPrefetch(a.href); }, 80); }, { passive: true });
+            })();
+
             // ===== SMOOTH PAGE TRANSITION =====
             (function () {
                 const progress = document.getElementById('pageProgress');
                 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                const LEAVE_DELAY = prefersReducedMotion ? 0 : 200;
+                const LEAVE_DELAY = prefersReducedMotion || window.matchMedia('(max-width: 1023px)').matches ? 0 : 200;   // মোবাইলে অপেক্ষা ছাড়াই
                 const nativeTransition = document.documentElement.classList.contains('no-vt') === false;
                 let navigating = false;
 
