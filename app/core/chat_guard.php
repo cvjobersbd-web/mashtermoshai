@@ -55,7 +55,22 @@ function chat_locked_for(Obj $t, int $me): bool
 {
     if (!empty($t->AdminChat) || is_admin()) return false;
     if ((int)$t->TeacherId !== $me || current_role() !== 'Teacher') return false;
+    if (chat_thread_free($t)) return false;
     return !is_premium_teacher($me);
+}
+
+/** অ্যাডমিন এই টিচার-শিক্ষার্থী জোড়াকে ফ্রি করে দিয়েছে কিনা (গ্রুপ বাদে) */
+function chat_thread_free(Obj $t): bool
+{
+    if (($t->Kind ?? '') === 'grp' || empty($t->TeacherId) || empty($t->StudentId)) return false;
+    try { return db()->IsChatFree((int)$t->TeacherId, (int)$t->StudentId); } catch (Throwable $e) { return false; }
+}
+
+/** এই চ্যাট থেকে আমি (টিচার) লাইভ ক্লাস নিতে পারব কিনা — লাইভ প্যাকেজ, বা অ্যাডমিনের ফ্রি জোড়া */
+function chat_live_allowed(Obj $t, int $me): bool
+{
+    if (teacher_live_enabled($me)) return true;
+    return (int)$t->TeacherId === $me && chat_thread_free($t);
 }
 
 /** কোনো ইউজার (নোটিফিকেশন পাবে এমন) প্যাকেজ ছাড়া টিচার কিনা — তাহলে নোটিফিকেশনে মেসেজের লেখা যায় না */

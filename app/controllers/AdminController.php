@@ -1934,6 +1934,61 @@ class AdminController extends Controller
         $this->view(null, null, ['S' => $s, 'Bot' => $bot, 'Hint' => $s['token'] !== '' ? '••••' . substr($s['token'], -4) : '']);
     }
 
+    // ===================== ফ্রি চ্যাট ও লাইভ ক্লাস (টিচার ↔ শিক্ষার্থী জোড়া) =====================
+    /** GET /Admin/ChatFree — অ্যাডমিন যে জোড়াগুলোকে প্যাকেজ ছাড়া চ্যাট আর লাইভ ক্লাসের অনুমতি দিয়েছেন */
+    public function ChatFree(): void
+    {
+        $this->requireAdminPage();
+        $this->view(null, null, ['Pairs' => $this->db->GetChatFreePairs()]);
+    }
+
+    /** GET /Admin/ChatFreeFind?q=&role=Teacher|User — নাম / ইউজারনেম / ইমেইল / মোবাইল / Teacher ID দিয়ে খোঁজা */
+    public function ChatFreeFind(): void
+    {
+        $this->requireAdminJson();
+        $q = trim((string)input_str('q', ''));
+        $role = input_str('role', 'User') === 'Teacher' ? 'Teacher' : 'User';
+        if (mb_strlen($q) < 2) json_response(['success' => true, 'users' => []]);
+        if ($role === 'Teacher' && preg_match('/^\s*(?:tch)?\s*-?\s*(\d{4,})\s*$/i', $q, $m)) {
+            $rows = $this->db->all("SELECT u.`Id`, u.`FullName`, u.`UserName`, u.`Email`, u.`ProfileImageLink` FROM `Users` u JOIN `TeacherRequests` r ON r.`UserId` = u.`Id` WHERE u.`Role` = 'Teacher' AND r.`Id` = :r LIMIT 5", ['r' => (int)$m[1] - 1000]);
+        } else {
+            $like = '%' . ltrim($q, '@') . '%';
+            $rows = $this->db->all("SELECT `Id`, `FullName`, `UserName`, `Email`, `ProfileImageLink` FROM `Users` WHERE `Role` = :role AND (`FullName` LIKE :a OR `UserName` LIKE :b OR `Email` LIKE :c OR `MobileNumber` LIKE :d OR CAST(`Id` AS CHAR) = :id) ORDER BY `Id` DESC LIMIT 12",
+                ['role' => $role, 'a' => $like, 'b' => $like, 'c' => $like, 'd' => $like, 'id' => $q]);
+        }
+        json_response(['success' => true, 'users' => array_map(function ($u) use ($role) {
+            $n = !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName;
+            return ['id' => (int)$u->Id, 'name' => $n, 'user' => (string)$u->UserName, 'email' => (string)$u->Email, 'code' => $role === 'Teacher' ? teacher_code((int)$u->Id) : '', 'photo' => (string)($u->ProfileImageLink ?? ''), 'initials' => initials($n, 'U')];
+        }, $rows)]);
+    }
+
+    /** POST /Admin/ChatFreeAdd (teacherId, studentId, note) — জোড়া যোগ + দুজনের মধ্যে চ্যাট খুলে দেওয়া */
+    public function ChatFreeAdd_POST(): void
+    {
+        $this->requireAdminJson();
+        $tid = input_int('teacherId', 0); $sid = input_int('studentId', 0);
+        $t = $tid ? $this->db->GetUserById($tid) : null; $s = $sid ? $this->db->GetUserById($sid) : null;
+        if (!$t || $t->Role !== 'Teacher') json_response(['success' => false, 'message' => 'টিচার বাছাই করুন।']);
+        if (!$s || $s->Role !== 'User') json_response(['success' => false, 'message' => 'শিক্ষার্থী বাছাই করুন।']);
+        $note = mb_substr(trim((string)input_str('note', '')), 0, 200);
+        if (!$this->db->AddChatFree($tid, $sid, $note, current_user_id())) json_response(['success' => false, 'message' => 'এই জোড়া আগে থেকেই যোগ করা আছে।']);
+        $key = $this->db->OpenDirectChat($sid, $tid);
+        $tn = !is_blank($t->FullName) ? $t->FullName : $t->UserName; $sn = !is_blank($s->FullName) ? $s->FullName : $s->UserName;
+        try {
+            $this->db->CreateNotification($tid, 'ফ্রি চ্যাট চালু 🎉', "মাষ্টার মশাই আপনাকে {$sn} এর সাথে প্যাকেজ ছাড়াই চ্যাট আর লাইভ ক্লাস করার সুযোগ দিয়েছে।", 'success', '/Chat?c=' . $key, 'fa-handshake');
+            $this->db->CreateNotification($sid, 'ফ্রি চ্যাট চালু 🎉', "মাষ্টার মশাই আপনাকে {$tn} এর সাথে ফ্রি চ্যাট আর লাইভ ক্লাসের সুযোগ দিয়েছে।", 'success', '/Chat?c=' . $key, 'fa-handshake');
+        } catch (Throwable $e) { }
+        json_response(['success' => true, 'message' => 'যোগ হয়েছে — দুজনের চ্যাট খুলে দেওয়া হয়েছে।']);
+    }
+
+    /** POST /Admin/ChatFreeRemove (id) — ফ্রি সুবিধা বন্ধ (চ্যাটের মেসেজ থাকে, আবার প্যাকেজের নিয়ম চালু হয়) */
+    public function ChatFreeRemove_POST(): void
+    {
+        $this->requireAdminJson();
+        $this->db->RemoveChatFree(input_int('id', 0));
+        json_response(['success' => true]);
+    }
+
     /** POST /Admin/SaveTelegram (token) — যাচাই করে সেভ, সাথে যারা START চেপেছে তাদের খুঁজে যোগ */
     public function SaveTelegram_POST(): void
     {

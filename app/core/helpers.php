@@ -1981,7 +1981,7 @@ function admin_action_rule(string $action): string
     if ($map === null) {
         $map = ['Dashboard' => 'always', 'ChangeMyPassword' => 'always'];
         $groups = [
-            'users' => ['TeacherOverview', 'UserOverview', 'NewUsersExcel', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock', 'SaveDeviceAuto', 'SaveDeviceMax'],
+            'users' => ['TeacherOverview', 'UserOverview', 'NewUsersExcel', 'StudentOverview', 'UserDetails', 'SuspendUser', 'UnsuspendUser', 'ToggleUserStatus', 'UpdatePassword', 'Devices', 'ApproveDevice', 'RejectDevice', 'RevokeDevice', 'SaveDeviceLock', 'SaveDeviceAuto', 'SaveDeviceMax', 'ChatFree', 'ChatFreeFind', 'ChatFreeAdd', 'ChatFreeRemove'],
             'teachers' => ['Kyc', 'KycDecide', 'TeacherRequests', 'ProcessTeacherRequest', 'DeleteTeacherAccount', 'GetTeacherRequestDetails'],
             'tuition' => ['PublicPosts', 'DeletePublicPost', 'TuitionPosts', 'QuickTuitionPost', 'AddTuitionPost', 'EditTuitionPost', 'ToggleTuitionStatus', 'ToggleShowOnHome', 'DeleteTuitionPost', 'TuitionApplications',
                 'UpdateApplicationStatus', 'DeleteTuitionApplication', 'TutorRequests', 'UpdateTutorRequestStatus', 'DeleteTutorRequest'],

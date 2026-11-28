@@ -120,7 +120,7 @@ class ChatController extends Controller
             'SeenUpTo' => $current ? $this->db->GetChatSeenUpTo($current, $me) : 0, 'Me' => $me,
             'ThreadJson' => $this->packThreads($threads),
             'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false,
-            'LivePkg' => teacher_live_enabled($me), 'LiveOk' => teacher_live_enabled($me) && bbb_ready(), 'Card' => $card,
+            'LivePkg' => $current ? chat_live_allowed($current, $me) : teacher_live_enabled($me), 'LiveOk' => ($current ? chat_live_allowed($current, $me) : teacher_live_enabled($me)) && bbb_ready(), 'Card' => $card,
             'TeacherPkg' => current_role() === 'Teacher' && is_premium_teacher($me), 'CanFind' => current_role() === 'User',
             'Contacts' => current_role() === 'Teacher' ? array_values($this->db->TeacherChatContacts($me)) : [],
             'IsSuper' => is_admin() && admin_is_super(),
@@ -246,7 +246,7 @@ class ChatController extends Controller
                 if ($n === 1) $this->db->CreateNotification($uid, 'নতুন গ্রুপ মেসেজ', "$myName — {$t->OtherName}" . (chat_user_locked((int)$uid) ? ' — মেসেজ দেখতে টিচার প্যাকেজ কিনুন' : ': ' . str_preview($body, 60)), 'info', '/Chat?c=' . $t->Key, 'fa-users');
             }
         } elseif (!$this->db->HasUnreadFrom($t, $me)) {
-            $this->db->CreateNotification($t->OtherId, 'নতুন মেসেজ', "$myName আপনাকে মেসেজ পাঠিয়েছেন" . (chat_user_locked((int)$t->OtherId) ? ' — দেখতে টিচার প্যাকেজ কিনুন।' : ': ' . str_preview($body, 60)), 'info', '/Chat?c=' . $t->Key, 'fa-comment-dots');
+            $this->db->CreateNotification($t->OtherId, 'নতুন মেসেজ', "$myName আপনাকে মেসেজ পাঠিয়েছেন" . (chat_user_locked((int)$t->OtherId) && !chat_thread_free($t) ? ' — দেখতে টিচার প্যাকেজ কিনুন।' : ': ' . str_preview($body, 60)), 'info', '/Chat?c=' . $t->Key, 'fa-comment-dots');
         }
         $msgs = $this->db->GetChatMessages($t, max(0, input_int('after', 0)), 0, 50);
         json_response(['success' => true, 'id' => $id, 'messages' => $this->pack($msgs, $me, $t)]);
@@ -260,7 +260,7 @@ class ChatController extends Controller
         if (!$t) json_response(['success' => false, 'closed' => true, 'message' => 'এই চ্যাটটি বন্ধ হয়ে গেছে।']);
         if ($t->TeacherId !== $me) json_response(['success' => false, 'message' => 'শুধু টিচার ক্লাস সেট করতে পারবেন।']);
         // Zoom / Google Meet আর না — সাইটের নিজের লাইভ ক্লাস (BigBlueButton), শুধু Premium টিচার প্যাকেজে
-        if (!teacher_live_enabled($me)) json_response(['success' => false, 'premium' => true, 'courseUrl' => '/Package?for=teacher', 'message' => 'লাইভ ক্লাস নিতে Premium প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — বাকি সব সুবিধার সাথে চ্যাট থেকে লাইভ ক্লাস।']);
+        if (!chat_live_allowed($t, $me)) json_response(['success' => false, 'premium' => true, 'courseUrl' => '/Package?for=teacher', 'message' => 'লাইভ ক্লাস নিতে Premium প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — বাকি সব সুবিধার সাথে চ্যাট থেকে লাইভ ক্লাস।']);
         if (!bbb_ready()) json_response(['success' => false, 'message' => 'লাইভ ক্লাসের সার্ভার এখনো চালু হয়নি — অ্যাডমিনকে জানান।']);
         $title = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str('title', ''))), 0, 150);
         if ($title !== '' && ($why = chat_contact_block($title)) !== null) json_response(['success' => false, 'message' => chat_block_message($why)]);

@@ -87,7 +87,7 @@ class LiveController extends Controller
         if (!bbb_ready()) $this->problem('লাইভ ক্লাসের সার্ভার এখনো চালু করা হয়নি — অ্যাডমিনকে জানান।', $back);
         $mid = 'mm-chat-' . $cl->Id;
         if ($cl->TeacherId === $me) {
-            if (!teacher_live_enabled($me)) $this->problem('লাইভ ক্লাস নিতে Premium প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — Package পেজ থেকে নিন।', '/Package?for=teacher');
+            if (!chat_live_allowed($t, $me)) $this->problem('লাইভ ক্লাস নিতে Premium প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — Package পেজ থেকে নিন।', '/Package?for=teacher');
             $err = null;
             if (!bbb_create($mid, (string)$cl->Title, ['record' => false, 'logoutURL' => site_public_url() . $back, 'duration' => $cl->DurationMin + 60], $err)) $this->problem($err ?: 'লাইভ ক্লাস শুরু করা যায়নি।', $back);
             if (empty($_SESSION['_live_notified'][$cl->Id])) {

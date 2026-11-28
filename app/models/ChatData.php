@@ -59,7 +59,50 @@ trait ChatData
             $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatGroupMembers` (`GroupId` INT NOT NULL, `UserId` INT NOT NULL, `LastReadId` INT NOT NULL DEFAULT 0, `AddedAt` DATETIME NOT NULL,
                 PRIMARY KEY (`GroupId`, `UserId`), KEY `IX_ChatGM_U` (`UserId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
+        // অ্যাডমিনের দেওয়া ফ্রি জোড়া — এই টিচার আর এই শিক্ষার্থী প্যাকেজ ছাড়াই কথা বলতে আর লাইভ ক্লাস করতে পারবে
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS "ChatFreePairs" ("Id" INTEGER PRIMARY KEY AUTOINCREMENT, "TeacherId" INTEGER NOT NULL, "StudentId" INTEGER NOT NULL, "Note" TEXT NULL, "CreatedBy" INTEGER NULL, "CreatedAt" TEXT NOT NULL, UNIQUE ("TeacherId", "StudentId"))');
+        } else {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `ChatFreePairs` (`Id` INT NOT NULL AUTO_INCREMENT, `TeacherId` INT NOT NULL, `StudentId` INT NOT NULL, `Note` VARCHAR(200) NULL, `CreatedBy` INT NULL, `CreatedAt` DATETIME NOT NULL,
+                PRIMARY KEY (`Id`), UNIQUE KEY `UX_ChatFree` (`TeacherId`, `StudentId`), KEY `IX_ChatFree_S` (`StudentId`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }
         $this->chatReady = true;
+    }
+
+    // ---------- অ্যাডমিনের ফ্রি জোড়া (প্যাকেজ ছাড়া চ্যাট + লাইভ ক্লাস) ----------
+    private array $chatFreeCache = [];
+    public function IsChatFree(int $teacherId, int $studentId): bool
+    {
+        if ($teacherId <= 0 || $studentId <= 0) return false;
+        $k = $teacherId . ':' . $studentId;
+        if (isset($this->chatFreeCache[$k])) return $this->chatFreeCache[$k];
+        $this->EnsureChatTables();
+        return $this->chatFreeCache[$k] = (int)$this->scalar('SELECT COUNT(*) FROM `ChatFreePairs` WHERE `TeacherId` = :t AND `StudentId` = :s', ['t' => $teacherId, 's' => $studentId]) > 0;
+    }
+
+    public function GetChatFreePairs(): array
+    {
+        $this->EnsureChatTables();
+        return $this->all('SELECT f.`Id`, f.`TeacherId`, f.`StudentId`, f.`Note`, f.`CreatedAt`, t.`FullName` AS TName, t.`UserName` AS TUser, t.`ProfileImageLink` AS TPhoto,
+            s.`FullName` AS SName, s.`UserName` AS SUser, s.`ProfileImageLink` AS SPhoto
+            FROM `ChatFreePairs` f LEFT JOIN `Users` t ON t.`Id` = f.`TeacherId` LEFT JOIN `Users` s ON s.`Id` = f.`StudentId` ORDER BY f.`Id` DESC');
+    }
+
+    public function AddChatFree(int $teacherId, int $studentId, string $note, ?int $by): bool
+    {
+        $this->EnsureChatTables();
+        if ($this->IsChatFree($teacherId, $studentId)) return false;
+        $this->exec('INSERT INTO `ChatFreePairs` (`TeacherId`, `StudentId`, `Note`, `CreatedBy`, `CreatedAt`) VALUES (:t, :s, :n, :b, :c)',
+            ['t' => $teacherId, 's' => $studentId, 'n' => $note !== '' ? $note : null, 'b' => $by, 'c' => now()]);
+        $this->chatFreeCache = [];
+        return true;
+    }
+
+    public function RemoveChatFree(int $id): void
+    {
+        $this->EnsureChatTables();
+        $this->exec('DELETE FROM `ChatFreePairs` WHERE `Id` = :i', ['i' => $id]);
+        $this->chatFreeCache = [];
     }
 
     // ---------- গ্রুপ চ্যাট ----------
