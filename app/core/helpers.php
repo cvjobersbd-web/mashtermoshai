@@ -2688,6 +2688,7 @@ function device_lock_applies(?string $role): bool
 require_once __DIR__ . '/bbb.php';
 require_once __DIR__ . '/telegram.php';
 require_once __DIR__ . '/payment_auto.php';
+require_once __DIR__ . '/chat_guard.php';
 
 // ============================================================
 // ===== সাইটের ভাষা (বাংলা ডিফল্ট / English) — শুধু সাইটের জন্য, অ্যাডমিন প্যানেল যেমন আছে তেমন =====

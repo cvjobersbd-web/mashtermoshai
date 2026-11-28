@@ -12,11 +12,18 @@ $ViewData['Robots'] = 'noindex, nofollow';
 $role = current_role();
 $isSuper = !empty($ViewBag->IsSuper);
 $adminChat = $cur && !empty($cur->AdminChat);
+$locked = $cur && !empty($cur->Locked);
+$card = $ViewBag->Card ?? null;
+$livePkg = !empty($ViewBag->LivePkg);
+$teacherPkg = !empty($ViewBag->TeacherPkg);
+$canFind = !empty($ViewBag->CanFind);
+$curSub = '';
+if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '' ? 'Teacher ID: ' . $card['code'] : (($cur->OtherUser ?? '') !== '' ? '@' . $cur->OtherUser : '');
 ?>
 <style>
     .ch { background: #EEF3F8; padding: 18px 0 26px; }
     .ch-wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
-    .ch-box { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: calc(100vh - 80px - 44px); min-height: 520px; background: #fff; border: 1px solid #E1E8F0; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 26px rgba(15,27,45,.06); }
+    .ch-box { display: grid; grid-template-columns: 330px minmax(0, 1fr) 300px; height: calc(100vh - 80px - 44px); min-height: 520px; background: #fff; border: 1px solid #E1E8F0; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 26px rgba(15,27,45,.06); }
     /* ===== তালিকা ===== */
     .ch-list { border-right: 1px solid #EAEFF5; display: flex; flex-direction: column; min-height: 0; }
     .ch-lh { padding: 18px 18px 12px; }
@@ -53,7 +60,7 @@ $adminChat = $cur && !empty($cur->AdminChat);
     .ch-mh .who div { font-size: 12.5px; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ch-mh .prof { margin-left: auto; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #DCE5EF; color: #0F172A; text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
     .ch-mh .prof:hover { background: #F1F5F9; }
-    .ch-msgs { flex: 1; overflow-y: auto; padding: 18px 18px 8px; background: #FAFCFE; display: flex; flex-direction: column; gap: 3px; }
+    .ch-msgs { flex: 1; overflow-y: auto; padding: 18px 18px 8px; background: #F7FAFD; display: flex; flex-direction: column; gap: 3px; }
     .ch-older { align-self: center; margin-bottom: 10px; border: 1px solid #DCE5EF; background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; color: #334155; cursor: pointer; font-family: inherit; }
     .ch-day { align-self: center; font-size: 11.5px; font-weight: 700; color: #64748B; background: #EEF2F7; border-radius: 999px; padding: 3px 12px; margin: 12px 0 8px; }
     .ch-intro { align-self: center; text-align: center; max-width: 420px; font-size: 13px; color: #64748B; background: #fff; border: 1px dashed #CFE3F0; border-radius: 14px; padding: 14px 16px; margin: 6px 0 12px; line-height: 1.6; }
@@ -124,6 +131,56 @@ $adminChat = $cur && !empty($cur->AdminChat);
     .ch-dlg .acts button { flex: 1; height: 44px; border-radius: 10px; border: none; font-weight: 800; font-size: 14.5px; cursor: pointer; font-family: inherit; }
     .ch-dlg .acts .ok { background: #00CFFF; color: #fff; } .ch-dlg .acts .ok:hover { background: #00B5E0; } .ch-dlg .acts .ok:disabled { opacity: .6; }
     .ch-dlg .acts .no { background: #F1F5F9; color: #334155; }
+    /* ===== খোঁজা + ফিল্টার ===== */
+    .ch-srch { position: relative; margin-top: 12px; }
+    .ch-srch i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 13px; }
+    .ch-srch input { width: 100%; height: 40px; border: 1px solid #E2E8F0; border-radius: 12px; padding: 0 12px 0 36px; font-size: 13.5px; font-family: inherit; background: #F6F9FC; outline: none; color: #0F172A; }
+    .ch-srch input:focus { border-color: #00CFFF; background: #fff; }
+    .ch-chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .ch-chips button { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #E2E8F0; background: #fff; color: #475569; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .ch-chips button.on { background: #0F172A; border-color: #0F172A; color: #fff; }
+    .ch-t.hide { display: none; }
+    .ch-ts, .ch-tl { display: block; }
+    .ch-ts { font-size: 11.5px; color: #0284C7; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ch-t.locked .ch-tl { color: #B45309; font-weight: 600; }
+    .tf-box { margin-top: 10px; }
+    .tf-h { font-size: 12px; font-weight: 800; color: #64748B; margin: 4px 2px 6px; }
+    .tf-row { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #EEF2F7; border-radius: 12px; margin-bottom: 6px; background: #fff; }
+    .tf-row .ch-av { width: 38px; height: 38px; font-size: 13px; }
+    .tf-row .nm { flex: 1; min-width: 0; } .tf-row .nm b { display: block; font-size: 13.5px; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tf-row .nm small { font-size: 11.5px; color: #64748B; }
+    .tf-row button { height: 32px; padding: 0 12px; border-radius: 9px; border: none; background: #00CFFF; color: #fff; font-weight: 800; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .tf-row button:disabled { background: #CBD5E1; cursor: default; }
+    .tf-none { font-size: 12.5px; color: #94A3B8; padding: 4px 2px 8px; }
+    .tf-hint { margin-top: 10px; font-size: 12.5px; color: #92400E; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 8px 10px; line-height: 1.5; }
+    .tf-hint a { color: #B45309; font-weight: 800; }
+    /* ===== প্যাকেজ ছাড়া টিচার — লক ===== */
+    .ch-m.lk .bb { filter: blur(5px); user-select: none; pointer-events: none; color: #334155; }
+    .ch-lock { position: sticky; bottom: 0; align-self: center; margin: 14px 0 4px; text-align: center; background: #fff; border: 1px solid #FDE68A; border-radius: 16px; padding: 16px 18px; max-width: 380px; box-shadow: 0 8px 24px rgba(15,27,45,.08); }
+    .ch-lock i { font-size: 26px; color: #F59E0B; display: block; margin-bottom: 6px; }
+    .ch-lock b { display: block; color: #0F172A; font-size: 15px; margin-bottom: 4px; }
+    .ch-lock p { margin: 0 0 12px; font-size: 13px; color: #64748B; line-height: 1.55; }
+    .ch-buy { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 18px; border-radius: 10px; background: #F59E0B; color: #fff !important; font-weight: 800; font-size: 14px; text-decoration: none; }
+    .ch-buy:hover { background: #D97706; }
+    .ch-lockbar { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 12px 14px; border-top: 1px solid #FDE68A; background: #FFFBEB; color: #92400E; font-size: 13.5px; font-weight: 600; }
+    .ch-note { font-size: 11.5px; color: #94A3B8; padding: 0 16px 8px; background: #fff; }
+    .ch-note i { color: #F59E0B; }
+    /* ===== ডান পাশের প্রোফাইল কার্ড ===== */
+    .ch-info { border-left: 1px solid #EAEFF5; overflow-y: auto; padding: 22px 18px; background: #fff; }
+    .ch-info .pc { text-align: center; }
+    .ch-info .ch-av { width: 92px; height: 92px; font-size: 30px; margin: 0 auto 12px; box-shadow: 0 0 0 4px #E6F9FF; }
+    .ch-info h2 { margin: 0; font-size: 17px; font-weight: 800; color: #0F172A; }
+    .ch-info .cd { font-size: 12.5px; color: #0284C7; font-weight: 700; margin-top: 3px; }
+    .ch-info .un { font-size: 12.5px; color: #64748B; margin-top: 2px; }
+    .ch-info .rt { margin-top: 8px; font-size: 13px; color: #334155; font-weight: 700; } .ch-info .rt i { color: #F59E0B; }
+    .ch-info dl { margin: 18px 0 0; text-align: left; display: grid; gap: 10px; }
+    .ch-info dt { font-size: 11.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: .3px; }
+    .ch-info dd { margin: 2px 0 0; font-size: 13.5px; color: #0F172A; line-height: 1.45; }
+    .ch-info .vp { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; height: 42px; border-radius: 11px; background: #0F172A; color: #fff; text-decoration: none; font-weight: 800; font-size: 14px; }
+    .ch-info .vp:hover { background: #1E293B; }
+    .ch-info .sf { margin-top: 16px; font-size: 12px; color: #64748B; background: #F8FAFC; border-radius: 10px; padding: 10px 12px; line-height: 1.5; text-align: left; }
+    .ch-info .sf i { color: #16A34A; }
+    @media (max-width: 1200px) { .ch-box { grid-template-columns: 320px minmax(0, 1fr); } .ch-info { display: none; } }
     /* ===== গ্রুপ ===== */
     .ch-lh .grp-new { margin-top: 10px; width: 100%; height: 38px; border-radius: 10px; border: 1.5px dashed #9BE7FA; background: #F0FCFF; color: #0369A1; font-weight: 800; font-size: 13.5px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
     .ch-lh .grp-new:hover { background: #E0F7FE; }
@@ -178,7 +235,12 @@ $adminChat = $cur && !empty($cur->AdminChat);
                 <div class="ch-lh">
                     <h1>Messages</h1>
                     <p><?= $isSuper ? 'যেকোনো টিচার বা শিক্ষার্থীকে খুঁজে চ্যাট খুলুন — তারপর উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে ক্লাস পাঠান। প্যাকেজ লাগবে না।' : ($role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'টিচারের অ্যাপ্লিকেশন Accept করলে বা টিচারের প্রোফাইল থেকে চ্যাট আনলক করলে এখানে চ্যাট খোলে।') ?></p>
-                    <?php if ($role === 'Teacher'): ?><button type="button" class="grp-new" id="grpNewBtn"><i class="fas fa-users"></i> নতুন গ্রুপ তৈরি করুন</button><?php endif; ?>
+                    <div class="ch-srch"><i class="fas fa-search"></i><input type="search" id="chSearch" placeholder="<?= $canFind ? 'চ্যাট বা টিচার খুঁজুন — নাম, ইউজারনেম, ইমেইল, Teacher ID' : 'চ্যাট খুঁজুন...' ?>" autocomplete="off" aria-label="খুঁজুন" /></div>
+                    <div class="ch-chips" id="chChips"><button type="button" class="on" data-f="all">সব</button><button type="button" data-f="unread">না-পড়া</button><button type="button" data-f="dir">সরাসরি</button><button type="button" data-f="grp">গ্রুপ</button></div>
+                    <?php if ($canFind): ?><div class="tf-box" id="tfBox" hidden><div class="tf-h">টিচার খুঁজে পাওয়া গেছে</div><div id="tfRes"></div></div>
+                        <form method="post" action="/Chat/Start" id="tfForm" hidden><?= csrf_field() ?><input type="hidden" name="teacherId" id="tfId" /><input type="hidden" name="from" value="chat" /></form>
+                    <?php elseif ($role === 'User'): ?><div class="tf-hint"><i class="fas fa-crown"></i> নাম / ইউজারনেম / ইমেইল / Teacher ID দিয়ে যেকোনো টিচারকে খুঁজে মেসেজ দিতে <a href="/Package?for=student">শিক্ষার্থী প্যাকেজ নিন</a>।</div><?php endif; ?>
+                    <?php if ($role === 'Teacher'): ?><button type="button" class="grp-new" id="grpNewBtn"<?= $teacherPkg ? '' : ' data-pkg="group"' ?>><i class="fas fa-users"></i> নতুন গ্রুপ তৈরি করুন</button><?php endif; ?>
                     <?php if ($isSuper): ?>
                         <div class="sa-box">
                             <div class="sa-h"><i class="fas fa-crown"></i> Super Admin — লাইভ ক্লাস প্র্যাকটিস</div>
@@ -203,10 +265,11 @@ $adminChat = $cur && !empty($cur->AdminChat);
                         </div>
                     <?php else: ?>
                         <?php foreach ($threads as $t): ?>
-                            <a class="ch-t<?= $cur && $cur->Key === $t->Key ? ' on' : '' ?><?= $t->Unread ? ' unread' : '' ?>" href="/Chat?c=<?= e($t->Key) ?>" data-id="<?= e($t->Key) ?>">
+                            <a class="ch-t<?= $cur && $cur->Key === $t->Key ? ' on' : '' ?><?= $t->Unread ? ' unread' : '' ?><?= !empty($t->Locked) ? ' locked' : '' ?>" href="/Chat?c=<?= e($t->Key) ?>" data-id="<?= e($t->Key) ?>" data-kind="<?= e($t->Kind) ?>">
                                 <span class="ch-av<?= $t->Kind === 'grp' ? ' grp' : '' ?>"><?= $t->Kind === 'grp' ? '<i class="fas fa-users"></i>' : e($t->Initials) ?><?php if ($t->OtherPhoto !== ''): ?><img src="<?= e($t->OtherPhoto) ?>" alt="<?= e(($t->Name ?? 'চ্যাট') . ' এর ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
                                 <span class="ch-tm">
                                     <span class="ch-tn"><b><?= e($t->OtherName) ?></b> <span class="ch-tr"><?= e($t->OtherRole) ?></span><small><?= e(time_ago($t->LastAt)) ?></small></span>
+                                    <?php $sub = $t->Kind === 'grp' ? '' : (($t->Code ?? '') !== '' ? 'Teacher ID: ' . $t->Code : (($t->OtherUser ?? '') !== '' ? '@' . $t->OtherUser : '')); if ($sub !== ''): ?><span class="ch-ts"><?= e($sub) ?></span><?php endif; ?>
                                     <span class="ch-tl"><?= $t->LastBody !== '' ? ($t->LastMine ? 'আপনি: ' : '') . e(str_preview($t->LastBody, 70)) : e($t->Topic !== '' ? $t->Topic : 'চ্যাট শুরু করুন') ?></span>
                                 </span>
                                 <span class="dot"><?= (int)$t->Unread ?></span>
@@ -224,9 +287,9 @@ $adminChat = $cur && !empty($cur->AdminChat);
                         <span class="ch-av sm<?= $isGrp ? ' grp' : '' ?>"><?= $isGrp ? '<i class="fas fa-users"></i>' : e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="<?= e(($cur->Name ?? 'চ্যাট') . ' এর ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
                         <div class="who">
                             <?php if ($isGrp): ?><b id="grpTitle"><?= e($cur->OtherName) ?></b><?php elseif ($adminChat && !$isSuper): ?><b><?= e($cur->OtherName) ?></b><?php else: ?><a href="/Profile/Show/<?= (int)$cur->OtherId ?>"><?= e($cur->OtherName) ?></a><?php endif; ?>
-                            <div><?= $isGrp ? 'গ্রুপ' : e($cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
+                            <div><?= $isGrp ? 'গ্রুপ' : e($curSub !== '' ? $curSub : $cur->OtherRole) ?><?= $cur->Topic !== '' ? ' · ' . e($cur->Topic) : '' ?></div>
                         </div>
-                        <?php if (!empty($ViewBag->IsTeacher)): ?><button type="button" class="cls-btn" id="chClsBtn" title="সাইট থেকেই লাইভ ক্লাস সেট করুন"><i class="fas fa-video"></i><span>লাইভ ক্লাস</span></button><?php endif; ?>
+                        <?php if (!empty($ViewBag->IsTeacher)): ?><button type="button" class="cls-btn" id="chClsBtn"<?= $livePkg ? '' : ' data-pkg="live"' ?> title="সাইট থেকেই লাইভ ক্লাস সেট করুন"><i class="fas fa-video"></i><span>লাইভ ক্লাস</span></button><?php endif; ?>
                         <?php if ($isGrp): ?><button type="button" class="mem-btn" id="grpMemBtn"><i class="fas fa-users"></i><span>সদস্য</span></button>
                         <?php elseif (!($adminChat && !$isSuper)): ?><a class="prof" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i><span>প্রোফাইল</span></a><?php endif; ?>
                     </header>
@@ -241,11 +304,16 @@ $adminChat = $cur && !empty($cur->AdminChat);
                         </div>
                     </div>
                     <div class="ch-closedbar" id="chClosedBar" hidden><i class="fas fa-lock"></i> এই চ্যাটটি বন্ধ হয়ে গেছে — অ্যাপ্লিকেশনটি আর Accepted নেই।</div>
+                    <?php if ($locked): ?>
+                    <div class="ch-lockbar"><i class="fas fa-lock"></i> মেসেজ দেখতে আর উত্তর দিতে টিচার প্যাকেজ লাগবে। <a class="ch-buy" href="/Package?for=teacher"><i class="fas fa-crown"></i> প্যাকেজ কিনুন</a></div>
+                    <?php else: ?>
                     <form class="ch-form" id="chForm" autocomplete="off">
                         <textarea id="chText" rows="1" maxlength="2000" placeholder="মেসেজ লিখুন..." aria-label="মেসেজ লিখুন"></textarea>
                         <button type="submit" id="chSend" aria-label="পাঠান"><i class="fas fa-paper-plane"></i></button>
                     </form>
-                    <?php if (!empty($ViewBag->IsTeacher)): ?>
+                    <?php if (!$adminChat): ?><div class="ch-note"><i class="fas fa-shield-halved"></i> নিরাপত্তার জন্য মোবাইল নম্বর, ইমেইল, লিংক, সোশ্যাল মিডিয়া, Zoom / Meet দেওয়া যাবে না।</div><?php endif; ?>
+                    <?php endif; ?>
+ <?php if (!empty($ViewBag->IsTeacher) && $livePkg): ?>
                     <div class="ch-dlg" id="chDlg" role="dialog" aria-modal="true" aria-labelledby="chDlgT">
                         <form id="chClsForm" autocomplete="off" novalidate>
                             <h3 id="chDlgT"><i class="fas fa-video"></i> লাইভ ক্লাস সেট করুন</h3>
@@ -283,9 +351,40 @@ $adminChat = $cur && !empty($cur->AdminChat);
                     </div>
                 <?php endif; ?>
             </section>
+
+            <aside class="ch-info" aria-label="প্রোফাইল">
+                <?php if ($cur && $cur->Kind !== 'grp' && !($adminChat && !$isSuper)): ?>
+                    <div class="pc">
+                        <span class="ch-av"><?= e($cur->Initials) ?><?php if ($cur->OtherPhoto !== ''): ?><img src="<?= e($cur->OtherPhoto) ?>" alt="<?= e($cur->OtherName . ' এর ছবি') ?>" onerror="this.remove()" /><?php endif; ?></span>
+                        <h2><?= e($cur->OtherName) ?></h2>
+                        <?php if ($card && ($card['code'] ?? '') !== ''): ?><div class="cd">Teacher ID: <?= e($card['code']) ?></div><?php endif; ?>
+                        <?php if ($card && ($card['user'] ?? '') !== ''): ?><div class="un">@<?= e($card['user']) ?></div><?php endif; ?>
+                        <?php if ($card && !empty($card['rating'])): ?><div class="rt"><i class="fas fa-star"></i> <?= e(number_format($card['rating'][0], 1)) ?> <span style="color:#94A3B8;font-weight:600;">(<?= (int)$card['rating'][1] ?> রিভিউ)</span></div><?php elseif ($cur->OtherRole === 'Teacher'): ?><div class="rt" style="color:#94A3B8;font-weight:600;"><i class="far fa-star"></i> এখনো রিভিউ নেই</div><?php endif; ?>
+                    </div>
+                    <?php if ($card && !empty($card['rows'])): ?><dl><?php foreach ($card['rows'] as $k => $v): ?><div><dt><?= e($k) ?></dt><dd><?= e($v) ?></dd></div><?php endforeach; ?></dl><?php endif; ?>
+                    <a class="vp" href="/Profile/Show/<?= (int)$cur->OtherId ?>"><i class="fas fa-user"></i> View Profile</a>
+                    <div class="sf"><i class="fas fa-shield-halved"></i> নিরাপত্তার জন্য সব কথা মাষ্টার মশাই এর চ্যাটেই রাখুন। কেউ নম্বর বা বাইরের লিংক চাইলে <a href="/Helpdesk">Helpdesk</a> এ জানান।</div>
+                <?php elseif ($cur && $cur->Kind === 'grp'): ?>
+                    <div class="pc"><span class="ch-av grp"><i class="fas fa-users"></i></span><h2><?= e($cur->OtherName) ?></h2><div class="un">গ্রুপ চ্যাট</div></div>
+                    <div class="sf"><i class="fas fa-circle-info" style="color:#0284C7"></i> গ্রুপে মেসেজ দিলে সব সদস্য পায়। টিচার এখান থেকে সবাইকে একসাথে লাইভ ক্লাসে ডাকতে পারেন।</div>
+                <?php else: ?>
+                    <div class="sf" style="margin-top:0"><i class="fas fa-comments" style="color:#00A8D6"></i> একটা চ্যাট খুললে এখানে তার প্রোফাইলের তথ্য দেখাবে।</div>
+                <?php endif; ?>
+            </aside>
         </div>
     </div>
 </div>
+
+<?php if ($role === 'Teacher' && (!$livePkg || !$teacherPkg)): ?>
+<div class="ch-dlg" id="pkgDlg" role="dialog" aria-modal="true" aria-labelledby="pkgDlgT">
+    <form onsubmit="return false" style="text-align:center">
+        <i class="fas fa-crown" style="font-size:38px;color:#F59E0B;margin:6px 0 10px;display:block"></i>
+        <h3 id="pkgDlgT" style="justify-content:center">প্যাকেজ কিনুন</h3>
+        <p class="sub" id="pkgDlgTx" style="margin-top:6px;line-height:1.6"></p>
+        <div class="acts"><button type="button" class="no" data-close>পরে</button><a class="ok" href="/Package?for=teacher" style="flex:1;height:44px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;background:#F59E0B;color:#fff;font-weight:800;"><i class="fas fa-crown"></i> প্যাকেজ দেখুন</a></div>
+    </form>
+</div>
+<?php endif; ?>
 
 <?php if ($role === 'Teacher'): $contacts = $ViewBag->Contacts ?? []; ?>
 <div class="ch-dlg" id="grpDlg" role="dialog" aria-modal="true" aria-labelledby="grpDlgT">
@@ -359,13 +458,68 @@ $adminChat = $cur && !empty($cur->AdminChat);
     function drawThreads(list) {
         if (!list.length) return;
         threadsBox.innerHTML = list.map(function (t) {
-            var cls = 'ch-t' + (t.id === CUR ? ' on' : '') + (t.unread && t.id !== CUR ? ' unread' : '');
+            var cls = 'ch-t' + (t.id === CUR ? ' on' : '') + (t.unread && t.id !== CUR ? ' unread' : '') + (t.locked ? ' locked' : '');
             var av = t.group ? '<span class="ch-av grp"><i class="fas fa-users"></i></span>' : '<span class="ch-av">' + esc(t.initials) + (t.photo ? '<img src="' + esc(t.photo) + '" alt="' + esc((t.name || 'চ্যাট') + ' এর ছবি') + '" onerror="this.remove()" />' : '') + '</span>';
             var last = t.last ? (t.lastMine ? 'আপনি: ' : '') + esc(t.last) : esc(t.topic || 'চ্যাট শুরু করুন');
-            return '<a class="' + cls + '" href="/Chat?c=' + encodeURIComponent(t.id) + '" data-id="' + esc(t.id) + '">' + av + '<span class="ch-tm"><span class="ch-tn"><b>' + esc(t.name) + '</b> <span class="ch-tr">' + esc(t.role)
-                + '</span><small>' + esc(t.ago) + '</small></span><span class="ch-tl">' + last + '</span></span><span class="dot">' + (t.unread || 0) + '</span></a>';
+            return '<a class="' + cls + '" href="/Chat?c=' + encodeURIComponent(t.id) + '" data-id="' + esc(t.id) + '" data-kind="' + esc(t.kind || '') + '">' + av + '<span class="ch-tm"><span class="ch-tn"><b>' + esc(t.name) + '</b> <span class="ch-tr">' + esc(t.role)
+                + '</span><small>' + esc(t.ago) + '</small></span>' + (t.sub ? '<span class="ch-ts">' + esc(t.sub) + '</span>' : '') + '<span class="ch-tl">' + last + '</span></span><span class="dot">' + (t.unread || 0) + '</span></a>';
         }).join('');
+        applyFilter();
     }
+
+    // ===== খোঁজা + ফিল্টার (তালিকার ভিতরে) =====
+    var sIn = document.getElementById('chSearch'), chips = document.getElementById('chChips'), FILTER = 'all';
+    function applyFilter() {
+        var q = sIn ? sIn.value.trim().toLowerCase() : '';
+        threadsBox.querySelectorAll('.ch-t').forEach(function (a) {
+            var k = a.getAttribute('data-kind'), ok = true;
+            if (FILTER === 'unread') ok = a.classList.contains('unread');
+            else if (FILTER === 'grp') ok = k === 'grp';
+            else if (FILTER === 'dir') ok = k !== 'grp';
+            if (ok && q) ok = a.textContent.toLowerCase().indexOf(q) !== -1;
+            a.classList.toggle('hide', !ok);
+        });
+    }
+    if (chips) chips.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-f]'); if (!b) return;
+        chips.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); FILTER = b.getAttribute('data-f'); applyFilter();
+    });
+    // প্যাকেজ নেওয়া শিক্ষার্থী: টিচার খোঁজা (নাম / ইউজারনেম / ইমেইল / Teacher ID)
+    var tfBox = document.getElementById('tfBox'), tfRes = document.getElementById('tfRes'), tfTm = null, tfSeq = 0;
+    if (sIn) sIn.addEventListener('input', function () {
+        applyFilter();
+        if (!tfBox) return;
+        clearTimeout(tfTm);
+        var q = sIn.value.trim();
+        if (q.length < 2) { tfBox.hidden = true; tfRes.innerHTML = ''; return; }
+        tfTm = setTimeout(async function () {
+            var my = ++tfSeq;
+            try {
+                var r = await (await fetch('/Chat/FindTeacher?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+                if (my !== tfSeq) return;
+                if (!r.success) { tfRes.innerHTML = '<div class="tf-none">' + esc(r.message || 'খোঁজা যায়নি') + '</div>'; tfBox.hidden = false; return; }
+                tfRes.innerHTML = r.teachers.length ? r.teachers.map(function (x) {
+                    return '<div class="tf-row"><span class="ch-av">' + esc(x.initials) + (x.photo ? '<img src="' + esc(x.photo) + '" alt="" onerror="this.remove()" />' : '') + '</span><span class="nm"><b>' + esc(x.name) + '</b><small>' + esc(x.code ? x.code + ' · ' : '') + '@' + esc(x.user) + '</small></span>'
+                        + (x.open ? '<button type="button" data-tid="' + x.id + '"><i class="fas fa-comment"></i> মেসেজ দিন</button>' : '<button type="button" disabled title="এই টিচারের প্রোফাইল এখন চালু নেই">বন্ধ</button>') + '</div>';
+                }).join('') : '<div class="tf-none">এই নামে / আইডিতে কোনো টিচার পাওয়া যায়নি।</div>';
+                tfBox.hidden = false;
+            } catch (e) { }
+        }, 300);
+    });
+    if (tfRes) tfRes.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-tid]'); if (!b) return;
+        document.getElementById('tfId').value = b.getAttribute('data-tid'); document.getElementById('tfForm').submit();
+    });
+    // প্যাকেজ ছাড়া টিচার: লাইভ ক্লাস / গ্রুপ বাটন চাপলে "প্যাকেজ কিনুন"
+    var pkgDlg = document.getElementById('pkgDlg');
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-pkg]'); if (!b || !pkgDlg) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        document.getElementById('pkgDlgTx').innerHTML = b.getAttribute('data-pkg') === 'live'
+            ? '<b>লাইভ ক্লাস</b> নিতে আলাদা <b>লাইভ ক্লাসের প্যাকেজ</b> লাগবে। সাধারণ প্যাকেজে শুধু চ্যাটে পড়ানোর বিষয় আর বেতন নিয়ে কথা বলা যায়।'
+            : 'স্টুডেন্টদের নিয়ে <b>গ্রুপ</b> বানাতে টিচার প্যাকেজ লাগবে।';
+        pkgDlg.classList.add('open');
+    }, true);
     async function refreshThreads() {
         if (document.hidden) return;
         try { var r = await (await fetch('/Chat/Threads', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); if (r.success) drawThreads(r.threads); } catch (e) { }
@@ -432,7 +586,6 @@ $adminChat = $cur && !empty($cur->AdminChat);
     var box = document.getElementById('chMsgs'), form = document.getElementById('chForm'), ta = document.getElementById('chText'), send = document.getElementById('chSend');
     var closedBar = document.getElementById('chClosedBar');
     var lastId = 0, firstId = 0, lastDay = '', seenUpTo = <?= (int)$ViewBag->SeenUpTo ?>, seen = {}, closed = false, busy = false;
-    var URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 
     function dayLabel(d) {
         var t = new Date(), y = new Date(Date.now() - 864e5);
@@ -440,14 +593,9 @@ $adminChat = $cur && !empty($cur->AdminChat);
         if (d === f(t)) return 'আজ'; if (d === f(y)) return 'গতকাল';
         var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     }
-    // লেখা নিরাপদে বসানো — লিংক থাকলে (যেমন Zoom/Meet) ক্লিক করা যায়
-    function fill(el, text) {
-        var parts = String(text).split(URL_RE);
-        parts.forEach(function (p, i) {
-            if (i % 2 === 1) { var a = document.createElement('a'); a.href = p; a.textContent = p; a.target = '_blank'; a.rel = 'noopener nofollow ugc'; el.appendChild(a); }
-            else if (p) el.appendChild(document.createTextNode(p));
-        });
-    }
+    // লেখা শুধু টেক্সট হিসেবে বসে — কোনো লিংক ক্লিকযোগ্য হয় না
+    function fill(el, text) { el.textContent = String(text); }
+    var LOCKED = <?= js($locked) ?>, DUMMY = ['আসসালামু আলাইকুম স্যার, আমার জন্য টিউশন খুঁজছি', 'সপ্তাহে কয়দিন পড়াতে পারবেন আর বেতন কত?', 'ক্লাস ৯ এর ম্যাথ আর ফিজিক্স', 'আপনি কি কাল থেকে শুরু করতে পারবেন?'];
     // ===== অনলাইন ক্লাস =====
     var CLASSES = {}, IS_TEACHER = <?= js(!empty($ViewBag->IsTeacher)) ?>, nextBar = document.getElementById('chNext');
     var PICON = { 'Zoom': 'fas fa-video', 'Google Meet': 'fas fa-video', 'Microsoft Teams': 'fas fa-users', 'মাষ্টার মশাই লাইভ': 'fas fa-tower-broadcast' };
@@ -503,6 +651,7 @@ $adminChat = $cur && !empty($cur->AdminChat);
         var w = document.createElement('div'); w.className = 'ch-m ' + (m.mine ? 'me' : 'them'); w.setAttribute('data-id', m.id || '');
         if (m.cls && CLASSES[m.cls]) { w.appendChild(card(CLASSES[m.cls])); var tm0 = document.createElement('div'); tm0.className = 'tm'; tm0.textContent = m.time || ''; w.appendChild(tm0); return w; }
         if (m.from && !m.mine) { var fr = document.createElement('div'); fr.className = 'from'; fr.textContent = m.from; w.appendChild(fr); }
+        if (m.locked) { w.classList.add('lk'); var lb = document.createElement('div'); lb.className = 'bb'; lb.textContent = DUMMY[m.id % DUMMY.length]; lb.setAttribute('aria-label', 'লক করা মেসেজ'); w.appendChild(lb); var lt = document.createElement('div'); lt.className = 'tm'; lt.textContent = '🔒 ' + (m.time || ''); w.appendChild(lt); return w; }
         var b = document.createElement('div'); b.className = 'bb'; fill(b, m.body); w.appendChild(b);
         var tm = document.createElement('div'); tm.className = 'tm'; tm.textContent = m.time || ''; w.appendChild(tm);
         return w;
@@ -514,7 +663,7 @@ $adminChat = $cur && !empty($cur->AdminChat);
         list.forEach(function (m) {
             if (seen[m.id]) return; seen[m.id] = 1;
             if (m.day !== lastDay) { var d = document.createElement('div'); d.className = 'ch-day'; d.textContent = dayLabel(m.day); box.appendChild(d); lastDay = m.day; }
-            box.appendChild(bubble(m));
+            var lkc = box.querySelector('.ch-lock'); if (lkc) box.insertBefore(bubble(m), lkc); else box.appendChild(bubble(m));
             lastId = Math.max(lastId, m.id); if (!firstId || m.id < firstId) firstId = m.id;
         });
         drawSeen();
@@ -528,12 +677,18 @@ $adminChat = $cur && !empty($cur->AdminChat);
     }
     function setClosed() {
         if (closed) return; closed = true;
-        closedBar.hidden = false; form.remove();
+        closedBar.hidden = false; if (form) form.remove();
     }
 
     // প্রথম মেসেজগুলো
     setClasses(<?= js($ViewBag->Classes ?? []) ?>);
-    append(<?= js($ViewBag->Messages) ?>); toBottom();
+    append(<?= js($ViewBag->Messages) ?>);
+    if (LOCKED) {
+        var lk = document.createElement('div'); lk.className = 'ch-lock';
+        lk.innerHTML = '<i class="fas fa-lock"></i><b>আপনার কাছে নতুন মেসেজ এসেছে</b><p>শিক্ষার্থী কী লিখেছে দেখতে আর উত্তর দিতে টিচার প্যাকেজ কিনুন।</p><a class="ch-buy" href="/Package?for=teacher"><i class="fas fa-crown"></i> মেসেজ দেখতে প্যাকেজ কিনুন</a>';
+        box.appendChild(lk);
+    }
+    toBottom();
     <?php if (!empty($ViewBag->HasOlder)): ?>
     (function () {
         var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'ch-older'; btn.textContent = 'আগের মেসেজ দেখুন';
@@ -572,6 +727,7 @@ $adminChat = $cur && !empty($cur->AdminChat);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) { poll(); refreshThreads(); } });
 
     // পাঠানো
+    if (form) {
     ta.addEventListener('input', function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'; });
     ta.addEventListener('keydown', function (e) {
         // ডেস্কটপে Enter = পাঠান, Shift+Enter = নতুন লাইন (মোবাইলে Enter নতুন লাইন)
@@ -587,12 +743,14 @@ $adminChat = $cur && !empty($cur->AdminChat);
             var r = await (await fetch('/Chat/Send', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
             if (!r.success) {
                 temp.classList.remove('pending'); temp.classList.add('failed'); temp.querySelector('.tm').textContent = r.message || 'পাঠানো যায়নি';
+                if (r.needPackage) { location.href = r.needPackage; return; }
                 if (r.closed) setClosed(); else if (!ta.value) ta.value = text;
                 return;
             }
             temp.remove(); append(r.messages);
         } catch (er) { temp.classList.remove('pending'); temp.classList.add('failed'); temp.querySelector('.tm').textContent = 'নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন'; if (!ta.value) ta.value = text; }
     });
+    }
     // ===== টিচার: ক্লাস সেট / বাতিল =====
     var dlg = document.getElementById('chDlg'), cf = document.getElementById('chClsForm');
     async function post(url, data) {
@@ -634,7 +792,7 @@ $adminChat = $cur && !empty($cur->AdminChat);
         try { var r = await post('/Chat/CancelClass', { id: x.getAttribute('data-cancel') }); if (!r.success) { alert(r.message || 'বাতিল করা যায়নি।'); x.disabled = false; return; } setClasses(r.classes); append(r.messages); }
         catch (er) { x.disabled = false; }
     });
-    if (window.matchMedia('(hover: hover)').matches) ta.focus();
+    if (ta && window.matchMedia('(hover: hover)').matches) ta.focus();
 })();
 </script>
 <?php section_end(); ?>

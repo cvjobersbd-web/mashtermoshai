@@ -257,6 +257,7 @@ trait ChatData
         $name = $iAmTeacher ? ($r->StudentName ?: $r->StudentUser) : ($r->TeacherName ?: $r->TeacherUser);
         $r->OtherName = !is_blank($name) ? (string)$name : 'User';
         $r->OtherPhoto = (string)(($iAmTeacher ? $r->StudentPhoto : $r->TeacherPhoto) ?? '');
+        $r->OtherUser = (string)(($iAmTeacher ? $r->StudentUser : $r->TeacherUser) ?? '');
         $r->OtherRole = $iAmTeacher ? 'Student' : 'Teacher';
         // Super Admin এর চ্যাট (লাইভ ক্লাস প্র্যাকটিস) — টিচারের জায়গায় অ্যাডমিন থাকে
         $r->AdminChat = ($r->TeacherRole ?? '') === 'Admin';

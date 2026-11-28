@@ -578,6 +578,9 @@ trait CourseData
         $n = now();
         if ((int)$this->scalar("SELECT COUNT(*) FROM `UserSubscriptions` s JOIN `PaymentRequests` p ON p.`Id` = s.`PaymentId` JOIN `Packages` k ON k.`Id` = p.`PackageId`
             WHERE s.`UserId` = :u AND s.`Audience` = 'Teacher' AND s.`StartsAt` <= :n AND s.`EndsAt` > :n2 AND k.`IsLive` = 1", ['u' => $userId, 'n' => $n, 'n2' => $n]) > 0) return true;
+        // পেমেন্ট হিস্টোরি ডিলিট হলেও চলবে — সাবস্ক্রিপশনের প্যাকেজ নাম লাইভ প্যাকেজের নামের সাথে মিললে
+        if ((int)$this->scalar("SELECT COUNT(*) FROM `UserSubscriptions` s JOIN `Packages` k ON k.`Name` = s.`PackageName` AND k.`IsLive` = 1
+            WHERE s.`UserId` = :u AND s.`Audience` = 'Teacher' AND s.`StartsAt` <= :n AND s.`EndsAt` > :n2", ['u' => $userId, 'n' => $n, 'n2' => $n]) > 0) return true;
         // অ্যাডমিনের দেওয়া Premium (User Role / Package Details থেকে)
         return (int)$this->scalar("SELECT COUNT(*) FROM `UserSubscriptions` WHERE `UserId` = :u AND `Audience` = 'Teacher' AND `PaymentId` IS NULL AND `PackageName` LIKE :pn AND `StartsAt` <= :n AND `EndsAt` > :n2",
             ['u' => $userId, 'pn' => 'Premium%', 'n' => $n, 'n2' => $n]) > 0;

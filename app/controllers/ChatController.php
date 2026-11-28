@@ -26,6 +26,18 @@ class ChatController extends Controller
     /** মেসেজ JSON আকারে (লেখা ব্রাউজারে textContent দিয়ে বসে — তাই HTML হিসেবে চলে না) */
     private function pack(array $msgs, int $me, ?Obj $t = null): array
     {
+        // প্যাকেজ ছাড়া টিচার: অন্যদের মেসেজের লেখা ব্রাউজারে যায়ই না — শুধু "মেসেজ এসেছে"
+        if ($t && chat_locked_for($t, $me)) {
+            return array_map(fn($m) => $m->SenderId === $me ? [
+                'id' => $m->Id, 'mine' => true, 'body' => (string)$m->Body, 'from' => null,
+                'at' => date('c', strtotime((string)$m->CreatedAt)), 'time' => date('h:i A', strtotime((string)$m->CreatedAt)),
+                'day' => date('Y-m-d', strtotime((string)$m->CreatedAt)), 'cls' => (int)($m->ClassId ?? 0),
+            ] : [
+                'id' => $m->Id, 'mine' => false, 'body' => '', 'locked' => true, 'from' => null,
+                'at' => date('c', strtotime((string)$m->CreatedAt)), 'time' => date('h:i A', strtotime((string)$m->CreatedAt)),
+                'day' => date('Y-m-d', strtotime((string)$m->CreatedAt)), 'cls' => 0,
+            ], $msgs);
+        }
         // গ্রুপে কে পাঠিয়েছে তার নাম দেখাতে হয়
         $names = [];
         if ($t && $t->Kind === 'grp') foreach ($this->db->GetChatGroupMembers($t->RefId) as $u) $names[$u->Id] = $u->Name . ($u->IsTeacher ? ' (Teacher)' : '');
@@ -54,10 +66,25 @@ class ChatController extends Controller
         return array_values(array_filter(array_map(fn($u) => $u->Id, $this->db->GetChatGroupMembers($t->RefId)), fn($id) => $id !== $me));
     }
 
+    /** প্যাকেজ ছাড়া টিচারের তালিকা: শিক্ষার্থীর ছবি আর শেষ মেসেজের লেখা লুকানো */
+    private function lockThreads(array $threads, int $me): array
+    {
+        foreach ($threads as $t) {
+            $t->Locked = chat_locked_for($t, $me);
+            $t->Code = $t->Kind !== 'grp' && $t->OtherRole === 'Teacher' ? teacher_code((int)$t->OtherId) : '';
+            if (!$t->Locked) continue;
+            $t->OtherPhoto = '';
+            if (($t->LastBody ?? '') !== '' && empty($t->LastMine)) $t->LastBody = '🔒 নতুন মেসেজ — দেখতে প্যাকেজ কিনুন';
+        }
+        return $threads;
+    }
+
     private function packThreads(array $threads): array
     {
         return array_map(fn($t) => [
             'id' => $t->Key, 'name' => $t->OtherName, 'photo' => $t->OtherPhoto, 'initials' => $t->Initials, 'role' => $t->OtherRole, 'group' => $t->Kind === 'grp',
+            'sub' => $t->Kind === 'grp' ? $t->Topic : (($t->Code ?? '') !== '' ? 'Teacher ID: ' . $t->Code : (($t->OtherUser ?? '') !== '' ? '@' . $t->OtherUser : '')),
+            'kind' => $t->Kind, 'locked' => !empty($t->Locked),
             'topic' => $t->Topic, 'last' => $t->LastBody !== '' ? str_preview($t->LastBody, 70) : '', 'lastMine' => $t->LastMine, 'ago' => time_ago($t->LastAt), 'unread' => $t->Unread,
         ], $threads);
     }
@@ -68,12 +95,22 @@ class ChatController extends Controller
         $me = $this->me();
         // অ্যাডমিনদের মধ্যে শুধু Super Admin চ্যাট খুলতে পারেন (যেকোনো ইউজারকে লাইভ ক্লাস পাঠানো — প্র্যাকটিস)
         if (current_role() === 'Admin' && !admin_is_super()) redirect('/Admin/Dashboard');
-        $threads = $this->db->GetChatThreads($me);
+        $threads = $this->lockThreads($this->db->GetChatThreads($me), $me);
         $cid = trim((string)input_str('c', ''));
         $current = $cid !== '' ? $this->db->GetChatThread($cid, $me) : null;
         $closed = $cid !== '' && !$current; // লিংক আছে কিন্তু চ্যাট বন্ধ / অনুমতি নেই
         $msgs = [];
+        $card = null;
         if ($current) {
+            $current->Locked = chat_locked_for($current, $me);
+            if ($current->Locked) $current->OtherPhoto = '';
+            // ডান পাশের প্রোফাইল কার্ড (যোগাযোগের কোনো তথ্য না)
+            if ($current->Kind !== 'grp' && empty($current->AdminChat)) {
+                try {
+                    $card = $current->OtherRole === 'Teacher' ? chat_teacher_card((int)$current->OtherId)
+                        : ['code' => '', 'user' => (string)($current->OtherUser ?? ''), 'rating' => null, 'rows' => array_filter(['বিষয় / ক্লাস' => $current->Kind === 'dir' ? '' : (string)$current->Topic], fn($v) => $v !== '')];
+                } catch (Throwable $e) { $card = null; }
+            }
             $msgs = $this->db->GetChatMessages($current, 0, 0, 50);
             $this->db->MarkChatRead($current, $me);
             foreach ($threads as $t) if ($t->Key === $current->Key) $t->Unread = 0;
@@ -82,7 +119,9 @@ class ChatController extends Controller
             'Current' => $current, 'Closed' => $closed, 'Messages' => $this->pack($msgs, $me, $current), 'HasOlder' => count($msgs) === 50,
             'SeenUpTo' => $current ? $this->db->GetChatSeenUpTo($current, $me) : 0, 'Me' => $me,
             'ThreadJson' => $this->packThreads($threads),
-            'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false, 'LiveOk' => teacher_live_enabled($me) && bbb_ready(),
+            'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false,
+            'LivePkg' => teacher_live_enabled($me), 'LiveOk' => teacher_live_enabled($me) && bbb_ready(), 'Card' => $card,
+            'TeacherPkg' => current_role() === 'Teacher' && is_premium_teacher($me), 'CanFind' => current_role() === 'User' && viewer_can_contact_teachers(),
             'Contacts' => current_role() === 'Teacher' ? array_values($this->db->TeacherChatContacts($me)) : [],
             'IsSuper' => is_admin() && admin_is_super(),
         ]);
@@ -102,6 +141,34 @@ class ChatController extends Controller
             $n = !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName;
             return ['id' => (int)$u->Id, 'name' => $n, 'user' => (string)$u->UserName, 'role' => (string)$u->Role === 'Teacher' ? 'Teacher' : 'Student', 'photo' => (string)($u->ProfileImageLink ?? ''), 'initials' => initials($n, 'U')];
         }, $rows)]);
+    }
+
+    /** GET /Chat/FindTeacher?q= — প্যাকেজ নেওয়া শিক্ষার্থী: নাম / ইউজারনেম / ইমেইল / Teacher ID দিয়ে টিচার খোঁজা (যোগাযোগের তথ্য ফেরত দেয় না) */
+    public function FindTeacher(): void
+    {
+        $this->me(true);
+        if (current_role() !== 'User') json_response(['success' => false, 'message' => 'শুধু শিক্ষার্থীরা টিচার খুঁজতে পারবেন।']);
+        if (!viewer_can_contact_teachers()) json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'টিচার খুঁজে মেসেজ দিতে শিক্ষার্থী প্যাকেজ নিন।']);
+        $q = trim((string)input_str('q', ''));
+        if (mb_strlen($q) < 2) json_response(['success' => true, 'teachers' => []]);
+        $base = "SELECT DISTINCT u.`Id`, u.`FullName`, u.`UserName`, u.`ProfileImageLink` FROM `Users` u JOIN `TeacherRequests` r ON r.`UserId` = u.`Id` AND r.`Status` = 'Approved'
+            WHERE u.`Role` = 'Teacher' AND u.`IsActive` = 1 AND ";
+        if (preg_match('/^\s*(?:tch)?\s*-?\s*(\d{4,})\s*$/i', $q, $m)) {
+            $rows = $this->db->all($base . "r.`Id` = :rid LIMIT 5", ['rid' => (int)$m[1] - 1000]);
+        } elseif (filter_var($q, FILTER_VALIDATE_EMAIL)) {
+            $rows = $this->db->all($base . "LOWER(u.`Email`) = :e LIMIT 5", ['e' => mb_strtolower($q)]);  // ইমেইল পুরোটা মিললেই — আংশিক না
+        } else {
+            $like = '%' . ltrim($q, '@') . '%';
+            $rows = $this->db->all($base . "(u.`FullName` LIKE :a OR u.`UserName` LIKE :b) ORDER BY u.`Id` DESC LIMIT 12", ['a' => $like, 'b' => $like]);
+        }
+        $out = [];
+        foreach ($rows as $u) {
+            $id = (int)$u->Id;
+            if ($this->db->GetActiveSuspension($id)) continue;
+            $n = !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName;
+            $out[] = ['id' => $id, 'name' => $n, 'user' => (string)$u->UserName, 'code' => teacher_code($id), 'photo' => (string)($u->ProfileImageLink ?? ''), 'initials' => initials($n, 'T'), 'open' => teacher_profile_open($id)];
+        }
+        json_response(['success' => true, 'teachers' => $out]);
     }
 
     /** POST /Chat/AdminStart (userId) — Super Admin যেকোনো ইউজারের সাথে চ্যাট খোলে (প্যাকেজ লাগে না) */
@@ -131,7 +198,7 @@ class ChatController extends Controller
     public function Threads(): void
     {
         $me = $this->me(true);
-        json_response(['success' => true, 'threads' => $this->packThreads($this->db->GetChatThreads($me))]);
+        json_response(['success' => true, 'threads' => $this->packThreads($this->lockThreads($this->db->GetChatThreads($me), $me))]);
     }
 
     /** GET /Chat/Unread */
@@ -148,7 +215,7 @@ class ChatController extends Controller
     {
         $me = $this->me();
         $tid = input_int('teacherId', 0);
-        $back = '/Tutors/Profile/' . $tid;
+        $back = input_str('from', '') === 'chat' ? '/Chat' : '/Tutors/Profile/' . $tid;
         if (current_role() !== 'User') { tempdata_set('Error', 'শুধু শিক্ষার্থীরা টিচারের সাথে চ্যাট শুরু করতে পারেন।'); redirect($back); }
         if (!viewer_can_contact_teachers()) {
             tempdata_set('Error', 'টিচারের সাথে চ্যাট আনলক করতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।');
@@ -170,9 +237,12 @@ class ChatController extends Controller
         if ($t->Kind === 'dir' && empty($t->AdminChat) && $t->StudentId === $me && !viewer_can_contact_teachers()) {
             json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'আপনার প্যাকেজের মেয়াদ শেষ — টিচারকে মেসেজ পাঠাতে আবার প্যাকেজ নিন।']);
         }
+        if (chat_locked_for($t, $me)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher', 'message' => 'মেসেজ দেখতে আর উত্তর দিতে টিচার প্যাকেজ কিনুন।']);
         $body = trim(str_replace(["\r\n", "\r"], "\n", (string)input_str('body', '')));
         $body = preg_replace("/\n{4,}/", "\n\n\n", $body);
         if ($body === '') json_response(['success' => false, 'message' => 'কিছু লিখুন।']);
+        // মোবাইল নম্বর, ইমেইল, লিংক, সোশ্যাল মিডিয়া, Zoom / Meet — দুই পক্ষেই বন্ধ (Super Admin এর চ্যাট বাদে)
+        if (empty($t->AdminChat) && !is_admin() && ($why = chat_contact_block($body)) !== null) json_response(['success' => false, 'blocked' => true, 'message' => chat_block_message($why)]);
         if (mb_strlen($body) > self::MAX_LEN) json_response(['success' => false, 'message' => 'মেসেজ সর্বোচ্চ ' . self::MAX_LEN . ' অক্ষর হতে পারে।']);
         if ($this->db->CountRecentChatMessages($me, 60) >= 30) json_response(['success' => false, 'message' => 'খুব দ্রুত মেসেজ পাঠাচ্ছেন — একটু পর আবার চেষ্টা করুন।']);
 
@@ -182,10 +252,10 @@ class ChatController extends Controller
         if ($t->Kind === 'grp') {
             // গ্রুপ: যার কাছে এটাই প্রথম না-পড়া মেসেজ, শুধু তাকে নোটিফিকেশন
             foreach ($this->db->GroupUnreadFor($t->RefId, $me) as $uid => $n) {
-                if ($n === 1) $this->db->CreateNotification($uid, 'নতুন গ্রুপ মেসেজ', "$myName — {$t->OtherName}: " . str_preview($body, 60), 'info', '/Chat?c=' . $t->Key, 'fa-users');
+                if ($n === 1) $this->db->CreateNotification($uid, 'নতুন গ্রুপ মেসেজ', "$myName — {$t->OtherName}" . (chat_user_locked((int)$uid) ? ' — মেসেজ দেখতে টিচার প্যাকেজ কিনুন' : ': ' . str_preview($body, 60)), 'info', '/Chat?c=' . $t->Key, 'fa-users');
             }
         } elseif (!$this->db->HasUnreadFrom($t, $me)) {
-            $this->db->CreateNotification($t->OtherId, 'নতুন মেসেজ', "$myName আপনাকে মেসেজ পাঠিয়েছেন: " . str_preview($body, 60), 'info', '/Chat?c=' . $t->Key, 'fa-comment-dots');
+            $this->db->CreateNotification($t->OtherId, 'নতুন মেসেজ', "$myName আপনাকে মেসেজ পাঠিয়েছেন" . (chat_user_locked((int)$t->OtherId) ? ' — দেখতে টিচার প্যাকেজ কিনুন।' : ': ' . str_preview($body, 60)), 'info', '/Chat?c=' . $t->Key, 'fa-comment-dots');
         }
         $msgs = $this->db->GetChatMessages($t, max(0, input_int('after', 0)), 0, 50);
         json_response(['success' => true, 'id' => $id, 'messages' => $this->pack($msgs, $me, $t)]);
@@ -202,6 +272,7 @@ class ChatController extends Controller
         if (!teacher_live_enabled($me)) json_response(['success' => false, 'premium' => true, 'courseUrl' => '/Package?for=teacher', 'message' => 'লাইভ ক্লাস নিতে Premium প্যাকেজ লাগবে (১ মাস ৳200 / ৩ মাস ৳500) — বাকি সব সুবিধার সাথে চ্যাট থেকে লাইভ ক্লাস।']);
         if (!bbb_ready()) json_response(['success' => false, 'message' => 'লাইভ ক্লাসের সার্ভার এখনো চালু হয়নি — অ্যাডমিনকে জানান।']);
         $title = mb_substr(trim(preg_replace('/\s+/u', ' ', (string)input_str('title', ''))), 0, 150);
+        if ($title !== '' && ($why = chat_contact_block($title)) !== null) json_response(['success' => false, 'message' => chat_block_message($why)]);
         $platform = 'মাষ্টার মশাই লাইভ';
         $link = '#';
         $date = (string)input_str('date', ''); $time = (string)input_str('time', '');
@@ -274,7 +345,9 @@ class ChatController extends Controller
     {
         $me = $this->me(true);
         if (current_role() !== 'Teacher') json_response(['success' => false, 'message' => 'শুধু টিচাররা গ্রুপ বানাতে পারবেন।']);
+        if (!is_premium_teacher($me)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher', 'message' => 'গ্রুপ বানাতে টিচার প্যাকেজ কিনুন।']);
         $name = $this->cleanGroupName();
+        if (($why = chat_contact_block($name)) !== null) json_response(['success' => false, 'message' => chat_block_message($why)]);
         $ids = $this->pickStudents($me);
         if (!$ids) json_response(['success' => false, 'message' => 'অন্তত একজন স্টুডেন্ট বাছাই করুন।']);
         if ((int)$this->db->scalar('SELECT COUNT(*) FROM `ChatGroups` WHERE `TeacherId` = :t', ['t' => $me]) >= 50) json_response(['success' => false, 'message' => 'সর্বোচ্চ ৫০টি গ্রুপ বানানো যায়।']);
