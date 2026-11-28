@@ -863,10 +863,17 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .chat-fab { display: none; }
             @media (min-width: 1024px) {
                 .chat-nav-wrap { display: none !important; }
-                .chat-fab { display: flex; position: fixed; right: 28px; bottom: 28px; z-index: 1030; width: 62px; height: 62px; border-radius: 50%; align-items: center; justify-content: center;
-                    background: linear-gradient(135deg, #00CFFF, #0284C7); color: #fff; font-size: 26px; text-decoration: none; box-shadow: 0 10px 28px rgba(2,132,199,.35); transition: transform .2s, box-shadow .2s; }
-                .chat-fab:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 14px 34px rgba(2,132,199,.45); color: #fff; }
-                .chat-fab .fab-badge { position: absolute; top: -2px; right: -2px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #EF4444; color: #fff; font-size: 12px; font-weight: 800;
+                /* চিঠি মুখে কবুতর — জায়গায় দাঁড়িয়ে ডানা ঝাপটায় */
+                .chat-fab { display: block; position: fixed; right: 22px; bottom: 18px; z-index: 1030; width: 116px; height: 92px; text-decoration: none;
+                    filter: drop-shadow(0 8px 14px rgba(8,34,74,.22)); animation: doveBob 1.8s ease-in-out infinite; transition: filter .2s; }
+                .chat-fab img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+                .chat-fab .dv-wing { transform-origin: 52% 58%; animation: doveFlap .42s ease-in-out infinite alternate; }
+                .chat-fab:hover { filter: drop-shadow(0 12px 20px rgba(2,132,199,.4)); }
+                .chat-fab:hover .dv-wing { animation-duration: .25s; }
+                @keyframes doveFlap { from { transform: scaleY(1) rotate(0deg); } to { transform: scaleY(.45) rotate(-4deg); } }
+                @keyframes doveBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+                @media (prefers-reduced-motion: reduce) { .chat-fab, .chat-fab .dv-wing { animation: none; } }
+                .chat-fab .fab-badge { position: absolute; top: 4px; right: 10px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #EF4444; color: #fff; font-size: 12px; font-weight: 800;
                     display: none; align-items: center; justify-content: center; border: 2px solid #fff; }
                 .chat-fab .fab-badge.show { display: inline-flex; }
                 body:has(.exp-bar) .chat-fab { bottom: 86px; }
@@ -1637,7 +1644,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             </div>
         </footer>
         <?php if (isset($chatUnread) && stripos(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/chat') !== 0): ?>
-        <a class="chat-fab" href="/Chat" title="Messages" aria-label="Messages"><i class="fas fa-comment-dots"></i><span class="fab-badge<?= $chatUnread ? ' show' : '' ?>" id="chatFabBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span></a>
+        <a class="chat-fab" href="/Chat" title="Messages" aria-label="Messages"><img class="dv-wing" src="/uploads/chat/dove-wing.webp" alt="" width="116" height="92" /><img src="/uploads/chat/dove-body.webp" alt="" width="116" height="92" /><span class="fab-badge<?= $chatUnread ? ' show' : '' ?>" id="chatFabBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span></a>
         <?php endif; ?>
     <?php endif; ?>
 
