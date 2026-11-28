@@ -1456,8 +1456,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             <nav class="m-nav">
                 <a href="/" class="<?= $mActive('/') ?>"><i class="fas fa-house"></i><span><?= t('হোম', 'Home') ?></span></a>
                 <a href="/Feed" class="<?= $mActive('/Feed') ?>"><i class="fas fa-graduation-cap"></i><span><?= t('এডু ফিড', 'Edu Feed') ?></span></a>
-                <a href="/Tutors" class="<?= $mActive('/Tutors') ?>"><i class="fas fa-chalkboard-user"></i><span><?= t('টিউটর খুঁজুন — টিউটর তালিকা', 'Find Tutor — Tutor List') ?></span></a>
-                <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span><?= t('টিউটর খুঁজুন — পড়াতে চাই', 'Find Tutor — Want to Teach') ?></span></a>
+                <a href="/Tutors" class="<?= $mActive('/Tutors') ?>"><i class="fas fa-chalkboard-user"></i><span><?= t('টিউটর তালিকা', 'Tutor List') ?></span></a>
+                <a href="/FindTutor" class="<?= $mActive('/FindTutor') ?>"><i class="fas fa-pen-to-square"></i><span><?= t('পড়াতে চাই', 'Want to Teach') ?></span></a>
                 <a href="/Categories" class="<?= $mActive('/Categories') ?>"><i class="fas fa-layer-group"></i><span><?= t('ক্যাটাগরি', 'Categories') ?></span></a>
                 <a href="/Tuition/Circular" class="<?= $mActive('/Tuition') ?>"><i class="fas fa-clipboard-list"></i><span><?= t('টিউশন সার্কুলার', 'Tuition Circular') ?></span></a>
                 <?php if (!$mLoggedIn): ?><a href="/Notice" class="<?= $mActive('/Notice') ?>"><i class="fas fa-bullhorn"></i><span><?= t('নোটিশ', 'Notice') ?></span></a><?php endif; ?>
@@ -1650,6 +1650,66 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         </footer>
         <?php if (isset($chatUnread) && stripos(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/chat') !== 0): ?>
         <a class="chat-fab" href="/Chat" title="Messages" aria-label="Messages"><img class="dv-wing" src="/uploads/chat/dove-wing.webp" alt="" width="116" height="92" /><img src="/uploads/chat/dove-body.webp" alt="" width="116" height="92" /><span class="fab-badge<?= $chatUnread ? ' show' : '' ?>" id="chatFabBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span></a>
+        <?php endif; ?>
+        <?php
+        // ===== মোবাইলের নিচের আইকন বার (Facebook এর মতো) — শুধু দরকারি আইকন; চ্যাট পেজ আর অ্যাডমিনে দেখায় না =====
+        $bnPath = strtolower(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+        $bnShow = ($mRole ?? null) !== 'Admin' && strpos($bnPath, '/chat') !== 0 && strpos($bnPath, '/admin') !== 0 && strpos($bnPath, '/live') !== 0;
+        if ($bnShow):
+            $bnOn = function (array $prefixes) use ($bnPath): string {
+                foreach ($prefixes as $px) { if ($px === '/' ? $bnPath === '/' || $bnPath === '/home' || $bnPath === '/home/index' : strpos($bnPath, strtolower($px)) === 0) return ' on'; }
+                return '';
+            };
+            $bnDash = ($mRole ?? '') === 'Teacher' ? '/Teacher/TeacherDashboard' : '/User/Dashboard';
+        ?>
+        <nav class="bnav" id="bNav" aria-label="<?= t('প্রধান মেনু', 'Main menu') ?>">
+            <a href="/" class="<?= $bnOn(['/']) ?>"><i class="fas fa-house"></i><span><?= t('হোম', 'Home') ?></span></a>
+            <a href="/Tutors" class="<?= $bnOn(['/Tutors', '/FindTutor']) ?>"><i class="fas fa-chalkboard-user"></i><span><?= t('টিউটর', 'Tutors') ?></span></a>
+            <a href="/Tuition/Circular" class="<?= $bnOn(['/Tuition']) ?>"><i class="fas fa-clipboard-list"></i><span><?= t('সার্কুলার', 'Circular') ?></span></a>
+            <?php if (!empty($mLoggedIn)): ?>
+                <a href="#" id="bnBell" role="button"><i class="fas fa-bell"></i><span><?= t('নোটিফিকেশন', 'Alerts') ?></span><em class="bn-badge" id="bnBadge"></em></a>
+                <a href="<?= e($bnDash) ?>" class="<?= $bnOn(['/User', '/Teacher', '/Profile']) ?>"><b class="bn-me"><?= e(initials((string)($mName ?? ''), 'U')) ?><?php if (!is_blank($mImg ?? '')): ?><img src="<?= e($mImg) ?>" alt="" onerror="this.remove()" /><?php endif; ?></b><span><?= t('আমার পেজ', 'Me') ?></span></a>
+            <?php else: ?>
+                <a href="/Package" class="<?= $bnOn(['/Package']) ?>"><i class="fas fa-tags"></i><span><?= t('প্যাকেজ', 'Package') ?></span></a>
+                <a href="/Account/Login" class="<?= $bnOn(['/Account']) ?>"><i class="fas fa-right-to-bracket"></i><span><?= t('লগইন', 'Login') ?></span></a>
+            <?php endif; ?>
+        </nav>
+        <style>
+            .bnav { display: none; }
+            @media (max-width: 1023px) {
+                .bnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1045; height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+                    background: #fff; border-top: 1px solid #E5ECF3; box-shadow: 0 -4px 18px rgba(8,34,74,.07); }
+                .bnav a { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #64748B; text-decoration: none; font-size: 10.5px; font-weight: 700; -webkit-tap-highlight-color: transparent; }
+                .bnav a i { font-size: 20px; }
+                .bnav a span { line-height: 1; white-space: nowrap; }
+                .bnav a.on { color: #00A8D6; }
+                .bnav a.on::before { content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 3px; border-radius: 0 0 3px 3px; background: #00CFFF; }
+                .bnav .bn-badge { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #EF4444; color: #fff; font-size: 10px; font-weight: 800; font-style: normal;
+                    display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; box-sizing: border-box; }
+                .bnav .bn-badge.show { display: inline-flex; }
+                .bnav .bn-me { width: 24px; height: 24px; border-radius: 50%; position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #08224A, #0A5A86); color: #fff; font-size: 9.5px; font-weight: 800; }
+                .bnav a.on .bn-me { box-shadow: 0 0 0 2px #00CFFF; }
+                .bnav .bn-me img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+                body:has(.bnav) { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+                body:has(.bnav) .exp-bar { bottom: calc(60px + env(safe-area-inset-bottom)); }
+                body:has(.bnav) .chat-fab:not(.moved) { bottom: 74px; }
+                body:has(.bnav):has(.exp-bar) .chat-fab:not(.moved) { bottom: 150px; }
+            }
+        </style>
+        <script>
+            (function () {
+                var bb = document.getElementById('bnBell'); if (!bb) return;
+                var src = document.getElementById('notifBadge'), dst = document.getElementById('bnBadge');
+                var sync = function () { if (!src || !dst) return; dst.textContent = src.textContent; dst.classList.toggle('show', src.classList.contains('show') && src.textContent.trim() !== '0'); };
+                if (src) { sync(); new MutationObserver(sync).observe(src, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }
+                // হেডারের ঘণ্টার নোটিফিকেশন তালিকাটাই খোলে
+                bb.addEventListener('click', function (e) {
+                    e.preventDefault(); e.stopPropagation();
+                    var bell = document.getElementById('notifBell'); if (!bell) { location.href = '/Notification'; return; }
+                    window.scrollTo({ top: 0, behavior: 'smooth' }); bell.click();
+                });
+            })();
+        </script>
         <?php endif; ?>
     <?php endif; ?>
 
