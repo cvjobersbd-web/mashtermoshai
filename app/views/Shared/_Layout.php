@@ -859,6 +859,18 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .chat-nav-wrap { margin-right: 4px; }
             .chat-nav-wrap .notification-bell { display: inline-flex; text-decoration: none; }
             @media (max-width: 1599px) and (min-width: 1280px) { .chat-nav-wrap { margin-right: 0; } }
+            /* পিসি / ল্যাপটপে: মেসেজ আইকন নেভবারে না — নিচে ডান কোণায় ভাসমান বাটন। মোবাইলে আগের মতো নেভবারে */
+            .chat-fab { display: none; }
+            @media (min-width: 1024px) {
+                .chat-nav-wrap { display: none !important; }
+                .chat-fab { display: flex; position: fixed; right: 28px; bottom: 28px; z-index: 1030; width: 62px; height: 62px; border-radius: 50%; align-items: center; justify-content: center;
+                    background: linear-gradient(135deg, #00CFFF, #0284C7); color: #fff; font-size: 26px; text-decoration: none; box-shadow: 0 10px 28px rgba(2,132,199,.35); transition: transform .2s, box-shadow .2s; }
+                .chat-fab:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 14px 34px rgba(2,132,199,.45); color: #fff; }
+                .chat-fab .fab-badge { position: absolute; top: -2px; right: -2px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #EF4444; color: #fff; font-size: 12px; font-weight: 800;
+                    display: none; align-items: center; justify-content: center; border: 2px solid #fff; }
+                .chat-fab .fab-badge.show { display: inline-flex; }
+                body:has(.exp-bar) .chat-fab { bottom: 86px; }
+            }
             /* ===== Find Tutor সাবমেনু ===== */
             .nav-dd { position: relative; display: inline-flex; }
             .nav-dd-caret { font-size: 9px !important; margin-left: 2px; opacity: .7; transition: transform .2s; display: inline-block !important; }
@@ -1624,6 +1636,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 </div>
             </div>
         </footer>
+        <?php if (isset($chatUnread) && stripos(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/chat') !== 0): ?>
+        <a class="chat-fab" href="/Chat" title="Messages" aria-label="Messages"><i class="fas fa-comment-dots"></i><span class="fab-badge<?= $chatUnread ? ' show' : '' ?>" id="chatFabBadge"><?= $chatUnread > 9 ? '9+' : (int)$chatUnread ?></span></a>
+        <?php endif; ?>
     <?php endif; ?>
 
     <!-- ========================================= -->
@@ -2018,7 +2033,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         var b = document.getElementById('chatBadge'); if (!b || location.pathname.toLowerCase().indexOf('/chat') === 0) return;
         async function upd() {
             if (document.hidden) return;
-            try { var r = await (await fetch('/Chat/Unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); var n = r.count || 0; b.textContent = n > 9 ? '9+' : n; b.classList.toggle('show', n > 0); } catch (e) { }
+            try { var r = await (await fetch('/Chat/Unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json(); var n = r.count || 0; [b, document.getElementById('chatFabBadge')].forEach(function (x) { if (x) { x.textContent = n > 9 ? '9+' : n; x.classList.toggle('show', n > 0); } }); } catch (e) { }
         }
         setInterval(upd, 30000);
     })();
