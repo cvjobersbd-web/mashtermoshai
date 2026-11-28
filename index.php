@@ -8,6 +8,19 @@
  */
 define('APP_ROOT', __DIR__);
 
+// ✅ সাইটের আগে থেকে বানানো Tailwind CSS (app/assets/site.css) — সেশন / ডাটাবেস ছাড়াই সরাসরি, ১ বছর ক্যাশ (লিংকে ?v= থাকে, বদলালে নতুন)
+if (strtok($_SERVER['REQUEST_URI'] ?? '', '?') === '/assets/site.css') {
+    $__css = __DIR__ . '/app/assets/site.css';
+    if (!is_file($__css)) { http_response_code(404); exit; }
+    $__etag = '"' . filemtime($__css) . '-' . filesize($__css) . '"';
+    header('Content-Type: text/css; charset=utf-8');
+    header('Cache-Control: public, max-age=31536000, immutable');
+    header('ETag: ' . $__etag);
+    if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $__etag) { http_response_code(304); exit; }
+    readfile($__css);
+    exit;
+}
+
 // লোকাল টেস্ট সার্ভার (php -S localhost:8000 index.php) এ স্ট্যাটিক ফাইল সরাসরি দেখানো
 if (PHP_SAPI === 'cli-server') {
     $__p = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

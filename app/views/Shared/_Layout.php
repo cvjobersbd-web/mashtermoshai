@@ -106,6 +106,8 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <?php $__twFile = APP_ROOT . '/app/assets/site.css'; $__twBuilt = is_file($__twFile); ?>
+    <?php if (!$__twBuilt): /* আগে থেকে বানানো CSS না থাকলে আগের মতো CDN (ধীর) */ ?>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
@@ -124,6 +126,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 }
             }
     </script>
+    <?php endif; ?>
 
     <script>
             if (!('PageSwapEvent' in window)) document.documentElement.classList.add('no-vt');
@@ -1157,6 +1160,11 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         .lang-sw:hover { border-color: #02B8F5; }
         @media (max-width: 420px) { .lang-sw { padding: 0 2px; margin-right: 0; height: 30px; font-size: 11px; } .lang-sw span { padding: 3px 5px; } }
     </style>
+    <?php if ($__twBuilt): ?>
+    <!-- ✅ Tailwind আগে থেকে বানানো (app/assets/site.css) — ব্রাউজারে আর বানাতে হয় না, তাই পেজ দ্রুত খোলে -->
+    <style>:root { --mm-primary: <?= e($layoutSettings->PrimaryColor) ?>; --mm-cream: <?= e($layoutSettings->SecondaryColor) ?>; }</style>
+    <link rel="stylesheet" href="/assets/site.css?v=<?= filemtime($__twFile) ?>" />
+    <?php endif; ?>
 </head>
 <body>
     <?php if (session_get('UserName') === null): ?><?= csrf_field() ?><?php endif; ?>
@@ -1742,17 +1750,25 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                         }
                         pill.style.transform = tf(x, 1); pill.classList.add('ready'); lastX = x;
                     };
-                    var cur = nav.querySelector('a.on'); if (cur) place(cur, false);
-                    window.addEventListener('resize', function () { var c = nav.querySelector('a.on'); if (c) { lastX = null; place(c, false); } });
+                    var cur = nav.querySelector('a.on'), from = null;
+                    try { var st = JSON.parse(sessionStorage.getItem('bnFrom') || 'null'); sessionStorage.removeItem('bnFrom'); if (st && Date.now() - st.t < 8000) from = items[st.i] || null; } catch (e) { }
+                    if (cur && from && from !== cur && !reduce) {
+                        // আগের পেজের বাটন থেকে এই বাটনে পানির মতো গড়িয়ে আসে — পেজ বদলালেও একটানা মনে হয়
+                        place(from, false); requestAnimationFrame(function () { place(cur, true); });
+                    } else if (cur) place(cur, false);
+                    // শুধু সত্যিই চওড়া বদলালে (ঘোরালে) নতুন জায়গায় বসায় — মোবাইলে ঠিকানা-বার লুকালে / দেখালে না
+                    var vw = window.innerWidth;
+                    window.addEventListener('resize', function () { if (window.innerWidth === vw) return; vw = window.innerWidth; var c = nav.querySelector('a.on'); if (c) { lastX = null; place(c, false); } });
                     items.forEach(function (a) {
                         // আঙুল রাখতেই পরের পেজ আগে থেকে লোড শুরু — ছাড়লে প্রায় সাথে সাথে খোলে
                         a.addEventListener('touchstart', function () { if (a.id !== 'bnBell' && window.mmPrefetch) window.mmPrefetch(a.href); }, { passive: true });
                         a.addEventListener('click', function (e) {
                             if (a.id === 'bnBell' || a.classList.contains('on') || e.ctrlKey || e.metaKey) return;
-                            e.preventDefault();
-                            var old = nav.querySelector('a.on'); if (old) old.classList.remove('on');
-                            a.classList.add('on'); place(a, true);
-                            setTimeout(function () { location.href = a.href; }, reduce ? 0 : 300);
+                            // অপেক্ষা ছাড়াই পেজ খোলা শুরু; বাটন সাথে সাথে রঙিন হয়, আর নতুন পেজে হাইলাইট গড়িয়ে আসে
+                            var old = nav.querySelector('a.on');
+                            try { if (old) sessionStorage.setItem('bnFrom', JSON.stringify({ i: items.indexOf(old), t: Date.now() })); } catch (x) { }
+                            if (old) old.classList.remove('on');
+                            a.classList.add('on');
                         });
                     });
                 }
