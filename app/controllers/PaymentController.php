@@ -218,14 +218,14 @@ class PaymentController extends Controller
         $u = $viaEps ? $this->db->GetUserById($uid) : null;
         $who = $viaEps ? (string)($u->FullName ?? $u->UserName ?? '') : (string)(session_get('UserFullName') ?? session_get('UserName'));
         $role = $viaEps ? (string)($u->Role ?? '') : (string)session_get('UserRole');
-        $epsNote = $viaEps ? ' ✅ EPS-এ টাকা পরিশোধ ও যাচাই হয়ে গেছে — রিসিট দেখার দরকার নেই।' : '';
+        $epsNote = $viaEps ? ' ✅ EPS-এ পরিশোধ — প্যাকেজ নিজে থেকেই চালু হয়ে গেছে।' : '';
         // টিচার হওয়ার আবেদন + পেমেন্ট একসাথে অ্যাডমিনের কাছে
         if ($pkg->Audience === 'Teacher' && $role !== 'Teacher') {
             $tr = $this->db->GetLatestTeacherRequest($uid);
             if ($tr && in_array($tr->Status, ['AwaitingPayment', 'Pending', 'Expired'], true)) {
                 $this->db->SetTeacherRequestState((int)$tr->Id, 'Pending', $id);
                 foreach ($this->db->GetAdmins() as $a) {
-                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — আগে Teacher Verification (Academic ID Card) Approve, তারপর Teacher Payment Requests এ পেমেন্ট Accept করুন।" . $epsNote, 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher');
+                    $this->db->CreateNotification((int)$a->Id, '🎓 New Teacher Application', "$who টিচার হওয়ার আবেদন আর “{$pkg->Name}” প্যাকেজের পেমেন্ট জমা দিয়েছেন — " . ($viaEps ? 'Teacher Verification (Academic ID Card) দেখে Approve করলেই টিচার হয়ে যাবেন।' : 'আগে Teacher Verification (Academic ID Card) Approve, তারপর Teacher Payment Requests এ পেমেন্ট Accept করুন।') . $epsNote, 'info', '/Admin/Kyc?k=teacher', 'fa-chalkboard-teacher');
                 }
                 return ['redirect' => '/Payment/My?new=' . $id,
                     'message' => 'পেমেন্ট আর টিচার আবেদন অ্যাডমিনের কাছে পাঠানো হয়েছে! যাচাই করে Approve করলে আপনি টিচার হয়ে যাবেন।'];
@@ -233,7 +233,7 @@ class PaymentController extends Controller
         }
         foreach ($this->db->GetAdmins() as $a) {
             $this->db->CreateNotification((int)$a->Id, 'New Payment', $full ? "$who “{$pkg->Name}” প্যাকেজ পুরোটা রেফারেল ব্যালেন্স (৳$disc) দিয়ে নিতে চেয়েছেন — Accept করুন।"
-                : ($viaEps ? "$who “{$pkg->Name}” এর জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " EPS দিয়ে পরিশোধ করেছেন।" . $epsNote . ' Accept করুন।'
+                : ($viaEps ? "$who “{$pkg->Name}” এর জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " EPS দিয়ে পরিশোধ করেছেন।" . $epsNote
                 : "$who “{$pkg->Name}” প্যাকেজের জন্য " . taka($payable) . ($disc ? " (রেফারেল ব্যালেন্স থেকে ৳$disc ছাড়ের পর)" : '') . " পেমেন্টের প্রমাণ জমা দিয়েছেন ({$methodName})।"), 'info', in_array($pkg->Audience, ['Course', 'Publish'], true) ? (($this->db->CourseKindMap()[(int)$courseId] ?? 'course') === 'live' ? '/Admin/LivePayments' : '/Admin/CoursePayments') : (in_array($pkg->Audience, ['Teacher', 'TApply'], true) ? '/Admin/TeacherPayments' : '/Admin/StudentPayments'), 'fa-money-bill-wave');
         }
         return ['redirect' => '/Payment/My?new=' . $id,
@@ -415,7 +415,8 @@ class PaymentController extends Controller
         }
         Eps::update($row->Id, ['Status' => 'Paid', 'PaymentRequestId' => $id, 'EpsTxnId' => $epsTxn, 'FinancialEntity' => $fe !== '' ? $fe : null]);
         try { $this->afterCreate($row->UserId, $o, $id, 'EPS', true); } catch (Throwable $e) { error_log('[eps after] ' . $e->getMessage()); }
-        try { $this->db->CreateNotification($row->UserId, 'পেমেন্ট সফল ✅', "“{$pkg->Name}” এর " . taka((int)$d['payable']) . ' EPS-এ পরিশোধ হয়েছে। অ্যাডমিন Accept করলেই চালু হবে।', 'success', '/Payment/My?new=' . $id, 'fa-circle-check'); } catch (Throwable $e) { }
+        // EPS এ সফল = সাথে সাথে চালু (অ্যাডমিনের Accept লাগে না) — ইউজার নোটিফিকেশন পায়
+        payment_auto_approve($id);
         return Eps::get($row->Id);
     }
 

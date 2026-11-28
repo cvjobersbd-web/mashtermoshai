@@ -2866,7 +2866,9 @@ class AdminController extends Controller
 
     private function paymentsPage(string $for, string $title, string $base): void
     {
-        $st = input_str('status', 'Pending');
+        // EPS এ পরিশোধ হয়ে আগের নিয়মে Pending থেকে যাওয়া পেমেন্ট — নিজে থেকে চালু (এখন EPS = সাথে সাথে চালু)
+        payment_auto_approve_pending_eps();
+        $st = input_str('status', 'all');
         if (!in_array($st, Db::PAYMENT_STATUSES, true)) $st = 'all';
         $km = []; try { $km = $this->db->CourseKindMap(); } catch (Throwable $e) { }
         $audOf = fn($x) => in_array($x->Audience, ['Teacher', 'TApply'], true) ? 'Teacher' : (in_array($x->Audience, ['Course', 'Publish'], true) ? (($km[(int)($x->CourseId ?? 0)] ?? 'course') === 'live' ? 'Live' : 'Course') : 'Student');

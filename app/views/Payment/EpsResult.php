@@ -7,7 +7,7 @@ $name = (string)($o['pkg']['Name'] ?? '');
 $st = (string)$row->Status;
 $back = !empty($o['courseId']) ? (($o['pkg']['Audience'] ?? '') === 'Publish' ? '/Payment/Checkout?publish=' . (int)$o['courseId'] : '/Payment/Checkout?course=' . (int)$o['courseId']) : '/Payment/Checkout/' . (int)($o['pkg']['Id'] ?? 0);
 $v = [
-    'Paid' => ['ok', 'fa-circle-check', 'পেমেন্ট সফল হয়েছে!', 'আপনার টাকা EPS-এ পরিশোধ ও যাচাই হয়ে গেছে। অ্যাডমিন Accept করলেই চালু হবে, আর আপনি নোটিফিকেশন পাবেন। নতুন করে রিসিট দিতে হবে না।'],
+    'Paid' => ['ok', 'fa-circle-check', 'পেমেন্ট সফল হয়েছে!', 'আপনার টাকা EPS-এ পরিশোধ হয়ে গেছে আর প্যাকেজ চালু হয়ে গেছে। নতুন করে রিসিট দিতে হবে না।'],
     'Finalizing' => ['ok', 'fa-circle-check', 'পেমেন্ট সফল হয়েছে!', 'পেমেন্টটা সেভ হচ্ছে — কিছুক্ষণ পর “আমার পেমেন্ট” পেজে দেখতে পাবেন।'],
     'Cancelled' => ['warn', 'fa-circle-xmark', 'পেমেন্ট বাতিল করা হয়েছে', 'কোনো টাকা কাটা হয়নি। চাইলে আবার চেষ্টা করুন।'],
     'Failed' => ['bad', 'fa-triangle-exclamation', 'পেমেন্ট সম্পন্ন হয়নি', 'কোনো টাকা কাটা হয়ে থাকলে চিন্তা করবেন না — EPS থেকে যাচাই করে আমরা দেখে নেব। আবার চেষ্টা করতে পারেন, অথবা Helpdesk-এ জানান।'],

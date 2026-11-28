@@ -2687,6 +2687,7 @@ function device_lock_applies(?string $role): bool
 // লাইভ ক্লাস (BigBlueButton) — আলাদা ফাইলে
 require_once __DIR__ . '/bbb.php';
 require_once __DIR__ . '/telegram.php';
+require_once __DIR__ . '/payment_auto.php';
 
 // ============================================================
 // ===== সাইটের ভাষা (বাংলা ডিফল্ট / English) — শুধু সাইটের জন্য, অ্যাডমিন প্যানেল যেমন আছে তেমন =====

@@ -5,7 +5,7 @@ $ViewData['Title'] = $pgTitle;
 $list = is_array($Model) ? $Model : [];
 $st = $ViewBag->Status ?? 'Pending';
 $stats = $ViewBag->Stats ?? ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Total' => 0, 'Revenue' => 0];
-$tabs = ['Pending' => ['যাচাই বাকি', 'fa-hourglass-half'], 'Approved' => ['Accepted', 'fa-circle-check'], 'Rejected' => ['Rejected', 'fa-circle-xmark'], 'all' => ['সব', 'fa-list']];
+$tabs = ['all' => ['সব পেমেন্ট', 'fa-list'], 'Approved' => ['সফল / চালু', 'fa-circle-check'], 'Pending' => ['যাচাই বাকি (আগের রিসিট)', 'fa-hourglass-half'], 'Rejected' => ['Rejected', 'fa-circle-xmark']];
 $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 ?>
 <style>
@@ -96,7 +96,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     <div class="ap-head">
         <div>
             <h2><i class="fas fa-money-bill-wave me-2" style="color:#22C55E;"></i><?= e($pgTitle) ?></h2>
-            <p>ইউজারদের জমা দেওয়া পেমেন্টের প্রমাণ দেখুন — টাকা এসেছে নিশ্চিত হলে Accept করুন, তাহলেই তার প্যাকেজ চালু হবে।</p>
+            <p>পেমেন্টের হিস্টোরি — EPS এ পেমেন্ট সফল হলেই প্যাকেজ নিজে থেকে চালু হয়ে যায়, Accept করতে হয় না। শুধু আগের নিয়মে (রিসিট দিয়ে) জমা হওয়া পেমেন্ট যাচাই বাকি থাকলে সেগুলোতে Accept / Reject বাটন থাকে।</p>
         </div>
         <a href="/Admin/PaymentMethods"><i class="fas fa-wallet"></i> Payment Methods &amp; QR</a>
     </div>
@@ -104,9 +104,9 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
 
     <div class="ap-stats">
         <div class="ap-stat"><div class="n"><?= e($stats['Pending']) ?></div><div class="l"><i class="fas fa-hourglass-half"></i> যাচাই বাকি</div></div>
-        <div class="ap-stat g"><div class="n"><?= e($stats['Approved']) ?></div><div class="l"><i class="fas fa-circle-check"></i> Accepted</div></div>
+        <div class="ap-stat g"><div class="n"><?= e($stats['Approved']) ?></div><div class="l"><i class="fas fa-circle-check"></i> সফল / চালু</div></div>
         <div class="ap-stat r"><div class="n"><?= e($stats['Rejected']) ?></div><div class="l"><i class="fas fa-circle-xmark"></i> Rejected</div></div>
-        <div class="ap-stat b"><div class="n"><?= e(taka($stats['Revenue'])) ?></div><div class="l"><i class="fas fa-sack-dollar"></i> মোট আয় (Accepted)</div></div>
+        <div class="ap-stat b"><div class="n"><?= e(taka($stats['Revenue'])) ?></div><div class="l"><i class="fas fa-sack-dollar"></i> মোট আয়</div></div>
     </div>
 
     <?php $for = (string)($ViewBag->For ?? 'all'); $cnt = $ViewBag->Counts ?? []; ?>
@@ -150,7 +150,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     </div>
                     <?php if ($p->Role): ?><span class="ap-role <?= e($p->Role) ?>"><?= e(role_label($p->Role, $p->UserId)) ?></span><?php endif; ?>
                     <?php if ($p->Audience === 'Teacher' && $p->Role === 'User'): ?><a class="ap-role apply" href="/Admin/Kyc?k=teacher" title="এখনো শিক্ষার্থী অ্যাকাউন্ট — টিচার হওয়ার আবেদন করে শিক্ষক প্যাকেজ কিনেছেন। Teacher Verification Approve + পেমেন্ট Accept হলে টিচার হয়ে যাবেন।"><i class="fas fa-chalkboard-user"></i> শিক্ষক হওয়ার আবেদনকারী</a><?php endif; ?>
-                    <span class="ap-pill <?= e($p->Status) ?>"><?= e($p->Status === 'Approved' ? 'Accepted' : $p->Status) ?></span>
+                    <span class="ap-pill <?= e($p->Status) ?>"><?= e($p->Status === 'Approved' ? 'সফল · চালু' : ($p->Status === 'Pending' ? 'যাচাই বাকি' : $p->Status)) ?></span>
                 </div>
                 <div class="ap-joined"><span class="ap-jl"><i class="fas fa-route"></i> কিভাবে এসেছে:</span><?= $p->FullName ? joined_via_full((int)$p->UserId) : '<span style="color:#94A3B8;">—</span>' ?></div>
                 <div class="ap-grid">
@@ -169,6 +169,7 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                     <div class="ap-tapp <?= $ap['req'] === 'Approved' ? 'ok' : ($kOk ? 'ok' : ($ap['kyc'] === 'Rejected' ? 'no' : 'warn')) ?>">
                         <i class="fas fa-user-check"></i>
                         <?php if ($ap['req'] === 'Approved'): ?>নতুন টিচার আবেদন — <b>Approved</b>, ইউজার এখন টিচার।
+                        <?php elseif ($p->Status === 'Approved'): ?>পেমেন্ট সফল, প্যাকেজ চালু · Teacher Verification: <b><?= e(['Pending' => 'যাচাই বাকি', 'Rejected' => 'Rejected', 'None' => 'ফর্ম নেই'][$ap['kyc']] ?? $ap['kyc']) ?></b> — <a href="/Admin/Kyc?k=teacher">Verification পেজে</a> Approve করলেই টিচার হয়ে যাবেন।
                         <?php elseif ($ap['kyc'] === 'Approved'): ?>নতুন টিচার আবেদন · Teacher Verification: <b>Approved ✅</b> — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
                         <?php elseif ($ap['kyc'] === 'None'): ?>নতুন টিচার আবেদন (Teacher Verification চালুর আগের) — পেমেন্ট Accept করলেই টিচার হয়ে যাবেন।
                         <?php elseif ($ap['kyc'] === 'Rejected'): ?>নতুন টিচার আবেদন · Teacher Verification: <b>Rejected</b> — নতুন Teacher Verification জমা দিয়ে Approve না হওয়া পর্যন্ত Accept করা যাবে না। <a href="/Admin/Kyc?k=teacher&amp;s=all">Teacher Verification দেখুন</a>
@@ -190,8 +191,10 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
                         <?php $blockAcc = (($ap = $apps[(int)$p->Id] ?? null) && $ap['req'] === 'Pending' && !in_array($ap['kyc'], ['Approved', 'None'], true)) || in_array(($ViewBag->StuKyc ?? [])[(int)$p->Id] ?? 'None', ['Pending', 'Rejected'], true); ?>
                         <button type="button" class="ap-btn ok" data-ap="approve" data-id="<?= (int)$p->Id ?>"<?= $blockAcc ? ' disabled title="আগে Teacher Verification Approve করুন"' : '' ?>><i class="fas fa-check"></i> Accept</button>
                         <button type="button" class="ap-btn no" data-ap="reject" data-id="<?= (int)$p->Id ?>"><i class="fas fa-times"></i> Reject</button>
+                    <?php elseif ($p->Status === 'Approved' && (string)$p->MethodName === 'EPS'): ?>
+                        <span style="font-size:12.5px;color:#166534;font-weight:700;"><i class="fas fa-bolt"></i> EPS — নিজে থেকে চালু হয়েছে: <?= e($fmt($p->ReviewedAt)) ?></span>
                     <?php else: ?>
-                        <span style="font-size:12.5px;color:#64748B;"><i class="far fa-clock"></i> যাচাই: <?= e($fmt($p->ReviewedAt)) ?></span>
+                        <span style="font-size:12.5px;color:#64748B;"><i class="far fa-clock"></i> <?= $p->Status === 'Approved' ? 'চালু হয়েছে' : 'যাচাই' ?>: <?= e($fmt($p->ReviewedAt)) ?></span>
                         <?php if ($p->Status === 'Rejected'): ?><button type="button" class="ap-btn del" data-ap="delete" data-id="<?= (int)$p->Id ?>"><i class="fas fa-trash"></i> Delete</button><?php endif; ?>
                     <?php endif; ?>
                 </div>
