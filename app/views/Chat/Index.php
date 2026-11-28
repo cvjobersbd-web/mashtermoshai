@@ -21,9 +21,9 @@ $curSub = '';
 if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '' ? 'Teacher ID: ' . $card['code'] : (($cur->OtherUser ?? '') !== '' ? '@' . $cur->OtherUser : '');
 ?>
 <style>
-    .ch { background: #EEF3F8; padding: 10px 0 12px; }
-    .ch-wrap { max-width: none; margin: 0; padding: 0 12px; }
-    .ch-box { display: grid; grid-template-columns: 330px minmax(0, 1fr) 300px; height: calc(100vh - 80px - 22px); min-height: 520px; background: #fff; border: 1px solid #E1E8F0; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 26px rgba(15,27,45,.06); }
+    .ch { background: #fff; padding: 0; }
+    .ch-wrap { max-width: none; margin: 0; padding: 0; }
+    .ch-box { display: grid; grid-template-columns: 330px minmax(0, 1fr) 300px; height: calc(100vh - 80px); height: calc(100dvh - 80px); min-height: 520px; background: #fff; border: none; border-top: 1px solid #E1E8F0; border-radius: 0; overflow: hidden; box-shadow: none; }
     /* ===== তালিকা ===== */
     .ch-list { border-right: 1px solid #EAEFF5; display: flex; flex-direction: column; min-height: 0; }
     .ch-lh { padding: 18px 18px 12px; }
