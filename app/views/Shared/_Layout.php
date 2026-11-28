@@ -1654,7 +1654,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         <?php
         // ===== মোবাইলের নিচের আইকন বার (Facebook এর মতো) — শুধু দরকারি আইকন; চ্যাট পেজ আর অ্যাডমিনে দেখায় না =====
         $bnPath = strtolower(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
-        $bnShow = ($mRole ?? null) !== 'Admin' && strpos($bnPath, '/chat') !== 0 && strpos($bnPath, '/admin') !== 0 && strpos($bnPath, '/live') !== 0;
+        $bnShow = ($mRole ?? null) !== 'Admin' && strpos($bnPath, '/admin') !== 0 && strpos($bnPath, '/live') !== 0;
         if ($bnShow):
             $bnOn = function (array $prefixes) use ($bnPath): string {
                 foreach ($prefixes as $px) { if ($px === '/' ? $bnPath === '/' || $bnPath === '/home' || $bnPath === '/home/index' : strpos($bnPath, strtolower($px)) === 0) return ' on'; }
@@ -1663,6 +1663,7 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             $bnDash = ($mRole ?? '') === 'Teacher' ? '/Teacher/TeacherDashboard' : '/User/Dashboard';
         ?>
         <nav class="bnav" id="bNav" aria-label="<?= t('প্রধান মেনু', 'Main menu') ?>">
+            <span class="bn-pill" id="bnPill" aria-hidden="true"></span><span class="bn-drop" id="bnDrop" aria-hidden="true"></span>
             <a href="/" class="<?= $bnOn(['/']) ?>"><i class="fas fa-house"></i><span><?= t('হোম', 'Home') ?></span></a>
             <a href="/Tutors" class="<?= $bnOn(['/Tutors', '/FindTutor']) ?>"><i class="fas fa-chalkboard-user"></i><span><?= t('টিউটর', 'Tutors') ?></span></a>
             <a href="/Tuition/Circular" class="<?= $bnOn(['/Tuition']) ?>"><i class="fas fa-clipboard-list"></i><span><?= t('সার্কুলার', 'Circular') ?></span></a>
@@ -1683,7 +1684,18 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
                 .bnav a i { font-size: 20px; }
                 .bnav a span { line-height: 1; white-space: nowrap; }
                 .bnav a.on { color: #00A8D6; }
-                .bnav a.on::before { content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 3px; border-radius: 0 0 3px 3px; background: #00CFFF; }
+                /* ===== তরল (liquid) হাইলাইট — চাপা বাটনের দিকে আগে সামনের দিক লম্বা হয়ে যায়, পেছনের দিক পরে টেনে আসে, সাথে ছোট্ট ফোঁটা ===== */
+                .bnav a { z-index: 1; }
+                .bnav a i, .bnav a span, .bnav a .bn-me { transition: color .35s, transform .35s; }
+                .bnav a.on { color: #0284C7; }
+                .bnav a.on i { transform: scale(1.08); }
+                .bn-pill { position: absolute; z-index: 0; top: 6px; bottom: calc(6px + env(safe-area-inset-bottom)); left: 0; right: 100%; border-radius: 24px; pointer-events: none; opacity: 0;
+                    background: linear-gradient(135deg, rgba(0,207,255,.20), rgba(2,132,199,.16)); box-shadow: inset 0 0 0 1px rgba(0,207,255,.18), 0 4px 14px rgba(0,168,214,.12);
+                    transition: left .5s cubic-bezier(.65,0,.35,1), right .5s cubic-bezier(.65,0,.35,1), opacity .3s; }
+                .bn-pill.ready { opacity: 1; }
+                .bn-drop { position: absolute; z-index: 0; top: 50%; left: 0; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; pointer-events: none; opacity: 0;
+                    background: rgba(0,207,255,.25); transition: left .75s cubic-bezier(.65,0,.35,1), opacity .75s ease-in, transform .75s; }
+                @media (prefers-reduced-motion: reduce) { .bn-pill, .bn-drop { transition: none; } }
                 .bnav .bn-badge { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #EF4444; color: #fff; font-size: 10px; font-weight: 800; font-style: normal;
                     display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; box-sizing: border-box; }
                 .bnav .bn-badge.show { display: inline-flex; }
@@ -1698,6 +1710,41 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         </style>
         <script>
             (function () {
+                // ===== তরল হাইলাইট: চাপা বাটনে গড়িয়ে যায় (সামনের দিক আগে, পেছনের দিক পরে), তারপর পেজ খোলে =====
+                var nav = document.getElementById('bNav'), pill = document.getElementById('bnPill'), drop = document.getElementById('bnDrop');
+                if (nav && pill) {
+                    var items = Array.prototype.slice.call(nav.querySelectorAll('a')), PAD = 6, last = null;
+                    var edges = function (a) { return [a.offsetLeft + PAD, nav.clientWidth - (a.offsetLeft + a.offsetWidth - PAD)]; };
+                    var place = function (a, animate) {
+                        var e = edges(a);
+                        if (!animate || !last) {
+                            pill.style.transition = 'none'; pill.style.left = e[0] + 'px'; pill.style.right = e[1] + 'px'; void pill.offsetWidth; pill.style.transition = '';
+                        } else {
+                            var right = a.offsetLeft > last.offsetLeft, fast = '.28s', slow = '.62s', ease = 'cubic-bezier(.65,0,.35,1)';
+                            // যেদিকে যাচ্ছে সেই দিকটা আগে ছোটে, অন্য দিকটা পরে টেনে আসে — পানির মতো লম্বা হয়ে আবার গুটিয়ে যায়
+                            pill.style.transition = 'left ' + (right ? slow : fast) + ' ' + ease + ', right ' + (right ? fast : slow) + ' ' + ease + ', opacity .3s';
+                            pill.style.left = e[0] + 'px'; pill.style.right = e[1] + 'px';
+                            if (drop) {   // পেছনে ছোট্ট একটা ফোঁটা থেকে যায়, তারপর মিলিয়ে যায়
+                                var from = last.offsetLeft + last.offsetWidth / 2 - 7, to = a.offsetLeft + a.offsetWidth / 2 - 7;
+                                drop.style.transition = 'none'; drop.style.left = from + 'px'; drop.style.opacity = '1'; drop.style.transform = 'scale(1)'; void drop.offsetWidth;
+                                drop.style.transition = ''; drop.style.left = (from + (to - from) * .55) + 'px'; drop.style.opacity = '0'; drop.style.transform = 'scale(.4)';
+                            }
+                        }
+                        pill.classList.add('ready'); last = a;
+                    };
+                    var cur = nav.querySelector('a.on'); if (cur) place(cur, false);
+                    window.addEventListener('resize', function () { var c = nav.querySelector('a.on'); if (c) { last = null; place(c, false); } });
+                    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    items.forEach(function (a) {
+                        a.addEventListener('click', function (e) {
+                            if (a.id === 'bnBell' || a.classList.contains('on') || e.ctrlKey || e.metaKey) return;
+                            e.preventDefault();
+                            var old = nav.querySelector('a.on'); if (old) old.classList.remove('on');
+                            a.classList.add('on'); place(a, true);
+                            setTimeout(function () { location.href = a.href; }, reduce ? 0 : 520);
+                        });
+                    });
+                }
                 var bb = document.getElementById('bnBell'); if (!bb) return;
                 var src = document.getElementById('notifBadge'), dst = document.getElementById('bnBadge');
                 var sync = function () { if (!src || !dst) return; dst.textContent = src.textContent; dst.classList.toggle('show', src.classList.contains('show') && src.textContent.trim() !== '0'); };

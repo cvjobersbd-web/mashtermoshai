@@ -203,10 +203,12 @@ if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '
     .gp-sec { font-size: 12.5px; font-weight: 800; color: #64748B; margin: 16px 0 4px; text-transform: uppercase; letter-spacing: .3px; }
     .gp-danger { margin-top: 16px; width: 100%; height: 40px; border-radius: 10px; border: 1px solid #FECACA; background: #fff; color: #B91C1C; font-weight: 700; cursor: pointer; font-family: inherit; }
     .gp-rename { display: flex; gap: 8px; } .gp-rename input { flex: 1; } .gp-rename button { height: 44px; padding: 0 14px; border-radius: 10px; border: none; background: #0F172A; color: #fff; font-weight: 700; cursor: pointer; font-family: inherit; }
+    @media (max-width: 1023px) { body:has(.bnav) .ch-box { height: calc(100vh - 80px - 60px); height: calc(100dvh - 80px - 60px - env(safe-area-inset-bottom)); } }
     @media (max-width: 860px) {
         .ch { padding: 0; }
         .ch-wrap { padding: 0; }
         .ch-box, .ch-box.no-info { grid-template-columns: minmax(0, 1fr); border-radius: 0; border: none; height: calc(100vh - 80px); height: calc(100dvh - 80px); min-height: 0; }
+        body:has(.bnav) .ch-box { height: calc(100vh - 80px - 60px); height: calc(100dvh - 80px - 60px - env(safe-area-inset-bottom)); }   /* নিচের মোবাইল মেনু বারের উপরে শেষ */
         .ch-box.has-cur .ch-list { display: none; }
         .ch-box:not(.has-cur) .ch-main { display: none; }
         .ch-back { display: inline-flex; }
