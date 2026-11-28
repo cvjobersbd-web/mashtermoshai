@@ -6,6 +6,11 @@
     .tl-pic { width: 66px; height: 66px; position: relative; display: flex; align-items: center; justify-content: center; text-decoration: none;
         border-radius: 58% 42% 55% 45% / 45% 55% 45% 55%; border: 2.5px solid #00CFFF; overflow: hidden; background: linear-gradient(135deg, #08224A, #0A5A86); color: #fff; font-weight: 800; font-size: 20px; }
     .tl-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    /* Premium টিচারের মুকুট — ছবির মাথার উপর, একটু হেলানো */
+    .tl-av { position: relative; display: inline-flex; }
+    .tl-crown { position: absolute; z-index: 2; top: -15px; left: 50%; transform: translateX(-70%) rotate(-18deg); color: #F59E0B; font-size: 21px; line-height: 1; pointer-events: none;
+        filter: drop-shadow(0 2px 2px rgba(8,34,74,.25)); }
+    .tl-card:has(.tl-crown) { padding-top: 30px; }
     .tl-badges { display: flex; gap: 5px; justify-content: center; align-items: center; min-height: 20px; margin-top: 8px; font-size: 14px; }
     .tl-badges .pr { color: #F59E0B; } .tl-badges .tp { color: #A855F7; } .tl-badges .vf { color: #00B5E0; }
     .tl-name { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: #1F2937; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

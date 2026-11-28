@@ -272,6 +272,7 @@ $expLabel = $Model->ExpYears !== null ? $Model->ExpYears . '+' : '—';
 
             <div class="pf-info">
                 <div class="ps-avatar-wrap">
+                    <?php if (is_premium_teacher((int)$u->Id)): ?><i class="fas fa-crown ps-crown" title="Premium Tutor" aria-label="Premium Tutor"></i><?php endif; ?>
                     <div class="ps-avatar" id="psAvatar" role="button" tabindex="0" aria-label="Profile picture">
                         <?= e(initials($name, 'T')) ?>
                         <?php if ($img): ?><img src="<?= e($img) ?>" alt="<?= e($name) ?>" onerror="this.remove()" /><?php endif; ?>

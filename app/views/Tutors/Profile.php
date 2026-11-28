@@ -57,6 +57,7 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
     .tp-head { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 30px; }
     .tp-id { text-align: center; }
     .tp-id .tl-pic { width: 92px; height: 92px; margin: 0 auto; font-size: 28px; }
+    .tp-id .tp-av { margin-top: 14px; } .tp-id .tl-crown { font-size: 28px; top: -21px; }
     .tp-id h1 { margin: 8px 0 0; font-size: 20px; font-weight: 700; color: #1F2937; }
     .tp-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin-top: 20px; text-align: left; font-size: 13px; }
     .tp-meta b { display: block; color: #1F2937; font-weight: 700; }
@@ -158,9 +159,8 @@ if (!$full) $ViewData['Description'] = $t->FullName . ' — Tutor। ' . ($subje
         <div class="tp-card">
             <div class="tp-head">
                 <div class="tp-id">
-                    <span class="tl-pic"><span><?= e($t->Initials) ?></span><?php if ($t->PhotoUrl !== '' && $full): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" onerror="this.remove()" /><?php endif; ?></span>
+                    <span class="tl-av tp-av"><?php if ($t->IsPremium): ?><i class="fas fa-crown tl-crown" title="Premium Tutor" aria-label="Premium Tutor"></i><?php endif; ?><span class="tl-pic"><span><?= e($t->Initials) ?></span><?php if ($t->PhotoUrl !== '' && $full): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" onerror="this.remove()" /><?php endif; ?></span></span>
                     <div class="tl-badges">
-                        <?php if ($t->IsPremium): ?><i class="fas fa-crown pr" title="Premium Tutor"></i><?php endif; ?>
                         <?php if ($t->IsTopRated): ?><i class="fas fa-award tp" title="Top Rated"></i><?php endif; ?>
                         <i class="fas fa-circle-check vf" title="Verified Tutor"></i>
                     </div>

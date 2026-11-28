@@ -10,12 +10,14 @@ $city = $t->City !== '' ? $t->City : ($t->Location !== '' ? explode(',', $t->Loc
 $inst = $t->Institution !== 'Not specified' ? $t->Institution : (!empty($t->Locked) ? implode(', ', array_slice((array)$t->Subjects, 0, 2)) : 'N/A');
 ?>
 <div class="tl-card">
-    <a class="tl-pic" href="/Tutors/Profile/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">
-        <span><?= e($t->Initials) ?></span>
-        <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
-    </a>
+    <span class="tl-av">
+        <?php if ($t->IsPremium): ?><i class="fas fa-crown tl-crown" title="Premium Tutor" aria-label="Premium Tutor"></i><?php endif; ?>
+        <a class="tl-pic" href="/Tutors/Profile/<?= (int)$t->UserId ?>" aria-hidden="true" tabindex="-1">
+            <span><?= e($t->Initials) ?></span>
+            <?php if ($t->PhotoUrl !== ''): ?><img src="<?= e($t->PhotoUrl) ?>" alt="<?= e($t->FullName) ?>" loading="lazy" onerror="this.remove()" /><?php endif; ?>
+        </a>
+    </span>
     <div class="tl-badges">
-        <?php if ($t->IsPremium): ?><i class="fas fa-crown pr" title="Premium Tutor"></i><?php endif; ?>
         <?php if ($t->IsTopRated): ?><i class="fas fa-award tp" title="Top Rated"></i><?php endif; ?>
         <i class="fas fa-circle-check vf" title="Verified Tutor"></i>
     </div>

@@ -47,6 +47,8 @@
 
     .pf-info { display: flex; gap: 26px; align-items: flex-start; padding: 0 28px 22px 32px; }
     .ps-avatar-wrap { position: relative; margin-top: -96px; flex-shrink: 0; z-index: 3; }
+    .ps-crown { position: absolute; z-index: 4; top: -30px; left: 50%; transform: translateX(-75%) rotate(-18deg); color: #F59E0B; font-size: 46px; line-height: 1; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(8,34,74,.3)); }
+    @media (max-width: 768px) { .ps-crown { font-size: 38px; top: -24px; } }
     .ps-avatar { width: 184px; height: 184px; border-radius: 50%; border: 6px solid #fff; position: relative; overflow: hidden; cursor: pointer;
         background: linear-gradient(135deg, #0B2447, #1D63E0); color: #fff; font-size: 58px; font-weight: 700;
         display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 28px rgba(15,27,45,.18); }

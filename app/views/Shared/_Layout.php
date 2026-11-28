@@ -859,24 +859,29 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
             .chat-nav-wrap { margin-right: 4px; }
             .chat-nav-wrap .notification-bell { display: inline-flex; text-decoration: none; }
             @media (max-width: 1599px) and (min-width: 1280px) { .chat-nav-wrap { margin-right: 0; } }
-            /* পিসি / ল্যাপটপে: মেসেজ আইকন নেভবারে না — নিচে ডান কোণায় ভাসমান বাটন। মোবাইলে আগের মতো নেভবারে */
-            .chat-fab { display: none; }
-            @media (min-width: 1024px) {
-                .chat-nav-wrap { display: none !important; }
-                /* চিঠি মুখে কবুতর — জায়গায় দাঁড়িয়ে ডানা ঝাপটায় */
-                .chat-fab { display: block; position: fixed; right: 22px; bottom: 18px; z-index: 1030; width: 116px; height: 92px; text-decoration: none;
-                    filter: drop-shadow(0 8px 14px rgba(8,34,74,.22)); animation: doveBob 1.8s ease-in-out infinite; transition: filter .2s; }
-                .chat-fab img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
-                .chat-fab .dv-wing { transform-origin: 52% 58%; animation: doveFlap .42s ease-in-out infinite alternate; }
-                .chat-fab:hover { filter: drop-shadow(0 12px 20px rgba(2,132,199,.4)); }
-                .chat-fab:hover .dv-wing { animation-duration: .25s; }
-                @keyframes doveFlap { from { transform: scaleY(1) rotate(0deg); } to { transform: scaleY(.45) rotate(-4deg); } }
-                @keyframes doveBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-                @media (prefers-reduced-motion: reduce) { .chat-fab, .chat-fab .dv-wing { animation: none; } }
-                .chat-fab .fab-badge { position: absolute; top: 4px; right: 10px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #EF4444; color: #fff; font-size: 12px; font-weight: 800;
-                    display: none; align-items: center; justify-content: center; border: 2px solid #fff; }
-                .chat-fab .fab-badge.show { display: inline-flex; }
-                body:has(.exp-bar) .chat-fab { bottom: 86px; }
+            /* মেসেজ: নেভবারে আইকন না — চিঠি মুখে কবুতর (ডানা ঝাপটায়, মাউস / আঙুল দিয়ে টেনে যেকোনো জায়গায় সরানো যায়) */
+            .chat-nav-wrap { display: none !important; }
+            .chat-fab { display: block; position: fixed; right: 22px; bottom: 18px; z-index: 1030; width: 116px; height: 92px; text-decoration: none; touch-action: none; cursor: grab;
+                -webkit-user-drag: none; user-select: none; -webkit-tap-highlight-color: transparent;
+                filter: drop-shadow(0 8px 14px rgba(8,34,74,.22)); animation: doveBob 1.8s ease-in-out infinite; transition: filter .2s; }
+            .chat-fab.drag { cursor: grabbing; animation: none; filter: drop-shadow(0 16px 24px rgba(8,34,74,.32)); }
+            .chat-fab img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+            .chat-fab .dv-wing { transform-origin: 52% 58%; animation: doveFlap .42s ease-in-out infinite alternate; }
+            .chat-fab:hover { filter: drop-shadow(0 12px 20px rgba(2,132,199,.4)); }
+            .chat-fab:hover .dv-wing, .chat-fab.drag .dv-wing { animation-duration: .22s; }
+            @keyframes doveFlap { from { transform: scaleY(1) rotate(0deg); } to { transform: scaleY(.45) rotate(-4deg); } }
+            @keyframes doveBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+            @media (prefers-reduced-motion: reduce) { .chat-fab, .chat-fab .dv-wing { animation: none; } }
+            /* না-পড়া মেসেজের সংখ্যা — খামের উপরে */
+            .chat-fab .fab-badge { position: absolute; left: 22%; top: 67%; transform: translate(-50%, -50%) rotate(-8deg); min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; box-sizing: border-box; letter-spacing: 0;
+                background: #EF4444; color: #fff; font-size: 9.5px; font-weight: 800; line-height: 1; display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(239,68,68,.45); }
+            .chat-fab .fab-badge.show { display: inline-flex; animation: fabPop 1.6s ease-in-out infinite; }
+            @keyframes fabPop { 0%, 100% { transform: translate(-50%, -50%) rotate(-8deg) scale(1); } 50% { transform: translate(-50%, -50%) rotate(-8deg) scale(1.08); } }
+            body:has(.exp-bar) .chat-fab:not(.moved) { bottom: 86px; }
+            @media (max-width: 1023px) {
+                .chat-fab { width: 80px; height: 64px; right: 12px; bottom: 14px; }
+                .chat-fab .fab-badge { min-width: 13px; height: 13px; font-size: 8.5px; padding: 0 3px; border-width: 1px; }
+                body:has(.exp-bar) .chat-fab:not(.moved) { bottom: 96px; }
             }
             /* ===== Find Tutor সাবমেনু ===== */
             .nav-dd { position: relative; display: inline-flex; }
@@ -2032,6 +2037,48 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         var h = document.getElementById('siteHeader'); if (!h) return;
         var on = function () { h.classList.toggle('scrolled', (window.scrollY || document.documentElement.scrollTop) > 8); };
         on(); window.addEventListener('scroll', on, { passive: true });
+    })();
+</script>
+<script>
+    /* কবুতর বাটন — টেনে সরানো যায়, জায়গাটা মনে থাকে; ছোট্ট ট্যাপ / ক্লিক = চ্যাটে যাওয়া */
+    (function () {
+        var f = document.querySelector('.chat-fab'); if (!f) return;
+        var KEY = 'mmDovePos', sx = 0, sy = 0, ox = 0, oy = 0, moved = false, down = false, pid = null;
+        function place(x, y) {
+            var w = f.offsetWidth, h = f.offsetHeight;
+            x = Math.max(4, Math.min(window.innerWidth - w - 4, x)); y = Math.max(4, Math.min(window.innerHeight - h - 4, y));
+            f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.right = 'auto'; f.style.bottom = 'auto'; f.classList.add('moved');
+            return [x, y];
+        }
+        function restore() {
+            var p = null; try { p = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { }
+            if (p && typeof p.x === 'number') place(p.x * window.innerWidth, p.y * window.innerHeight);
+        }
+        restore();
+        window.addEventListener('resize', function () { if (f.classList.contains('moved')) { var r = f.getBoundingClientRect(); place(r.left, r.top); } });
+        f.addEventListener('dragstart', function (e) { e.preventDefault(); });
+        f.addEventListener('pointerdown', function (e) {
+            if (e.button !== undefined && e.button !== 0) return;
+            var r = f.getBoundingClientRect(); down = true; moved = false; pid = e.pointerId;
+            sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+        });
+        f.addEventListener('pointermove', function (e) {
+            if (!down || e.pointerId !== pid) return;
+            var dx = e.clientX - sx, dy = e.clientY - sy;
+            if (!moved && Math.abs(dx) + Math.abs(dy) < 7) return;
+            if (!moved) { moved = true; f.classList.add('drag'); try { f.setPointerCapture(pid); } catch (x) { } }
+            place(ox + dx, oy + dy); e.preventDefault();
+        });
+        function end(e) {
+            if (!down) return; down = false; f.classList.remove('drag');
+            if (moved) {
+                var r = f.getBoundingClientRect();
+                try { localStorage.setItem(KEY, JSON.stringify({ x: r.left / window.innerWidth, y: r.top / window.innerHeight })); } catch (x) { }
+            }
+        }
+        f.addEventListener('pointerup', end); f.addEventListener('pointercancel', end);
+        // টেনে ছাড়লে ক্লিক হবে না (চ্যাটে চলে যাবে না)
+        f.addEventListener('click', function (e) { if (moved) { e.preventDefault(); moved = false; } });
     })();
 </script>
 <script>
