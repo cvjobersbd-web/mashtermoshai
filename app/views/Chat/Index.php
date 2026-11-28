@@ -21,9 +21,9 @@ $curSub = '';
 if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '' ? 'Teacher ID: ' . $card['code'] : (($cur->OtherUser ?? '') !== '' ? '@' . $cur->OtherUser : '');
 ?>
 <style>
-    .ch { background: #EEF3F8; padding: 18px 0 26px; }
-    .ch-wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
-    .ch-box { display: grid; grid-template-columns: 330px minmax(0, 1fr) 300px; height: calc(100vh - 80px - 44px); min-height: 520px; background: #fff; border: 1px solid #E1E8F0; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 26px rgba(15,27,45,.06); }
+    .ch { background: #EEF3F8; padding: 10px 0 12px; }
+    .ch-wrap { max-width: none; margin: 0; padding: 0 12px; }
+    .ch-box { display: grid; grid-template-columns: 330px minmax(0, 1fr) 300px; height: calc(100vh - 80px - 22px); min-height: 520px; background: #fff; border: 1px solid #E1E8F0; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 26px rgba(15,27,45,.06); }
     /* ===== তালিকা ===== */
     .ch-list { border-right: 1px solid #EAEFF5; display: flex; flex-direction: column; min-height: 0; }
     .ch-lh { padding: 18px 18px 12px; }
@@ -180,6 +180,8 @@ if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '
     .ch-info .vp:hover { background: #1E293B; }
     .ch-info .sf { margin-top: 16px; font-size: 12px; color: #64748B; background: #F8FAFC; border-radius: 10px; padding: 10px 12px; line-height: 1.5; text-align: left; }
     .ch-info .sf i { color: #16A34A; }
+    .ch-box.no-info { grid-template-columns: 340px minmax(0, 1fr); } .ch-box.no-info .ch-info { display: none; }
+    @media (min-width: 1600px) { .ch-box { grid-template-columns: 360px minmax(0, 1fr) 340px; } }
     @media (max-width: 1200px) { .ch-box { grid-template-columns: 320px minmax(0, 1fr); } .ch-info { display: none; } }
     /* ===== গ্রুপ ===== */
     .ch-lh .grp-new { margin-top: 10px; width: 100%; height: 38px; border-radius: 10px; border: 1.5px dashed #9BE7FA; background: #F0FCFF; color: #0369A1; font-weight: 800; font-size: 13.5px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
@@ -204,7 +206,7 @@ if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '
     @media (max-width: 860px) {
         .ch { padding: 0; }
         .ch-wrap { padding: 0; }
-        .ch-box { grid-template-columns: minmax(0, 1fr); border-radius: 0; border: none; height: calc(100vh - 80px); height: calc(100dvh - 80px); min-height: 0; }
+        .ch-box, .ch-box.no-info { grid-template-columns: minmax(0, 1fr); border-radius: 0; border: none; height: calc(100vh - 80px); height: calc(100dvh - 80px); min-height: 0; }
         .ch-box.has-cur .ch-list { display: none; }
         .ch-box:not(.has-cur) .ch-main { display: none; }
         .ch-back { display: inline-flex; }
@@ -230,7 +232,7 @@ if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '
 
 <div class="ch">
     <div class="ch-wrap">
-        <div class="ch-box<?= ($cur || $closed) ? ' has-cur' : '' ?>" id="chBox">
+        <div class="ch-box<?= ($cur || $closed) ? ' has-cur' : '' ?><?= (!$cur || ($adminChat && !$isSuper)) ? ' no-info' : '' ?>" id="chBox">
             <aside class="ch-list">
                 <div class="ch-lh">
                     <h1>Messages</h1>
