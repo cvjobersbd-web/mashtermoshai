@@ -124,12 +124,32 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
     </div>
 
     <?php if ($list) partial('Admin/_ListSearch', ['items' => '.ap-item', 'ph' => 'নাম, ইউজারনেম, ইমেইল, মোবাইল বা TxnID দিয়ে খুঁজুন']); ?>
+    <?php if ($list): ?>
+    <div class="ap-sel" id="apSel">
+        <label><input type="checkbox" id="apAll" /> সব বাছাই করুন <small>(খোঁজার ফলাফলে যেগুলো দেখা যাচ্ছে)</small></label>
+        <span class="n" id="apN">০টা বাছাই করা</span>
+        <button type="button" class="ap-btn del" id="apDelSel" disabled><i class="fas fa-trash"></i> বাছাই করা হিস্টোরি ডিলিট</button>
+    </div>
+    <style>
+        .ap-sel { position: sticky; top: 84px; z-index: 5; display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 14px; margin: 0 0 14px; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+        .ap-sel label { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: #0F172A; margin: 0; cursor: pointer; font-size: 14px; }
+        .ap-sel label small { font-weight: 500; color: #94A3B8; font-size: 12px; }
+        .ap-sel input, .ap-ck input { width: 18px; height: 18px; accent-color: #DC2626; cursor: pointer; }
+        .ap-sel .n { font-size: 13px; font-weight: 700; color: #B91C1C; }
+        .ap-sel #apDelSel { margin-left: auto; background: #DC2626; color: #fff; border-color: #DC2626; }
+        .ap-sel #apDelSel:disabled { opacity: .45; cursor: default; }
+        .ap-item { position: relative; }
+        .ap-ck { position: absolute; top: 10px; left: 10px; z-index: 2; background: #fff; border-radius: 6px; padding: 3px; display: flex; box-shadow: 0 1px 4px rgba(0,0,0,.15); cursor: pointer; }
+        .ap-item.picked { outline: 2px solid #FCA5A5; }
+    </style>
+    <?php endif; ?>
     <?php if (!$list): ?>
         <div class="ap-empty"><i class="fas fa-inbox"></i><h5 style="color:#08224A;">কোনো পেমেন্ট নেই</h5><p style="margin:0;">ইউজার প্যাকেজ নিয়ে পেমেন্টের প্রমাণ জমা দিলে এখানে দেখাবে।</p></div>
     <?php endif; ?>
 
     <?php foreach ($list as $p): ?>
         <div class="ap-item <?= e($p->Status) ?>" id="ap-<?= (int)$p->Id ?>" data-s="<?= e(mb_strtolower(implode(' ', [(string)$p->FullName, (string)$p->UserName, '@' . $p->UserName, (string)$p->Email, (string)($p->MobileNumber ?? ''), (string)$p->TxnId, (string)$p->PackageName, (string)($p->RefCode ?? '')]))) ?>">
+            <label class="ap-ck" title="ডিলিট করতে বাছাই করুন"><input type="checkbox" class="ap-pick" value="<?= (int)$p->Id ?>" /></label>
             <?php if ((string)$p->ReceiptUrl === '' && (string)$p->MethodName === 'EPS'): ?>
                 <span class="ap-rc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#F0FDF4;color:#166534;font-weight:700;font-size:12.5px;text-align:center;padding:8px;"><i class="fas fa-shield-halved" style="font-size:26px;color:#15803D;"></i>EPS-এ পরিশোধিত ও যাচাই করা — রিসিট লাগেনি<?php if (str_contains((string)$p->Note, 'SANDBOX')): ?><b style="color:#B45309;">SANDBOX টেস্ট</b><?php endif; ?></span>
             <?php elseif ((string)$p->ReceiptUrl === ''): ?>
@@ -241,6 +261,33 @@ $fmt = fn($d) => $d ? date('d M Y, h:i A', strtotime((string)$d)) : '';
         } catch (x) { alert('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); b.disabled = false; }
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lb.hidden = true; });
+    // ===== বাছাই করে হিস্টোরি ডিলিট =====
+    var all = document.getElementById('apAll'), delBtn = document.getElementById('apDelSel'), nEl = document.getElementById('apN');
+    if (all) {
+        var bn = function (n) { return String(n).replace(/\d/g, function (d) { return '০১২৩৪৫৬৭৮৯'[d]; }); };
+        var visible = function (i) { var it = i.closest('.ap-item'); return it && it.offsetParent !== null; };
+        var picks = function () { return Array.prototype.filter.call(document.querySelectorAll('.ap-pick'), function (i) { return i.checked; }); };
+        var sync = function () {
+            var p = picks(); nEl.textContent = bn(p.length) + 'টা বাছাই করা'; delBtn.disabled = !p.length;
+            document.querySelectorAll('.ap-pick').forEach(function (i) { i.closest('.ap-item').classList.toggle('picked', i.checked); });
+            var vis = Array.prototype.filter.call(document.querySelectorAll('.ap-pick'), visible);
+            all.checked = vis.length > 0 && vis.every(function (i) { return i.checked; });
+        };
+        document.addEventListener('change', function (e) { if (e.target.classList.contains('ap-pick')) sync(); });
+        all.addEventListener('change', function () { document.querySelectorAll('.ap-pick').forEach(function (i) { if (visible(i)) i.checked = all.checked; }); sync(); });
+        delBtn.addEventListener('click', async function () {
+            var ids = picks().map(function (i) { return i.value; });
+            if (!ids.length) return;
+            if (!confirm(bn(ids.length) + 'টা পেমেন্টের হিস্টোরি (আর রিসিট) মুছে ফেলবেন? এটা আর ফেরত আনা যাবে না।\n\nইউজারের চালু প্যাকেজ বন্ধ হবে না — শুধু হিস্টোরি থেকে মুছে যাবে।')) return;
+            delBtn.disabled = true;
+            try {
+                var d = await post('/Admin/DeletePayments', { ids: ids.join(',') });
+                if (!d.success) { alert(d.message || 'মুছে ফেলা যায়নি।'); delBtn.disabled = false; return; }
+                location.reload();
+            } catch (x) { alert('ইন্টারনেট সমস্যা — আবার চেষ্টা করুন।'); delBtn.disabled = false; }
+        });
+        sync();
+    }
 })();
 </script>
 <?php section_end(); ?>

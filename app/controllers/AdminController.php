@@ -1214,14 +1214,18 @@ class AdminController extends Controller
             $s2[] = [$fd($day) . ' — মোট', '', '', array_sum(array_column($list, 'n')), array_sum(array_column($list, 't')), array_sum(array_column($list, 's')), array_sum(array_column($list, 'x')), array_sum(array_column($list, 'b'))]; }
         if (count($s2) === 1) $s2[] = ['এই সময়ে কোনো রেফারেল নেই'];
         // বিস্তারিত
-        $s3 = [['#', 'তারিখ ও সময়', 'রেফারার', 'রেফারেল কোড', 'যে এসেছে', 'ইউজারনেম', 'ইমেইল', 'মোবাইল', 'টিচার না শিক্ষার্থী', 'কোথা থেকে', 'প্যাকেজ কিনেছে?']];
+        // রেফার করা ইউজারের মোবাইল: প্রোফাইলের নম্বর, না থাকলে Verification ফর্মে দেওয়া নিজের নম্বর; কোথাও না থাকলে ঘর খালি
+        $kycMob = [];
+        if ($rows) { try { foreach ($this->db->all('SELECT `UserId`, `Data` FROM `KycRequests` WHERE `UserId` IN (' . implode(',', array_map(fn($r) => (int)$r->ReferredUserId, $rows)) . ') ORDER BY `Id`') as $k) { $kd = json_decode((string)$k->Data, true); $m = trim((string)($kd['mobile'] ?? '')); if ($m !== '') $kycMob[(int)$k->UserId] = $m; } } catch (Throwable $e) { } }
+        $mob = fn($r) => trim((string)($r->MobileNumber ?? '')) !== '' ? trim((string)$r->MobileNumber) : ($kycMob[(int)$r->ReferredUserId] ?? '');
+        $s3 = [['#', 'তারিখ ও সময়', 'যে এসেছে', 'মোবাইল নম্বর', 'ইউজারনেম', 'ইমেইল', 'রেফারার', 'রেফারেল কোড', 'টিচার না শিক্ষার্থী', 'কোথা থেকে', 'প্যাকেজ কিনেছে?']];
         $i = 0; foreach ($rows as $r) { $u = $refs[(int)$r->ReferrerId] ?? null;
-            $s3[] = [++$i, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), $nm($u), (string)($u->Code ?? ''), (string)($r->Name ?: $r->UserName ?: 'Deleted user'), $r->UserName ? '@' . $r->UserName : '', (string)($r->Email ?? ''), (string)($r->MobileNumber ?? ''), $r->KLabel, $src($r), $r->Bought ? 'হ্যাঁ' : 'না']; }
+            $s3[] = [++$i, date('d M Y, h:i A', strtotime((string)$r->CreatedAt)), (string)($r->Name ?: $r->UserName ?: 'Deleted user'), $mob($r), $r->UserName ? '@' . $r->UserName : '', (string)($r->Email ?? ''), $nm($u), (string)($u->Code ?? ''), $r->KLabel, $src($r), $r->Bought ? 'হ্যাঁ' : 'না']; }
         $bold2 = [0]; foreach ($s2 as $k => $row) if (str_contains((string)($row[0] ?? ''), '— মোট')) $bold2[] = $k;
         xlsx_send(($pick ? 'selected-referrers-' : 'no-bonus-referrals-') . $from . ($from !== $to ? '-to-' . $to : ''), [
             ['name' => 'সারাংশ', 'rows' => $s1, 'bold' => [0, 8, count($s1) - 1], 'widths' => [6, 26, 20, 30, 14, 12, 10, 12, 16, 15, 14], 'freeze' => 9],
             ['name' => 'তারিখ অনুযায়ী', 'rows' => $s2, 'bold' => $bold2, 'widths' => [22, 26, 14, 18, 10, 12, 16, 15], 'freeze' => 1],
-            ['name' => 'বিস্তারিত', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 24, 14, 24, 18, 30, 16, 34, 22, 15], 'freeze' => 1],
+            ['name' => 'রেফার করা ইউজার (মোবাইল সহ)', 'rows' => $s3, 'bold' => [0], 'widths' => [6, 22, 26, 16, 20, 30, 24, 14, 34, 22, 15], 'freeze' => 1],
         ]);
     }
 
@@ -3001,6 +3005,20 @@ class AdminController extends Controller
         if (!$p || $p->Status !== 'Rejected') json_response(['success' => false, 'message' => 'শুধু Rejected পেমেন্ট মুছে ফেলা যায়।']);
         delete_upload($this->db->DeletePaymentRequest($p->Id));
         json_response(['success' => true]);
+    }
+
+    /** POST /Admin/DeletePayments (ids = 1,2,3) — বাছাই করা পেমেন্টের হিস্টোরি মুছে ফেলা (রিসিট সহ); চালু প্যাকেজ / কোর্সে ভর্তি বন্ধ হয় না */
+    public function DeletePayments_POST(): void
+    {
+        $this->requireAdminJson();
+        $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', explode(',', (string)input_str('ids', '')))))), 0, 500);
+        if (!$ids) json_response(['success' => false, 'message' => 'কোনো পেমেন্ট বাছাই করা হয়নি।']);
+        $n = 0;
+        foreach ($ids as $id) {
+            try { $r = $this->db->DeletePaymentRequest($id); if ($r !== null) { $n++; if ($r !== '') delete_upload($r); } }
+            catch (Throwable $e) { error_log('[delete payments] ' . $e->getMessage()); }
+        }
+        json_response(['success' => $n > 0, 'deleted' => $n, 'message' => $n ? "{$n}টা পেমেন্ট মুছে ফেলা হয়েছে।" : 'মুছে ফেলা যায়নি।']);
     }
 
     /** GET /Admin/PaymentMethods */
