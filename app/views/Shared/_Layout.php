@@ -1161,9 +1161,9 @@ $logoRadius = $layoutSettings->GetLogoBorderRadius();
         @media (max-width: 420px) { .lang-sw { padding: 0 2px; margin-right: 0; height: 30px; font-size: 11px; } .lang-sw span { padding: 3px 5px; } }
     </style>
     <?php if ($__twBuilt): ?>
-    <!-- ✅ Tailwind আগে থেকে বানানো (app/assets/site.css) — ব্রাউজারে আর বানাতে হয় না, তাই পেজ দ্রুত খোলে -->
-    <style>:root { --mm-primary: <?= e($layoutSettings->PrimaryColor) ?>; --mm-cream: <?= e($layoutSettings->SecondaryColor) ?>; }</style>
-    <link rel="stylesheet" href="/assets/site.css?v=<?= filemtime($__twFile) ?>" />
+    <!-- ✅ Tailwind আগে থেকে বানানো (app/assets/site.css) — ব্রাউজারে আর বানাতে হয় না, তাই পেজ দ্রুত খোলে। পেজের ভেতরেই বসানো (আলাদা ফাইল লোডের ঝামেলা নেই, ~৪KB gzip) -->
+    <style>:root { --mm-primary: <?= e($layoutSettings->PrimaryColor) ?>; --mm-cream: <?= e($layoutSettings->SecondaryColor) ?>; }
+<?= str_replace('</', '<\/', (string)file_get_contents($__twFile)) ?></style>
     <?php endif; ?>
 </head>
 <body>
