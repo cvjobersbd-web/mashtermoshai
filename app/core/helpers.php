@@ -2627,15 +2627,12 @@ function teacher_chat_button(int $teacherId, string $cls): string
 {
     $me = current_user_id();
     if ($me !== null && ((int)$me === $teacherId || current_role() !== 'User')) return '';
-    if (!teacher_profile_open($teacherId)) return '';   // টিচারের প্যাকেজ নেই — যোগাযোগ বন্ধ
-    if (!viewer_can_contact_teachers()) {
-        return '<a class="' . e($cls) . '" href="' . e(student_package_url()) . '" title="টিচারের সাথে চ্যাট করতে শিক্ষার্থী প্যাকেজ নিন"><i class="fas fa-lock"></i> '
-            . ($me === null ? 'লগইন করে চ্যাট' : 'প্যাকেজ নিয়ে চ্যাট আনলক') . '</a>';
-    }
+    // শিক্ষার্থীর চ্যাটে প্যাকেজ লাগে না — লগইন থাকলেই যেকোনো টিচারকে মেসেজ (টিচারের প্যাকেজ না থাকলে টিচার শুধু "মেসেজ এসেছে" দেখে)
+    if ($me === null) return '<a class="' . e($cls) . '" href="' . e(student_package_url()) . '" title="মেসেজ দিতে লগইন করুন"><i class="fas fa-comment-dots"></i> লগইন করে মেসেজ</a>';
     $key = db()->FindDirectChat((int)$me, $teacherId);
     if ($key) return '<a class="' . e($cls) . '" href="/Chat?c=' . e($key) . '"><i class="fas fa-comment-dots"></i> চ্যাট খুলুন</a>';
     return '<form method="post" action="/Chat/Start" style="display:inline;margin:0;">' . csrf_field() . '<input type="hidden" name="teacherId" value="' . $teacherId . '" />'
-        . '<button type="submit" class="' . e($cls) . '"><i class="fas fa-comment-dots"></i> চ্যাট আনলক করুন</button></form>';
+        . '<button type="submit" class="' . e($cls) . '"><i class="fas fa-comment-dots"></i> মেসেজ দিন</button></form>';
 }
 
 

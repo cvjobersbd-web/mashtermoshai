@@ -236,7 +236,7 @@ if ($cur && $cur->Kind !== 'grp') $curSub = $card && ($card['code'] ?? '') !== '
             <aside class="ch-list">
                 <div class="ch-lh">
                     <h1>Messages</h1>
-                    <p><?= $isSuper ? 'যেকোনো টিচার বা শিক্ষার্থীকে খুঁজে চ্যাট খুলুন — তারপর উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে ক্লাস পাঠান। প্যাকেজ লাগবে না।' : ($role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'টিচারের অ্যাপ্লিকেশন Accept করলে বা টিচারের প্রোফাইল থেকে চ্যাট আনলক করলে এখানে চ্যাট খোলে।') ?></p>
+                    <p><?= $isSuper ? 'যেকোনো টিচার বা শিক্ষার্থীকে খুঁজে চ্যাট খুলুন — তারপর উপরের <b>লাইভ ক্লাস</b> বাটন দিয়ে ক্লাস পাঠান। প্যাকেজ লাগবে না।' : ($role === 'Teacher' ? 'স্টুডেন্ট আপনার অ্যাপ্লিকেশন Accept করলে বা আপনার প্রোফাইল থেকে চ্যাট শুরু করলে এখানে চ্যাট খোলে।' : 'উপরের ঘরে নাম, ইউজারনেম, ইমেইল বা Teacher ID লিখে যেকোনো টিচারকে খুঁজে মেসেজ দিন।') ?></p>
                     <div class="ch-srch"><i class="fas fa-search"></i><input type="search" id="chSearch" placeholder="<?= $canFind ? 'চ্যাট বা টিচার খুঁজুন — নাম, ইউজারনেম, ইমেইল, Teacher ID' : 'চ্যাট খুঁজুন...' ?>" autocomplete="off" aria-label="খুঁজুন" /></div>
                     <div class="ch-chips" id="chChips"><button type="button" class="on" data-f="all">সব</button><button type="button" data-f="unread">না-পড়া</button><button type="button" data-f="dir">সরাসরি</button><button type="button" data-f="grp">গ্রুপ</button></div>
                     <?php if ($canFind): ?><div class="tf-box" id="tfBox" hidden><div class="tf-h">টিচার খুঁজে পাওয়া গেছে</div><div id="tfRes"></div></div>

@@ -121,7 +121,7 @@ class ChatController extends Controller
             'ThreadJson' => $this->packThreads($threads),
             'Classes' => $current ? $this->packClasses($current) : [], 'IsTeacher' => $current ? $current->TeacherId === $me : false,
             'LivePkg' => teacher_live_enabled($me), 'LiveOk' => teacher_live_enabled($me) && bbb_ready(), 'Card' => $card,
-            'TeacherPkg' => current_role() === 'Teacher' && is_premium_teacher($me), 'CanFind' => current_role() === 'User' && viewer_can_contact_teachers(),
+            'TeacherPkg' => current_role() === 'Teacher' && is_premium_teacher($me), 'CanFind' => current_role() === 'User',
             'Contacts' => current_role() === 'Teacher' ? array_values($this->db->TeacherChatContacts($me)) : [],
             'IsSuper' => is_admin() && admin_is_super(),
         ]);
@@ -148,7 +148,6 @@ class ChatController extends Controller
     {
         $this->me(true);
         if (current_role() !== 'User') json_response(['success' => false, 'message' => 'শুধু শিক্ষার্থীরা টিচার খুঁজতে পারবেন।']);
-        if (!viewer_can_contact_teachers()) json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'টিচার খুঁজে মেসেজ দিতে শিক্ষার্থী প্যাকেজ নিন।']);
         $q = trim((string)input_str('q', ''));
         if (mb_strlen($q) < 2) json_response(['success' => true, 'teachers' => []]);
         $base = "SELECT DISTINCT u.`Id`, u.`FullName`, u.`UserName`, u.`ProfileImageLink` FROM `Users` u JOIN `TeacherRequests` r ON r.`UserId` = u.`Id` AND r.`Status` = 'Approved'
@@ -166,7 +165,7 @@ class ChatController extends Controller
             $id = (int)$u->Id;
             if ($this->db->GetActiveSuspension($id)) continue;
             $n = !is_blank($u->FullName) ? (string)$u->FullName : (string)$u->UserName;
-            $out[] = ['id' => $id, 'name' => $n, 'user' => (string)$u->UserName, 'code' => teacher_code($id), 'photo' => (string)($u->ProfileImageLink ?? ''), 'initials' => initials($n, 'T'), 'open' => teacher_profile_open($id)];
+            $out[] = ['id' => $id, 'name' => $n, 'user' => (string)$u->UserName, 'code' => teacher_code($id), 'photo' => (string)($u->ProfileImageLink ?? ''), 'initials' => initials($n, 'T'), 'open' => true];
         }
         json_response(['success' => true, 'teachers' => $out]);
     }
@@ -209,7 +208,7 @@ class ChatController extends Controller
     }
 
     /**
-     * POST /Chat/Start (teacherId) — টিচারের প্রোফাইল থেকে "চ্যাট আনলক": প্যাকেজ নেওয়া শিক্ষার্থী সরাসরি চ্যাট শুরু করে
+     * POST /Chat/Start (teacherId) — শিক্ষার্থী যেকোনো টিচারের সাথে সরাসরি চ্যাট শুরু করে (প্যাকেজ লাগে না)
      */
     public function Start_POST(): void
     {
@@ -217,13 +216,8 @@ class ChatController extends Controller
         $tid = input_int('teacherId', 0);
         $back = input_str('from', '') === 'chat' ? '/Chat' : '/Tutors/Profile/' . $tid;
         if (current_role() !== 'User') { tempdata_set('Error', 'শুধু শিক্ষার্থীরা টিচারের সাথে চ্যাট শুরু করতে পারেন।'); redirect($back); }
-        if (!viewer_can_contact_teachers()) {
-            tempdata_set('Error', 'টিচারের সাথে চ্যাট আনলক করতে শিক্ষার্থী প্যাকেজ নিন (' . package_price_hint('Student') . ')।');
-            redirect('/Package?for=student');
-        }
         $t = $tid > 0 ? $this->db->GetUserById($tid) : null;
         if (!$t || $t->Role !== 'Teacher' || !(int)$t->IsActive || $this->db->GetActiveSuspension($tid)) { tempdata_set('Error', 'এই টিচারের সাথে এখন চ্যাট করা যাচ্ছে না।'); redirect($back); }
-        if (!teacher_profile_open($tid) && !$this->db->FindDirectChat($me, $tid)) { tempdata_set('Error', 'এই টিচারের সম্পূর্ণ প্রোফাইল এখন চালু নেই — তাই এখন চ্যাট শুরু করা যাবে না।'); redirect($back); }
         redirect('/Chat?c=' . $this->db->OpenDirectChat($me, $tid));
     }
 
@@ -233,10 +227,7 @@ class ChatController extends Controller
         $me = $this->me(true);
         $t = $this->db->GetChatThread(trim((string)input_str('c', '')), $me);
         if (!$t) json_response(['success' => false, 'closed' => true, 'message' => 'এই চ্যাটটি বন্ধ হয়ে গেছে — আর মেসেজ পাঠানো যাবে না।']);
-        // সরাসরি চ্যাট: শিক্ষার্থীর প্যাকেজের মেয়াদ শেষ হলে শিক্ষার্থী আর মেসেজ পাঠাতে পারবে না (টিচার উত্তর দিতে পারবে)
-        if ($t->Kind === 'dir' && empty($t->AdminChat) && $t->StudentId === $me && !viewer_can_contact_teachers()) {
-            json_response(['success' => false, 'needPackage' => '/Package?for=student', 'message' => 'আপনার প্যাকেজের মেয়াদ শেষ — টিচারকে মেসেজ পাঠাতে আবার প্যাকেজ নিন।']);
-        }
+        // শিক্ষার্থীর চ্যাটে প্যাকেজ লাগে না
         if (chat_locked_for($t, $me)) json_response(['success' => false, 'needPackage' => '/Package?for=teacher', 'message' => 'মেসেজ দেখতে আর উত্তর দিতে টিচার প্যাকেজ কিনুন।']);
         $body = trim(str_replace(["\r\n", "\r"], "\n", (string)input_str('body', '')));
         $body = preg_replace("/\n{4,}/", "\n\n\n", $body);
